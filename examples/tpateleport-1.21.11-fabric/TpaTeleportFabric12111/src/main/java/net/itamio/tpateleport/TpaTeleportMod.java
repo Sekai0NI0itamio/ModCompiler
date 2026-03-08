@@ -9,20 +9,17 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.command.CommandSource;
-import net.minecraft.network.packet.s2c.play.PositionFlag;
+import net.minecraft.Util;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Util;
+import net.minecraft.server.level.ServerPlayer;
 
 public class TpaTeleportMod implements ModInitializer {
     public static final String MOD_ID = "tpateleport";
@@ -30,18 +27,18 @@ public class TpaTeleportMod implements ModInitializer {
     private static final Map<UUID, Map<UUID, TeleportRequest>> REQUESTS_BY_TARGET = new HashMap<>();
     private static int tickCounter = 0;
 
-    private static final SuggestionProvider<ServerCommandSource> ONLINE_PLAYERS = (context, builder) ->
-        CommandSource.suggestMatching(context.getSource().getPlayerNames(), builder);
+    private static final SuggestionProvider<CommandSourceStack> ONLINE_PLAYERS = (context, builder) ->
+        SharedSuggestionProvider.suggest(context.getSource().getServer().getPlayerNames(), builder);
 
-    private static final SuggestionProvider<ServerCommandSource> PENDING_FOR_TARGET = (context, builder) -> {
-        ServerPlayerEntity target = context.getSource().getPlayer();
+    private static final SuggestionProvider<CommandSourceStack> PENDING_FOR_TARGET = (context, builder) -> {
+        ServerPlayer target = context.getSource().getPlayer();
         if (target == null) {
             return builder.buildFuture();
         }
 
-        long now = Util.getMeasuringTimeMs();
-        purgeExpiredForTarget(target.getUuid(), now);
-        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUuid());
+        long now = Util.getMillis();
+        purgeExpiredForTarget(target.getUUID(), now);
+        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUUID());
         if (requests == null || requests.isEmpty()) {
             return builder.buildFuture();
         }
@@ -50,25 +47,25 @@ public class TpaTeleportMod implements ModInitializer {
         for (TeleportRequest request : requests.values()) {
             names.add(request.senderName);
         }
-        return CommandSource.suggestMatching(names, builder);
+        return SharedSuggestionProvider.suggest(names, builder);
     };
 
-    private static final SuggestionProvider<ServerCommandSource> PENDING_FOR_SENDER = (context, builder) -> {
-        ServerPlayerEntity sender = context.getSource().getPlayer();
+    private static final SuggestionProvider<CommandSourceStack> PENDING_FOR_SENDER = (context, builder) -> {
+        ServerPlayer sender = context.getSource().getPlayer();
         if (sender == null) {
             return builder.buildFuture();
         }
 
-        long now = Util.getMeasuringTimeMs();
+        long now = Util.getMillis();
         purgeExpired(now);
         List<String> names = new ArrayList<>();
         for (Map<UUID, TeleportRequest> requests : REQUESTS_BY_TARGET.values()) {
-            TeleportRequest request = requests.get(sender.getUuid());
+            TeleportRequest request = requests.get(sender.getUUID());
             if (request != null && !request.isExpired(now)) {
                 names.add(request.targetName);
             }
         }
-        return CommandSource.suggestMatching(names, builder);
+        return SharedSuggestionProvider.suggest(names, builder);
     };
 
     @Override
@@ -78,129 +75,129 @@ public class TpaTeleportMod implements ModInitializer {
             tickCounter++;
             if (tickCounter >= 20) {
                 tickCounter = 0;
-                purgeExpired(Util.getMeasuringTimeMs());
+                purgeExpired(Util.getMillis());
             }
         });
     }
 
-    private static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
+    private static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
-            CommandManager.literal("tpa")
-                .requires(source -> source.getPlayer() != null)
+            Commands.literal("tpa")
+                .requires(source -> source.getEntity() instanceof ServerPlayer)
                 .then(
-                    CommandManager.argument("player", StringArgumentType.word())
+                    Commands.argument("player", StringArgumentType.word())
                         .suggests(ONLINE_PLAYERS)
                         .executes(context -> sendRequest(context, StringArgumentType.getString(context, "player"), RequestType.TO_TARGET))
                 )
         );
 
         dispatcher.register(
-            CommandManager.literal("tpahere")
-                .requires(source -> source.getPlayer() != null)
+            Commands.literal("tpahere")
+                .requires(source -> source.getEntity() instanceof ServerPlayer)
                 .then(
-                    CommandManager.argument("player", StringArgumentType.word())
+                    Commands.argument("player", StringArgumentType.word())
                         .suggests(ONLINE_PLAYERS)
                         .executes(context -> sendRequest(context, StringArgumentType.getString(context, "player"), RequestType.HERE))
                 )
         );
 
         dispatcher.register(
-            CommandManager.literal("tpacancel")
-                .requires(source -> source.getPlayer() != null)
-                .then(CommandManager.literal("all").executes(TpaTeleportMod::cancelAll))
+            Commands.literal("tpacancel")
+                .requires(source -> source.getEntity() instanceof ServerPlayer)
+                .then(Commands.literal("all").executes(TpaTeleportMod::cancelAll))
                 .then(
-                    CommandManager.argument("player", StringArgumentType.word())
+                    Commands.argument("player", StringArgumentType.word())
                         .suggests(PENDING_FOR_SENDER)
                         .executes(context -> cancelRequest(context, StringArgumentType.getString(context, "player")))
                 )
         );
 
         dispatcher.register(
-            CommandManager.literal("tpacceptall")
-                .requires(source -> source.getPlayer() != null)
+            Commands.literal("tpacceptall")
+                .requires(source -> source.getEntity() instanceof ServerPlayer)
                 .executes(TpaTeleportMod::acceptAll)
         );
 
         dispatcher.register(
-            CommandManager.literal("tpaccept")
-                .requires(source -> source.getPlayer() != null)
+            Commands.literal("tpaccept")
+                .requires(source -> source.getEntity() instanceof ServerPlayer)
                 .then(
-                    CommandManager.argument("player", StringArgumentType.word())
+                    Commands.argument("player", StringArgumentType.word())
                         .suggests(PENDING_FOR_TARGET)
                         .executes(context -> acceptRequest(context, StringArgumentType.getString(context, "player")))
                 )
         );
 
         dispatcher.register(
-            CommandManager.literal("tpadeny")
-                .requires(source -> source.getPlayer() != null)
+            Commands.literal("tpadeny")
+                .requires(source -> source.getEntity() instanceof ServerPlayer)
                 .then(
-                    CommandManager.argument("player", StringArgumentType.word())
+                    Commands.argument("player", StringArgumentType.word())
                         .suggests(PENDING_FOR_TARGET)
                         .executes(context -> denyRequest(context, StringArgumentType.getString(context, "player")))
                 )
         );
 
         dispatcher.register(
-            CommandManager.literal("tpadenyall")
-                .requires(source -> source.getPlayer() != null)
+            Commands.literal("tpadenyall")
+                .requires(source -> source.getEntity() instanceof ServerPlayer)
                 .executes(TpaTeleportMod::denyAll)
         );
     }
 
-    private static int sendRequest(CommandContext<ServerCommandSource> context, String targetName, RequestType type) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity sender = context.getSource().getPlayerOrThrow();
+    private static int sendRequest(CommandContext<CommandSourceStack> context, String targetName, RequestType type) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer sender = context.getSource().getPlayerOrException();
         MinecraftServer server = context.getSource().getServer();
-        ServerPlayerEntity target = findOnlinePlayer(server, targetName);
+        ServerPlayer target = findOnlinePlayer(server, targetName);
         if (target == null) {
             sendMessage(sender, "Player '" + targetName + "' not found.");
             return 0;
         }
-        if (target.getUuid().equals(sender.getUuid())) {
+        if (target.getUUID().equals(sender.getUUID())) {
             sendMessage(sender, "You cannot send a request to yourself.");
             return 0;
         }
 
-        long now = Util.getMeasuringTimeMs();
-        purgeExpiredForTarget(target.getUuid(), now);
-        Map<UUID, TeleportRequest> requests = getTargetMap(target.getUuid());
-        TeleportRequest existing = requests.get(sender.getUuid());
+        long now = Util.getMillis();
+        purgeExpiredForTarget(target.getUUID(), now);
+        Map<UUID, TeleportRequest> requests = getTargetMap(target.getUUID());
+        TeleportRequest existing = requests.get(sender.getUUID());
         if (existing != null && !existing.isExpired(now)) {
-            sendMessage(sender, "You already have a pending request to " + target.getNameForScoreboard() + ".");
+            sendMessage(sender, "You already have a pending request to " + target.getGameProfile().getName() + ".");
             return 0;
         }
 
         TeleportRequest request = new TeleportRequest(
-            sender.getUuid(),
-            sender.getNameForScoreboard(),
-            target.getUuid(),
-            target.getNameForScoreboard(),
+            sender.getUUID(),
+            sender.getGameProfile().getName(),
+            target.getUUID(),
+            target.getGameProfile().getName(),
             type,
             now + REQUEST_TTL_MS
         );
-        requests.put(sender.getUuid(), request);
+        requests.put(sender.getUUID(), request);
 
         if (type == RequestType.TO_TARGET) {
-            sendMessage(sender, "Teleport request sent to " + target.getNameForScoreboard() + ".");
-            sendMessage(target, sender.getNameForScoreboard() + " wants to teleport to you. Use /tpaccept " + sender.getNameForScoreboard() + " or /tpadeny " + sender.getNameForScoreboard() + ".");
+            sendMessage(sender, "Teleport request sent to " + target.getGameProfile().getName() + ".");
+            sendMessage(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
         } else {
-            sendMessage(sender, "Teleport-here request sent to " + target.getNameForScoreboard() + ".");
-            sendMessage(target, sender.getNameForScoreboard() + " wants you to teleport to them. Use /tpaccept " + sender.getNameForScoreboard() + " or /tpadeny " + sender.getNameForScoreboard() + ".");
+            sendMessage(sender, "Teleport-here request sent to " + target.getGameProfile().getName() + ".");
+            sendMessage(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
         }
 
         return 1;
     }
 
-    private static int cancelAll(CommandContext<ServerCommandSource> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity sender = context.getSource().getPlayerOrThrow();
-        long now = Util.getMeasuringTimeMs();
+    private static int cancelAll(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer sender = context.getSource().getPlayerOrException();
+        long now = Util.getMillis();
         purgeExpired(now);
 
         int removed = 0;
         Iterator<Map.Entry<UUID, Map<UUID, TeleportRequest>>> iterator = REQUESTS_BY_TARGET.entrySet().iterator();
         while (iterator.hasNext()) {
             Map<UUID, TeleportRequest> requests = iterator.next().getValue();
-            TeleportRequest request = requests.remove(sender.getUuid());
+            TeleportRequest request = requests.remove(sender.getUUID());
             if (request != null) {
                 removed++;
                 notifyTargetOfCancel(context.getSource().getServer(), request);
@@ -219,29 +216,29 @@ public class TpaTeleportMod implements ModInitializer {
         return removed;
     }
 
-    private static int cancelRequest(CommandContext<ServerCommandSource> context, String targetName) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity sender = context.getSource().getPlayerOrThrow();
+    private static int cancelRequest(CommandContext<CommandSourceStack> context, String targetName) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer sender = context.getSource().getPlayerOrException();
         MinecraftServer server = context.getSource().getServer();
-        long now = Util.getMeasuringTimeMs();
+        long now = Util.getMillis();
         purgeExpired(now);
 
-        ServerPlayerEntity target = findOnlinePlayer(server, targetName);
+        ServerPlayer target = findOnlinePlayer(server, targetName);
         if (target != null) {
-            Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUuid());
+            Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUUID());
             if (requests != null) {
-                TeleportRequest request = requests.remove(sender.getUuid());
+                TeleportRequest request = requests.remove(sender.getUUID());
                 if (request != null) {
                     if (requests.isEmpty()) {
-                        REQUESTS_BY_TARGET.remove(target.getUuid());
+                        REQUESTS_BY_TARGET.remove(target.getUUID());
                     }
-                    sendMessage(sender, "Canceled request to " + target.getNameForScoreboard() + ".");
+                    sendMessage(sender, "Canceled request to " + target.getGameProfile().getName() + ".");
                     notifyTargetOfCancel(server, request);
                     return 1;
                 }
             }
         }
 
-        TeleportRequest request = removeRequestByTargetName(sender.getUuid(), targetName);
+        TeleportRequest request = removeRequestByTargetName(sender.getUUID(), targetName);
         if (request == null) {
             sendMessage(sender, "No pending request to " + targetName + ".");
             return 0;
@@ -252,13 +249,13 @@ public class TpaTeleportMod implements ModInitializer {
         return 1;
     }
 
-    private static int acceptAll(CommandContext<ServerCommandSource> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity target = context.getSource().getPlayerOrThrow();
+    private static int acceptAll(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer target = context.getSource().getPlayerOrException();
         MinecraftServer server = context.getSource().getServer();
-        long now = Util.getMeasuringTimeMs();
-        purgeExpiredForTarget(target.getUuid(), now);
+        long now = Util.getMillis();
+        purgeExpiredForTarget(target.getUUID(), now);
 
-        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUuid());
+        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUUID());
         if (requests == null || requests.isEmpty()) {
             sendMessage(target, "No pending requests.");
             return 0;
@@ -266,7 +263,7 @@ public class TpaTeleportMod implements ModInitializer {
 
         List<TeleportRequest> snapshot = new ArrayList<>(requests.values());
         requests.clear();
-        REQUESTS_BY_TARGET.remove(target.getUuid());
+        REQUESTS_BY_TARGET.remove(target.getUUID());
 
         int accepted = 0;
         for (TeleportRequest request : snapshot) {
@@ -274,7 +271,7 @@ public class TpaTeleportMod implements ModInitializer {
                 continue;
             }
 
-            ServerPlayerEntity sender = findOnlinePlayerByUuid(server, request.senderId);
+            ServerPlayer sender = findOnlinePlayerByUuid(server, request.senderId);
             if (sender != null && executeTeleport(request, sender, target)) {
                 accepted++;
             }
@@ -289,15 +286,15 @@ public class TpaTeleportMod implements ModInitializer {
         return accepted;
     }
 
-    private static int acceptRequest(CommandContext<ServerCommandSource> context, String senderName) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity target = context.getSource().getPlayerOrThrow();
+    private static int acceptRequest(CommandContext<CommandSourceStack> context, String senderName) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer target = context.getSource().getPlayerOrException();
         MinecraftServer server = context.getSource().getServer();
-        long now = Util.getMeasuringTimeMs();
-        purgeExpiredForTarget(target.getUuid(), now);
+        long now = Util.getMillis();
+        purgeExpiredForTarget(target.getUUID(), now);
 
-        ServerPlayerEntity sender = findOnlinePlayer(server, senderName);
+        ServerPlayer sender = findOnlinePlayer(server, senderName);
         if (sender == null) {
-            TeleportRequest removed = removeRequestBySenderName(target.getUuid(), senderName);
+            TeleportRequest removed = removeRequestBySenderName(target.getUUID(), senderName);
             if (removed != null) {
                 sendMessage(target, "Request from " + senderName + " expired or player is offline.");
                 return 0;
@@ -306,35 +303,35 @@ public class TpaTeleportMod implements ModInitializer {
             return 0;
         }
 
-        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUuid());
+        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUUID());
         if (requests == null) {
             sendMessage(target, "No pending request from " + senderName + ".");
             return 0;
         }
 
-        TeleportRequest request = requests.remove(sender.getUuid());
+        TeleportRequest request = requests.remove(sender.getUUID());
         if (request == null || request.isExpired(now)) {
             if (requests.isEmpty()) {
-                REQUESTS_BY_TARGET.remove(target.getUuid());
+                REQUESTS_BY_TARGET.remove(target.getUUID());
             }
             sendMessage(target, "No pending request from " + senderName + ".");
             return 0;
         }
 
         if (requests.isEmpty()) {
-            REQUESTS_BY_TARGET.remove(target.getUuid());
+            REQUESTS_BY_TARGET.remove(target.getUUID());
         }
 
         return executeTeleport(request, sender, target) ? 1 : 0;
     }
 
-    private static int denyAll(CommandContext<ServerCommandSource> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity target = context.getSource().getPlayerOrThrow();
+    private static int denyAll(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer target = context.getSource().getPlayerOrException();
         MinecraftServer server = context.getSource().getServer();
-        long now = Util.getMeasuringTimeMs();
-        purgeExpiredForTarget(target.getUuid(), now);
+        long now = Util.getMillis();
+        purgeExpiredForTarget(target.getUUID(), now);
 
-        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.remove(target.getUuid());
+        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.remove(target.getUUID());
         if (requests == null || requests.isEmpty()) {
             sendMessage(target, "No pending requests.");
             return 0;
@@ -347,36 +344,36 @@ public class TpaTeleportMod implements ModInitializer {
         return requests.size();
     }
 
-    private static int denyRequest(CommandContext<ServerCommandSource> context, String senderName) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity target = context.getSource().getPlayerOrThrow();
+    private static int denyRequest(CommandContext<CommandSourceStack> context, String senderName) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer target = context.getSource().getPlayerOrException();
         MinecraftServer server = context.getSource().getServer();
-        long now = Util.getMeasuringTimeMs();
-        purgeExpiredForTarget(target.getUuid(), now);
+        long now = Util.getMillis();
+        purgeExpiredForTarget(target.getUUID(), now);
 
-        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUuid());
+        Map<UUID, TeleportRequest> requests = REQUESTS_BY_TARGET.get(target.getUUID());
         if (requests == null || requests.isEmpty()) {
             sendMessage(target, "No pending request from " + senderName + ".");
             return 0;
         }
 
         TeleportRequest request = null;
-        ServerPlayerEntity sender = findOnlinePlayer(server, senderName);
+        ServerPlayer sender = findOnlinePlayer(server, senderName);
         if (sender != null) {
-            request = requests.remove(sender.getUuid());
+            request = requests.remove(sender.getUUID());
         }
         if (request == null) {
-            request = removeRequestBySenderName(target.getUuid(), senderName);
+            request = removeRequestBySenderName(target.getUUID(), senderName);
         }
         if (request == null || request.isExpired(now)) {
             if (requests.isEmpty()) {
-                REQUESTS_BY_TARGET.remove(target.getUuid());
+                REQUESTS_BY_TARGET.remove(target.getUUID());
             }
             sendMessage(target, "No pending request from " + senderName + ".");
             return 0;
         }
 
         if (requests.isEmpty()) {
-            REQUESTS_BY_TARGET.remove(target.getUuid());
+            REQUESTS_BY_TARGET.remove(target.getUUID());
         }
 
         notifySenderOfDeny(server, request);
@@ -384,40 +381,38 @@ public class TpaTeleportMod implements ModInitializer {
         return 1;
     }
 
-    private static boolean executeTeleport(TeleportRequest request, ServerPlayerEntity sender, ServerPlayerEntity target) {
+    private static boolean executeTeleport(TeleportRequest request, ServerPlayer sender, ServerPlayer target) {
         if (request.type == RequestType.TO_TARGET) {
             if (!teleportPlayer(sender, target)) {
-                sendMessage(target, "Could not teleport " + sender.getNameForScoreboard() + ".");
+                sendMessage(target, "Could not teleport " + sender.getGameProfile().getName() + ".");
                 sendMessage(sender, "Teleport failed.");
                 return false;
             }
-            sendMessage(sender, "Teleported to " + target.getNameForScoreboard() + ".");
-            sendMessage(target, "Accepted request from " + sender.getNameForScoreboard() + ".");
+            sendMessage(sender, "Teleported to " + target.getGameProfile().getName() + ".");
+            sendMessage(target, "Accepted request from " + sender.getGameProfile().getName() + ".");
             return true;
         }
 
         if (!teleportPlayer(target, sender)) {
             sendMessage(target, "Teleport failed.");
-            sendMessage(sender, "Could not teleport " + target.getNameForScoreboard() + ".");
+            sendMessage(sender, "Could not teleport " + target.getGameProfile().getName() + ".");
             return false;
         }
-        sendMessage(target, "Teleported to " + sender.getNameForScoreboard() + ".");
-        sendMessage(sender, "Accepted request from " + target.getNameForScoreboard() + ".");
+        sendMessage(target, "Teleported to " + sender.getGameProfile().getName() + ".");
+        sendMessage(sender, "Accepted request from " + target.getGameProfile().getName() + ".");
         return true;
     }
 
-    private static boolean teleportPlayer(ServerPlayerEntity player, ServerPlayerEntity destination) {
-        ServerWorld destinationWorld = destination.getServerWorld();
-        return player.teleport(
-            destinationWorld,
+    private static boolean teleportPlayer(ServerPlayer player, ServerPlayer destination) {
+        player.teleportTo(
+            destination.serverLevel(),
             destination.getX(),
             destination.getY(),
             destination.getZ(),
-            Set.<PositionFlag>of(),
-            destination.getYaw(),
-            destination.getPitch(),
-            true
+            destination.getYRot(),
+            destination.getXRot()
         );
+        return true;
     }
 
     private static Map<UUID, TeleportRequest> getTargetMap(UUID targetId) {
@@ -483,35 +478,40 @@ public class TpaTeleportMod implements ModInitializer {
         return null;
     }
 
-    private static ServerPlayerEntity findOnlinePlayer(MinecraftServer server, String targetName) {
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            if (player.getNameForScoreboard().equalsIgnoreCase(targetName)) {
+    private static ServerPlayer findOnlinePlayer(MinecraftServer server, String targetName) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (player.getGameProfile().getName().equalsIgnoreCase(targetName)) {
                 return player;
             }
         }
         return null;
     }
 
-    private static ServerPlayerEntity findOnlinePlayerByUuid(MinecraftServer server, UUID playerId) {
-        return server.getPlayerManager().getPlayer(playerId);
+    private static ServerPlayer findOnlinePlayerByUuid(MinecraftServer server, UUID playerId) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (player.getUUID().equals(playerId)) {
+                return player;
+            }
+        }
+        return null;
     }
 
     private static void notifyTargetOfCancel(MinecraftServer server, TeleportRequest request) {
-        ServerPlayerEntity target = findOnlinePlayerByUuid(server, request.targetId);
+        ServerPlayer target = findOnlinePlayerByUuid(server, request.targetId);
         if (target != null) {
             sendMessage(target, request.senderName + " canceled their request.");
         }
     }
 
     private static void notifySenderOfDeny(MinecraftServer server, TeleportRequest request) {
-        ServerPlayerEntity sender = findOnlinePlayerByUuid(server, request.senderId);
+        ServerPlayer sender = findOnlinePlayerByUuid(server, request.senderId);
         if (sender != null) {
             sendMessage(sender, "Your request to " + request.targetName + " was denied.");
         }
     }
 
-    private static void sendMessage(ServerPlayerEntity player, String message) {
-        player.sendMessage(Text.literal(message));
+    private static void sendMessage(ServerPlayer player, String message) {
+        player.sendSystemMessage(Component.literal(message));
     }
 
     private static final class TeleportRequest {
@@ -532,7 +532,7 @@ public class TpaTeleportMod implements ModInitializer {
         }
 
         private boolean isExpired(long now) {
-            return now >= this.expiresAt;
+            return now >= expiresAt;
         }
     }
 
