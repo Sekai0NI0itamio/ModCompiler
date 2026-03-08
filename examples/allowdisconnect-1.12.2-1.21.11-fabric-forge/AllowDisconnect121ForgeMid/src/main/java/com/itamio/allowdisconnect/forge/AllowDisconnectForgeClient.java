@@ -1,51 +1,24 @@
 package com.itamio.allowdisconnect.forge;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
-import net.minecraft.network.chat.Component;
-import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
+@Mod.EventBusSubscriber(
+    modid = AllowDisconnectForgeMod.MOD_ID,
+    bus = Mod.EventBusSubscriber.Bus.FORGE,
+    value = Dist.CLIENT
+)
 public final class AllowDisconnectForgeClient {
+    private static final AllowDisconnectScreenController CONTROLLER = new AllowDisconnectScreenController();
+
     private AllowDisconnectForgeClient() {
     }
 
-    public static void onScreenInit(ScreenEvent.Init.Post event) {
-        Screen screen = event.getScreen();
-        if (!isSupportedScreen(screen)) {
-            return;
-        }
-
-        Button button = Button.builder(
-            Component.translatable("menu.disconnect"),
-            ignored -> disconnect(Minecraft.getInstance())
-        ).bounds((screen.width - 150) / 2, screen.height - 40, 150, 20).build();
-        event.addListener(button);
-    }
-
-    private static boolean isSupportedScreen(Screen screen) {
-        String name = screen.getClass().getSimpleName();
-        switch (name) {
-            case "ConnectingScreen":
-            case "ConnectScreen":
-            case "DownloadTerrainScreen":
-            case "DownloadingTerrainScreen":
-            case "ReceivingLevelScreen":
-            case "LevelLoadingScreen":
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static void disconnect(Minecraft minecraft) {
-        Screen nextScreen = new JoinMultiplayerScreen(new TitleScreen());
-        try {
-            Minecraft.class.getMethod("disconnect", Screen.class).invoke(minecraft, nextScreen);
-        } catch (ReflectiveOperationException ignored) {
-            minecraft.setScreen(nextScreen);
-        }
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent.Post event) {
+        CONTROLLER.onClientTick(Minecraft.getInstance());
     }
 }
