@@ -18,10 +18,14 @@ public final class AllowDisconnectForgeClient {
             return;
         }
 
-        Button button = Button.builder(
+        Button button = new Button(
+            (screen.width - 150) / 2,
+            screen.height - 40,
+            150,
+            20,
             Component.translatable("menu.disconnect"),
             ignored -> disconnect(Minecraft.getInstance())
-        ).bounds((screen.width - 150) / 2, screen.height - 40, 150, 20).build();
+        );
         event.addListener(button);
     }
 
