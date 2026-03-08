@@ -1,0 +1,117 @@
+# ModCompiler
+
+This repository is a GitHub-only scaffold for compiling Minecraft mods from a committed zip file. The workflow is manual-only, processes one zip per run, resolves the requested exact Minecraft version to a version folder, patches a vendored template, and then builds each mod as a separate sequential GitHub Actions job.
+
+## Repo Layout
+
+- `incoming/`: commit the zip you want to build here, then run the workflow and point `zip_path` at it.
+- `version-manifest.json`: source of truth for version ranges, loader support, Java versions, build commands, and template locations.
+- `<range>/build_adapter.py`: range-specific adapter entrypoint that patches the vendored template for that generation.
+- `<range>/<loader>/template/`: the pinned template snapshot for that version range and loader.
+- `<range>/<loader>/PROVENANCE.md`: where the vendored template came from and whether it is exact or anchor-based.
+
+Active top-level version folders:
+
+- `1.8.9`
+- `1.12-1.12.2`
+- `1.16.5`
+- `1.17-1.17.1`
+- `1.18-1.18.2`
+- `1.19-1.19.4`
+- `1.20-1.20.6`
+- `1.21-1.21.11`
+
+## Zip Contract
+
+The committed zip must contain one folder per mod at the top level:
+
+```text
+my-batch.zip
+  CoolMod/
+    src/
+    mod.txt
+    version.txt
+  OtherMod/
+    src/
+    mod.txt
+    version.txt
+```
+
+`version.txt` uses strict `key=value`:
+
+```text
+minecraft_version=1.20.6
+loader=fabric
+```
+
+`mod.txt` uses strict `key=value`:
+
+```text
+mod_id=coolmod
+name=Cool Mod
+mod_version=1.0.0
+group=com.example.coolmod
+entrypoint_class=com.example.coolmod.CoolMod
+description=One-line or escaped multi-line description
+authors=YourName, AnotherAuthor
+license=MIT
+homepage=https://example.com
+sources=https://github.com/example/coolmod
+issues=https://github.com/example/coolmod/issues
+```
+
+## Build Behavior
+
+The workflow runs in three stages:
+
+1. `prepare`: validates the zip, extracts each mod folder, parses metadata, resolves the range folder, and creates the matrix.
+2. `build`: builds one mod per matrix job with `max-parallel: 1`, which keeps the overall run sequential while still producing one artifact per mod.
+3. `bundle`: downloads all per-mod artifacts, writes one combined summary artifact, and publishes a Markdown table to the GitHub Actions run summary.
+
+Each per-mod artifact contains:
+
+- `build.log`
+- `input-metadata.json`
+- `result.json`
+- `jars/` when a jar was produced
+
+The combined artifact contains:
+
+- `SUMMARY.md`
+- `run-summary.json`
+- `mods/<slug>/...` copies of each per-mod artifact
+
+## Current Template State
+
+The Forge side uses pinned official MDK snapshots for:
+
+- `1.8.9`
+- `1.12.2`
+- `1.16.5`
+- `1.20.6`
+- `1.21.11`
+
+The Fabric side uses:
+
+- Legacy Fabric example mod for `1.8.9`
+- Official `FabricMC/fabric-example-mod` `1.17` branch as an adapted fallback for `1.16.5`
+- Official `FabricMC/fabric-example-mod` `1.17` branch for `1.17-1.17.1`
+- Official `FabricMC/fabric-example-mod` `1.18` branch for `1.18-1.18.2`
+- Official `FabricMC/fabric-example-mod` `1.19` branch for `1.19-1.19.4`
+- Official `FabricMC/fabric-example-mod` `1.20` branch for `1.20-1.20.6`
+- Official `FabricMC/fabric-example-mod` `1.21` branch for `1.21-1.21.11`
+
+Some range folders are intentionally marked as `anchor_only` in `version-manifest.json`. That means the scaffold resolves the exact Minecraft version correctly, but the underlying dependency versions are still anchored to the vendored template snapshot. Before first production use, extend the manifest and adapters if you need exact Forge/Fabric dependency resolution across every patch version in those broad ranges.
+
+## First GitHub Test
+
+This repo now includes a ready-to-commit example package at `incoming/example-1.12.2-forge.zip`. Its unpacked source lives under `examples/example-1.12.2-forge/` if you want to inspect or edit it before pushing.
+
+The first remote test flow is:
+
+1. Create a GitHub repository from this folder and push the current contents.
+2. In GitHub, open the `Actions` tab and enable workflows if the repo is new.
+3. Run the `Build Mods` workflow manually.
+4. For `zip_path`, enter `incoming/example-1.12.2-forge.zip`.
+5. After the run finishes, inspect the per-mod artifact and the combined `all-mod-builds` artifact.
+6. If the build fails, download `build.log` from the artifact and use that as the next debugging input.
