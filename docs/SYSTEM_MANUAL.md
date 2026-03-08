@@ -33,7 +33,8 @@ Each top-level version folder represents either one exact Minecraft version or o
 - `1.18-1.18.2`
 - `1.19-1.19.4`
 - `1.20-1.20.6`
-- `1.21-1.21.11`
+- `1.21-1.21.8`
+- `1.21.9-1.21.11`
 
 Inside each version folder are supported loader templates:
 
@@ -279,6 +280,7 @@ Examples:
 
 - `1.12.2` + `forge`
 - `1.20.6` + `forge`
+- `1.21.8` + `fabric`
 - `1.21.11` + `fabric`
 
 Do not write the mod first and choose the API later.
@@ -494,10 +496,11 @@ Use this sequence:
 
 ## Included Example
 
-This repository now includes ready-to-build Tpa Teleport examples for two API generations:
+This repository now includes ready-to-build Tpa Teleport examples for the included Forge 1.12.2 and Fabric 1.21 families:
 
 ```text
 incoming/tpateleport-1.12.2-forge.zip
+incoming/tpateleport-1.21.8-fabric.zip
 incoming/tpateleport-1.21.11-fabric.zip
 ```
 
@@ -505,6 +508,7 @@ The unpacked source packages live under:
 
 ```text
 examples/tpateleport-1.12.2-forge/TpaTeleport1122/
+examples/tpateleport-1.21.8-fabric/TpaTeleportFabric1218/
 examples/tpateleport-1.21.11-fabric/TpaTeleportFabric12111/
 ```
 

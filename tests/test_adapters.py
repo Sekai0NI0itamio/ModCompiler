@@ -107,7 +107,7 @@ class AdapterTests(unittest.TestCase):
             )
             prepare_workspace(
                 manifest=manifest,
-                range_folder="1.21-1.21.11",
+                range_folder="1.21.9-1.21.11",
                 loader="forge",
                 source_dir=source / "src",
                 workspace=workspace,

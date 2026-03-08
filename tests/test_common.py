@@ -47,7 +47,9 @@ class CommonTests(unittest.TestCase):
     def test_resolve_range_uses_inclusive_bounds(self) -> None:
         manifest = load_json(MANIFEST_PATH)
         self.assertEqual(resolve_range(manifest, "1.12")["folder"], "1.12-1.12.2")
-        self.assertEqual(resolve_range(manifest, "1.21")["folder"], "1.21-1.21.11")
+        self.assertEqual(resolve_range(manifest, "1.21")["folder"], "1.21-1.21.8")
+        self.assertEqual(resolve_range(manifest, "1.21.8")["folder"], "1.21-1.21.8")
+        self.assertEqual(resolve_range(manifest, "1.21.11")["folder"], "1.21.9-1.21.11")
 
     def test_build_prepare_plan_validates_archive_and_generates_warning(self) -> None:
         manifest = load_json(MANIFEST_PATH)
