@@ -551,3 +551,5 @@ Use that as a reference for:
 - `mod.txt`
 - `version.txt`
 - how a version-specific source tree should look
+
+The Toggle Sprint batch is intentionally split into several top-level Forge folders instead of one giant Forge range. That lets the batch skip unsupported exact Forge patches such as `1.20.5` and `1.21.2`, and it also lets early `1.21` Forge builds use a different event-bus API family than `1.21.6+`.

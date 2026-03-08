@@ -138,12 +138,15 @@ The first remote test flow is:
 6. After the run finishes, inspect the per-mod artifact and the combined `all-mod-builds` artifact.
 7. If the build fails, download `build.log` from the artifact and use that as the next debugging input.
 
-This repo also includes a larger batch example at `incoming/togglesprint-1.20.1-1.21.11-fabric-forge.zip`. That archive contains four top-level mod folders and fans out across exact versions for:
+This repo also includes a larger batch example at `incoming/togglesprint-1.20.1-1.21.11-fabric-forge.zip`. That archive contains multiple top-level mod folders so unsupported Forge exact patches can be skipped while still covering the full supported span. It fans out across exact versions for:
 
 - Fabric `1.20.1-1.20.6`
-- Forge `1.20.1-1.20.6`
+- Forge `1.20.1-1.20.4`
+- Forge `1.20.6`
 - Fabric `1.21-1.21.11`
-- Forge `1.21-1.21.11`
+- Forge `1.21-1.21.1`
+- Forge `1.21.3-1.21.5`
+- Forge `1.21.6-1.21.11`
 
 ## Jar Decompile Workflow
 
