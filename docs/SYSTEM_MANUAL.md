@@ -62,6 +62,9 @@ This is the source of truth for:
 When you ask the system to build `1.12.2`, the builder does not guess.
 It resolves that version against `version-manifest.json`, finds the correct range folder, and then uses the loader information from that same file.
 
+If you ask it to build a same-minor range such as `1.21-1.21.8`, it expands that request into exact targets from `1.21` through `1.21.8`.
+Each exact target becomes its own build entry and artifact.
+
 ### `build_mods.py`
 
 This is the root Python entrypoint used by the workflows.
@@ -114,9 +117,10 @@ It then:
    - `mod.txt`
    - `version.txt`
 4. parses the metadata files
-5. resolves the exact Minecraft version to one repo version folder
-6. checks that the requested loader is actually supported there
-7. creates a build plan and matrix metadata
+5. expands same-minor version ranges into exact Minecraft versions when needed
+6. resolves each exact Minecraft version to one repo version folder
+7. checks that the requested loader is actually supported there
+8. creates a build plan and matrix metadata
 
 If this stage fails, the issue is usually one of:
 
@@ -129,9 +133,9 @@ If this stage fails, the issue is usually one of:
 
 ### Stage 2: Build
 
-Each mod from the zip is built as its own matrix job, but the workflow is configured to run sequentially.
+Each exact target from the zip is built as its own matrix job, but the workflow is configured to run sequentially.
 
-For each mod:
+For each exact target:
 
 1. the correct template is copied into an isolated workspace
 2. your `src/` is copied into that workspace
@@ -240,11 +244,21 @@ minecraft_version=1.12.2
 loader=forge
 ```
 
+Range example:
+
+```text
+minecraft_version=1.21-1.21.8
+loader=fabric
+```
+
 Important behavior:
 
-- `minecraft_version` is exact, not a range
+- `minecraft_version` can be one exact version or one inclusive same-minor range
+- valid range example: `1.21-1.21.8`
+- invalid range example: `1.19-1.20` because cross-minor ranges are not expanded automatically
 - `loader` must be `forge` or `fabric`
-- the exact version is resolved into the matching repo range folder automatically
+- each exact version is resolved into the matching repo range folder automatically
+- if one exact version from a range fails, the workflow preserves that failure and continues with the remaining exact versions
 
 ## What Your `src/` Folder Should Contain
 
@@ -272,14 +286,15 @@ The system treats `mod.txt` and `version.txt` as the canonical build metadata.
 
 ## How To Write A Mod For This System
 
-### Step 1: Choose The Exact Build Target
+### Step 1: Choose The Build Target
 
-Pick the exact version and loader you want first.
+Pick either one exact version or one same-minor range, plus the loader, first.
 
 Examples:
 
 - `1.12.2` + `forge`
 - `1.20.6` + `forge`
+- `1.21-1.21.8` + `fabric`
 - `1.21.8` + `fabric`
 - `1.21.11` + `fabric`
 
@@ -394,13 +409,14 @@ For a successful run, this is the normal chain:
 1. GitHub checks out the repository
 2. the workflow reads your zip path
 3. Python validates the zip
-4. the exact version is resolved to the repo range folder
-5. the loader-specific template is copied
-6. your source is merged into the workspace
-7. metadata files are generated or patched
-8. Gradle builds the mod
-9. the resulting jar is published as an artifact
-10. the run summary records the mod id, loader, target version, and status
+4. if the input requested a range, Python expands it into exact targets
+5. each exact version is resolved to the repo range folder
+6. the loader-specific template is copied
+7. your source is merged into the workspace
+8. metadata files are generated or patched
+9. Gradle builds the mod
+10. the resulting jar is published as an artifact
+11. the run summary records the mod id, loader, target version, and status
 
 ## What Is Expected To Happen During A Failed Build
 
@@ -501,6 +517,7 @@ This repository now includes ready-to-build Tpa Teleport examples for the includ
 ```text
 incoming/tpateleport-1.12.2-forge.zip
 incoming/tpateleport-1.21.8-fabric.zip
+incoming/tpateleport-1.21-1.21.8-fabric-range.zip
 incoming/tpateleport-1.21.11-fabric.zip
 ```
 
@@ -509,6 +526,7 @@ The unpacked source packages live under:
 ```text
 examples/tpateleport-1.12.2-forge/TpaTeleport1122/
 examples/tpateleport-1.21.8-fabric/TpaTeleportFabric1218/
+examples/tpateleport-1.21-1.21.8-fabric-range/TpaTeleportFabric121Range/
 examples/tpateleport-1.21.11-fabric/TpaTeleportFabric12111/
 ```
 

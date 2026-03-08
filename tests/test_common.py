@@ -95,6 +95,53 @@ class CommonTests(unittest.TestCase):
             plan = build_prepare_plan(zip_path, root / "prepared", manifest)
             self.assertEqual(plan["mods"][0]["range_folder"], "1.18-1.18.2")
 
+    def test_build_prepare_plan_expands_same_minor_range_into_exact_versions(self) -> None:
+        manifest = load_json(MANIFEST_PATH)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            zip_path = root / "mods.zip"
+            with zipfile.ZipFile(zip_path, "w") as archive:
+                archive.writestr("Demo/src/main/java/com/example/DemoMod.java", "class DemoMod {}")
+                archive.writestr("Demo/mod.txt", "\n".join([
+                    "mod_id=demo",
+                    "name=Demo",
+                    "mod_version=1.0.0",
+                    "group=com.example.demo",
+                    "entrypoint_class=com.example.demo.DemoMod",
+                    "description=Demo",
+                    "authors=Dev",
+                    "license=MIT",
+                ]))
+                archive.writestr("Demo/version.txt", "minecraft_version=1.21-1.21.2\nloader=fabric\n")
+            plan = build_prepare_plan(zip_path, root / "prepared", manifest)
+            self.assertEqual(
+                [mod["minecraft_version"] for mod in plan["mods"]],
+                ["1.21", "1.21.1", "1.21.2"],
+            )
+            self.assertTrue(all(mod["requested_version_spec"] == "1.21-1.21.2" for mod in plan["mods"]))
+
+    def test_build_prepare_plan_keeps_range_failures_as_entries(self) -> None:
+        manifest = load_json(MANIFEST_PATH)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            zip_path = root / "mods.zip"
+            with zipfile.ZipFile(zip_path, "w") as archive:
+                archive.writestr("Demo/src/main/java/com/example/DemoMod.java", "class DemoMod {}")
+                archive.writestr("Demo/mod.txt", "\n".join([
+                    "mod_id=demo",
+                    "name=Demo",
+                    "mod_version=1.0.0",
+                    "group=com.example.demo",
+                    "entrypoint_class=com.example.demo.DemoMod",
+                    "description=Demo",
+                    "authors=Dev",
+                    "license=MIT",
+                ]))
+                archive.writestr("Demo/version.txt", "minecraft_version=1.12-1.12.2\nloader=fabric\n")
+            plan = build_prepare_plan(zip_path, root / "prepared", manifest)
+            self.assertEqual(len(plan["mods"]), 3)
+            self.assertTrue(all(mod["precheck_error"] for mod in plan["mods"]))
+
     def test_build_prepare_plan_rejects_unsupported_loader(self) -> None:
         manifest = load_json(MANIFEST_PATH)
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -128,6 +128,32 @@ def parse_version_tuple(version: str) -> tuple[int, int, int]:
     return numbers[0], numbers[1], numbers[2]
 
 
+def format_exact_version(major: int, minor: int, patch: int) -> str:
+    if patch == 0:
+        return f"{major}.{minor}"
+    return f"{major}.{minor}.{patch}"
+
+
+def expand_minecraft_version_spec(version_spec: str) -> list[str]:
+    cleaned = version_spec.strip()
+    if "-" not in cleaned:
+        parse_version_tuple(cleaned)
+        return [cleaned]
+
+    lower_raw, upper_raw = [part.strip() for part in cleaned.split("-", 1)]
+    lower = parse_version_tuple(lower_raw)
+    upper = parse_version_tuple(upper_raw)
+    if lower[:2] != upper[:2]:
+        raise ModCompilerError(
+            "Minecraft version ranges must stay within one major.minor family; "
+            f"got '{version_spec}'"
+        )
+    if lower > upper:
+        raise ModCompilerError(f"Minecraft version range is reversed: '{version_spec}'")
+    major, minor = lower[0], lower[1]
+    return [format_exact_version(major, minor, patch) for patch in range(lower[2], upper[2] + 1)]
+
+
 def version_inclusive_between(version: str, lower: str, upper: str) -> bool:
     parsed = parse_version_tuple(version)
     return parse_version_tuple(lower) <= parsed <= parse_version_tuple(upper)
@@ -244,60 +270,87 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
     for mod_dir in discover_top_level_mod_dirs(extracted_root):
         validate_mod_dir(mod_dir)
         metadata, version_info = load_mod_metadata(mod_dir / "mod.txt", mod_dir / "version.txt")
+        version_spec = version_info["minecraft_version"].strip()
+        exact_versions = expand_minecraft_version_spec(version_spec)
         loader = version_info["loader"].strip().lower()
         if loader not in {"fabric", "forge"}:
             raise ModCompilerError(f"{mod_dir.name}: unsupported loader '{loader}'")
-        resolved_range = resolve_range(manifest, version_info["minecraft_version"])
-        if loader not in resolved_range["loaders"]:
-            raise ModCompilerError(
-                f"{mod_dir.name}: loader '{loader}' is not supported in folder {resolved_range['folder']}"
+        for exact_version in exact_versions:
+            slug = make_slug(metadata.mod_id, loader, exact_version)
+            if slug in seen_slugs:
+                raise ModCompilerError(f"Duplicate mod build slug '{slug}' in archive")
+            seen_slugs.add(slug)
+            destination = prepared_root / "mods" / slug
+            safe_rmtree(destination)
+            copy_tree(mod_dir, destination)
+
+            warnings: list[str] = []
+            precheck_error: str | None = None
+            range_folder = "-"
+            java_version: int | None = None
+            template_dir = ""
+            jar_glob = ""
+            build_command: list[str] = []
+            anchor_version = ""
+            exact_dependency_mode = ""
+
+            try:
+                resolved_range = resolve_range(manifest, exact_version)
+                range_folder = resolved_range["folder"]
+                if loader not in resolved_range["loaders"]:
+                    raise ModCompilerError(
+                        f"{mod_dir.name}: loader '{loader}' is not supported in folder {resolved_range['folder']}"
+                    )
+                loader_config = resolved_range["loaders"][loader]
+                java_version = resolve_java_version(loader_config, exact_version)
+                template_dir = loader_config["template_dir"]
+                jar_glob = loader_config["jar_glob"]
+                build_command = loader_config["build_command"]
+                anchor_version = loader_config["anchor_version"]
+                exact_dependency_mode = loader_config["exact_dependency_mode"]
+                if loader_config["exact_dependency_mode"] == "anchor_only" and exact_version != loader_config["anchor_version"]:
+                    warnings.append(
+                        "Template dependency versions are still anchored to "
+                        f"{loader_config['anchor_version']} for this loader; update version-manifest.json before production use."
+                    )
+            except ModCompilerError as error:
+                if len(exact_versions) == 1:
+                    raise
+                precheck_error = str(error)
+                warnings.append(precheck_error)
+
+            plan_mods.append(
+                {
+                    "slug": slug,
+                    "folder_name_in_zip": mod_dir.name,
+                    "requested_version_spec": version_spec,
+                    "minecraft_version": exact_version,
+                    "loader": loader,
+                    "range_folder": range_folder,
+                    "java_version": java_version,
+                    "metadata": {
+                        "mod_id": metadata.mod_id,
+                        "name": metadata.name,
+                        "mod_version": metadata.mod_version,
+                        "group": metadata.group,
+                        "entrypoint_class": metadata.entrypoint_class,
+                        "description": metadata.description,
+                        "authors": metadata.authors,
+                        "license": metadata.license,
+                        "homepage": metadata.homepage,
+                        "sources": metadata.sources,
+                        "issues": metadata.issues,
+                    },
+                    "mod_dir": f"mods/{slug}",
+                    "template_dir": template_dir,
+                    "jar_glob": jar_glob,
+                    "build_command": build_command,
+                    "anchor_version": anchor_version,
+                    "exact_dependency_mode": exact_dependency_mode,
+                    "precheck_error": precheck_error,
+                    "warnings": warnings,
+                }
             )
-        loader_config = resolved_range["loaders"][loader]
-        slug = make_slug(metadata.mod_id, loader, version_info["minecraft_version"])
-        if slug in seen_slugs:
-            raise ModCompilerError(f"Duplicate mod build slug '{slug}' in archive")
-        seen_slugs.add(slug)
-        destination = prepared_root / "mods" / slug
-        safe_rmtree(destination)
-        copy_tree(mod_dir, destination)
-        exact_version = version_info["minecraft_version"]
-        java_version = resolve_java_version(loader_config, exact_version)
-        warnings: list[str] = []
-        if loader_config["exact_dependency_mode"] == "anchor_only" and exact_version != loader_config["anchor_version"]:
-            warnings.append(
-                "Template dependency versions are still anchored to "
-                f"{loader_config['anchor_version']} for this loader; update version-manifest.json before production use."
-            )
-        plan_mods.append(
-            {
-                "slug": slug,
-                "folder_name_in_zip": mod_dir.name,
-                "minecraft_version": exact_version,
-                "loader": loader,
-                "range_folder": resolved_range["folder"],
-                "java_version": java_version,
-                "metadata": {
-                    "mod_id": metadata.mod_id,
-                    "name": metadata.name,
-                    "mod_version": metadata.mod_version,
-                    "group": metadata.group,
-                    "entrypoint_class": metadata.entrypoint_class,
-                    "description": metadata.description,
-                    "authors": metadata.authors,
-                    "license": metadata.license,
-                    "homepage": metadata.homepage,
-                    "sources": metadata.sources,
-                    "issues": metadata.issues,
-                },
-                "mod_dir": f"mods/{slug}",
-                "template_dir": loader_config["template_dir"],
-                "jar_glob": loader_config["jar_glob"],
-                "build_command": loader_config["build_command"],
-                "anchor_version": loader_config["anchor_version"],
-                "exact_dependency_mode": loader_config["exact_dependency_mode"],
-                "warnings": warnings,
-            }
-        )
     safe_rmtree(extracted_root)
     return {
         "schema_version": 1,

@@ -115,6 +115,7 @@ def command_build_one(args: argparse.Namespace) -> int:
     result: dict[str, Any] = {
         "slug": mod["slug"],
         "loader": mod["loader"],
+        "requested_version_spec": mod.get("requested_version_spec", mod["minecraft_version"]),
         "minecraft_version": mod["minecraft_version"],
         "range_folder": mod["range_folder"],
         "metadata": mod["metadata"],
@@ -129,6 +130,20 @@ def command_build_one(args: argparse.Namespace) -> int:
     write_json(metadata_path, mod)
 
     build_exit = 1
+    precheck_error = mod.get("precheck_error")
+    if precheck_error:
+        log_path.write_text(
+            "Pre-build validation failed.\n\n"
+            f"Requested version spec: {mod.get('requested_version_spec', mod['minecraft_version'])}\n"
+            f"Exact build target: {mod['minecraft_version']}\n"
+            f"Loader: {mod['loader']}\n"
+            f"Source folder: {mod['folder_name_in_zip']}\n\n"
+            f"{precheck_error}\n",
+            encoding="utf-8",
+        )
+        write_json(artifact_dir / "result.json", result)
+        return 1
+
     try:
         with tempfile.TemporaryDirectory(prefix=f"modcompiler-{mod['slug']}-") as temp_dir:
             workspace = Path(temp_dir) / "workspace"
