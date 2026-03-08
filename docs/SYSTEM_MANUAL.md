@@ -494,16 +494,18 @@ Use this sequence:
 
 ## Included Example
 
-This repository now includes a ready-to-build Forge 1.12.2 backport package for Tpa Teleport:
+This repository now includes ready-to-build Tpa Teleport examples for two API generations:
 
 ```text
 incoming/tpateleport-1.12.2-forge.zip
+incoming/tpateleport-1.21.11-fabric.zip
 ```
 
-The unpacked source package lives under:
+The unpacked source packages live under:
 
 ```text
 examples/tpateleport-1.12.2-forge/TpaTeleport1122/
+examples/tpateleport-1.21.11-fabric/TpaTeleportFabric12111/
 ```
 
 Use that as a reference for:
