@@ -12,6 +12,11 @@ on:
         required: true
         default: "all"
         type: string
+      modrinth_project_url:
+        description: Optional Modrinth project URL or slug. If set, successful jars are uploaded using the MODRINTH_TOKEN repository secret.
+        required: false
+        default: ""
+        type: string
 
 jobs:
   prepare:
@@ -150,3 +155,62 @@ jobs:
       - if: always()
         shell: bash
         run: exit "${{ steps.bundle.outputs.exit_code }}"
+
+  publish-modrinth:
+    needs:
+      - bundle
+    if: ${{ always() && inputs.modrinth_project_url != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: all-mod-builds
+          path: .workflow_downloads/combined
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - id: publish
+        shell: bash
+        continue-on-error: true
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set +e
+          python build_mods.py publish-modrinth \
+            --artifacts-root .workflow_downloads/combined \
+            --project "${{ inputs.modrinth_project_url }}" \
+            --artifact-dir .workflow_artifacts/modrinth-publish
+          exit_code=$?
+          set -e
+          printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: modrinth-publish
+          path: .workflow_artifacts/modrinth-publish
+
+      - if: always()
+        shell: bash
+        run: |
+          if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then
+            cat .workflow_artifacts/modrinth-publish/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - if: always()
+        shell: bash
+        run: exit "${{ steps.publish.outputs.exit_code }}"

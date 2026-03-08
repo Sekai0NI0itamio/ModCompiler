@@ -27,6 +27,7 @@ from modcompiler.common import (
     write_json,
 )
 from modcompiler.decompile import command_decompile_jar
+from modcompiler.modrinth import command_publish_modrinth
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -55,6 +56,11 @@ def main(argv: list[str] | None = None) -> int:
     decompile_parser.add_argument("--decompiler-jar", required=True)
     decompile_parser.add_argument("--artifact-dir", required=True)
 
+    publish_parser = subparsers.add_parser("publish-modrinth")
+    publish_parser.add_argument("--artifacts-root", required=True)
+    publish_parser.add_argument("--project", required=True)
+    publish_parser.add_argument("--artifact-dir", required=True)
+
     args = parser.parse_args(argv)
     try:
         if args.command == "prepare":
@@ -65,6 +71,8 @@ def main(argv: list[str] | None = None) -> int:
             return command_bundle(args)
         if args.command == "decompile-jar":
             return command_decompile_jar(args)
+        if args.command == "publish-modrinth":
+            return command_publish_modrinth(args)
     except ModCompilerError as error:
         print(str(error), file=sys.stderr)
         return 1
