@@ -77,11 +77,12 @@ runtime_side=client
 
 ## Build Behavior
 
-The workflow runs in three stages:
+The workflow runs in three main stages, plus one optional publish stage:
 
 1. `prepare`: validates the zip, extracts each mod folder, parses metadata, expands same-minor version ranges into exact versions, resolves the version folder for each exact target, and creates the matrix.
 2. `build`: builds one exact target per matrix job, with workflow input `max_parallel` controlling how many run at once. Use `all` for no scaffold-side cap.
 3. `bundle`: downloads all per-mod artifacts, writes one combined summary artifact, and publishes a Markdown table to the GitHub Actions run summary.
+4. `publish-modrinth` (optional): if `modrinth_project_url` is set, uploads successful jars to that Modrinth project using the `MODRINTH_TOKEN` repository secret.
 
 If one exact target from a range fails, its artifact still contains the error and the workflow keeps going with the remaining exact versions from that same range.
 
@@ -97,6 +98,11 @@ The combined artifact contains:
 - `SUMMARY.md`
 - `run-summary.json`
 - `mods/<slug>/...` copies of each per-mod artifact
+
+If Modrinth publishing is enabled, the workflow also uploads a `modrinth-publish` artifact with:
+
+- `SUMMARY.md`
+- `result.json`
 
 ## Current Template State
 
@@ -135,8 +141,10 @@ The first remote test flow is:
 3. Run the `Build Mods` workflow manually.
 4. For `zip_path`, enter `incoming/example-1.12.2-forge.zip`.
 5. For `max_parallel`, enter either a positive number or `all`. The workflow now defaults to `all`, which means it will fan out as far as the repo runner quota allows.
-6. After the run finishes, inspect the per-mod artifact and the combined `all-mod-builds` artifact.
-7. If the build fails, download `build.log` from the artifact and use that as the next debugging input.
+6. Optionally set `modrinth_project_url` to a Modrinth project URL or slug if you want successful jars uploaded automatically.
+7. If you want Modrinth publishing, create a repository secret named `MODRINTH_TOKEN` first. The workflow does not take the token as a normal input because GitHub workflow inputs are not true secrets.
+8. After the run finishes, inspect the per-mod artifact and the combined `all-mod-builds` artifact.
+9. If the build fails, download `build.log` from the artifact and use that as the next debugging input.
 
 This repo also includes a larger batch example at `incoming/togglesprint-1.20.1-1.21.11-fabric-forge.zip`. That archive contains multiple top-level mod folders so unsupported Forge exact patches can be skipped while still covering the full supported span. It fans out across exact versions for:
 

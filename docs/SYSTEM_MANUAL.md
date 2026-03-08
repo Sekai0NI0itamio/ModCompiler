@@ -104,7 +104,7 @@ The adapter knows how to patch the correct files for that generation.
 
 ## How The Build Workflow Works
 
-The `Build Mods` workflow is a three-stage pipeline.
+The `Build Mods` workflow is a three-stage pipeline with one optional publish stage.
 
 ### Stage 1: Prepare
 
@@ -165,6 +165,28 @@ After all builds finish, the workflow:
 4. publishes a table to the GitHub Actions job summary
 
 That combined artifact is the easiest place to inspect the whole run.
+
+### Optional Stage 4: Publish To Modrinth
+
+If you enter `modrinth_project_url` when starting the workflow, the repository will attempt to upload every successful built jar to that Modrinth project.
+
+Important security detail:
+
+- GitHub manual workflow inputs are not true secrets
+- because of that, the workflow does not accept the Modrinth API key as a plain input
+- instead, you must store the token in a repository secret named `MODRINTH_TOKEN`
+
+When Modrinth publishing runs, it:
+
+1. reads the combined build artifact
+2. skips failed builds automatically
+3. selects the primary distributable jar from each successful build
+4. resolves the Modrinth project from the URL or slug you entered
+5. checks whether that exact jar/version target already exists on Modrinth
+6. uploads the missing versions
+7. writes a `modrinth-publish` artifact with `SUMMARY.md` and `result.json`
+
+If authentication fails, the workflow reports that the Modrinth token is invalid or missing, but it does not print the token.
 
 ## What The Build Input Must Look Like
 
@@ -517,9 +539,11 @@ Use this sequence:
 4. place the package in a top-level folder
 5. zip it
 6. commit the zip to `incoming/`
-7. run `Build Mods`
-8. inspect the artifact or the log
-9. iterate until clean
+7. if you want auto-publishing, create the `MODRINTH_TOKEN` repository secret
+8. run `Build Mods`
+9. optionally fill in `modrinth_project_url`
+10. inspect the artifact or the log
+11. iterate until clean
 
 ## Included Example
 
