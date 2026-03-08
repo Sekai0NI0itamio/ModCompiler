@@ -135,7 +135,8 @@ If this stage fails, the issue is usually one of:
 
 ### Stage 2: Build
 
-Each exact target from the zip is built as its own matrix job, but the workflow is configured to run sequentially.
+Each exact target from the zip is built as its own matrix job.
+The `Build Mods` workflow now accepts `max_parallel`, which controls how many exact targets GitHub builds at the same time.
 
 For each exact target:
 
@@ -390,6 +391,7 @@ In GitHub:
 3. select `Build Mods`
 4. click `Run workflow`
 5. enter the zip path such as `incoming/tpateleport-1.12.2-forge.zip`
+6. enter `max_parallel`, for example `4`
 
 ### Step 4: Read The Result
 
@@ -519,6 +521,7 @@ This repository now includes ready-to-build Tpa Teleport examples for the includ
 
 ```text
 incoming/tpateleport-1.12.2-forge.zip
+incoming/tpateleport-1.21-1.21.1-fabric-range.zip
 incoming/tpateleport-1.21.8-fabric.zip
 incoming/tpateleport-1.21-1.21.8-fabric-range.zip
 incoming/tpateleport-1.21.11-fabric.zip
@@ -528,6 +531,7 @@ The unpacked source packages live under:
 
 ```text
 examples/tpateleport-1.12.2-forge/TpaTeleport1122/
+examples/tpateleport-1.21-1.21.1-fabric-range/TpaTeleportFabric12101Range/
 examples/tpateleport-1.21.8-fabric/TpaTeleportFabric1218/
 examples/tpateleport-1.21-1.21.8-fabric-range/TpaTeleportFabric121Range/
 examples/tpateleport-1.21.11-fabric/TpaTeleportFabric12111/
