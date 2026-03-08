@@ -45,6 +45,7 @@ def run_range_adapter(range_folder: str, argv: list[str] | None = None) -> int:
         mod_version=metadata_dict["mod_version"],
         group=metadata_dict["group"],
         entrypoint_class=metadata_dict["entrypoint_class"],
+        runtime_side=metadata_dict.get("runtime_side", "both"),
         description=metadata_dict["description"],
         authors=metadata_dict["authors"],
         license=metadata_dict["license"],
@@ -153,6 +154,12 @@ def build_fabric_metadata(
     java_version: int,
     workspace: Path,
 ) -> dict[str, Any]:
+    environment = "*" if metadata.runtime_side == "both" else metadata.runtime_side
+    entrypoint_key = {
+        "both": "main",
+        "client": "client",
+        "server": "server",
+    }[metadata.runtime_side]
     payload: dict[str, Any] = {
         "schemaVersion": 1,
         "id": metadata.mod_id,
@@ -161,8 +168,8 @@ def build_fabric_metadata(
         "description": metadata.description,
         "authors": metadata.authors,
         "license": metadata.license,
-        "environment": "*",
-        "entrypoints": {"main": [metadata.entrypoint_class]},
+        "environment": environment,
+        "entrypoints": {entrypoint_key: [metadata.entrypoint_class]},
         "depends": {
             "fabricloader": "*",
             "minecraft": minecraft_version,
@@ -370,10 +377,16 @@ def toml_multiline(value: str) -> str:
 
 
 def build_mods_toml(metadata: ModMetadata, minecraft_version: str) -> str:
+    runtime_lines = ""
+    if metadata.runtime_side == "client":
+        runtime_lines = 'clientSideOnly=true\n' 'displayTest="IGNORE_ALL_VERSION"\n'
+    elif metadata.runtime_side == "server":
+        runtime_lines = 'displayTest="IGNORE_SERVER_VERSION"\n'
     return (
         'modLoader="javafml"\n'
         'loaderVersion="*"\n'
         f'license={toml_quote(metadata.license)}\n'
+        f"{runtime_lines}"
         "\n"
         "[[mods]]\n"
         f'modId={toml_quote(metadata.mod_id)}\n'

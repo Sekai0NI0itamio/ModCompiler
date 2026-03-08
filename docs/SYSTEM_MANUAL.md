@@ -137,6 +137,7 @@ If this stage fails, the issue is usually one of:
 
 Each exact target from the zip is built as its own matrix job.
 The `Build Mods` workflow now accepts `max_parallel`, which controls how many exact targets GitHub builds at the same time.
+The workflow currently allows up to `10` concurrent exact-target builds.
 
 For each exact target:
 
@@ -206,6 +207,7 @@ Optional keys:
 - `homepage`
 - `sources`
 - `issues`
+- `runtime_side`
 
 Example:
 
@@ -221,12 +223,16 @@ license=MIT
 homepage=https://modrinth.com/
 sources=https://github.com/example/repo
 issues=https://github.com/example/repo/issues
+runtime_side=client
 ```
 
 Important behavior:
 
 - `authors` is comma-separated
 - `entrypoint_class` must be fully qualified
+- `runtime_side` defaults to `both`
+- valid `runtime_side` values are `both`, `client`, and `server`
+- use `runtime_side=client` for client-only mods so Fabric gets a client entrypoint and Forge is marked client-side only
 - unknown keys fail validation
 - duplicate keys fail validation
 - comments are allowed only as full lines starting with `#`
@@ -391,7 +397,7 @@ In GitHub:
 3. select `Build Mods`
 4. click `Run workflow`
 5. enter the zip path such as `incoming/tpateleport-1.12.2-forge.zip`
-6. enter `max_parallel`, for example `4`
+6. enter `max_parallel`, up to `10`
 
 ### Step 4: Read The Result
 
@@ -517,7 +523,7 @@ Use this sequence:
 
 ## Included Example
 
-This repository now includes ready-to-build Tpa Teleport examples for the included Forge 1.12.2 and Fabric 1.21 families:
+This repository now includes ready-to-build Tpa Teleport and Toggle Sprint examples:
 
 ```text
 incoming/tpateleport-1.12.2-forge.zip
@@ -525,6 +531,7 @@ incoming/tpateleport-1.21-1.21.1-fabric-range.zip
 incoming/tpateleport-1.21.8-fabric.zip
 incoming/tpateleport-1.21-1.21.8-fabric-range.zip
 incoming/tpateleport-1.21.11-fabric.zip
+incoming/togglesprint-1.20.1-1.21.11-fabric-forge.zip
 ```
 
 The unpacked source packages live under:
@@ -535,6 +542,7 @@ examples/tpateleport-1.21-1.21.1-fabric-range/TpaTeleportFabric12101Range/
 examples/tpateleport-1.21.8-fabric/TpaTeleportFabric1218/
 examples/tpateleport-1.21-1.21.8-fabric-range/TpaTeleportFabric121Range/
 examples/tpateleport-1.21.11-fabric/TpaTeleportFabric12111/
+examples/togglesprint-1.20.1-1.21.11-fabric-forge/
 ```
 
 Use that as a reference for:
