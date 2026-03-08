@@ -1,0 +1,4 @@
+Forge 1.12.2 is a legacy FML/GuiScreen port.
+Use GuiScreenEvent.InitGuiEvent.Post to add the button and GuiScreenEvent.ActionPerformedEvent.Pre to handle clicks.
+The loading screens use GuiScreen classes such as GuiDownloadTerrain and GuiConnecting.
+Disconnecting is done manually with Minecraft#loadWorld(null) and a GuiMultiplayer/GuiMainMenu fallback because this generation predates the newer unified disconnect helpers.
