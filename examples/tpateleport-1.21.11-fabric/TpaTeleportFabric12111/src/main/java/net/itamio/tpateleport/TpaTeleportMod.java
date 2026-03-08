@@ -408,8 +408,10 @@ public class TpaTeleportMod implements ModInitializer {
             destination.getX(),
             destination.getY(),
             destination.getZ(),
+            java.util.Set.of(),
             destination.getYRot(),
-            destination.getXRot()
+            destination.getXRot(),
+            false
         );
         return true;
     }
