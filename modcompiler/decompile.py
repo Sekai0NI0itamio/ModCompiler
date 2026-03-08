@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 import tempfile
+import traceback
 import tomllib
 import zipfile
 from pathlib import Path
@@ -28,96 +29,178 @@ FORGE_MCMOD_BASENAME = "mcmod.info"
 
 
 def command_decompile_jar(args: Any) -> int:
-    jar_path = Path(args.jar_path)
-    if not jar_path.is_absolute():
-        jar_path = Path.cwd() / jar_path
-    if not jar_path.exists():
-        raise ModCompilerError(f"Jar path does not exist: {jar_path}")
-    if jar_path.suffix.lower() != ".jar":
-        raise ModCompilerError(f"Expected a .jar file but got: {jar_path.name}")
-
-    decompiler_jar = Path(args.decompiler_jar)
-    if not decompiler_jar.is_absolute():
-        decompiler_jar = Path.cwd() / decompiler_jar
-    if not decompiler_jar.exists():
-        raise ModCompilerError(f"Decompiler jar does not exist: {decompiler_jar}")
-
-    manifest = load_json(Path(args.manifest))
     artifact_dir = Path(args.artifact_dir)
     safe_rmtree(artifact_dir)
     artifact_dir.mkdir(parents=True, exist_ok=True)
     log_path = artifact_dir / "decompile.log"
+    metadata = default_decompile_metadata(str(args.jar_path))
+    exit_code = 1
+    try:
+        jar_path = resolve_input_jar_path(args.jar_path)
+        metadata["jar_name"] = jar_path.name
+        metadata["resolved_jar_path"] = relativize_to_cwd(jar_path)
+        if jar_path.suffix.lower() != ".jar":
+            raise ModCompilerError(f"Expected a .jar file but got: {jar_path.name}")
 
-    metadata = inspect_mod_jar(jar_path, manifest)
-    slug = make_slug(metadata["primary_mod_id"], metadata["loader"], "decompiled")
-    metadata["slug"] = slug
+        decompiler_jar = Path(args.decompiler_jar)
+        if not decompiler_jar.is_absolute():
+            decompiler_jar = Path.cwd() / decompiler_jar
+        if not decompiler_jar.exists():
+            raise ModCompilerError(f"Decompiler jar does not exist: {decompiler_jar}")
 
-    status = "failed"
-    with tempfile.TemporaryDirectory(prefix=f"modcompiler-decompile-{slug}-") as temp_dir:
-        temp_root = Path(temp_dir)
-        expanded_jar = temp_root / "expanded-jar"
-        java_output = temp_root / "java-output"
-        package_root = temp_root / "package"
-        package_src = package_root / "src" / "main" / "java"
-        package_root.mkdir(parents=True, exist_ok=True)
-        expanded_jar.mkdir(parents=True, exist_ok=True)
-        java_output.mkdir(parents=True, exist_ok=True)
+        manifest = load_json(Path(args.manifest))
+        metadata = inspect_mod_jar(jar_path, manifest)
+        metadata["requested_jar_path"] = str(args.jar_path)
+        metadata["resolved_jar_path"] = relativize_to_cwd(jar_path)
+        slug = make_slug(metadata["primary_mod_id"], metadata["loader"], "decompiled")
+        metadata["slug"] = slug
 
-        with zipfile.ZipFile(jar_path) as archive:
-            archive.extractall(expanded_jar)
+        info_path = artifact_dir / "mod_info.txt"
+        info_path.write_text(render_mod_info(metadata), encoding="utf-8")
 
-        command = [
-            "java",
-            "-jar",
-            str(decompiler_jar),
-            str(expanded_jar),
-            str(java_output),
-        ]
-        with log_path.open("w", encoding="utf-8") as log_file:
-            log_file.write("$ " + " ".join(command) + "\n\n")
-            run = subprocess.run(
-                command,
-                cwd=Path.cwd(),
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
-        if run.returncode != 0:
-            metadata["warnings"].append("Decompiler exited with a non-zero status.")
-        else:
-            for source_file in sorted(java_output.rglob("*")):
-                if not source_file.is_file():
-                    continue
-                relative = source_file.relative_to(java_output)
-                destination = package_src / relative
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                copy_file(source_file, destination)
-            if not list(package_src.rglob("*.java")) and not list(package_src.rglob("*.kt")):
-                metadata["warnings"].append("Decompiler finished without producing Java or Kotlin source files.")
+        with tempfile.TemporaryDirectory(prefix=f"modcompiler-decompile-{slug}-") as temp_dir:
+            temp_root = Path(temp_dir)
+            expanded_jar = temp_root / "expanded-jar"
+            java_output = temp_root / "java-output"
+            package_root = temp_root / "package"
+            package_src = package_root / "src" / "main" / "java"
+            package_root.mkdir(parents=True, exist_ok=True)
+            expanded_jar.mkdir(parents=True, exist_ok=True)
+            java_output.mkdir(parents=True, exist_ok=True)
+
+            with zipfile.ZipFile(jar_path) as archive:
+                archive.extractall(expanded_jar)
+
+            command = [
+                "java",
+                "-jar",
+                str(decompiler_jar),
+                str(expanded_jar),
+                str(java_output),
+            ]
+            with log_path.open("w", encoding="utf-8") as log_file:
+                log_file.write("$ " + " ".join(command) + "\n\n")
+                run = subprocess.run(
+                    command,
+                    cwd=Path.cwd(),
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
+            if run.returncode != 0:
+                metadata["warnings"].append("Decompiler exited with a non-zero status.")
             else:
-                inferred_entrypoint = detect_forge_entrypoint(package_root / "src", metadata["primary_mod_id"])
-                if inferred_entrypoint and not metadata["metadata"]["entrypoint_class"]:
-                    metadata["metadata"]["entrypoint_class"] = inferred_entrypoint
-                    metadata["metadata"]["group"] = entrypoint_group(inferred_entrypoint)
-                info_path = artifact_dir / "mod_info.txt"
-                info_path.write_text(render_mod_info(metadata), encoding="utf-8")
-                zip_path = artifact_dir / f"{slug}.zip"
-                create_decompile_zip(package_root, zip_path)
-                status = "success"
-                metadata["zip_name"] = zip_path.name
+                for source_file in sorted(java_output.rglob("*")):
+                    if not source_file.is_file():
+                        continue
+                    relative = source_file.relative_to(java_output)
+                    destination = package_src / relative
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    copy_file(source_file, destination)
+                if not list(package_src.rglob("*.java")) and not list(package_src.rglob("*.kt")):
+                    metadata["warnings"].append("Decompiler finished without producing Java or Kotlin source files.")
+                else:
+                    inferred_entrypoint = detect_forge_entrypoint(package_root / "src", metadata["primary_mod_id"])
+                    if inferred_entrypoint and not metadata["metadata"]["entrypoint_class"]:
+                        metadata["metadata"]["entrypoint_class"] = inferred_entrypoint
+                        metadata["metadata"]["group"] = entrypoint_group(inferred_entrypoint)
+                        info_path.write_text(render_mod_info(metadata), encoding="utf-8")
+                    zip_path = artifact_dir / f"{slug}.zip"
+                    create_decompile_zip(package_root, zip_path)
+                    metadata["status"] = "success"
+                    metadata["zip_name"] = zip_path.name
+                    exit_code = 0
+    except ModCompilerError as error:
+        metadata["warnings"].append(str(error))
+        append_failure_log(log_path, str(error))
+    except Exception as error:  # pragma: no cover - defensive fallback
+        metadata["warnings"].append(str(error))
+        append_failure_log(
+            log_path,
+            "Unhandled decompile exception:\n" + "".join(traceback.format_exception(error)),
+        )
 
-    metadata["status"] = status
+    if metadata["status"] != "success":
+        metadata["status"] = "failed"
     metadata["log_relpath"] = "decompile.log"
+    if (artifact_dir / "mod_info.txt").exists():
+        (artifact_dir / "mod_info.txt").write_text(render_mod_info(metadata), encoding="utf-8")
     summary_markdown = render_decompile_summary_markdown(metadata)
     (artifact_dir / "SUMMARY.md").write_text(summary_markdown, encoding="utf-8")
     write_json(artifact_dir / "result.json", metadata)
-    return 0 if status == "success" else 1
+    return exit_code
+
+
+def default_decompile_metadata(requested_jar_path: str) -> dict[str, Any]:
+    requested = Path(requested_jar_path)
+    primary_mod_id = requested.stem.lower() or "unknown"
+    return {
+        "jar_name": requested.name or requested_jar_path,
+        "requested_jar_path": requested_jar_path,
+        "resolved_jar_path": "",
+        "loader": "unknown",
+        "loader_detail": "",
+        "metadata_source": "",
+        "supported_minecraft": "",
+        "loader_version": "",
+        "resolved_range_folders": [],
+        "warnings": [],
+        "detected_mod_ids": [],
+        "primary_mod_id": primary_mod_id,
+        "slug": make_slug(primary_mod_id, "unknown", "decompiled"),
+        "status": "failed",
+        "zip_name": "",
+        "metadata": {
+            "mod_id": primary_mod_id,
+            "name": requested.stem or requested_jar_path,
+            "mod_version": "",
+            "description": "",
+            "authors": [],
+            "license": "",
+            "homepage": "",
+            "sources": "",
+            "issues": "",
+            "entrypoint_class": "",
+            "group": "",
+        },
+    }
+
+
+def resolve_input_jar_path(raw_path: str) -> Path:
+    path = Path(raw_path)
+    candidates: list[Path] = []
+    if path.is_absolute():
+        candidates.append(path)
+    else:
+        repo_root = Path.cwd()
+        candidates.append(repo_root / path)
+        if len(path.parts) == 1:
+            candidates.append(repo_root / "To Be Decompiled" / path)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    searched = ", ".join(str(candidate) for candidate in candidates) or raw_path
+    raise ModCompilerError(f"Jar path does not exist. Checked: {searched}")
+
+
+def relativize_to_cwd(path: Path) -> str:
+    try:
+        return str(path.relative_to(Path.cwd()))
+    except ValueError:
+        return str(path)
+
+
+def append_failure_log(log_path: Path, message: str) -> None:
+    with log_path.open("a", encoding="utf-8") as log_file:
+        log_file.write(message.rstrip() + "\n")
 
 
 def inspect_mod_jar(jar_path: Path, manifest: dict[str, Any]) -> dict[str, Any]:
     primary_mod_id = jar_path.stem.lower()
     metadata: dict[str, Any] = {
         "jar_name": jar_path.name,
+        "requested_jar_path": str(jar_path),
+        "resolved_jar_path": str(jar_path),
         "loader": "unknown",
         "loader_detail": "",
         "metadata_source": "",
@@ -479,6 +562,8 @@ def render_mod_info(metadata: dict[str, Any]) -> str:
     details = metadata["metadata"]
     lines = [
         f"jar_name={metadata['jar_name']}",
+        f"requested_jar_path={metadata.get('requested_jar_path', '')}",
+        f"resolved_jar_path={metadata.get('resolved_jar_path', '')}",
         f"loader={metadata['loader']}",
         f"loader_detail={metadata['loader_detail']}",
         f"metadata_source={metadata['metadata_source']}",
@@ -514,14 +599,16 @@ def render_decompile_summary_markdown(metadata: dict[str, Any]) -> str:
     details = metadata["metadata"]
     folders = ", ".join(metadata["resolved_range_folders"]) or "-"
     warnings = " | ".join(metadata["warnings"]) or "-"
-    zip_name = metadata.get("zip_name", "-")
+    zip_name = metadata.get("zip_name") or "-"
     return "\n".join(
         [
             "# Jar Decompile Summary",
             "",
-            "| Jar | Loader | Mod ID | Name | Version | Supported Minecraft | Repo Folders | Zip |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- |",
-            f"| {metadata['jar_name']} | {metadata['loader']} | {details['mod_id']} | {details['name']} | "
+            "| Status | Requested Path | Resolved Path | Jar | Loader | Mod ID | Name | Version | Supported Minecraft | Repo Folders | Zip |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+            f"| {metadata.get('status', 'failed')} | {metadata.get('requested_jar_path', '-') or '-'} | "
+            f"{metadata.get('resolved_jar_path', '-') or '-'} | "
+            f"{metadata['jar_name']} | {metadata['loader']} | {details['mod_id']} | {details['name']} | "
             f"{details['mod_version'] or '-'} | {metadata['supported_minecraft'] or '-'} | {folders} | {zip_name} |",
             "",
             f"Warnings: {warnings}",

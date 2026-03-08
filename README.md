@@ -125,7 +125,7 @@ Input contract:
 
 - Commit one jar under `To Be Decompiled/`
 - Run the `Jar Decompile` workflow
-- Pass the repo-relative path, for example `To Be Decompiled/some-mod.jar`
+- Pass either the bare jar filename, for example `some-mod.jar`, or the repo-relative path, for example `To Be Decompiled/some-mod.jar`
 
 What it does:
 
@@ -142,3 +142,5 @@ The `jar-decompile-output` artifact contains:
 - `<slug>.zip` on success
 - `SUMMARY.md`
 - `result.json`
+
+If the workflow input is wrong or decompilation fails, the run still writes `decompile.log`, `SUMMARY.md`, and `result.json` so the failure is inspectable from the artifact.
