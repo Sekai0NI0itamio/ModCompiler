@@ -1,13 +1,13 @@
 package net.itamio.togglesprint.fabric;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 public final class ToggleSprintController {
     private boolean sprintLocked;
     private boolean sprintKeyWasDown;
 
-    public void onClientTick(MinecraftClient client) {
+    public void onClientTick(Minecraft client) {
         if (client == null || client.options == null) {
             sprintLocked = false;
             sprintKeyWasDown = false;
@@ -23,12 +23,15 @@ public final class ToggleSprintController {
             return;
         }
 
-        boolean sprintKeyDown = client.options.sprintKey.isPressed();
+        boolean sprintKeyDown = client.options.keySprint.isDown();
         if (sprintKeyDown && !sprintKeyWasDown) {
             sprintLocked = !sprintLocked;
-            client.options.sprintKey.setPressed(false);
+            client.options.keySprint.setDown(false);
             client.player.setSprinting(false);
-            client.player.sendMessage(Text.literal("Toggle Sprint: " + (sprintLocked ? "ON" : "OFF")), true);
+            client.player.displayClientMessage(
+                Component.literal("Toggle Sprint: " + (sprintLocked ? "ON" : "OFF")),
+                true
+            );
         }
         sprintKeyWasDown = sprintKeyDown;
 
@@ -38,19 +41,19 @@ public final class ToggleSprintController {
         client.player.setSprinting(shouldKeepSprinting(client));
     }
 
-    private boolean shouldKeepSprinting(MinecraftClient client) {
-        if (client.currentScreen != null) {
+    private boolean shouldKeepSprinting(Minecraft client) {
+        if (client.screen != null) {
             return false;
         }
         if (client.player == null) {
             return false;
         }
-        if (client.player.isSpectator() || client.player.hasVehicle()) {
+        if (client.player.isSpectator() || client.player.isPassenger()) {
             return false;
         }
-        if (client.player.isSneaking() || client.player.isUsingItem()) {
+        if (client.player.isShiftKeyDown() || client.player.isUsingItem()) {
             return false;
         }
-        return client.options.forwardKey.isPressed() && !client.options.backKey.isPressed();
+        return client.options.keyUp.isDown() && !client.options.keyDown.isDown();
     }
 }
