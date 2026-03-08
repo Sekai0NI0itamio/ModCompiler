@@ -92,7 +92,7 @@
             {
               "max": "1.16.5",
               "min": "1.16.5",
-              "version": 8
+              "version": 16
             }
           ],
           "template_dir": "1.16.5/fabric/template"
@@ -162,6 +162,9 @@
               "version": 16
             }
           ],
+          "supported_versions": [
+            "1.17.1"
+          ],
           "template_dir": "1.17-1.17.1/forge/template"
         }
       },
@@ -200,7 +203,24 @@
             "--stacktrace",
             "--no-daemon"
           ],
-          "exact_dependency_mode": "anchor_only",
+          "dependency_overrides": {
+            "1.18": {
+              "forge_version": "38.0.17",
+              "mapping_version": "1.18",
+              "minecraft_version": "1.18"
+            },
+            "1.18.1": {
+              "forge_version": "39.1.2",
+              "mapping_version": "1.18.1",
+              "minecraft_version": "1.18.1"
+            },
+            "1.18.2": {
+              "forge_version": "40.3.12",
+              "mapping_version": "1.18.2",
+              "minecraft_version": "1.18.2"
+            }
+          },
+          "exact_dependency_mode": "exact",
           "jar_glob": "build/libs/*.jar",
           "java_rules": [
             {
@@ -208,6 +228,11 @@
               "min": "1.18",
               "version": 17
             }
+          ],
+          "supported_versions": [
+            "1.18",
+            "1.18.1",
+            "1.18.2"
           ],
           "template_dir": "1.18-1.18.2/forge/template"
         }
@@ -247,7 +272,34 @@
             "--stacktrace",
             "--no-daemon"
           ],
-          "exact_dependency_mode": "anchor_only",
+          "dependency_overrides": {
+            "1.19": {
+              "forge_version": "41.1.0",
+              "mapping_version": "1.19",
+              "minecraft_version": "1.19"
+            },
+            "1.19.1": {
+              "forge_version": "42.0.9",
+              "mapping_version": "1.19.1",
+              "minecraft_version": "1.19.1"
+            },
+            "1.19.2": {
+              "forge_version": "43.4.22",
+              "mapping_version": "1.19.2",
+              "minecraft_version": "1.19.2"
+            },
+            "1.19.3": {
+              "forge_version": "44.1.21",
+              "mapping_version": "1.19.3",
+              "minecraft_version": "1.19.3"
+            },
+            "1.19.4": {
+              "forge_version": "45.4.3",
+              "mapping_version": "1.19.4",
+              "minecraft_version": "1.19.4"
+            }
+          },
+          "exact_dependency_mode": "exact",
           "jar_glob": "build/libs/*.jar",
           "java_rules": [
             {
@@ -255,6 +307,13 @@
               "min": "1.19",
               "version": 17
             }
+          ],
+          "supported_versions": [
+            "1.19",
+            "1.19.1",
+            "1.19.2",
+            "1.19.3",
+            "1.19.4"
           ],
           "template_dir": "1.19-1.19.4/forge/template"
         }
