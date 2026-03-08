@@ -2,6 +2,8 @@
 
 This repository is a GitHub-only scaffold for compiling Minecraft mods from a committed zip file. The workflow is manual-only, processes one zip per run, resolves the requested exact Minecraft version to a version folder, patches a vendored template, and then builds each mod as a separate sequential GitHub Actions job.
 
+Deep usage guide: [docs/SYSTEM_MANUAL.md](/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/docs/SYSTEM_MANUAL.md)
+
 ## Repo Layout
 
 - `incoming/`: commit the zip you want to build here, then run the workflow and point `zip_path` at it.
