@@ -21,7 +21,7 @@ MOD_REQUIRED_KEYS = {
     "authors",
     "license",
 }
-MOD_OPTIONAL_KEYS = {"homepage", "sources", "issues"}
+MOD_OPTIONAL_KEYS = {"homepage", "sources", "issues", "runtime_side"}
 TEXT_FILE_SUFFIXES = {
     ".cfg",
     ".gradle",
@@ -52,6 +52,7 @@ class ModMetadata:
     mod_version: str
     group: str
     entrypoint_class: str
+    runtime_side: str
     description: str
     authors: list[str]
     license: str
@@ -100,12 +101,18 @@ def load_mod_metadata(mod_txt: Path, version_txt: Path) -> tuple[ModMetadata, di
     authors = [author.strip() for author in mod_raw["authors"].split(",") if author.strip()]
     if not authors:
         raise ModCompilerError(f"{mod_txt}: authors must contain at least one non-empty value")
+    runtime_side = (mod_raw.get("runtime_side") or "both").strip().lower()
+    if runtime_side not in {"both", "client", "server"}:
+        raise ModCompilerError(
+            f"{mod_txt}: runtime_side must be one of both, client, or server; got '{runtime_side}'"
+        )
     metadata = ModMetadata(
         mod_id=mod_raw["mod_id"],
         name=mod_raw["name"],
         mod_version=mod_raw["mod_version"],
         group=mod_raw["group"],
         entrypoint_class=mod_raw["entrypoint_class"],
+        runtime_side=runtime_side,
         description=mod_raw["description"],
         authors=authors,
         license=mod_raw["license"],
@@ -334,6 +341,7 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
                         "mod_version": metadata.mod_version,
                         "group": metadata.group,
                         "entrypoint_class": metadata.entrypoint_class,
+                        "runtime_side": metadata.runtime_side,
                         "description": metadata.description,
                         "authors": metadata.authors,
                         "license": metadata.license,

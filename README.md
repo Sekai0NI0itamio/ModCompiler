@@ -70,7 +70,10 @@ license=MIT
 homepage=https://example.com
 sources=https://github.com/example/coolmod
 issues=https://github.com/example/coolmod/issues
+runtime_side=client
 ```
+
+`runtime_side` is optional. Omit it for normal client+server mods. Set it to `client` for client-only mods such as HUD, keybind, or movement-toggle mods. The scaffold will then generate a Fabric client entrypoint and client-only Forge metadata.
 
 ## Build Behavior
 
@@ -131,9 +134,16 @@ The first remote test flow is:
 2. In GitHub, open the `Actions` tab and enable workflows if the repo is new.
 3. Run the `Build Mods` workflow manually.
 4. For `zip_path`, enter `incoming/example-1.12.2-forge.zip`.
-5. For `max_parallel`, enter how many exact-version builds to run at once, for example `4`.
+5. For `max_parallel`, enter how many exact-version builds to run at once, up to `10`. The workflow now defaults to `10`.
 6. After the run finishes, inspect the per-mod artifact and the combined `all-mod-builds` artifact.
 7. If the build fails, download `build.log` from the artifact and use that as the next debugging input.
+
+This repo also includes a larger batch example at `incoming/togglesprint-1.20.1-1.21.11-fabric-forge.zip`. That archive contains four top-level mod folders and fans out across exact versions for:
+
+- Fabric `1.20.1-1.20.6`
+- Forge `1.20.1-1.20.6`
+- Fabric `1.21-1.21.11`
+- Forge `1.21-1.21.11`
 
 ## Jar Decompile Workflow
 

@@ -14,6 +14,7 @@ from modcompiler.common import (
     VERSION_KEYS,
     build_prepare_plan,
     load_json,
+    load_mod_metadata,
     parse_key_value_file,
     render_summary_markdown,
     resolve_range,
@@ -43,6 +44,30 @@ class CommonTests(unittest.TestCase):
             config.write_text("minecraft_version=1.16.5\nloader=forge\nextra=value\n", encoding="utf-8")
             with self.assertRaises(ModCompilerError):
                 parse_key_value_file(config, VERSION_KEYS, set())
+
+    def test_load_mod_metadata_accepts_runtime_side(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            mod_txt = root / "mod.txt"
+            version_txt = root / "version.txt"
+            mod_txt.write_text(
+                "\n".join([
+                    "mod_id=testmod",
+                    "name=Test Mod",
+                    "mod_version=1.0.0",
+                    "group=com.example",
+                    "entrypoint_class=com.example.TestMod",
+                    "description=desc",
+                    "authors=Dev",
+                    "license=MIT",
+                    "runtime_side=client",
+                ]) + "\n",
+                encoding="utf-8",
+            )
+            version_txt.write_text("minecraft_version=1.20.6\nloader=fabric\n", encoding="utf-8")
+            metadata, version_info = load_mod_metadata(mod_txt, version_txt)
+            self.assertEqual(metadata.runtime_side, "client")
+            self.assertEqual(version_info["loader"], "fabric")
 
     def test_resolve_range_uses_inclusive_bounds(self) -> None:
         manifest = load_json(MANIFEST_PATH)
@@ -96,6 +121,7 @@ class CommonTests(unittest.TestCase):
                 archive.writestr("Demo/version.txt", "minecraft_version=1.18.2\nloader=forge\n")
             plan = build_prepare_plan(zip_path, root / "prepared", manifest)
             self.assertEqual(plan["mods"][0]["range_folder"], "1.18-1.18.2")
+            self.assertEqual(plan["mods"][0]["metadata"]["runtime_side"], "both")
 
     def test_build_prepare_plan_expands_same_minor_range_into_exact_versions(self) -> None:
         manifest = load_json(MANIFEST_PATH)
