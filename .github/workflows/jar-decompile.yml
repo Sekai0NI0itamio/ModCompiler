@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       jar_path:
-        description: Repo-relative path to the committed jar under To Be Decompiled/
+        description: Bare jar filename or repo-relative path to a committed jar under To Be Decompiled/
         required: true
         type: string
 
@@ -45,7 +45,17 @@ jobs:
         with:
           name: jar-decompile-output
           path: .workflow_artifacts/jar-decompile
+          if-no-files-found: warn
 
       - if: always()
         shell: bash
-        run: cat .workflow_artifacts/jar-decompile/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          if [ -f .workflow_artifacts/jar-decompile/SUMMARY.md ]; then
+            cat .workflow_artifacts/jar-decompile/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "# Jar Decompile Summary"
+              echo
+              echo "No summary file was generated."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

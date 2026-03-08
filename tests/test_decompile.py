@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 from modcompiler.decompile import (
+    command_decompile_jar,
     detect_forge_entrypoint,
     infer_range_folders,
     inspect_mod_jar,
+    resolve_input_jar_path,
     render_mod_info,
 )
 from modcompiler.common import load_json
@@ -105,6 +109,38 @@ class DecompileTests(unittest.TestCase):
             self.assertEqual(metadata["loader"], "forge")
             self.assertEqual(metadata["resolved_range_folders"], ["1.12-1.12.2"])
 
+    def test_resolve_input_jar_path_accepts_bare_filename_in_default_folder(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            jar_path = root / "To Be Decompiled" / "example.jar"
+            jar_path.parent.mkdir(parents=True, exist_ok=True)
+            jar_path.write_bytes(b"jar")
+            old_cwd = Path.cwd()
+            os.chdir(root)
+            try:
+                resolved = resolve_input_jar_path("example.jar")
+            finally:
+                os.chdir(old_cwd)
+            self.assertEqual(resolved.resolve(), jar_path.resolve())
+
+    def test_command_decompile_jar_writes_failure_artifacts_for_missing_jar(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact_dir = Path(temp_dir) / "artifacts"
+            result = command_decompile_jar(
+                SimpleNamespace(
+                    jar_path="missing.jar",
+                    manifest=str(MANIFEST_PATH),
+                    decompiler_jar="missing-decompiler.jar",
+                    artifact_dir=str(artifact_dir),
+                )
+            )
+            self.assertEqual(result, 1)
+            self.assertTrue((artifact_dir / "decompile.log").exists())
+            self.assertTrue((artifact_dir / "SUMMARY.md").exists())
+            result_json = json.loads((artifact_dir / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(result_json["status"], "failed")
+            self.assertIn("Jar path does not exist.", " ".join(result_json["warnings"]))
+
     def test_detect_forge_entrypoint_finds_mod_annotation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -117,6 +153,8 @@ class DecompileTests(unittest.TestCase):
         rendered = render_mod_info(
             {
                 "jar_name": "demo.jar",
+                "requested_jar_path": "demo.jar",
+                "resolved_jar_path": "To Be Decompiled/demo.jar",
                 "loader": "forge",
                 "loader_detail": "javafml",
                 "metadata_source": "META-INF/mods.toml",
@@ -142,6 +180,7 @@ class DecompileTests(unittest.TestCase):
         )
         self.assertIn("loader=forge", rendered)
         self.assertIn("resolved_range_folders=1.20-1.20.6", rendered)
+        self.assertIn("requested_jar_path=demo.jar", rendered)
 
     def test_infer_range_folders_handles_interval_and_wildcard(self) -> None:
         manifest = load_json(MANIFEST_PATH)
