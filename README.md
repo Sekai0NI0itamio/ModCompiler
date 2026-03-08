@@ -1,6 +1,6 @@
 # ModCompiler
 
-This repository is a GitHub-only scaffold for compiling Minecraft mods from a committed zip file. The workflow is manual-only, processes one zip per run, resolves the requested exact Minecraft version to a version folder, patches a vendored template, and then builds each mod as a separate sequential GitHub Actions job.
+This repository is a GitHub-only scaffold for compiling Minecraft mods from a committed zip file. The workflow is manual-only, processes one zip per run, resolves the requested exact Minecraft version or same-minor version range to one or more version folders, patches a vendored template, and then builds each exact target as a separate sequential GitHub Actions job.
 
 Deep usage guide: [docs/SYSTEM_MANUAL.md](/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/docs/SYSTEM_MANUAL.md)
 
@@ -48,6 +48,13 @@ minecraft_version=1.20.6
 loader=fabric
 ```
 
+For a per-version fan-out build across one Minecraft minor family:
+
+```text
+minecraft_version=1.21-1.21.8
+loader=fabric
+```
+
 `mod.txt` uses strict `key=value`:
 
 ```text
@@ -68,9 +75,11 @@ issues=https://github.com/example/coolmod/issues
 
 The workflow runs in three stages:
 
-1. `prepare`: validates the zip, extracts each mod folder, parses metadata, resolves the range folder, and creates the matrix.
-2. `build`: builds one mod per matrix job with `max-parallel: 1`, which keeps the overall run sequential while still producing one artifact per mod.
+1. `prepare`: validates the zip, extracts each mod folder, parses metadata, expands same-minor version ranges into exact versions, resolves the version folder for each exact target, and creates the matrix.
+2. `build`: builds one exact target per matrix job with `max-parallel: 1`, which keeps the overall run sequential while still producing one artifact per exact version.
 3. `bundle`: downloads all per-mod artifacts, writes one combined summary artifact, and publishes a Markdown table to the GitHub Actions run summary.
+
+If one exact target from a range fails, its artifact still contains the error and the workflow keeps going with the remaining exact versions from that same range.
 
 Each per-mod artifact contains:
 
