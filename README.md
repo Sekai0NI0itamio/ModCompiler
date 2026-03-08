@@ -2,7 +2,7 @@
 
 This repository is a GitHub-only scaffold for compiling Minecraft mods from a committed zip file. The workflow is manual-only, processes one zip per run, resolves the requested exact Minecraft version or same-minor version range to one or more version folders, patches a vendored template, and then builds each exact target as a separate GitHub Actions matrix job.
 
-Deep usage guide: [docs/SYSTEM_MANUAL.md](/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/docs/SYSTEM_MANUAL.md)
+Deep usage guide: [docs/SYSTEM_MANUAL.md]
 
 ## Repo Layout
 
