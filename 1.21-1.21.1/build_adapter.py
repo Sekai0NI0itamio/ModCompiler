@@ -11,4 +11,4 @@ from modcompiler.adapters import run_range_adapter
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_range_adapter("1.21-1.21.8"))
+    raise SystemExit(run_range_adapter("1.21-1.21.1"))

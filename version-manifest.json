@@ -320,7 +320,54 @@
       "min_version": "1.20"
     },
     {
-      "folder": "1.21-1.21.8",
+      "folder": "1.21-1.21.1",
+      "loaders": {
+        "fabric": {
+          "adapter_family": "fabric_split",
+          "anchor_version": "1.21.1",
+          "build_command": [
+            "./gradlew",
+            "build",
+            "--stacktrace",
+            "--no-daemon"
+          ],
+          "exact_dependency_mode": "anchor_only",
+          "jar_glob": "build/libs/*.jar",
+          "java_rules": [
+            {
+              "max": "1.21.1",
+              "min": "1.21",
+              "version": 21
+            }
+          ],
+          "template_dir": "1.21-1.21.1/fabric/template"
+        },
+        "forge": {
+          "adapter_family": "forge_mods_toml",
+          "anchor_version": "1.21.1",
+          "build_command": [
+            "./gradlew",
+            "build",
+            "--stacktrace",
+            "--no-daemon"
+          ],
+          "exact_dependency_mode": "anchor_only",
+          "jar_glob": "build/libs/*.jar",
+          "java_rules": [
+            {
+              "max": "1.21.1",
+              "min": "1.21",
+              "version": 21
+            }
+          ],
+          "template_dir": "1.21-1.21.1/forge/template"
+        }
+      },
+      "max_version": "1.21.1",
+      "min_version": "1.21"
+    },
+    {
+      "folder": "1.21.2-1.21.8",
       "loaders": {
         "fabric": {
           "adapter_family": "fabric_split",
@@ -336,11 +383,11 @@
           "java_rules": [
             {
               "max": "1.21.8",
-              "min": "1.21",
+              "min": "1.21.2",
               "version": 21
             }
           ],
-          "template_dir": "1.21-1.21.8/fabric/template"
+          "template_dir": "1.21.2-1.21.8/fabric/template"
         },
         "forge": {
           "adapter_family": "forge_mods_toml",
@@ -356,15 +403,15 @@
           "java_rules": [
             {
               "max": "1.21.8",
-              "min": "1.21",
+              "min": "1.21.2",
               "version": 21
             }
           ],
-          "template_dir": "1.21-1.21.8/forge/template"
+          "template_dir": "1.21.2-1.21.8/forge/template"
         }
       },
       "max_version": "1.21.8",
-      "min_version": "1.21"
+      "min_version": "1.21.2"
     },
     {
       "folder": "1.21.9-1.21.11",

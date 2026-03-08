@@ -33,7 +33,8 @@ Each top-level version folder represents either one exact Minecraft version or o
 - `1.18-1.18.2`
 - `1.19-1.19.4`
 - `1.20-1.20.6`
-- `1.21-1.21.8`
+- `1.21-1.21.1`
+- `1.21.2-1.21.8`
 - `1.21.9-1.21.11`
 
 Inside each version folder are supported loader templates:
@@ -64,6 +65,7 @@ It resolves that version against `version-manifest.json`, finds the correct rang
 
 If you ask it to build a same-minor range such as `1.21-1.21.8`, it expands that request into exact targets from `1.21` through `1.21.8`.
 Each exact target becomes its own build entry and artifact.
+In this repo, `1.21` and `1.21.1` route to `1.21-1.21.1`, while `1.21.2` through `1.21.8` route to `1.21.2-1.21.8`.
 
 ### `build_mods.py`
 
@@ -295,6 +297,7 @@ Examples:
 - `1.12.2` + `forge`
 - `1.20.6` + `forge`
 - `1.21-1.21.8` + `fabric`
+- `1.21.1` + `fabric`
 - `1.21.8` + `fabric`
 - `1.21.11` + `fabric`
 
