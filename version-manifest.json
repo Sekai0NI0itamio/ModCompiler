@@ -274,7 +274,33 @@
             "--stacktrace",
             "--no-daemon"
           ],
-          "exact_dependency_mode": "anchor_only",
+          "dependency_overrides": {
+            "1.20.1": {
+              "fabric_version": "0.92.1+1.20.1",
+              "yarn_mappings": "1.20.1+build.5"
+            },
+            "1.20.2": {
+              "fabric_version": "0.89.3+1.20.2",
+              "yarn_mappings": "1.20.2+build.1"
+            },
+            "1.20.3": {
+              "fabric_version": "0.90.8+1.20.3",
+              "yarn_mappings": "1.20.3+build.1"
+            },
+            "1.20.4": {
+              "fabric_version": "0.94.1+1.20.4",
+              "yarn_mappings": "1.20.4+build.1"
+            },
+            "1.20.5": {
+              "fabric_version": "0.96.2+1.20.5",
+              "yarn_mappings": "1.20.5+build.1"
+            },
+            "1.20.6": {
+              "fabric_version": "0.97.8+1.20.6",
+              "yarn_mappings": "1.20.6+build.1"
+            }
+          },
+          "exact_dependency_mode": "exact",
           "jar_glob": "build/libs/*.jar",
           "java_rules": [
             {
@@ -287,6 +313,14 @@
               "min": "1.20.5",
               "version": 21
             }
+          ],
+          "supported_versions": [
+            "1.20.1",
+            "1.20.2",
+            "1.20.3",
+            "1.20.4",
+            "1.20.5",
+            "1.20.6"
           ],
           "template_dir": "1.20-1.20.6/fabric/template"
         },
