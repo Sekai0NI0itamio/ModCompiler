@@ -19,7 +19,7 @@ public final class ToggleSprintController {
             return;
         }
         if (client.isPaused()) {
-            sprintKeyWasDown = client.options.keySprint.isDown();
+            sprintKeyWasDown = client.options.sprintKey.isPressed();
             return;
         }
 

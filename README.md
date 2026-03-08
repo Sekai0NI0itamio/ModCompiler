@@ -80,7 +80,7 @@ runtime_side=client
 The workflow runs in three stages:
 
 1. `prepare`: validates the zip, extracts each mod folder, parses metadata, expands same-minor version ranges into exact versions, resolves the version folder for each exact target, and creates the matrix.
-2. `build`: builds one exact target per matrix job, with workflow input `max_parallel` controlling how many run at once.
+2. `build`: builds one exact target per matrix job, with workflow input `max_parallel` controlling how many run at once. Use `all` for no scaffold-side cap.
 3. `bundle`: downloads all per-mod artifacts, writes one combined summary artifact, and publishes a Markdown table to the GitHub Actions run summary.
 
 If one exact target from a range fails, its artifact still contains the error and the workflow keeps going with the remaining exact versions from that same range.
@@ -134,7 +134,7 @@ The first remote test flow is:
 2. In GitHub, open the `Actions` tab and enable workflows if the repo is new.
 3. Run the `Build Mods` workflow manually.
 4. For `zip_path`, enter `incoming/example-1.12.2-forge.zip`.
-5. For `max_parallel`, enter how many exact-version builds to run at once, up to `10`. The workflow now defaults to `10`.
+5. For `max_parallel`, enter either a positive number or `all`. The workflow now defaults to `all`, which means it will fan out as far as the repo runner quota allows.
 6. After the run finishes, inspect the per-mod artifact and the combined `all-mod-builds` artifact.
 7. If the build fails, download `build.log` from the artifact and use that as the next debugging input.
 

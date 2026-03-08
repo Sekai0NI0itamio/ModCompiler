@@ -8,27 +8,17 @@ on:
         required: true
         type: string
       max_parallel:
-        description: Number of build jobs to run at once, up to 10
+        description: Number of build jobs to run at once. Use all for no scaffold-side cap.
         required: true
-        default: "10"
-        type: choice
-        options:
-          - "1"
-          - "2"
-          - "3"
-          - "4"
-          - "5"
-          - "6"
-          - "7"
-          - "8"
-          - "9"
-          - "10"
+        default: "all"
+        type: string
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.prepare.outputs.matrix }}
+      max_parallel: ${{ steps.prepare.outputs.max_parallel }}
     steps:
       - uses: actions/checkout@v4
 
@@ -38,13 +28,34 @@ jobs:
 
       - id: prepare
         shell: bash
+        env:
+          MAX_PARALLEL_INPUT: ${{ inputs.max_parallel }}
         run: |
           mkdir -p .workflow_state/prepared
           python build_mods.py prepare \
             --zip-path "${{ inputs.zip_path }}" \
             --manifest version-manifest.json \
             --output-dir .workflow_state/prepared
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          matrix = json.loads(Path(".workflow_state/prepared/matrix.json").read_text(encoding="utf-8"))
+          count = max(1, len(matrix.get("include", [])))
+          raw = os.environ.get("MAX_PARALLEL_INPUT", "all").strip().lower()
+          if raw in {"", "all", "unlimited", "max"}:
+              resolved = count
+          else:
+              value = int(raw)
+              if value < 1:
+                  raise SystemExit("max_parallel must be >= 1 or one of: all, unlimited, max")
+              resolved = value
+          Path(".workflow_state/prepared/max_parallel.txt").write_text(str(resolved), encoding="utf-8")
+          print(f"Resolved max_parallel={resolved}")
+          PY
           printf 'matrix=%s\n' "$(tr -d '\n' < .workflow_state/prepared/matrix.json)" >> "$GITHUB_OUTPUT"
+          printf 'max_parallel=%s\n' "$(tr -d '\n' < .workflow_state/prepared/max_parallel.txt)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -56,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: ${{ fromJson(inputs.max_parallel) }}
+      max-parallel: ${{ fromJson(needs.prepare.outputs.max_parallel) }}
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
