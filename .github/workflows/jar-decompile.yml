@@ -1,0 +1,51 @@
+name: Jar Decompile
+
+on:
+  workflow_dispatch:
+    inputs:
+      jar_path:
+        description: Repo-relative path to the committed jar under To Be Decompiled/
+        required: true
+        type: string
+
+jobs:
+  decompile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Download Vineflower
+        shell: bash
+        run: |
+          mkdir -p .workflow_tools
+          curl -L \
+            https://repo1.maven.org/maven2/org/vineflower/vineflower/1.11.0/vineflower-1.11.0.jar \
+            -o .workflow_tools/vineflower.jar
+
+      - name: Decompile jar
+        shell: bash
+        run: |
+          python build_mods.py decompile-jar \
+            --jar-path "${{ inputs.jar_path }}" \
+            --manifest version-manifest.json \
+            --decompiler-jar .workflow_tools/vineflower.jar \
+            --artifact-dir .workflow_artifacts/jar-decompile
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jar-decompile-output
+          path: .workflow_artifacts/jar-decompile
+
+      - if: always()
+        shell: bash
+        run: cat .workflow_artifacts/jar-decompile/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"

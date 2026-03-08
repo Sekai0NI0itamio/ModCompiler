@@ -26,6 +26,7 @@ from modcompiler.common import (
     safe_rmtree,
     write_json,
 )
+from modcompiler.decompile import command_decompile_jar
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -48,6 +49,12 @@ def main(argv: list[str] | None = None) -> int:
     bundle_parser.add_argument("--artifacts-root", required=True)
     bundle_parser.add_argument("--output-dir", required=True)
 
+    decompile_parser = subparsers.add_parser("decompile-jar")
+    decompile_parser.add_argument("--jar-path", required=True)
+    decompile_parser.add_argument("--manifest", required=True)
+    decompile_parser.add_argument("--decompiler-jar", required=True)
+    decompile_parser.add_argument("--artifact-dir", required=True)
+
     args = parser.parse_args(argv)
     try:
         if args.command == "prepare":
@@ -56,6 +63,8 @@ def main(argv: list[str] | None = None) -> int:
             return command_build_one(args)
         if args.command == "bundle":
             return command_bundle(args)
+        if args.command == "decompile-jar":
+            return command_decompile_jar(args)
     except ModCompilerError as error:
         print(str(error), file=sys.stderr)
         return 1

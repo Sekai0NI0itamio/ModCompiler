@@ -5,6 +5,7 @@ This repository is a GitHub-only scaffold for compiling Minecraft mods from a co
 ## Repo Layout
 
 - `incoming/`: commit the zip you want to build here, then run the workflow and point `zip_path` at it.
+- `To Be Decompiled/`: commit a jar here when you want GitHub Actions to decompile it.
 - `version-manifest.json`: source of truth for version ranges, loader support, Java versions, build commands, and template locations.
 - `<range>/build_adapter.py`: range-specific adapter entrypoint that patches the vendored template for that generation.
 - `<range>/<loader>/template/`: the pinned template snapshot for that version range and loader.
@@ -115,3 +116,29 @@ The first remote test flow is:
 4. For `zip_path`, enter `incoming/example-1.12.2-forge.zip`.
 5. After the run finishes, inspect the per-mod artifact and the combined `all-mod-builds` artifact.
 6. If the build fails, download `build.log` from the artifact and use that as the next debugging input.
+
+## Jar Decompile Workflow
+
+The repo also includes a second manual workflow named `Jar Decompile`.
+
+Input contract:
+
+- Commit one jar under `To Be Decompiled/`
+- Run the `Jar Decompile` workflow
+- Pass the repo-relative path, for example `To Be Decompiled/some-mod.jar`
+
+What it does:
+
+1. Downloads the Vineflower Java decompiler in GitHub Actions
+2. Extracts the jar and decompiles its class files to `src/main/java`
+3. Reads supported mod metadata when present from `fabric.mod.json`, `META-INF/mods.toml`, or `mcmod.info`
+4. Writes a `mod_info.txt` summary with loader, mod id, name, version, supported Minecraft range, guessed repo folders, and other discovered fields
+5. Packages `src/` plus `mod_info.txt` into one zip file inside the workflow artifact
+
+The `jar-decompile-output` artifact contains:
+
+- `decompile.log`
+- `mod_info.txt` on success
+- `<slug>.zip` on success
+- `SUMMARY.md`
+- `result.json`

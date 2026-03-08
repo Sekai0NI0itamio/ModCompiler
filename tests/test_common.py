@@ -163,5 +163,5 @@ class CommonTests(unittest.TestCase):
             self.assertEqual(summary["mods"][0]["slug"], "demo-forge-1-16-5")
 
 
-if __name__ == "__main__":
-    unittest.main()
+        if __name__ == "__main__":
+            unittest.main()
