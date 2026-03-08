@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -403,17 +404,82 @@ public class TpaTeleportMod implements ModInitializer {
     }
 
     private static boolean teleportPlayer(ServerPlayer player, ServerPlayer destination) {
-        player.teleportTo(
-            (net.minecraft.server.level.ServerLevel) destination.level(),
-            destination.getX(),
-            destination.getY(),
-            destination.getZ(),
+        net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) destination.level();
+        double x = destination.getX();
+        double y = destination.getY();
+        double z = destination.getZ();
+        float yaw = destination.getYRot();
+        float pitch = destination.getXRot();
+
+        if (invokeTeleport(player, new Class<?>[] {
+            net.minecraft.server.level.ServerLevel.class,
+            double.class,
+            double.class,
+            double.class,
+            java.util.Set.class,
+            float.class,
+            float.class,
+            boolean.class,
+        }, new Object[] {
+            level,
+            x,
+            y,
+            z,
             java.util.Set.of(),
-            destination.getYRot(),
-            destination.getXRot(),
-            false
-        );
-        return true;
+            yaw,
+            pitch,
+            false,
+        })) {
+            return true;
+        }
+
+        if (invokeTeleport(player, new Class<?>[] {
+            net.minecraft.server.level.ServerLevel.class,
+            double.class,
+            double.class,
+            double.class,
+            java.util.Set.class,
+            float.class,
+            float.class,
+        }, new Object[] {
+            level,
+            x,
+            y,
+            z,
+            java.util.Set.of(),
+            yaw,
+            pitch,
+        })) {
+            return true;
+        }
+
+        return invokeTeleport(player, new Class<?>[] {
+            net.minecraft.server.level.ServerLevel.class,
+            double.class,
+            double.class,
+            double.class,
+            float.class,
+            float.class,
+        }, new Object[] {
+            level,
+            x,
+            y,
+            z,
+            yaw,
+            pitch,
+        });
+    }
+
+    private static boolean invokeTeleport(ServerPlayer player, Class<?>[] parameterTypes, Object[] arguments) {
+        try {
+            Method method = ServerPlayer.class.getMethod("teleportTo", parameterTypes);
+            method.invoke(player, arguments);
+            return true;
+        } catch (NoSuchMethodException ignored) {
+            return false;
+        } catch (ReflectiveOperationException ignored) {
+            return false;
+        }
     }
 
     private static Map<UUID, TeleportRequest> getTargetMap(UUID targetId) {

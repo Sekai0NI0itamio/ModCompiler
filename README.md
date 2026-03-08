@@ -22,7 +22,8 @@ Active top-level version folders:
 - `1.18-1.18.2`
 - `1.19-1.19.4`
 - `1.20-1.20.6`
-- `1.21-1.21.8`
+- `1.21-1.21.1`
+- `1.21.2-1.21.8`
 - `1.21.9-1.21.11`
 
 ## Zip Contract
@@ -102,6 +103,7 @@ The Forge side uses pinned official MDK snapshots for:
 - `1.12.2`
 - `1.16.5`
 - `1.20.6`
+- `1.21.1`
 - `1.21.8`
 - `1.21.11`
 
@@ -113,7 +115,8 @@ The Fabric side uses:
 - Official `FabricMC/fabric-example-mod` `1.18` branch for `1.18-1.18.2`
 - Official `FabricMC/fabric-example-mod` `1.19` branch for `1.19-1.19.4`
 - Official `FabricMC/fabric-example-mod` `1.20` branch for `1.20-1.20.6`
-- Official `FabricMC/fabric-example-mod` `1.21` branch retargeted to `1.21-1.21.8`
+- Official `FabricMC/fabric-example-mod` `1.21` branch retargeted to `1.21-1.21.1`
+- Official `FabricMC/fabric-example-mod` `1.21` branch retargeted to `1.21.2-1.21.8`
 - Official `FabricMC/fabric-example-mod` `1.21` branch for `1.21.9-1.21.11`
 
 Some range folders are intentionally marked as `anchor_only` in `version-manifest.json`. That means the scaffold resolves the exact Minecraft version correctly, but the underlying dependency versions are still anchored to the vendored template snapshot. Before first production use, extend the manifest and adapters if you need exact Forge/Fabric dependency resolution across every patch version in those broad ranges.
