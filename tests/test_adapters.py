@@ -196,6 +196,54 @@ class AdapterTests(unittest.TestCase):
             self.assertIn("clientSideOnly=true", mods_toml)
             self.assertIn('displayTest="IGNORE_ALL_VERSION"', mods_toml)
 
+    def test_forge_adapter_rewrites_exact_121_dependency(self) -> None:
+        manifest = load_json(MANIFEST_PATH)
+        metadata = ModMetadata(
+            mod_id="demo",
+            name="Demo",
+            mod_version="2.0.0",
+            group="com.example.demo",
+            entrypoint_class="com.example.demo.DemoMod",
+            runtime_side="both",
+            description="Demo mod",
+            authors=["Dev"],
+            license="MIT",
+            homepage=None,
+            sources=None,
+            issues=None,
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            workspace = root / "workspace"
+            source = root / "source"
+            write(
+                workspace / "build.gradle",
+                "version = '1.0.0'\n"
+                "group = 'com.example.examplemod'\n"
+                "java.toolchain.languageVersion = JavaLanguageVersion.of(21)\n"
+                "minecraft {\n"
+                "    mappings channel: 'official', version: '1.21.11'\n"
+                "}\n"
+                "dependencies {\n"
+                "    implementation minecraft.dependency('net.minecraftforge:forge:1.21.11-61.1.3')\n"
+                "}\n",
+            )
+            write(source / "src/main/java/com/example/demo/DemoMod.java", "package com.example.demo;\nclass DemoMod {}\n")
+            prepare_workspace(
+                manifest=manifest,
+                range_folder="1.21.9-1.21.11",
+                loader="forge",
+                source_dir=source / "src",
+                workspace=workspace,
+                minecraft_version="1.21.10",
+                metadata=metadata,
+            )
+            build_gradle = (workspace / "build.gradle").read_text(encoding="utf-8")
+            self.assertIn("version = '2.0.0'", build_gradle)
+            self.assertIn("group = 'com.example.demo'", build_gradle)
+            self.assertIn("version: '1.21.10'", build_gradle)
+            self.assertIn("net.minecraftforge:forge:1.21.10-60.1.8", build_gradle)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,8 +19,9 @@ from modcompiler.common import (
     load_json,
     next_major_range,
     replace_known_placeholders_in_entrypoint,
-    replace_text,
+    resolve_dependency_overrides,
     resolve_java_version,
+    validate_loader_exact_support,
     update_key_value_assignment,
     update_settings_gradle,
     write_json,
@@ -77,8 +78,10 @@ def prepare_workspace(
 ) -> None:
     range_entry = get_range_by_folder(manifest, range_folder)
     loader_config = range_entry["loaders"][loader]
+    validate_loader_exact_support(loader_config, minecraft_version)
     adapter_family = loader_config["adapter_family"]
     java_version = resolve_java_version(loader_config, minecraft_version)
+    dependency_overrides = resolve_dependency_overrides(loader_config, minecraft_version)
 
     if adapter_family.startswith("fabric"):
         if (workspace / "src").exists():
@@ -101,6 +104,7 @@ def prepare_workspace(
             metadata=metadata,
             minecraft_version=minecraft_version,
             java_version=java_version,
+            dependency_overrides=dependency_overrides,
         )
     elif adapter_family.startswith("forge_legacy"):
         apply_legacy_forge_adapter(
@@ -114,6 +118,7 @@ def prepare_workspace(
             metadata=metadata,
             minecraft_version=minecraft_version,
             java_version=java_version,
+            dependency_overrides=dependency_overrides,
         )
     else:
         raise ModCompilerError(f"Unsupported adapter family '{adapter_family}'")
@@ -125,6 +130,7 @@ def apply_fabric_adapter(
     metadata: ModMetadata,
     minecraft_version: str,
     java_version: int,
+    dependency_overrides: dict[str, str],
 ) -> None:
     gradle_properties = workspace / "gradle.properties"
     build_gradle = workspace / "build.gradle"
@@ -133,6 +139,8 @@ def apply_fabric_adapter(
     update_key_value_assignment(gradle_properties, "mod_version", metadata.mod_version)
     update_key_value_assignment(gradle_properties, "maven_group", metadata.group)
     update_key_value_assignment(gradle_properties, "archives_base_name", metadata.mod_id)
+    for key, value in dependency_overrides.items():
+        update_key_value_assignment(gradle_properties, key, value)
 
     if build_gradle.exists():
         text = build_gradle.read_text(encoding="utf-8")
@@ -246,13 +254,17 @@ def apply_mods_toml_forge_adapter(
     metadata: ModMetadata,
     minecraft_version: str,
     java_version: int,
+    dependency_overrides: dict[str, str],
 ) -> None:
     gradle_properties = workspace / "gradle.properties"
     build_gradle = workspace / "build.gradle"
+    effective_minecraft_version = dependency_overrides.get("minecraft_version", minecraft_version)
+    mapping_version = dependency_overrides.get("mapping_version", effective_minecraft_version)
+    forge_version = dependency_overrides.get("forge_version")
     if gradle_properties.exists():
-        update_key_value_assignment(gradle_properties, "minecraft_version", minecraft_version)
-        update_key_value_assignment(gradle_properties, "minecraft_version_range", next_major_range(minecraft_version))
-        update_key_value_assignment(gradle_properties, "mapping_version", minecraft_version)
+        update_key_value_assignment(gradle_properties, "minecraft_version", effective_minecraft_version)
+        update_key_value_assignment(gradle_properties, "minecraft_version_range", next_major_range(effective_minecraft_version))
+        update_key_value_assignment(gradle_properties, "mapping_version", mapping_version)
         update_key_value_assignment(gradle_properties, "mod_id", metadata.mod_id)
         update_key_value_assignment(gradle_properties, "mod_name", metadata.name)
         update_key_value_assignment(gradle_properties, "mod_license", metadata.license)
@@ -264,6 +276,8 @@ def apply_mods_toml_forge_adapter(
             "mod_description",
             metadata.description.replace("\n", "\\n"),
         )
+        for key, value in dependency_overrides.items():
+            update_key_value_assignment(gradle_properties, key, value)
     if build_gradle.exists():
         text = build_gradle.read_text(encoding="utf-8")
         text = re.sub(
@@ -271,15 +285,28 @@ def apply_mods_toml_forge_adapter(
             rf"\g<1>{java_version}\2",
             text,
         )
+        text = re.sub(r"(?m)^version\s*=\s*['\"][^'\"]+['\"]", f"version = '{metadata.mod_version}'", text)
+        text = re.sub(r"(?m)^group\s*=\s*['\"][^'\"]+['\"]", f"group = '{metadata.group}'", text)
+        text = re.sub(
+            r"(mappings channel:\s*'official',\s*version:\s*)'[^']+'",
+            rf"\1'{mapping_version}'",
+            text,
+        )
+        if forge_version:
+            text = re.sub(
+                r"(minecraft\.dependency\('net\.minecraftforge:forge:)[^']+('\))",
+                lambda match: f"{match.group(1)}{effective_minecraft_version}-{forge_version}{match.group(2)}",
+                text,
+            )
         build_gradle.write_text(text, encoding="utf-8")
 
     mods_toml = workspace / "src/main/resources/META-INF/mods.toml"
     ensure_parent(mods_toml)
-    mods_toml.write_text(build_mods_toml(metadata, minecraft_version), encoding="utf-8")
+    mods_toml.write_text(build_mods_toml(metadata, effective_minecraft_version), encoding="utf-8")
 
     pack_mcmeta = workspace / "src/main/resources/pack.mcmeta"
     ensure_parent(pack_mcmeta)
-    pack_payload = load_or_build_pack_mcmeta(pack_mcmeta, metadata.mod_id, minecraft_version)
+    pack_payload = load_or_build_pack_mcmeta(pack_mcmeta, metadata.mod_id, effective_minecraft_version)
     pack_mcmeta.write_text(json.dumps(pack_payload, indent=2) + "\n", encoding="utf-8")
 
 

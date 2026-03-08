@@ -196,6 +196,22 @@ def resolve_java_version(loader_config: dict[str, Any], minecraft_version: str) 
     )
 
 
+def validate_loader_exact_support(loader_config: dict[str, Any], minecraft_version: str) -> None:
+    supported_versions = loader_config.get("supported_versions")
+    if supported_versions and minecraft_version not in supported_versions:
+        supported_text = ", ".join(supported_versions)
+        raise ModCompilerError(
+            f"{loader_config['template_dir']} does not support exact Minecraft {minecraft_version}. "
+            f"Supported exact versions: {supported_text}"
+        )
+
+
+def resolve_dependency_overrides(loader_config: dict[str, Any], minecraft_version: str) -> dict[str, str]:
+    overrides = dict(loader_config.get("dependency_defaults", {}))
+    overrides.update(loader_config.get("dependency_overrides", {}).get(minecraft_version, {}))
+    return {key: str(value) for key, value in overrides.items()}
+
+
 def next_major_range(version: str) -> str:
     major, minor, _patch = parse_version_tuple(version)
     return f"[{version},{major}.{minor + 1})"
@@ -309,6 +325,7 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
                         f"{mod_dir.name}: loader '{loader}' is not supported in folder {resolved_range['folder']}"
                     )
                 loader_config = resolved_range["loaders"][loader]
+                validate_loader_exact_support(loader_config, exact_version)
                 java_version = resolve_java_version(loader_config, exact_version)
                 template_dir = loader_config["template_dir"]
                 jar_glob = loader_config["jar_glob"]
