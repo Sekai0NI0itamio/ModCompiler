@@ -15,6 +15,7 @@ public final class PingFixForgeMod {
     public static final String NAME = "PingFix";
     public static final String VERSION = "1.0.0";
     private static final long REFRESH_INTERVAL_MS = 10_000L;
+    private static final long SCREEN_OPEN_REFRESH_GUARD_MS = 1_000L;
 
     private GuiScreen trackedScreen;
     private long lastRefreshMs;
@@ -37,16 +38,20 @@ public final class PingFixForgeMod {
         }
 
         GuiScreen screen = minecraft.currentScreen;
+        long now = System.currentTimeMillis();
         if (screen != trackedScreen) {
             trackedScreen = screen;
-            lastRefreshMs = System.currentTimeMillis();
+            if (screen instanceof GuiMultiplayer && now - lastRefreshMs >= SCREEN_OPEN_REFRESH_GUARD_MS) {
+                lastRefreshMs = now;
+                minecraft.displayGuiScreen(new GuiMultiplayer(new GuiMainMenu()));
+            }
+            return;
         }
 
         if (!(screen instanceof GuiMultiplayer)) {
             return;
         }
 
-        long now = System.currentTimeMillis();
         if (now - lastRefreshMs < REFRESH_INTERVAL_MS) {
             return;
         }

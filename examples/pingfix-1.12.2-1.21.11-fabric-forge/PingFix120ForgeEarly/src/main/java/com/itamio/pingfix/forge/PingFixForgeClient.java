@@ -8,6 +8,7 @@ import net.minecraftforge.event.TickEvent;
 
 public final class PingFixForgeClient {
     private static final long REFRESH_INTERVAL_MS = 10_000L;
+    private static final long SCREEN_OPEN_REFRESH_GUARD_MS = 1_000L;
 
     private static Screen trackedScreen;
     private static long lastRefreshMs;
@@ -28,16 +29,20 @@ public final class PingFixForgeClient {
         }
 
         Screen screen = minecraft.screen;
+        long now = System.currentTimeMillis();
         if (screen != trackedScreen) {
             trackedScreen = screen;
-            lastRefreshMs = System.currentTimeMillis();
+            if (screen instanceof JoinMultiplayerScreen && now - lastRefreshMs >= SCREEN_OPEN_REFRESH_GUARD_MS) {
+                lastRefreshMs = now;
+                minecraft.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
+            }
+            return;
         }
 
         if (!(screen instanceof JoinMultiplayerScreen)) {
             return;
         }
 
-        long now = System.currentTimeMillis();
         if (now - lastRefreshMs < REFRESH_INTERVAL_MS) {
             return;
         }

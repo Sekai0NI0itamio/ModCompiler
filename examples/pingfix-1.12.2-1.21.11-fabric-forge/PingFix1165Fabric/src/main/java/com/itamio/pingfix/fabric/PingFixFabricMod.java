@@ -9,6 +9,7 @@ import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 
 public final class PingFixFabricMod implements ClientModInitializer {
     private static final long REFRESH_INTERVAL_MS = 10_000L;
+    private static final long SCREEN_OPEN_REFRESH_GUARD_MS = 1_000L;
 
     private Screen trackedScreen;
     private long lastRefreshMs;
@@ -26,16 +27,20 @@ public final class PingFixFabricMod implements ClientModInitializer {
         }
 
         Screen screen = client.currentScreen;
+        long now = System.currentTimeMillis();
         if (screen != trackedScreen) {
             trackedScreen = screen;
-            lastRefreshMs = System.currentTimeMillis();
+            if (screen instanceof MultiplayerScreen && now - lastRefreshMs >= SCREEN_OPEN_REFRESH_GUARD_MS) {
+                lastRefreshMs = now;
+                client.openScreen(new MultiplayerScreen(new TitleScreen()));
+            }
+            return;
         }
 
         if (!(screen instanceof MultiplayerScreen)) {
             return;
         }
 
-        long now = System.currentTimeMillis();
         if (now - lastRefreshMs < REFRESH_INTERVAL_MS) {
             return;
         }
