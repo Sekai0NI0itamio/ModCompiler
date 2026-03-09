@@ -3,14 +3,14 @@ package com.itamio.snowaccumulation.fabric;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Random;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.SnowBlock;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SnowLayerBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class SnowAccumulationHandler {
     private static final Random RANDOM = new Random();
@@ -23,7 +23,7 @@ public final class SnowAccumulationHandler {
     }
 
     public static void onServerTick(MinecraftServer server) {
-        ServerWorld world = server.getOverworld();
+        ServerLevel world = server.overworld();
         if (world == null) {
             return;
         }
@@ -44,13 +44,13 @@ public final class SnowAccumulationHandler {
             return;
         }
 
-        List<ServerPlayerEntity> players = world.getPlayers();
+        List<ServerPlayer> players = world.players();
         if (players.isEmpty()) {
             return;
         }
 
-        ServerPlayerEntity player = players.get(RANDOM.nextInt(players.size()));
-        BlockPos playerPos = player.getBlockPos();
+        ServerPlayer player = players.get(RANDOM.nextInt(players.size()));
+        BlockPos playerPos = player.blockPosition();
         int playerChunkX = playerPos.getX() >> 4;
         int playerChunkZ = playerPos.getZ() >> 4;
         int chunkRadius = SnowAccumulationConfig.getChunkRadius();
@@ -59,7 +59,7 @@ public final class SnowAccumulationHandler {
         for (int chunkIndex = 0; chunkIndex < chunksPerTick; chunkIndex++) {
             int chunkX = playerChunkX + RANDOM.nextInt(chunkRadius * 2 + 1) - chunkRadius;
             int chunkZ = playerChunkZ + RANDOM.nextInt(chunkRadius * 2 + 1) - chunkRadius;
-            if (!world.isChunkLoaded(chunkX, chunkZ)) {
+            if (!world.hasChunk(chunkX, chunkZ)) {
                 continue;
             }
 
@@ -71,8 +71,8 @@ public final class SnowAccumulationHandler {
         }
     }
 
-    private static void processColumn(ServerWorld world, int x, int z) {
-        int topY = world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
+    private static void processColumn(ServerLevel world, int x, int z) {
+        int topY = world.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         if (topY <= 0) {
             return;
         }
@@ -82,73 +82,73 @@ public final class SnowAccumulationHandler {
 
         if (isSnow(surfaceState)) {
             BlockPos topSnowPos = findTopSnowBlock(world, surfacePos);
-            BlockPos precipitationPos = topSnowPos.up();
+            BlockPos precipitationPos = topSnowPos.above();
             if (shouldAccumulateAt(world, precipitationPos)) {
                 growSnowColumn(world, topSnowPos);
             }
             return;
         }
 
-        BlockPos placementPos = surfacePos.up();
+        BlockPos placementPos = surfacePos.above();
         if (!shouldAccumulateAt(world, placementPos)) {
             return;
         }
         if (!world.getBlockState(placementPos).isAir()) {
             return;
         }
-        if (!Blocks.SNOW.getDefaultState().canPlaceAt(world, placementPos)) {
+        if (!Blocks.SNOW.defaultBlockState().canSurvive(world, placementPos)) {
             return;
         }
         if (SnowAccumulationConfig.getMaxSnowHeight() < 1) {
             return;
         }
 
-        world.setBlockState(placementPos, Blocks.SNOW.getDefaultState().with(SnowBlock.LAYERS, 1), 3);
+        world.setBlockAndUpdate(placementPos, Blocks.SNOW.defaultBlockState().setValue(SnowLayerBlock.LAYERS, 1));
     }
 
-    private static boolean shouldAccumulateAt(ServerWorld world, BlockPos pos) {
+    private static boolean shouldAccumulateAt(ServerLevel world, BlockPos pos) {
         if (!world.isRaining()) {
             return false;
         }
-        if (!world.isSkyVisible(pos)) {
+        if (!world.canSeeSky(pos)) {
             return false;
         }
         return getBiomeTemperature(world, pos) <= 0.15F;
     }
 
-    private static void growSnowColumn(ServerWorld world, BlockPos topSnowPos) {
+    private static void growSnowColumn(ServerLevel world, BlockPos topSnowPos) {
         int currentTotalLayers = countSnowLayers(world, topSnowPos);
         if (currentTotalLayers >= SnowAccumulationConfig.getMaxSnowHeight()) {
             return;
         }
 
         BlockState topState = world.getBlockState(topSnowPos);
-        int layers = topState.get(SnowBlock.LAYERS);
+        int layers = topState.getValue(SnowLayerBlock.LAYERS);
         if (layers < 8) {
-            world.setBlockState(topSnowPos, topState.with(SnowBlock.LAYERS, layers + 1), 3);
+            world.setBlockAndUpdate(topSnowPos, topState.setValue(SnowLayerBlock.LAYERS, layers + 1));
             return;
         }
 
-        BlockPos newSnowPos = topSnowPos.up();
+        BlockPos newSnowPos = topSnowPos.above();
         if (!world.getBlockState(newSnowPos).isAir()) {
             return;
         }
-        if (!Blocks.SNOW.getDefaultState().canPlaceAt(world, newSnowPos)) {
+        if (!Blocks.SNOW.defaultBlockState().canSurvive(world, newSnowPos)) {
             return;
         }
 
-        world.setBlockState(newSnowPos, Blocks.SNOW.getDefaultState().with(SnowBlock.LAYERS, 1), 3);
+        world.setBlockAndUpdate(newSnowPos, Blocks.SNOW.defaultBlockState().setValue(SnowLayerBlock.LAYERS, 1));
     }
 
-    private static BlockPos findTopSnowBlock(ServerWorld world, BlockPos startPos) {
+    private static BlockPos findTopSnowBlock(ServerLevel world, BlockPos startPos) {
         BlockPos current = startPos;
-        while (isSnow(world.getBlockState(current.up()))) {
-            current = current.up();
+        while (isSnow(world.getBlockState(current.above()))) {
+            current = current.above();
         }
         return current;
     }
 
-    private static int countSnowLayers(ServerWorld world, BlockPos topSnowPos) {
+    private static int countSnowLayers(ServerLevel world, BlockPos topSnowPos) {
         int totalLayers = 0;
         BlockPos current = topSnowPos;
         while (current.getY() > 0) {
@@ -156,17 +156,17 @@ public final class SnowAccumulationHandler {
             if (!isSnow(state)) {
                 break;
             }
-            totalLayers += state.get(SnowBlock.LAYERS);
-            current = current.down();
+            totalLayers += state.getValue(SnowLayerBlock.LAYERS);
+            current = current.below();
         }
         return totalLayers;
     }
 
     private static boolean isSnow(BlockState state) {
-        return state.getBlock() == Blocks.SNOW;
+        return state.is(Blocks.SNOW);
     }
 
-    private static float getBiomeTemperature(ServerWorld world, BlockPos pos) {
+    private static float getBiomeTemperature(ServerLevel world, BlockPos pos) {
         try {
             Object biomeReference = world.getBiome(pos);
             Object biome = unwrapBiome(biomeReference);

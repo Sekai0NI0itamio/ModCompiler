@@ -22,11 +22,12 @@ public final class SnowAccumulationHandler {
     private SnowAccumulationHandler() {
     }
 
-    public static void onServerTick(MinecraftServer server) {
-        if (server == null) {
+    public static void onServerTick(Object serverObject) {
+        if (!(serverObject instanceof MinecraftServer)) {
             return;
         }
 
+        MinecraftServer server = (MinecraftServer) serverObject;
         ServerLevel world = server.overworld();
         if (world == null) {
             return;

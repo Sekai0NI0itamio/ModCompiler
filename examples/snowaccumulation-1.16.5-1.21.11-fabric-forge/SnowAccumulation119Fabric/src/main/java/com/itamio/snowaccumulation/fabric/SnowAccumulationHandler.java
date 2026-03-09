@@ -168,7 +168,7 @@ public final class SnowAccumulationHandler {
 
     private static float getBiomeTemperature(ServerWorld world, BlockPos pos) {
         try {
-            Object biomeReference = world.getBiome(pos);
+            Object biomeReference = invokeWorldBiome(world, pos);
             Object biome = unwrapBiome(biomeReference);
             if (biome == null) {
                 return 1.0F;
@@ -186,6 +186,34 @@ public final class SnowAccumulationHandler {
         } catch (ReflectiveOperationException ignored) {
         }
         return 1.0F;
+    }
+
+    private static Object invokeWorldBiome(ServerWorld world, BlockPos pos) throws ReflectiveOperationException {
+        Method[] methods = world.getClass().getMethods();
+        for (int index = 0; index < methods.length; index++) {
+            Method method = methods[index];
+            if (!"getBiome".equals(method.getName())) {
+                continue;
+            }
+            Class<?>[] parameterTypes = method.getParameterTypes();
+            if (parameterTypes.length == 1 && parameterTypes[0].isAssignableFrom(pos.getClass())) {
+                return method.invoke(world, pos);
+            }
+        }
+
+        try {
+            Method storedBiome = world.getClass().getMethod("getGeneratorStoredBiome", int.class, int.class, int.class);
+            return storedBiome.invoke(world, pos.getX() >> 2, pos.getY() >> 2, pos.getZ() >> 2);
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        try {
+            Object biomeAccess = world.getClass().getMethod("getBiomeAccess").invoke(world);
+            return biomeAccess.getClass().getMethod("getBiome", pos.getClass()).invoke(biomeAccess, pos);
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        return null;
     }
 
     private static Object unwrapBiome(Object biomeReference) throws ReflectiveOperationException {
