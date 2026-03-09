@@ -6,14 +6,10 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(
-    modid = PingFixForgeMod.MOD_ID,
-    bus = Mod.EventBusSubscriber.Bus.FORGE,
-    value = Dist.CLIENT
-)
+@Mod.EventBusSubscriber(modid = PingFixForgeMod.MOD_ID, value = Dist.CLIENT)
 public final class PingFixForgeClient {
     private static final long REFRESH_INTERVAL_MS = 10_000L;
     private static final long SCREEN_OPEN_REFRESH_GUARD_MS = 1_000L;
@@ -25,7 +21,11 @@ public final class PingFixForgeClient {
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent.Post event) {
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft == null) {
             trackedScreen = null;
