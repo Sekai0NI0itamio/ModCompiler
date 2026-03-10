@@ -2,29 +2,32 @@ package com.itamio.snowaccumulation.forge;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod(SnowAccumulationForgeMod.MOD_ID)
-@Mod.EventBusSubscriber(modid = SnowAccumulationForgeMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class SnowAccumulationForgeMod {
     public static final String MOD_ID = "snowaccumulation";
 
     public SnowAccumulationForgeMod() {
         SnowAccumulationConfig.load();
+        MinecraftForge.EVENT_BUS.addListener(this::onServerTick);
         System.out.println("[Snow Accumulation] Forge server logic loaded.");
     }
 
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent.Post event) {
+    private void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+
         Object server = resolveServer(event);
         if (server != null) {
             SnowAccumulationHandler.onServerTick(server);
         }
     }
 
-    private static Object resolveServer(Object event) {
+    private static Object resolveServer(TickEvent.ServerTickEvent event) {
         try {
             Method method = event.getClass().getMethod("getServer");
             return method.invoke(event);
