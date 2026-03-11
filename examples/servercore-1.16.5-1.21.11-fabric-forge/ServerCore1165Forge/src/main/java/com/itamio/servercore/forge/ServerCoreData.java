@@ -1,5 +1,6 @@
 package com.itamio.servercore.forge;
 
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -10,6 +11,7 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraft.nbt.StringNBT;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraft.world.storage.DimensionSavedDataManager;
 import net.minecraft.world.storage.WorldSavedData;
@@ -29,9 +31,30 @@ public final class ServerCoreData extends WorldSavedData {
     }
 
     public static ServerCoreData get(MinecraftServer server) {
-        ServerWorld overworld = server.getWorld(net.minecraft.world.World.OVERWORLD);
-        DimensionSavedDataManager storage = overworld.getSavedData();
-        return storage.getOrCreate(ServerCoreData::new, DATA_NAME);
+        if (server == null) {
+            return new ServerCoreData();
+        }
+        ServerWorld overworld = getOverworld(server);
+        if (overworld == null) {
+            return new ServerCoreData();
+        }
+        Object storage = invoke(overworld, "getSavedData");
+        if (storage == null) {
+            storage = invoke(overworld, "getDataStorage");
+        }
+        if (storage == null) {
+            return new ServerCoreData();
+        }
+        if (storage instanceof DimensionSavedDataManager) {
+            return ((DimensionSavedDataManager) storage).getOrCreate(ServerCoreData::new, DATA_NAME);
+        }
+        try {
+            Method method = storage.getClass().getMethod("getOrCreate", java.util.function.Supplier.class, String.class);
+            Object result = method.invoke(storage, (java.util.function.Supplier<ServerCoreData>) ServerCoreData::new, DATA_NAME);
+            return result instanceof ServerCoreData ? (ServerCoreData) result : new ServerCoreData();
+        } catch (ReflectiveOperationException ignored) {
+            return new ServerCoreData();
+        }
     }
 
     @Override
@@ -113,33 +136,51 @@ public final class ServerCoreData extends WorldSavedData {
     }
 
     public Collection<HomeRecord> listHomes(UUID playerUuid) {
+        if (playerUuid == null) {
+            return java.util.Collections.emptyList();
+        }
         return getHomes(playerUuid).values();
     }
 
     public HomeRecord getHome(UUID playerUuid, String key) {
+        if (playerUuid == null) {
+            return null;
+        }
         return getHomes(playerUuid).get(key);
     }
 
     public void putHome(UUID playerUuid, HomeRecord record) {
+        if (playerUuid == null || record == null) {
+            return;
+        }
         getHomes(playerUuid).put(record.getKey(), record);
-        markDirty();
+        markDirtyCompat();
     }
 
     public HomeRecord removeHome(UUID playerUuid, String key) {
+        if (playerUuid == null) {
+            return null;
+        }
         HomeRecord removed = getHomes(playerUuid).remove(key);
         if (removed != null) {
-            markDirty();
+            markDirtyCompat();
         }
         return removed;
     }
 
     public boolean hasSeen(UUID uuid) {
+        if (uuid == null) {
+            return false;
+        }
         return seenPlayers.contains(uuid);
     }
 
     public void markSeen(UUID uuid) {
+        if (uuid == null) {
+            return;
+        }
         if (seenPlayers.add(uuid)) {
-            markDirty();
+            markDirtyCompat();
         }
     }
 
@@ -150,6 +191,73 @@ public final class ServerCoreData extends WorldSavedData {
             homesByPlayer.put(playerUuid, homes);
         }
         return homes;
+    }
+
+    private void markDirtyCompat() {
+        if (invokeNoArgs(this, "setDirty")) {
+            return;
+        }
+        invokeNoArgs(this, "markDirty");
+    }
+
+    private static ServerWorld getOverworld(MinecraftServer server) {
+        Object key = World.OVERWORLD;
+        Object world = invoke(server, "getWorld", key.getClass(), key);
+        if (world == null) {
+            world = invoke(server, "getLevel", key.getClass(), key);
+        }
+        if (world instanceof ServerWorld) {
+            return (ServerWorld) world;
+        }
+        Object worlds = invoke(server, "getWorlds");
+        if (worlds == null) {
+            worlds = invoke(server, "getAllLevels");
+        }
+        if (worlds instanceof Iterable) {
+            for (Object candidate : (Iterable<?>) worlds) {
+                if (candidate instanceof ServerWorld) {
+                    return (ServerWorld) candidate;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static Object invoke(Object target, String name, Class<?> param, Object arg) {
+        if (target == null) {
+            return null;
+        }
+        try {
+            Method method = target.getClass().getMethod(name, param);
+            return method.invoke(target, arg);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
+    }
+
+    private static Object invoke(Object target, String name) {
+        if (target == null) {
+            return null;
+        }
+        try {
+            Method method = target.getClass().getMethod(name);
+            return method.invoke(target);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean invokeNoArgs(Object target, String name) {
+        if (target == null) {
+            return false;
+        }
+        try {
+            Method method = target.getClass().getMethod(name);
+            method.invoke(target);
+            return true;
+        } catch (ReflectiveOperationException ignored) {
+            return false;
+        }
     }
 
     private static UUID parseUuid(String text) {

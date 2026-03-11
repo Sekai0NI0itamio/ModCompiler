@@ -191,12 +191,18 @@ public final class ServerCoreCommands {
             MessageUtil.send(target, "Requester is offline.");
             return 0;
         }
+        ServerWorld targetWorld = TeleportUtil.getServerWorld(target);
+        ServerWorld requesterWorld = TeleportUtil.getServerWorld(requester);
+        if (targetWorld == null || requesterWorld == null) {
+            MessageUtil.send(target, "Target world is unavailable.");
+            return 0;
+        }
         if (request.getType() == RequestType.TPA) {
-            TeleportUtil.teleport(requester, target.getServerWorld(), target.getX(), target.getY(), target.getZ(), target.getYaw(), target.getPitch());
+            TeleportUtil.teleport(requester, targetWorld, target.getX(), target.getY(), target.getZ(), target.getYaw(), target.getPitch());
             MessageUtil.send(requester, "Teleporting to " + target.getGameProfile().getName() + ".");
             MessageUtil.send(target, "Accepted teleport request from " + requester.getGameProfile().getName() + ".");
         } else {
-            TeleportUtil.teleport(target, requester.getServerWorld(), requester.getX(), requester.getY(), requester.getZ(), requester.getYaw(), requester.getPitch());
+            TeleportUtil.teleport(target, requesterWorld, requester.getX(), requester.getY(), requester.getZ(), requester.getYaw(), requester.getPitch());
             MessageUtil.send(target, "Teleporting to " + requester.getGameProfile().getName() + ".");
             MessageUtil.send(requester, target.getGameProfile().getName() + " accepted your request.");
         }

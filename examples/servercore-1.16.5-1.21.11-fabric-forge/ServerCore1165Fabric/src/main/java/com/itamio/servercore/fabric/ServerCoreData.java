@@ -24,13 +24,18 @@ public final class ServerCoreData extends PersistentState {
     public static ServerCoreData get(MinecraftServer server) {
         ServerWorld overworld = server.getWorld(World.OVERWORLD);
         PersistentStateManager manager = overworld.getPersistentStateManager();
-        return manager.getOrCreate(ServerCoreData::fromNbt, ServerCoreData::new, DATA_NAME);
+        return manager.getOrCreate(ServerCoreData::new, DATA_NAME);
     }
 
     public static ServerCoreData fromNbt(NbtCompound tag) {
         ServerCoreData data = new ServerCoreData();
         data.read(tag);
         return data;
+    }
+
+    @Override
+    public void fromTag(NbtCompound tag) {
+        read(tag);
     }
 
     private void read(NbtCompound tag) {

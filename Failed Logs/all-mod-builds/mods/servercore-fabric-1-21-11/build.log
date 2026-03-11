@@ -23,250 +23,158 @@ Please make sure to read and understand the following license:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 > Task :compileJava
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:7: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:7: error: cannot find symbol
 import net.minecraft.resources.ResourceLocation;
                               ^
   symbol:   class ResourceLocation
   location: package net.minecraft.resources
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:83: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:83: error: cannot find symbol
     private static ResourceKey<Level> createDimensionKey(ResourceLocation id) throws ReflectiveOperationException {
                                                          ^
   symbol:   class ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:18: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:18: error: cannot find symbol
         return level.dimension().location().toString().toLowerCase(Locale.ROOT);
                                 ^
   symbol:   method location()
   location: class ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:26: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:26: error: cannot find symbol
         if (Level.OVERWORLD.location().toString().equals(key)) {
                            ^
   symbol:   method location()
   location: variable OVERWORLD of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:29: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:29: error: cannot find symbol
         if (Level.NETHER.location().toString().equals(key)) {
                         ^
   symbol:   method location()
   location: variable NETHER of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:32: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:32: error: cannot find symbol
         if (Level.END.location().toString().equals(key)) {
                      ^
   symbol:   method location()
   location: variable END of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
         ResourceLocation id = ResourceLocation.tryParse(key);
         ^
   symbol:   class ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
         ResourceLocation id = ResourceLocation.tryParse(key);
                               ^
   symbol:   variable ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:88: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:88: error: cannot find symbol
             Method create = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
                                                                                      ^
   symbol:   class ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:93: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:93: error: cannot find symbol
             Method create = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
                                                                                      ^
   symbol:   class ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
-        ListTag players = tag.getList("players", 10);
-                             ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-            CompoundTag playerTag = players.getCompound(i);
-                                                       ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
-            UUID uuid = parseUuid(playerTag.getString("uuid"));
-                                                     ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
-            ListTag homesList = playerTag.getList("homes", 10);
-                                         ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-                CompoundTag homeTag = homesList.getCompound(j);
-                                                           ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
-                String key = homeTag.getString("key");
-                                              ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
-                String name = homeTag.getString("name");
-                                               ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
-                String dimension = homeTag.getString("dimension");
-                                                    ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
-                        homeTag.getDouble("x"),
-                                         ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
-        ListTag seenList = tag.getList("seen", 8);
-                              ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
-            String uuidText = seenList.getString(i);
-                                                ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:77: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:78: error: cannot find symbol
                         .executes(ctx -> handleRtp(ctx, Level.OVERWORLD.location().toString())))
                                                                        ^
   symbol:   method location()
   location: variable OVERWORLD of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:79: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:80: error: cannot find symbol
                         .executes(ctx -> handleRtp(ctx, Level.NETHER.location().toString())))
                                                                     ^
   symbol:   method location()
   location: variable NETHER of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:81: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:82: error: cannot find symbol
                         .executes(ctx -> handleRtp(ctx, Level.END.location().toString()))));
                                                                  ^
   symbol:   method location()
   location: variable END of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:146: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:146: error: cannot find symbol
         return level.dimension().location().toString();
                                 ^
   symbol:   method location()
   location: class ResourceKey<Level>
-Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-26 errors
+14 errors
 
 > Task :compileJava FAILED
 
-[Incubating] Problems report is available at: file:///tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
 Execution failed for task ':compileJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
-          ListTag players = tag.getList("players", 10);
-                               ^
-    required: String
-    found:    String,int
-    reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
-              ListTag homesList = playerTag.getList("homes", 10);
-                                           ^
-    required: String
-    found:    String,int
-    reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
-          ListTag seenList = tag.getList("seen", 8);
-                                ^
-    required: String
-    found:    String,int
-    reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-              CompoundTag playerTag = players.getCompound(i);
-                                                         ^
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
-              UUID uuid = parseUuid(playerTag.getString("uuid"));
-                                                       ^
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-                  CompoundTag homeTag = homesList.getCompound(j);
-                                                             ^
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
-                  String key = homeTag.getString("key");
-                                                ^
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
-                  String name = homeTag.getString("name");
-                                                 ^
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
-                  String dimension = homeTag.getString("dimension");
-                                                      ^
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
-                          homeTag.getDouble("x"),
-                                           ^
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
-              String uuidText = seenList.getString(i);
-                                                  ^
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:7: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:7: error: cannot find symbol
   import net.minecraft.resources.ResourceLocation;
                                 ^
     symbol:   class ResourceLocation
     location: package net.minecraft.resources
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:83: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:83: error: cannot find symbol
       private static ResourceKey<Level> createDimensionKey(ResourceLocation id) throws ReflectiveOperationException {
                                                            ^
     symbol:   class ResourceLocation
     location: class TeleportUtil
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
           ResourceLocation id = ResourceLocation.tryParse(key);
           ^
     symbol:   class ResourceLocation
     location: class TeleportUtil
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
           ResourceLocation id = ResourceLocation.tryParse(key);
                                 ^
     symbol:   variable ResourceLocation
     location: class TeleportUtil
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:88: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:88: error: cannot find symbol
               Method create = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
                                                                                        ^
     symbol:   class ResourceLocation
     location: class TeleportUtil
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:93: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:93: error: cannot find symbol
               Method create = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
                                                                                        ^
     symbol:   class ResourceLocation
     location: class TeleportUtil
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
-      @Override
-      ^
-  Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:18: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:18: error: cannot find symbol
           return level.dimension().location().toString().toLowerCase(Locale.ROOT);
                                   ^
     symbol:   method location()
     location: class ResourceKey<Level>
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:26: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:26: error: cannot find symbol
           if (Level.OVERWORLD.location().toString().equals(key)) {
                              ^
     symbol:   method location()
     location: variable OVERWORLD of type ResourceKey<Level>
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:29: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:29: error: cannot find symbol
           if (Level.NETHER.location().toString().equals(key)) {
                           ^
     symbol:   method location()
     location: variable NETHER of type ResourceKey<Level>
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:32: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:32: error: cannot find symbol
           if (Level.END.location().toString().equals(key)) {
                        ^
     symbol:   method location()
     location: variable END of type ResourceKey<Level>
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:77: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:78: error: cannot find symbol
                           .executes(ctx -> handleRtp(ctx, Level.OVERWORLD.location().toString())))
                                                                          ^
     symbol:   method location()
     location: variable OVERWORLD of type ResourceKey<Level>
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:79: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:80: error: cannot find symbol
                           .executes(ctx -> handleRtp(ctx, Level.NETHER.location().toString())))
                                                                       ^
     symbol:   method location()
     location: variable NETHER of type ResourceKey<Level>
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:81: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:82: error: cannot find symbol
                           .executes(ctx -> handleRtp(ctx, Level.END.location().toString()))));
                                                                    ^
     symbol:   method location()
     location: variable END of type ResourceKey<Level>
-  /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:146: error: cannot find symbol
+  /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:146: error: cannot find symbol
           return level.dimension().location().toString();
                                   ^
     symbol:   method location()
     location: class ResourceKey<Level>
-  26 errors
+  14 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
@@ -305,157 +213,80 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:328)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
-	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
-	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:146)
-	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:131)
-	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
-	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
-	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
-	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
-	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:45)
-	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
-	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
-	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:269)
-	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:42)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:267)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:259)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
-	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
-	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
-	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
-	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
-        ListTag players = tag.getList("players", 10);
-                             ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
-            ListTag homesList = playerTag.getList("homes", 10);
-                                         ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
-        ListTag seenList = tag.getList("seen", 8);
-                              ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-            CompoundTag playerTag = players.getCompound(i);
-                                                       ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
-            UUID uuid = parseUuid(playerTag.getString("uuid"));
-                                                     ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-                CompoundTag homeTag = homesList.getCompound(j);
-                                                           ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
-                String key = homeTag.getString("key");
-                                              ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
-                String name = homeTag.getString("name");
-                                               ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
-                String dimension = homeTag.getString("dimension");
-                                                    ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
-                        homeTag.getDouble("x"),
-                                         ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
-            String uuidText = seenList.getString(i);
-                                                ^
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:7: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:7: error: cannot find symbol
 import net.minecraft.resources.ResourceLocation;
                               ^
   symbol:   class ResourceLocation
   location: package net.minecraft.resources
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:83: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:83: error: cannot find symbol
     private static ResourceKey<Level> createDimensionKey(ResourceLocation id) throws ReflectiveOperationException {
                                                          ^
   symbol:   class ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
         ResourceLocation id = ResourceLocation.tryParse(key);
         ^
   symbol:   class ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:35: error: cannot find symbol
         ResourceLocation id = ResourceLocation.tryParse(key);
                               ^
   symbol:   variable ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:88: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:88: error: cannot find symbol
             Method create = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
                                                                                      ^
   symbol:   class ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:93: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:93: error: cannot find symbol
             Method create = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
                                                                                      ^
   symbol:   class ResourceLocation
   location: class TeleportUtil
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:18: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:18: error: cannot find symbol
         return level.dimension().location().toString().toLowerCase(Locale.ROOT);
                                 ^
   symbol:   method location()
   location: class ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:26: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:26: error: cannot find symbol
         if (Level.OVERWORLD.location().toString().equals(key)) {
                            ^
   symbol:   method location()
   location: variable OVERWORLD of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:29: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:29: error: cannot find symbol
         if (Level.NETHER.location().toString().equals(key)) {
                         ^
   symbol:   method location()
   location: variable NETHER of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:32: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/TeleportUtil.java:32: error: cannot find symbol
         if (Level.END.location().toString().equals(key)) {
                      ^
   symbol:   method location()
   location: variable END of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:77: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:78: error: cannot find symbol
                         .executes(ctx -> handleRtp(ctx, Level.OVERWORLD.location().toString())))
                                                                        ^
   symbol:   method location()
   location: variable OVERWORLD of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:79: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:80: error: cannot find symbol
                         .executes(ctx -> handleRtp(ctx, Level.NETHER.location().toString())))
                                                                     ^
   symbol:   method location()
   location: variable NETHER of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:81: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:82: error: cannot find symbol
                         .executes(ctx -> handleRtp(ctx, Level.END.location().toString()))));
                                                                  ^
   symbol:   method location()
   location: variable END of type ResourceKey<Level>
-/tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:146: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:146: error: cannot find symbol
         return level.dimension().location().toString();
                                 ^
   symbol:   method location()
   location: class ResourceKey<Level>
-26 errors
+14 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -576,12 +407,12 @@ Note: Some messages have been simplified; recompile with -Xdiags:verbose to get 
 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:31)
 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:64)
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
-	... 61 more
+	... 30 more
 
 
-BUILD FAILED in 1m 6s
+BUILD FAILED in 1m 3s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.9-1.21.11/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-21-11/src --template-workspace /tmp/modcompiler-servercore-fabric-1-21-11-c18428il/workspace --minecraft-version 1.21.11 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.9-1.21.11/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-21-11/src --template-workspace /tmp/modcompiler-servercore-fabric-1-21-11-v2fuiwbg/workspace --minecraft-version 1.21.11 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

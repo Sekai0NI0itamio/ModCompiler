@@ -45,7 +45,15 @@ public final class RandomTeleportService {
             }
             BlockPos safe = findSafePosition(world, candidate.getX(), candidate.getZ());
             if (safe != null) {
-                TeleportUtil.teleport(player, world, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, player.getYaw(), player.getPitch());
+                TeleportUtil.teleport(
+                        player,
+                        world,
+                        safe.getX() + 0.5,
+                        safe.getY(),
+                        safe.getZ() + 0.5,
+                        RotationUtil.getYaw(player),
+                        RotationUtil.getPitch(player)
+                );
                 return RtpResult.success(safe, "Teleported to random location in " + dimensionName(world) + ".");
             }
         }

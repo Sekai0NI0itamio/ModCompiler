@@ -10,7 +10,6 @@ import net.minecraft.block.MagmaBlock;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.gen.Heightmap;
 import net.minecraft.world.server.ServerWorld;
@@ -80,7 +79,7 @@ public final class RandomTeleportService {
 
     private BlockPos findSafePosition(ServerWorld world, int x, int z) {
         int top = world.getHeight(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
-        int maxY = Math.min(top, world.getMaxHeight() - 2);
+        int maxY = Math.min(top, getMaxHeight(world) - 2);
         int minY = 2;
         for (int y = maxY; y >= minY; y--) {
             BlockPos feet = new BlockPos(x, y, z);
@@ -92,8 +91,8 @@ public final class RandomTeleportService {
     }
 
     private boolean isSafeStandPosition(ServerWorld world, BlockPos feet) {
-        BlockPos head = feet.up();
-        BlockPos ground = feet.down();
+        BlockPos head = feet.above();
+        BlockPos ground = feet.below();
         BlockState feetState = world.getBlockState(feet);
         BlockState headState = world.getBlockState(head);
         BlockState groundState = world.getBlockState(ground);
@@ -128,16 +127,38 @@ public final class RandomTeleportService {
     }
 
     private String dimensionName(ServerWorld world) {
-        if (world.getDimensionKey().equals(World.OVERWORLD)) {
+        String dimensionKey = TeleportUtil.dimensionKey(world);
+        if ("minecraft:overworld".equals(dimensionKey)) {
             return "the Overworld";
         }
-        if (world.getDimensionKey().equals(World.THE_NETHER)) {
+        if ("minecraft:the_nether".equals(dimensionKey)) {
             return "the Nether";
         }
-        if (world.getDimensionKey().equals(World.THE_END)) {
+        if ("minecraft:the_end".equals(dimensionKey)) {
             return "the End";
         }
-        return world.getDimensionKey().getLocation().toString();
+        return dimensionKey == null ? "unknown dimension" : dimensionKey;
+    }
+
+    private int getMaxHeight(ServerWorld world) {
+        Integer value = getInt(world, "getMaxBuildHeight");
+        if (value == null) {
+            value = getInt(world, "getMaxHeight");
+        }
+        return value == null ? 256 : value;
+    }
+
+    private Integer getInt(Object target, String methodName) {
+        if (target == null) {
+            return null;
+        }
+        try {
+            java.lang.reflect.Method method = target.getClass().getMethod(methodName);
+            Object result = method.invoke(target);
+            return result instanceof Number ? ((Number) result).intValue() : null;
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
     }
 
     public static final class RtpResult {

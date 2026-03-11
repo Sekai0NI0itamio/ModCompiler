@@ -18,7 +18,7 @@ Fabric Loom: 1.6.12
 :remapping 51 mods from modImplementation (java-api)
 
 > Task :compileJava
-/tmp/modcompiler-servercore-fabric-1-20-3-1zwbo22w/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:27: error: method getOrCreate in class PersistentStateManager cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-20-3-w9b8dl_j/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:27: error: method getOrCreate in class PersistentStateManager cannot be applied to given types;
         return manager.getOrCreate(ServerCoreData::fromNbt, ServerCoreData::new, DATA_NAME);
                       ^
   required: Type<T>,String
@@ -27,21 +27,7 @@ Fabric Loom: 1.6.12
     (actual and formal argument lists differ in length)
   where T is a type-variable:
     T extends PersistentState declared in method <T>getOrCreate(Type<T>,String)
-/tmp/modcompiler-servercore-fabric-1-20-3-1zwbo22w/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:38: error: incompatible thrown types Exception in functional expression
-                .executes(ServerCoreCommands::handleTpacceptAll));
-                          ^
-/tmp/modcompiler-servercore-fabric-1-20-3-1zwbo22w/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:48: error: incompatible thrown types Exception in functional expression
-                .executes(ServerCoreCommands::handleTpadenyAll));
-                          ^
-/tmp/modcompiler-servercore-fabric-1-20-3-1zwbo22w/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:63: error: incompatible thrown types Exception in functional expression
-                        .executes(ServerCoreCommands::handleHomeList))
-                                  ^
-/tmp/modcompiler-servercore-fabric-1-20-3-1zwbo22w/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:222: error: cannot find symbol
-        ServerWorld world = TeleportUtil.resolveWorld(ctx.getSource().getServer(), record.getDimension());
-        ^
-  symbol:   class ServerWorld
-  location: class ServerCoreCommands
-5 errors
+1 error
 
 > Task :compileJava FAILED
 
@@ -247,9 +233,9 @@ Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Com
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 1m 16s
+BUILD FAILED in 55s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.20-1.20.6/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-20-3-1zwbo22w/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-20-3/src --template-workspace /tmp/modcompiler-servercore-fabric-1-20-3-1zwbo22w/workspace --minecraft-version 1.20.3 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.20-1.20.6/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-20-3-w9b8dl_j/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-20-3/src --template-workspace /tmp/modcompiler-servercore-fabric-1-20-3-w9b8dl_j/workspace --minecraft-version 1.20.3 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

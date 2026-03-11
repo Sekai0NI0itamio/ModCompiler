@@ -6,6 +6,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import java.util.List;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
@@ -191,12 +192,34 @@ public final class ServerCoreCommands {
             MessageUtil.send(target, "Requester is offline.");
             return 0;
         }
+        ServerWorld targetWorld = TeleportUtil.getServerWorld(target);
+        ServerWorld requesterWorld = TeleportUtil.getServerWorld(requester);
+        if (targetWorld == null || requesterWorld == null) {
+            MessageUtil.send(target, "Target world is unavailable.");
+            return 0;
+        }
         if (request.getType() == RequestType.TPA) {
-            TeleportUtil.teleport(requester, target.getServerWorld(), target.getX(), target.getY(), target.getZ(), target.getYaw(), target.getPitch());
+            TeleportUtil.teleport(
+                    requester,
+                    targetWorld,
+                    target.getX(),
+                    target.getY(),
+                    target.getZ(),
+                    RotationUtil.getYaw(target),
+                    RotationUtil.getPitch(target)
+            );
             MessageUtil.send(requester, "Teleporting to " + target.getGameProfile().getName() + ".");
             MessageUtil.send(target, "Accepted teleport request from " + requester.getGameProfile().getName() + ".");
         } else {
-            TeleportUtil.teleport(target, requester.getServerWorld(), requester.getX(), requester.getY(), requester.getZ(), requester.getYaw(), requester.getPitch());
+            TeleportUtil.teleport(
+                    target,
+                    requesterWorld,
+                    requester.getX(),
+                    requester.getY(),
+                    requester.getZ(),
+                    RotationUtil.getYaw(requester),
+                    RotationUtil.getPitch(requester)
+            );
             MessageUtil.send(target, "Teleporting to " + requester.getGameProfile().getName() + ".");
             MessageUtil.send(requester, target.getGameProfile().getName() + " accepted your request.");
         }
@@ -208,7 +231,12 @@ public final class ServerCoreCommands {
         if (player == null) {
             return 0;
         }
-        HomeRecord record = HomeService.getInstance().setHome(ctx.getSource().getServer(), player, name);
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            MessageUtil.send(player, "Server unavailable.");
+            return 0;
+        }
+        HomeRecord record = HomeService.getInstance().setHome(server, player, name);
         if (record == null) {
             MessageUtil.send(player, "Invalid home name.");
             return 0;
@@ -222,7 +250,12 @@ public final class ServerCoreCommands {
         if (player == null) {
             return 0;
         }
-        var homes = HomeService.getInstance().listHomes(ctx.getSource().getServer(), player.getUuid());
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            MessageUtil.send(player, "Server unavailable.");
+            return 0;
+        }
+        List<HomeRecord> homes = HomeService.getInstance().listHomes(server, player.getUuid());
         if (homes.isEmpty()) {
             MessageUtil.send(player, "You have no homes.");
             return 0;
@@ -243,12 +276,17 @@ public final class ServerCoreCommands {
         if (player == null) {
             return 0;
         }
-        HomeRecord record = HomeService.getInstance().getHome(ctx.getSource().getServer(), player.getUuid(), name);
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            MessageUtil.send(player, "Server unavailable.");
+            return 0;
+        }
+        HomeRecord record = HomeService.getInstance().getHome(server, player.getUuid(), name);
         if (record == null) {
             MessageUtil.send(player, "Home not found.");
             return 0;
         }
-        ServerWorld world = TeleportUtil.resolveWorld(ctx.getSource().getServer(), record.getDimension());
+        ServerWorld world = TeleportUtil.resolveWorld(server, record.getDimension());
         if (world == null) {
             MessageUtil.send(player, "Target dimension is not available.");
             return 0;
@@ -263,7 +301,12 @@ public final class ServerCoreCommands {
         if (player == null) {
             return 0;
         }
-        boolean removed = HomeService.getInstance().deleteHome(ctx.getSource().getServer(), player.getUuid(), name);
+        MinecraftServer server = player.getServer();
+        if (server == null) {
+            MessageUtil.send(player, "Server unavailable.");
+            return 0;
+        }
+        boolean removed = HomeService.getInstance().deleteHome(server, player.getUuid(), name);
         MessageUtil.send(player, removed ? "Home deleted." : "Home not found.");
         return removed ? 1 : 0;
     }

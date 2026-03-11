@@ -18,8 +18,8 @@ Calculating task graph as no cached configuration is available for tasks: build
 
 > Configure project :
 Minecraft Mavenizer 0.4.48 by Forge Development LLC
-  Output:             /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/.gradle/mavenizer/repo
-  Output JSON:        /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/.gradle/mavenizer/dependencies/default.json
+  Output:             /tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/.gradle/mavenizer/repo
+  Output JSON:        /tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/.gradle/mavenizer/dependencies/default.json
   Dependencies Only:  false
   Cache:              /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
   JDK Cache:          /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
@@ -96,115 +96,49 @@ Maven POM
 Metadata
   metadata[forge]
   metadata[forge][variants]
-Minecraft Maven has finished, took 3:52.546
+Minecraft Maven has finished, took 3:45.848
 
 > Task :processTestResources NO-SOURCE
 
 > Task :compileJava
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
-        ListTag players = tag.getList("players", 10);
-                             ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-            CompoundTag playerTag = players.getCompound(i);
-                                                       ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
-            UUID uuid = parseUuid(playerTag.getString("uuid"));
-                                                     ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
-            ListTag homesList = playerTag.getList("homes", 10);
-                                         ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-                CompoundTag homeTag = homesList.getCompound(j);
-                                                           ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
-                String key = homeTag.getString("key");
-                                              ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
-                String name = homeTag.getString("name");
-                                               ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
-                String dimension = homeTag.getString("dimension");
-                                                    ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
-                        homeTag.getDouble("x"),
-                                         ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
-        ListTag seenList = tag.getList("seen", 8);
-                              ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
-            String uuidText = seenList.getString(i);
-                                                ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-12 errors
+/tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:7: error: package net.minecraftforge.eventbus.api does not exist
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+                                      ^
+/tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:18: error: cannot find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class ServerCoreForgeMod
+/tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:23: error: cannot find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class ServerCoreForgeMod
+3 errors
 
 > Task :compileJava FAILED
 
-[Incubating] Problems report is available at: file:///tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
 Execution failed for task ':compileJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
-          ListTag players = tag.getList("players", 10);
-                               ^
-    required: String
-    found:    String,int
-    reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
-              ListTag homesList = playerTag.getList("homes", 10);
-                                           ^
-    required: String
-    found:    String,int
-    reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
-          ListTag seenList = tag.getList("seen", 8);
-                                ^
-    required: String
-    found:    String,int
-    reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-              CompoundTag playerTag = players.getCompound(i);
-                                                         ^
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
-              UUID uuid = parseUuid(playerTag.getString("uuid"));
-                                                       ^
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-                  CompoundTag homeTag = homesList.getCompound(j);
-                                                             ^
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
-                  String key = homeTag.getString("key");
-                                                ^
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
-                  String name = homeTag.getString("name");
-                                                 ^
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
-                  String dimension = homeTag.getString("dimension");
-                                                      ^
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
-                          homeTag.getDouble("x"),
-                                           ^
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
-              String uuidText = seenList.getString(i);
-                                                  ^
-  /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
-      @Override
-      ^
-  Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-  12 errors
+  /tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:18: error: cannot find symbol
+      @SubscribeEvent
+       ^
+    symbol:   class SubscribeEvent
+    location: class ServerCoreForgeMod
+  /tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:23: error: cannot find symbol
+      @SubscribeEvent
+       ^
+    symbol:   class SubscribeEvent
+    location: class ServerCoreForgeMod
+  /tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:7: error: package net.minecraftforge.eventbus.api does not exist
+  import net.minecraftforge.eventbus.api.SubscribeEvent;
+                                        ^
+  3 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
@@ -246,53 +180,20 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
-        ListTag players = tag.getList("players", 10);
-                             ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-            CompoundTag playerTag = players.getCompound(i);
-                                                       ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
-            UUID uuid = parseUuid(playerTag.getString("uuid"));
-                                                     ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
-            ListTag homesList = playerTag.getList("homes", 10);
-                                         ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
-                CompoundTag homeTag = homesList.getCompound(j);
-                                                           ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
-                String key = homeTag.getString("key");
-                                              ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
-                String name = homeTag.getString("name");
-                                               ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
-                String dimension = homeTag.getString("dimension");
-                                                    ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
-                        homeTag.getDouble("x"),
-                                         ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
-        ListTag seenList = tag.getList("seen", 8);
-                              ^
-  required: String
-  found:    String,int
-  reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
-            String uuidText = seenList.getString(i);
-                                                ^
-/tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-12 errors
+/tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:7: error: package net.minecraftforge.eventbus.api does not exist
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+                                      ^
+/tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:18: error: cannot find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class ServerCoreForgeMod
+/tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:23: error: cannot find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class ServerCoreForgeMod
+3 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -425,10 +326,10 @@ Note: Some messages have been simplified; recompile with -Xdiags:verbose to get 
 	... 30 more
 
 
-BUILD FAILED in 4m 27s
+BUILD FAILED in 4m 17s
 1 actionable task: 1 executed
 Configuration cache entry stored.
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.2-1.21.8/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-21-6/src --template-workspace /tmp/modcompiler-servercore-forge-1-21-6-yjjemiyx/workspace --minecraft-version 1.21.6 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.2-1.21.8/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-21-6/src --template-workspace /tmp/modcompiler-servercore-forge-1-21-6-a1149t6w/workspace --minecraft-version 1.21.6 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon
