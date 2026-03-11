@@ -6,9 +6,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.world.World;
 
 public final class TeleportUtil {
     private TeleportUtil() {
@@ -26,8 +23,36 @@ public final class TeleportUtil {
         if (id == null) {
             return null;
         }
-        RegistryKey<World> key = RegistryKey.of(RegistryKeys.WORLD, id);
-        return server.getWorld(key);
+        Object key = createRegistryKey(id);
+        if (key == null) {
+            return null;
+        }
+        try {
+            Method method = server.getClass().getMethod("getWorld", key.getClass());
+            return (ServerWorld) method.invoke(server, key);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
+    }
+
+    private static Object createRegistryKey(Identifier id) {
+        try {
+            Class<?> registryKeys = Class.forName("net.minecraft.registry.RegistryKeys");
+            Object worldKey = registryKeys.getField("WORLD").get(null);
+            Class<?> registryKeyClass = Class.forName("net.minecraft.registry.RegistryKey");
+            Method of = registryKeyClass.getMethod("of", registryKeyClass, Identifier.class);
+            return of.invoke(null, worldKey, id);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Class<?> registryClass = Class.forName("net.minecraft.util.registry.Registry");
+            Object worldKey = registryClass.getField("WORLD_KEY").get(null);
+            Class<?> registryKeyClass = Class.forName("net.minecraft.util.registry.RegistryKey");
+            Method of = registryKeyClass.getMethod("of", registryKeyClass, Identifier.class);
+            return of.invoke(null, worldKey, id);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        return null;
     }
 
     public static void teleport(ServerPlayerEntity player, ServerWorld world, double x, double y, double z, float yaw, float pitch) {

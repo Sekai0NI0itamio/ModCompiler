@@ -1,5 +1,6 @@
 package com.itamio.servercore.forge;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -25,10 +26,11 @@ public final class ServerCoreForgeMod {
             return;
         }
         ServerPlayer player = (ServerPlayer) event.getEntity();
-        if (player.getServer() == null) {
+        MinecraftServer server = ServerCoreAccess.getServer(player);
+        if (server == null) {
             return;
         }
-        ServerCoreData data = ServerCoreData.get(player.getServer());
+        ServerCoreData data = ServerCoreData.get(server);
         if (data.hasSeen(player.getUUID())) {
             return;
         }
