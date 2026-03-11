@@ -20,32 +20,27 @@ Fabric Loom: 0.10.66
 :remapping 46 mods (TinyRemapper, intermediary -> named)
 
 > Task :compileJava
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/MessageUtil.java:12: error: cannot find symbol
-            player.sendMessage(Text.literal(message), false);
-                                   ^
-  symbol:   method literal(String)
-  location: interface Text
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreFabricMod.java:15: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreFabricMod.java:15: error: cannot find symbol
             ServerPlayerEntity player = handler.getPlayer();
                                                ^
   symbol:   method getPlayer()
   location: variable handler of type ServerPlayNetworkHandler
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/HomeService.java:38: error: method getYaw in class LivingEntity cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/HomeService.java:44: error: method getYaw in class LivingEntity cannot be applied to given types;
                 player.getYaw(),
                       ^
   required: float
   found:    no arguments
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/HomeService.java:39: error: method getPitch in class Entity cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/HomeService.java:45: error: method getPitch in class Entity cannot be applied to given types;
                 player.getPitch()
                       ^
   required: float
   found:    no arguments
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:18: error: ServerCoreData is not abstract and does not override abstract method fromTag(NbtCompound) in PersistentState
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:18: error: ServerCoreData is not abstract and does not override abstract method fromTag(NbtCompound) in PersistentState
 public final class ServerCoreData extends PersistentState {
              ^
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:27: error: method getOrCreate in class PersistentStateManager cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:27: error: method getOrCreate in class PersistentStateManager cannot be applied to given types;
         return manager.getOrCreate(ServerCoreData::fromNbt, ServerCoreData::new, DATA_NAME);
                       ^
   required: Supplier<T>,String
@@ -54,82 +49,68 @@ public final class ServerCoreData extends PersistentState {
     (actual and formal argument lists differ in length)
   where T is a type-variable:
     T extends PersistentState declared in method <T>getOrCreate(Supplier<T>,String)
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:38: error: incompatible thrown types Exception in functional expression
-                .executes(ServerCoreCommands::handleTpacceptAll));
-                          ^
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:48: error: incompatible thrown types Exception in functional expression
-                .executes(ServerCoreCommands::handleTpadenyAll));
-                          ^
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:63: error: incompatible thrown types Exception in functional expression
-                        .executes(ServerCoreCommands::handleHomeList))
-                                  ^
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:175: error: method getYaw in class LivingEntity cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:195: error: method getYaw in class LivingEntity cannot be applied to given types;
             TeleportUtil.teleport(requester, target.getServerWorld(), target.getX(), target.getY(), target.getZ(), target.getYaw(), target.getPitch());
                                                                                                                          ^
   required: float
   found:    no arguments
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:175: error: method getPitch in class Entity cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:195: error: method getPitch in class Entity cannot be applied to given types;
             TeleportUtil.teleport(requester, target.getServerWorld(), target.getX(), target.getY(), target.getZ(), target.getYaw(), target.getPitch());
                                                                                                                                           ^
   required: float
   found:    no arguments
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:179: error: method getYaw in class LivingEntity cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:199: error: method getYaw in class LivingEntity cannot be applied to given types;
             TeleportUtil.teleport(target, requester.getServerWorld(), requester.getX(), requester.getY(), requester.getZ(), requester.getYaw(), requester.getPitch());
                                                                                                                                      ^
   required: float
   found:    no arguments
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:179: error: method getPitch in class Entity cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:199: error: method getPitch in class Entity cannot be applied to given types;
             TeleportUtil.teleport(target, requester.getServerWorld(), requester.getX(), requester.getY(), requester.getZ(), requester.getYaw(), requester.getPitch());
                                                                                                                                                          ^
   required: float
   found:    no arguments
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:188: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:211: error: cannot find symbol
         HomeRecord record = HomeService.getInstance().setHome(ctx.getSource().getServer(), player, name);
                                                                              ^
   symbol:   method getServer()
   location: class ServerCommandSource
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:199: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:225: error: cannot find symbol
         var homes = HomeService.getInstance().listHomes(ctx.getSource().getServer(), player.getUuid());
                                                                        ^
   symbol:   method getServer()
   location: class ServerCommandSource
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:217: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:246: error: cannot find symbol
         HomeRecord record = HomeService.getInstance().getHome(ctx.getSource().getServer(), player.getUuid(), name);
                                                                              ^
   symbol:   method getServer()
   location: class ServerCommandSource
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:222: error: cannot find symbol
-        ServerWorld world = TeleportUtil.resolveWorld(ctx.getSource().getServer(), record.getDimension());
-        ^
-  symbol:   class ServerWorld
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:222: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:251: error: cannot find symbol
         ServerWorld world = TeleportUtil.resolveWorld(ctx.getSource().getServer(), record.getDimension());
                                                                      ^
   symbol:   method getServer()
   location: class ServerCommandSource
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:234: error: cannot find symbol
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:266: error: cannot find symbol
         boolean removed = HomeService.getInstance().deleteHome(ctx.getSource().getServer(), player.getUuid(), name);
                                                                               ^
   symbol:   method getServer()
   location: class ServerCommandSource
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:48: error: method getYaw in class LivingEntity cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:48: error: method getYaw in class LivingEntity cannot be applied to given types;
                 TeleportUtil.teleport(player, world, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, player.getYaw(), player.getPitch());
                                                                                                               ^
   required: float
   found:    no arguments
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:48: error: method getPitch in class Entity cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:48: error: method getPitch in class Entity cannot be applied to given types;
                 TeleportUtil.teleport(player, world, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, player.getYaw(), player.getPitch());
                                                                                                                                ^
   required: float
   found:    no arguments
   reason: actual and formal argument lists differ in length
-21 errors
+16 errors
 
 > Task :compileJava FAILED
 
@@ -334,9 +315,9 @@ Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Com
 
 * Get more help at https://help.gradle.org
 
-BUILD FAILED in 1m 35s
+BUILD FAILED in 1m 43s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.16.5/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-16-5/src --template-workspace /tmp/modcompiler-servercore-fabric-1-16-5-hj2etfv9/workspace --minecraft-version 1.16.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.16.5/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-16-5/src --template-workspace /tmp/modcompiler-servercore-fabric-1-16-5-cv1wvgi3/workspace --minecraft-version 1.16.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

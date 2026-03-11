@@ -143,7 +143,8 @@ public final class RandomTeleportService {
         if (level.dimension().equals(Level.END)) {
             return "the End";
         }
-        return level.dimension().location().toString();
+        String key = TeleportUtil.dimensionKey(level);
+        return key == null ? "unknown" : key;
     }
 
     public static final class RtpResult {

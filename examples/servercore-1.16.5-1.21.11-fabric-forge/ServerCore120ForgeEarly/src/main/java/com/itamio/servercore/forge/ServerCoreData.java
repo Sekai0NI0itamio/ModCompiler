@@ -1,11 +1,15 @@
 package com.itamio.servercore.forge;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.server.MinecraftServer;
@@ -20,7 +24,58 @@ public final class ServerCoreData extends SavedData {
 
     public static ServerCoreData get(MinecraftServer server) {
         ServerLevel overworld = server.overworld();
-        return overworld.getDataStorage().computeIfAbsent(ServerCoreData::load, ServerCoreData::new, DATA_NAME);
+        Object storage = overworld.getDataStorage();
+        try {
+            return getWithFactory(storage);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Method method = storage.getClass().getMethod("computeIfAbsent", Function.class, Supplier.class, String.class);
+            return (ServerCoreData) method.invoke(
+                    storage,
+                    (Function<CompoundTag, ServerCoreData>) ServerCoreData::load,
+                    (Supplier<ServerCoreData>) ServerCoreData::new,
+                    DATA_NAME
+            );
+        } catch (ReflectiveOperationException ignored) {
+            return new ServerCoreData();
+        }
+    }
+
+    private static ServerCoreData getWithFactory(Object storage) throws ReflectiveOperationException {
+        Object factory = createSavedDataFactory();
+        if (factory == null) {
+            throw new ReflectiveOperationException("No SavedData.Factory available");
+        }
+        Method method = storage.getClass().getMethod("computeIfAbsent", factory.getClass(), String.class);
+        return (ServerCoreData) method.invoke(storage, factory, DATA_NAME);
+    }
+
+    private static Object createSavedDataFactory() {
+        try {
+            Class<?> factoryClass = Class.forName("net.minecraft.world.level.saveddata.SavedData$Factory");
+            Function<CompoundTag, ServerCoreData> loader = ServerCoreData::load;
+            Supplier<ServerCoreData> supplier = ServerCoreData::new;
+            for (Constructor<?> ctor : factoryClass.getConstructors()) {
+                Class<?>[] params = ctor.getParameterTypes();
+                if (params.length == 2 && isSupplier(params[0]) && isFunction(params[1])) {
+                    return ctor.newInstance(supplier, loader);
+                }
+                if (params.length == 2 && isFunction(params[0]) && isSupplier(params[1])) {
+                    return ctor.newInstance(loader, supplier);
+                }
+            }
+        } catch (ReflectiveOperationException ignored) {
+        }
+        return null;
+    }
+
+    private static boolean isFunction(Class<?> type) {
+        return Function.class.isAssignableFrom(type);
+    }
+
+    private static boolean isSupplier(Class<?> type) {
+        return Supplier.class.isAssignableFrom(type);
     }
 
     public static ServerCoreData load(CompoundTag tag) {

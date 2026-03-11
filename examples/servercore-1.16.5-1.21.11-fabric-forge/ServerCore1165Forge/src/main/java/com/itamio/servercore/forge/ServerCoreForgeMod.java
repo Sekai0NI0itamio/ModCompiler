@@ -28,10 +28,10 @@ public final class ServerCoreForgeMod {
             return;
         }
         ServerCoreData data = ServerCoreData.get(player.getServer());
-        if (data.hasSeen(player.getUniqueID())) {
+        if (data.hasSeen(PlayerUtil.getUuid(player))) {
             return;
         }
-        data.markSeen(player.getUniqueID());
+        data.markSeen(PlayerUtil.getUuid(player));
         RandomTeleportService.RtpResult result = RandomTeleportService.getInstance().teleport(player, "minecraft:overworld");
         if (!result.isSuccess()) {
             MessageUtil.send(player, "First-join teleport failed: " + result.getMessage());

@@ -1,11 +1,15 @@
 package com.itamio.servercore.fabric;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtString;
@@ -24,7 +28,89 @@ public final class ServerCoreData extends PersistentState {
     public static ServerCoreData get(MinecraftServer server) {
         ServerWorld overworld = server.getWorld(World.OVERWORLD);
         PersistentStateManager manager = overworld.getPersistentStateManager();
-        return manager.getOrCreate(ServerCoreData::fromNbt, ServerCoreData::new, DATA_NAME);
+        try {
+            return getWithType(manager);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Method method = manager.getClass().getMethod("getOrCreate", Function.class, Supplier.class, String.class);
+            return (ServerCoreData) method.invoke(
+                    manager,
+                    (Function<NbtCompound, ServerCoreData>) ServerCoreData::fromNbt,
+                    (Supplier<ServerCoreData>) ServerCoreData::new,
+                    DATA_NAME
+            );
+        } catch (ReflectiveOperationException ignored) {
+            return new ServerCoreData();
+        }
+    }
+
+    private static ServerCoreData getWithType(PersistentStateManager manager) throws ReflectiveOperationException {
+        Object type = createPersistentStateType();
+        Method method = manager.getClass().getMethod("getOrCreate", type.getClass(), String.class);
+        return (ServerCoreData) method.invoke(manager, type, DATA_NAME);
+    }
+
+    private static Object createPersistentStateType() throws ReflectiveOperationException {
+        Class<?> typeClass = Class.forName("net.minecraft.world.PersistentState$Type");
+        Object dataFixTypes = getDataFixTypes();
+        Function<NbtCompound, ServerCoreData> loader = ServerCoreData::fromNbt;
+        Supplier<ServerCoreData> supplier = ServerCoreData::new;
+        for (Constructor<?> ctor : typeClass.getConstructors()) {
+            Class<?>[] params = ctor.getParameterTypes();
+            if (params.length == 2 && isFunction(params[0]) && isSupplier(params[1])) {
+                return ctor.newInstance(loader, supplier);
+            }
+            if (params.length == 2 && isSupplier(params[0]) && isFunction(params[1])) {
+                return ctor.newInstance(supplier, loader);
+            }
+            if (params.length == 3 && dataFixTypes != null && params[2].isInstance(dataFixTypes)) {
+                if (isFunction(params[0]) && isSupplier(params[1])) {
+                    return ctor.newInstance(loader, supplier, dataFixTypes);
+                }
+                if (isSupplier(params[0]) && isFunction(params[1])) {
+                    return ctor.newInstance(supplier, loader, dataFixTypes);
+                }
+            }
+        }
+        try {
+            Method method = typeClass.getMethod("create", Function.class, Supplier.class, dataFixTypes == null ? Object.class : dataFixTypes.getClass());
+            return method.invoke(null, loader, supplier, dataFixTypes);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Method method = typeClass.getMethod("of", Function.class, Supplier.class, dataFixTypes == null ? Object.class : dataFixTypes.getClass());
+            return method.invoke(null, loader, supplier, dataFixTypes);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Method method = typeClass.getMethod("create", Function.class, Supplier.class);
+            return method.invoke(null, loader, supplier);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Method method = typeClass.getMethod("of", Function.class, Supplier.class);
+            return method.invoke(null, loader, supplier);
+        } catch (ReflectiveOperationException ignored) {
+        }
+        throw new ReflectiveOperationException("No compatible PersistentState.Type constructor");
+    }
+
+    private static Object getDataFixTypes() {
+        try {
+            Class<?> dataFixClass = Class.forName("net.minecraft.util.datafix.DataFixTypes");
+            return dataFixClass.getField("SAVED_DATA").get(null);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isFunction(Class<?> type) {
+        return Function.class.isAssignableFrom(type);
+    }
+
+    private static boolean isSupplier(Class<?> type) {
+        return Supplier.class.isAssignableFrom(type);
     }
 
     public static ServerCoreData fromNbt(NbtCompound tag) {

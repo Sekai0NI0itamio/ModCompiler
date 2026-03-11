@@ -75,11 +75,11 @@ public final class ServerCoreCommands {
         dispatcher.register(Commands.literal("rtp")
                 .requires(source -> source.getEntity() instanceof ServerPlayer)
                 .then(Commands.literal("overworld")
-                        .executes(ctx -> handleRtp(ctx, Level.OVERWORLD.location().toString())))
+                        .executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(Level.OVERWORLD))))
                 .then(Commands.literal("nether")
-                        .executes(ctx -> handleRtp(ctx, Level.NETHER.location().toString())))
+                        .executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(Level.NETHER))))
                 .then(Commands.literal("end")
-                        .executes(ctx -> handleRtp(ctx, Level.END.location().toString()))));
+                        .executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(Level.END)))));
     }
 
     private static int handleTpa(CommandContext<CommandSourceStack> ctx, ServerPlayer target, RequestType type) {

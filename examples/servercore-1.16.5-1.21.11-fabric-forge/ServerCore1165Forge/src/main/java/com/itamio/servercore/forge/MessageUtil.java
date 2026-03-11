@@ -23,7 +23,8 @@ public final class MessageUtil {
         }
         try {
             Method method = player.getClass().getMethod("sendMessage", ITextComponent.class, UUID.class);
-            method.invoke(player, component, player.getUniqueID());
+            UUID uuid = PlayerUtil.getUuid(player);
+            method.invoke(player, component, uuid == null ? new UUID(0L, 0L) : uuid);
         } catch (ReflectiveOperationException ignored) {
         }
     }

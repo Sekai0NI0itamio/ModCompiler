@@ -46,4 +46,21 @@ public final class TeleportUtil {
         } catch (ReflectiveOperationException ignored) {
         }
     }
+
+    public static ServerWorld getServerWorld(ServerPlayerEntity player) {
+        if (player == null) {
+            return null;
+        }
+        try {
+            Method method = player.getClass().getMethod("getServerWorld");
+            Object value = method.invoke(player);
+            return value instanceof ServerWorld ? (ServerWorld) value : null;
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            return (ServerWorld) player.getWorld();
+        } catch (ClassCastException ignored) {
+            return null;
+        }
+    }
 }

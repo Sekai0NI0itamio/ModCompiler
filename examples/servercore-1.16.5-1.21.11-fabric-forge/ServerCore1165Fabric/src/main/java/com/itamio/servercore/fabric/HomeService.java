@@ -1,6 +1,5 @@
 package com.itamio.servercore.fabric;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,7 +28,7 @@ public final class HomeService {
             return null;
         }
         String key = normalizeKey(homeName);
-        ServerWorld world = getServerWorld(player);
+        ServerWorld world = TeleportUtil.getServerWorld(player);
         if (world == null) {
             return null;
         }
@@ -41,8 +40,8 @@ public final class HomeService {
                 player.getX(),
                 player.getY(),
                 player.getZ(),
-                player.getYaw(),
-                player.getPitch()
+                RotationUtil.getYaw(player),
+                RotationUtil.getPitch(player)
         );
         ServerCoreData data = ServerCoreData.get(server);
         data.putHome(player.getUuid(), record);
@@ -95,21 +94,5 @@ public final class HomeService {
         }
         String trimmed = rawName.trim();
         return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
-    }
-
-    private static ServerWorld getServerWorld(ServerPlayerEntity player) {
-        try {
-            Method method = player.getClass().getMethod("getServerWorld");
-            Object value = method.invoke(player);
-            return value instanceof ServerWorld ? (ServerWorld) value : null;
-        } catch (ReflectiveOperationException ignored) {
-        }
-        try {
-            Method method = player.getClass().getMethod("getWorld");
-            Object value = method.invoke(player);
-            return value instanceof ServerWorld ? (ServerWorld) value : null;
-        } catch (ReflectiveOperationException ignored) {
-        }
-        return null;
     }
 }

@@ -12,7 +12,7 @@ public final class ServerCoreFabricMod implements ModInitializer {
                 ServerCoreCommands.register(dispatcher));
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            ServerPlayerEntity player = handler.getPlayer();
+            ServerPlayerEntity player = handler.player;
             ServerCoreData data = ServerCoreData.get(server);
             if (data.hasSeen(player.getUuid())) {
                 return;

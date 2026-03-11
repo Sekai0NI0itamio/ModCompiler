@@ -27,19 +27,23 @@ public final class HomeService {
             return null;
         }
         String key = normalizeKey(homeName);
-        String dimension = TeleportUtil.dimensionKey(player.getServerWorld());
+        String dimension = TeleportUtil.dimensionKey(PlayerUtil.getServerWorld(player));
         HomeRecord record = new HomeRecord(
                 key,
                 homeName,
                 dimension,
-                player.getPosX(),
-                player.getPosY(),
-                player.getPosZ(),
+                PlayerUtil.getX(player),
+                PlayerUtil.getY(player),
+                PlayerUtil.getZ(player),
                 RotationUtil.getYaw(player),
                 RotationUtil.getPitch(player)
         );
+        java.util.UUID uuid = PlayerUtil.getUuid(player);
+        if (uuid == null) {
+            return null;
+        }
         ServerCoreData data = ServerCoreData.get(server);
-        data.putHome(player.getUniqueID(), record);
+        data.putHome(uuid, record);
         return record;
     }
 

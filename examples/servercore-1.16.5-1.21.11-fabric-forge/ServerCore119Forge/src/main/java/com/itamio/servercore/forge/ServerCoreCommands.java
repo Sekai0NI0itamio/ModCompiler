@@ -11,6 +11,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
@@ -191,12 +192,14 @@ public final class ServerCoreCommands {
             MessageUtil.send(target, "Requester is offline.");
             return 0;
         }
+        ServerLevel targetLevel = (ServerLevel) target.getLevel();
+        ServerLevel requesterLevel = (ServerLevel) requester.getLevel();
         if (request.getType() == RequestType.TPA) {
-            TeleportUtil.teleport(requester, target.serverLevel(), target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
+            TeleportUtil.teleport(requester, targetLevel, target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
             MessageUtil.send(requester, "Teleporting to " + target.getGameProfile().getName() + ".");
             MessageUtil.send(target, "Accepted teleport request from " + requester.getGameProfile().getName() + ".");
         } else {
-            TeleportUtil.teleport(target, requester.serverLevel(), requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
+            TeleportUtil.teleport(target, requesterLevel, requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
             MessageUtil.send(target, "Teleporting to " + requester.getGameProfile().getName() + ".");
             MessageUtil.send(requester, target.getGameProfile().getName() + " accepted your request.");
         }
