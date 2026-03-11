@@ -5,11 +5,13 @@ import com.itamio.servercore.fabric.TeleportRequestService.TeleportRequest;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.World;
 
 public final class ServerCoreCommands {
@@ -79,8 +81,11 @@ public final class ServerCoreCommands {
                         .executes(ctx -> handleRtp(ctx, World.END.getValue().toString()))));
     }
 
-    private static int handleTpa(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity target, RequestType type) throws Exception {
-        ServerPlayerEntity sender = ctx.getSource().getPlayer();
+    private static int handleTpa(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity target, RequestType type) {
+        ServerPlayerEntity sender = requirePlayer(ctx);
+        if (sender == null) {
+            return 0;
+        }
         if (sender.getUuid().equals(target.getUuid())) {
             MessageUtil.send(sender, "You cannot teleport to yourself.");
             return 0;
@@ -101,8 +106,11 @@ public final class ServerCoreCommands {
         return 1;
     }
 
-    private static int handleTpaccept(CommandContext<ServerCommandSource> ctx, String requesterName) throws Exception {
-        ServerPlayerEntity target = ctx.getSource().getPlayer();
+    private static int handleTpaccept(CommandContext<ServerCommandSource> ctx, String requesterName) {
+        ServerPlayerEntity target = requirePlayer(ctx);
+        if (target == null) {
+            return 0;
+        }
         TeleportRequestService service = TeleportRequestService.getInstance();
         TeleportRequest request;
         if (requesterName == null || requesterName.isEmpty()) {
@@ -117,8 +125,11 @@ public final class ServerCoreCommands {
         return completeTeleport(target, request);
     }
 
-    private static int handleTpacceptAll(CommandContext<ServerCommandSource> ctx) throws Exception {
-        ServerPlayerEntity target = ctx.getSource().getPlayer();
+    private static int handleTpacceptAll(CommandContext<ServerCommandSource> ctx) {
+        ServerPlayerEntity target = requirePlayer(ctx);
+        if (target == null) {
+            return 0;
+        }
         int success = 0;
         for (TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.getUuid())) {
             success += completeTeleport(target, request);
@@ -129,8 +140,11 @@ public final class ServerCoreCommands {
         return success;
     }
 
-    private static int handleTpadeny(CommandContext<ServerCommandSource> ctx, String requesterName) throws Exception {
-        ServerPlayerEntity target = ctx.getSource().getPlayer();
+    private static int handleTpadeny(CommandContext<ServerCommandSource> ctx, String requesterName) {
+        ServerPlayerEntity target = requirePlayer(ctx);
+        if (target == null) {
+            return 0;
+        }
         TeleportRequestService service = TeleportRequestService.getInstance();
         TeleportRequest request;
         if (requesterName == null || requesterName.isEmpty()) {
@@ -146,15 +160,21 @@ public final class ServerCoreCommands {
         return 1;
     }
 
-    private static int handleTpadenyAll(CommandContext<ServerCommandSource> ctx) throws Exception {
-        ServerPlayerEntity target = ctx.getSource().getPlayer();
+    private static int handleTpadenyAll(CommandContext<ServerCommandSource> ctx) {
+        ServerPlayerEntity target = requirePlayer(ctx);
+        if (target == null) {
+            return 0;
+        }
         int denied = TeleportRequestService.getInstance().popAllIncoming(target.getUuid()).size();
         MessageUtil.send(target, denied == 0 ? "No pending teleport requests." : ("Denied " + denied + " requests."));
         return denied;
     }
 
-    private static int handleTpacancel(CommandContext<ServerCommandSource> ctx, String targetNameOrAll) throws Exception {
-        ServerPlayerEntity requester = ctx.getSource().getPlayer();
+    private static int handleTpacancel(CommandContext<ServerCommandSource> ctx, String targetNameOrAll) {
+        ServerPlayerEntity requester = requirePlayer(ctx);
+        if (requester == null) {
+            return 0;
+        }
         int removed = TeleportRequestService.getInstance().cancelOutgoing(requester.getUuid(), targetNameOrAll);
         MessageUtil.send(requester, removed == 0 ? "No pending outgoing requests." : ("Cancelled " + removed + " request(s)."));
         return removed;
@@ -183,8 +203,11 @@ public final class ServerCoreCommands {
         return 1;
     }
 
-    private static int handleSetHome(CommandContext<ServerCommandSource> ctx, String name) throws Exception {
-        ServerPlayerEntity player = ctx.getSource().getPlayer();
+    private static int handleSetHome(CommandContext<ServerCommandSource> ctx, String name) {
+        ServerPlayerEntity player = requirePlayer(ctx);
+        if (player == null) {
+            return 0;
+        }
         HomeRecord record = HomeService.getInstance().setHome(ctx.getSource().getServer(), player, name);
         if (record == null) {
             MessageUtil.send(player, "Invalid home name.");
@@ -194,8 +217,11 @@ public final class ServerCoreCommands {
         return 1;
     }
 
-    private static int handleHomeList(CommandContext<ServerCommandSource> ctx) throws Exception {
-        ServerPlayerEntity player = ctx.getSource().getPlayer();
+    private static int handleHomeList(CommandContext<ServerCommandSource> ctx) {
+        ServerPlayerEntity player = requirePlayer(ctx);
+        if (player == null) {
+            return 0;
+        }
         var homes = HomeService.getInstance().listHomes(ctx.getSource().getServer(), player.getUuid());
         if (homes.isEmpty()) {
             MessageUtil.send(player, "You have no homes.");
@@ -212,8 +238,11 @@ public final class ServerCoreCommands {
         return homes.size();
     }
 
-    private static int handleHomeTeleport(CommandContext<ServerCommandSource> ctx, String name) throws Exception {
-        ServerPlayerEntity player = ctx.getSource().getPlayer();
+    private static int handleHomeTeleport(CommandContext<ServerCommandSource> ctx, String name) {
+        ServerPlayerEntity player = requirePlayer(ctx);
+        if (player == null) {
+            return 0;
+        }
         HomeRecord record = HomeService.getInstance().getHome(ctx.getSource().getServer(), player.getUuid(), name);
         if (record == null) {
             MessageUtil.send(player, "Home not found.");
@@ -229,17 +258,31 @@ public final class ServerCoreCommands {
         return 1;
     }
 
-    private static int handleDelHome(CommandContext<ServerCommandSource> ctx, String name) throws Exception {
-        ServerPlayerEntity player = ctx.getSource().getPlayer();
+    private static int handleDelHome(CommandContext<ServerCommandSource> ctx, String name) {
+        ServerPlayerEntity player = requirePlayer(ctx);
+        if (player == null) {
+            return 0;
+        }
         boolean removed = HomeService.getInstance().deleteHome(ctx.getSource().getServer(), player.getUuid(), name);
         MessageUtil.send(player, removed ? "Home deleted." : "Home not found.");
         return removed ? 1 : 0;
     }
 
-    private static int handleRtp(CommandContext<ServerCommandSource> ctx, String dimensionKey) throws Exception {
-        ServerPlayerEntity player = ctx.getSource().getPlayer();
+    private static int handleRtp(CommandContext<ServerCommandSource> ctx, String dimensionKey) {
+        ServerPlayerEntity player = requirePlayer(ctx);
+        if (player == null) {
+            return 0;
+        }
         RandomTeleportService.RtpResult result = RandomTeleportService.getInstance().teleport(player, dimensionKey);
         MessageUtil.send(player, result.getMessage());
         return result.isSuccess() ? 1 : 0;
+    }
+
+    private static ServerPlayerEntity requirePlayer(CommandContext<ServerCommandSource> ctx) {
+        try {
+            return ctx.getSource().getPlayer();
+        } catch (CommandSyntaxException ignored) {
+            return null;
+        }
     }
 }

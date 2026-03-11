@@ -1,7 +1,7 @@
 package com.itamio.servercore.fabric;
 
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.text.LiteralText;
 
 public final class MessageUtil {
     private MessageUtil() {
@@ -9,7 +9,7 @@ public final class MessageUtil {
 
     public static void send(ServerPlayerEntity player, String message) {
         if (player != null) {
-            player.sendMessage(Text.literal(message), false);
+            player.sendMessage(new LiteralText(message), false);
         }
     }
 }

@@ -21,12 +21,26 @@ Minecraft Version (1.17) does not match yarn's minecraft version (1.17.1)
 :remapping 48 mods (TinyRemapper, intermediary -> named)
 
 > Task :compileJava
-/tmp/modcompiler-servercore-fabric-1-17-o75ftfvd/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:16: error: cannot find symbol
-import net.minecraft.world.gen.Heightmap;
-                              ^
-  symbol:   class Heightmap
-  location: package net.minecraft.world.gen
-1 error
+/tmp/modcompiler-servercore-fabric-1-17-ifnmxbf1/workspace/src/main/java/com/itamio/servercore/fabric/MessageUtil.java:12: error: cannot find symbol
+            player.sendMessage(Text.literal(message), false);
+                                   ^
+  symbol:   method literal(String)
+  location: interface Text
+/tmp/modcompiler-servercore-fabric-1-17-ifnmxbf1/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:38: error: incompatible thrown types Exception in functional expression
+                .executes(ServerCoreCommands::handleTpacceptAll));
+                          ^
+/tmp/modcompiler-servercore-fabric-1-17-ifnmxbf1/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:48: error: incompatible thrown types Exception in functional expression
+                .executes(ServerCoreCommands::handleTpadenyAll));
+                          ^
+/tmp/modcompiler-servercore-fabric-1-17-ifnmxbf1/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:63: error: incompatible thrown types Exception in functional expression
+                        .executes(ServerCoreCommands::handleHomeList))
+                                  ^
+/tmp/modcompiler-servercore-fabric-1-17-ifnmxbf1/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:222: error: cannot find symbol
+        ServerWorld world = TeleportUtil.resolveWorld(ctx.getSource().getServer(), record.getDimension());
+        ^
+  symbol:   class ServerWorld
+  location: class ServerCoreCommands
+5 errors
 
 > Task :compileJava FAILED
 
@@ -231,9 +245,9 @@ Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Com
 
 * Get more help at https://help.gradle.org
 
-BUILD FAILED in 1m 21s
+BUILD FAILED in 1m 20s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.17-1.17.1/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-17-o75ftfvd/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-17/src --template-workspace /tmp/modcompiler-servercore-fabric-1-17-o75ftfvd/workspace --minecraft-version 1.17 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.17-1.17.1/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-17-ifnmxbf1/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-17/src --template-workspace /tmp/modcompiler-servercore-fabric-1-17-ifnmxbf1/workspace --minecraft-version 1.17 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

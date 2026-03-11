@@ -17,13 +17,39 @@ Daemon will be stopped at the end of the build
 Fabric Loom: 1.6.12
 :remapping 51 mods from modImplementation (java-api)
 
+> Task :compileJava
+/tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:18: error: ServerCoreData is not abstract and does not override abstract method writeNbt(NbtCompound,WrapperLookup) in PersistentState
+public final class ServerCoreData extends PersistentState {
+             ^
+/tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:27: error: method getOrCreate in class PersistentStateManager cannot be applied to given types;
+        return manager.getOrCreate(ServerCoreData::fromNbt, ServerCoreData::new, DATA_NAME);
+                      ^
+  required: Type<T>,String
+  found:    ServerCore[...]omNbt,ServerCoreData::new,String
+  reason: cannot infer type-variable(s) T
+    (actual and formal argument lists differ in length)
+  where T is a type-variable:
+    T extends PersistentState declared in method <T>getOrCreate(Type<T>,String)
+/tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:81: error: method does not override or implement a method from a supertype
+    @Override
+    ^
+/tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:38: error: incompatible thrown types Exception in functional expression
+                .executes(ServerCoreCommands::handleTpacceptAll));
+                          ^
+/tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:48: error: incompatible thrown types Exception in functional expression
+                .executes(ServerCoreCommands::handleTpadenyAll));
+                          ^
+/tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:63: error: incompatible thrown types Exception in functional expression
+                        .executes(ServerCoreCommands::handleHomeList))
+                                  ^
+/tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:222: error: cannot find symbol
+        ServerWorld world = TeleportUtil.resolveWorld(ctx.getSource().getServer(), record.getDimension());
+        ^
+  symbol:   class ServerWorld
+  location: class ServerCoreCommands
+7 errors
+
 > Task :compileJava FAILED
-/tmp/modcompiler-servercore-fabric-1-20-5-56gfakue/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:16: error: cannot find symbol
-import net.minecraft.world.gen.Heightmap;
-                              ^
-  symbol:   class Heightmap
-  location: package net.minecraft.world.gen
-1 error
 
 FAILURE: Build failed with an exception.
 
@@ -225,9 +251,9 @@ Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Com
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 59s
+BUILD FAILED in 1m 17s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.20-1.20.6/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-20-5-56gfakue/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-20-5/src --template-workspace /tmp/modcompiler-servercore-fabric-1-20-5-56gfakue/workspace --minecraft-version 1.20.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.20-1.20.6/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-20-5/src --template-workspace /tmp/modcompiler-servercore-fabric-1-20-5-dfax0n17/workspace --minecraft-version 1.20.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon
