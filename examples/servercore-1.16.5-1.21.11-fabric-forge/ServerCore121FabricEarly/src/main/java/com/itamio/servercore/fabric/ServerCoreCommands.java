@@ -1,7 +1,7 @@
 package com.itamio.servercore.fabric;
 
-import com.itamio.servercore.forge.TeleportRequestService.RequestType;
-import com.itamio.servercore.forge.TeleportRequestService.TeleportRequest;
+import com.itamio.servercore.fabric.TeleportRequestService.RequestType;
+import com.itamio.servercore.fabric.TeleportRequestService.TeleportRequest;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -10,6 +10,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
@@ -88,16 +89,16 @@ public final class ServerCoreCommands {
         }
         TeleportRequestService.getInstance().upsertRequest(
                 sender.getUUID(),
-                sender.getGameProfile().getName(),
+                ServerCoreAccess.getPlayerName(sender),
                 target.getUUID(),
-                target.getGameProfile().getName(),
+                ServerCoreAccess.getPlayerName(target),
                 type
         );
-        MessageUtil.send(sender, "Teleport request sent to " + target.getGameProfile().getName() + ".");
+        MessageUtil.send(sender, "Teleport request sent to " + ServerCoreAccess.getPlayerName(target) + ".");
         if (type == RequestType.TPA) {
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
+            MessageUtil.send(target, ServerCoreAccess.getPlayerName(sender) + " wants to teleport to you. Use /tpaccept " + ServerCoreAccess.getPlayerName(sender) + " or /tpadeny " + ServerCoreAccess.getPlayerName(sender) + ".");
         } else {
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
+            MessageUtil.send(target, ServerCoreAccess.getPlayerName(sender) + " wants you to teleport to them. Use /tpaccept " + ServerCoreAccess.getPlayerName(sender) + " or /tpadeny " + ServerCoreAccess.getPlayerName(sender) + ".");
         }
         return 1;
     }
@@ -162,7 +163,7 @@ public final class ServerCoreCommands {
     }
 
     private static int completeTeleport(ServerPlayer target, TeleportRequest request) {
-        MinecraftServer server = target.getServer();
+        MinecraftServer server = ServerCoreAccess.getServer(target);
         if (server == null) {
             MessageUtil.send(target, "Server unavailable.");
             return 0;
@@ -172,14 +173,20 @@ public final class ServerCoreCommands {
             MessageUtil.send(target, "Requester is offline.");
             return 0;
         }
+        ServerLevel targetLevel = ServerCoreAccess.getServerLevel(target);
+        ServerLevel requesterLevel = ServerCoreAccess.getServerLevel(requester);
+        if (targetLevel == null || requesterLevel == null) {
+            MessageUtil.send(target, "Target level unavailable.");
+            return 0;
+        }
         if (request.getType() == RequestType.TPA) {
-            TeleportUtil.teleport(requester, target.serverLevel(), target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
-            MessageUtil.send(requester, "Teleporting to " + target.getGameProfile().getName() + ".");
-            MessageUtil.send(target, "Accepted teleport request from " + requester.getGameProfile().getName() + ".");
+            TeleportUtil.teleport(requester, targetLevel, target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
+            MessageUtil.send(requester, "Teleporting to " + ServerCoreAccess.getPlayerName(target) + ".");
+            MessageUtil.send(target, "Accepted teleport request from " + ServerCoreAccess.getPlayerName(requester) + ".");
         } else {
-            TeleportUtil.teleport(target, requester.serverLevel(), requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
-            MessageUtil.send(target, "Teleporting to " + requester.getGameProfile().getName() + ".");
-            MessageUtil.send(requester, target.getGameProfile().getName() + " accepted your request.");
+            TeleportUtil.teleport(target, requesterLevel, requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
+            MessageUtil.send(target, "Teleporting to " + ServerCoreAccess.getPlayerName(requester) + ".");
+            MessageUtil.send(requester, ServerCoreAccess.getPlayerName(target) + " accepted your request.");
         }
         return 1;
     }
