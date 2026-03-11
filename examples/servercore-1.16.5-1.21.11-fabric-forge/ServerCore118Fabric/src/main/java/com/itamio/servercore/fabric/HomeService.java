@@ -1,5 +1,6 @@
 package com.itamio.servercore.fabric;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -9,6 +10,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 
 public final class HomeService {
     private static final Pattern HOME_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,32}$");
@@ -27,7 +29,11 @@ public final class HomeService {
             return null;
         }
         String key = normalizeKey(homeName);
-        String dimension = TeleportUtil.dimensionKey(player.getServerWorld());
+        ServerWorld world = getServerWorld(player);
+        if (world == null) {
+            return null;
+        }
+        String dimension = TeleportUtil.dimensionKey(world);
         HomeRecord record = new HomeRecord(
                 key,
                 homeName,
@@ -89,5 +95,21 @@ public final class HomeService {
         }
         String trimmed = rawName.trim();
         return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
+    }
+
+    private static ServerWorld getServerWorld(ServerPlayerEntity player) {
+        try {
+            Method method = player.getClass().getMethod("getServerWorld");
+            Object value = method.invoke(player);
+            return value instanceof ServerWorld ? (ServerWorld) value : null;
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Method method = player.getClass().getMethod("getWorld");
+            Object value = method.invoke(player);
+            return value instanceof ServerWorld ? (ServerWorld) value : null;
+        } catch (ReflectiveOperationException ignored) {
+        }
+        return null;
     }
 }

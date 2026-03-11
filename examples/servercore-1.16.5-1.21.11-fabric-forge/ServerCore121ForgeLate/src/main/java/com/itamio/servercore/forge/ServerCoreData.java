@@ -8,6 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.core.HolderLookup;
@@ -178,20 +179,26 @@ public final class ServerCoreData extends SavedData {
         homesByPlayer.clear();
         seenPlayers.clear();
 
-        ListTag players = tag.getList("players", 10);
+        ListTag players = getListTag(tag, "players");
         for (int i = 0; i < players.size(); i++) {
-            CompoundTag playerTag = players.getCompound(i);
-            UUID uuid = parseUuid(playerTag.getString("uuid"));
+            CompoundTag playerTag = getCompoundTag(players, i);
+            if (playerTag == null) {
+                continue;
+            }
+            UUID uuid = parseUuid(getStringValue(playerTag, "uuid"));
             if (uuid == null) {
                 continue;
             }
-            ListTag homesList = playerTag.getList("homes", 10);
+            ListTag homesList = getListTag(playerTag, "homes");
             Map<String, HomeRecord> homes = new LinkedHashMap<>();
             for (int j = 0; j < homesList.size(); j++) {
-                CompoundTag homeTag = homesList.getCompound(j);
-                String key = homeTag.getString("key");
-                String name = homeTag.getString("name");
-                String dimension = homeTag.getString("dimension");
+                CompoundTag homeTag = getCompoundTag(homesList, j);
+                if (homeTag == null) {
+                    continue;
+                }
+                String key = getStringValue(homeTag, "key");
+                String name = getStringValue(homeTag, "name");
+                String dimension = getStringValue(homeTag, "dimension");
                 if (key == null || key.isEmpty() || name == null || name.isEmpty()) {
                     continue;
                 }
@@ -199,20 +206,20 @@ public final class ServerCoreData extends SavedData {
                         key,
                         name,
                         dimension,
-                        homeTag.getDouble("x"),
-                        homeTag.getDouble("y"),
-                        homeTag.getDouble("z"),
-                        homeTag.getFloat("yaw"),
-                        homeTag.getFloat("pitch")
+                        getDoubleValue(homeTag, "x"),
+                        getDoubleValue(homeTag, "y"),
+                        getDoubleValue(homeTag, "z"),
+                        getFloatValue(homeTag, "yaw"),
+                        getFloatValue(homeTag, "pitch")
                 );
                 homes.put(key, record);
             }
             homesByPlayer.put(uuid, homes);
         }
 
-        ListTag seenList = tag.getList("seen", 8);
+        ListTag seenList = getListTag(tag, "seen");
         for (int i = 0; i < seenList.size(); i++) {
-            String uuidText = seenList.getString(i);
+            String uuidText = getStringValue(seenList, i);
             UUID uuid = parseUuid(uuidText);
             if (uuid != null) {
                 seenPlayers.add(uuid);
@@ -220,7 +227,6 @@ public final class ServerCoreData extends SavedData {
         }
     }
 
-    @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         ListTag players = new ListTag();
         for (Map.Entry<UUID, Map<String, HomeRecord>> entry : homesByPlayer.entrySet()) {
@@ -250,6 +256,71 @@ public final class ServerCoreData extends SavedData {
         }
         tag.put("seen", seenList);
         return tag;
+    }
+
+    public CompoundTag save(CompoundTag tag) {
+        return save(tag, null);
+    }
+
+    private static ListTag getListTag(CompoundTag tag, String key) {
+        Object value = invoke(tag, "getList", new Class<?>[] {String.class, int.class}, key, 10);
+        if (value == null) {
+            value = invoke(tag, "getList", new Class<?>[] {String.class}, key);
+        }
+        value = unwrapOptional(value);
+        if (value instanceof ListTag) {
+            return (ListTag) value;
+        }
+        return new ListTag();
+    }
+
+    private static CompoundTag getCompoundTag(ListTag list, int index) {
+        Object value = invoke(list, "getCompound", new Class<?>[] {int.class}, index);
+        value = unwrapOptional(value);
+        return value instanceof CompoundTag ? (CompoundTag) value : null;
+    }
+
+    private static String getStringValue(CompoundTag tag, String key) {
+        Object value = invoke(tag, "getString", new Class<?>[] {String.class}, key);
+        value = unwrapOptional(value);
+        return value instanceof String ? (String) value : "";
+    }
+
+    private static String getStringValue(ListTag list, int index) {
+        Object value = invoke(list, "getString", new Class<?>[] {int.class}, index);
+        value = unwrapOptional(value);
+        return value instanceof String ? (String) value : "";
+    }
+
+    private static double getDoubleValue(CompoundTag tag, String key) {
+        Object value = invoke(tag, "getDouble", new Class<?>[] {String.class}, key);
+        value = unwrapOptional(value);
+        return value instanceof Number ? ((Number) value).doubleValue() : 0.0;
+    }
+
+    private static float getFloatValue(CompoundTag tag, String key) {
+        Object value = invoke(tag, "getFloat", new Class<?>[] {String.class}, key);
+        value = unwrapOptional(value);
+        return value instanceof Number ? ((Number) value).floatValue() : 0.0f;
+    }
+
+    private static Object invoke(Object target, String name, Class<?>[] params, Object... args) {
+        if (target == null) {
+            return null;
+        }
+        try {
+            Method method = target.getClass().getMethod(name, params);
+            return method.invoke(target, args);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
+    }
+
+    private static Object unwrapOptional(Object value) {
+        if (value instanceof Optional) {
+            return ((Optional<?>) value).orElse(null);
+        }
+        return value;
     }
 
     public Collection<HomeRecord> listHomes(UUID playerUuid) {

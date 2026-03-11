@@ -33,41 +33,49 @@ Executing steps
  > Running 'listLibraries'
  > Running 'rename'
 Stopping at requested step: /home/runner/.gradle/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.18-20211130.085255/joined/rename/output.jar
-[10:44:27] [main/INFO]: Writing debug log file accesstransform.log
-[10:44:27] [main/INFO]: Access Transformer processor running version 8.2.1
-[10:44:27] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17/forge-1.18-38.0.17-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17_mapped_official_1.18/forge-1.18-38.0.17_mapped_official_1.18.jar, --logFile, accesstransform.log, --atFile, /tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/workspace/build/_atJar_4/parent_at.cfg]
-[10:44:27] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17/forge-1.18-38.0.17-injected.jar
-[10:44:27] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17_mapped_official_1.18/forge-1.18-38.0.17_mapped_official_1.18.jar
-[10:44:27] [main/INFO]: Transformer file /tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/workspace/build/_atJar_4/parent_at.cfg
-[10:44:27] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17_mapped_official_1.18/forge-1.18-38.0.17_mapped_official_1.18.jar, overwriting
-[10:44:31] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17_mapped_official_1.18/forge-1.18-38.0.17_mapped_official_1.18.jar
+[11:47:58] [main/INFO]: Writing debug log file accesstransform.log
+[11:47:58] [main/INFO]: Access Transformer processor running version 8.2.1
+[11:47:58] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17/forge-1.18-38.0.17-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17_mapped_official_1.18/forge-1.18-38.0.17_mapped_official_1.18.jar, --logFile, accesstransform.log, --atFile, /tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/build/_atJar_4/parent_at.cfg]
+[11:47:58] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17/forge-1.18-38.0.17-injected.jar
+[11:47:58] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17_mapped_official_1.18/forge-1.18-38.0.17_mapped_official_1.18.jar
+[11:47:58] [main/INFO]: Transformer file /tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/build/_atJar_4/parent_at.cfg
+[11:47:58] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17_mapped_official_1.18/forge-1.18-38.0.17_mapped_official_1.18.jar, overwriting
+[11:48:01] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.18-38.0.17_mapped_official_1.18/forge-1.18-38.0.17_mapped_official_1.18.jar
 Creating SRG -> MCP TSRG
-/tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/workspace/src/main/java/com/itamio/servercore/forge/MessageUtil.java:16: error: cannot find symbol
-        Component component = Component.literal(message);
-                                       ^
-  symbol:   method literal(String)
-  location: interface Component
-/tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/workspace/src/main/java/com/itamio/servercore/forge/HomeService.java:30: error: cannot find symbol
-        String dimension = TeleportUtil.dimensionKey(player.serverLevel());
-                                                           ^
-  symbol:   method serverLevel()
-  location: variable player of type ServerPlayer
-/tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:176: error: cannot find symbol
-            TeleportUtil.teleport(requester, target.serverLevel(), target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
-                                                   ^
-  symbol:   method serverLevel()
-  location: variable target of type ServerPlayer
-/tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:180: error: cannot find symbol
-            TeleportUtil.teleport(target, requester.serverLevel(), requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
-                                                   ^
-  symbol:   method serverLevel()
-  location: variable requester of type ServerPlayer
-/tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:223: error: cannot find symbol
-        ServerLevel level = TeleportUtil.resolveLevel(ctx.getSource().getServer(), record.getDimension());
-        ^
-  symbol:   class ServerLevel
-  location: class ServerCoreCommands
-5 errors
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:85: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer sender = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:107: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer target = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:123: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer target = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:135: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer target = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:152: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer target = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:159: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer requester = ctx.getSource().getPlayerOrException();
+                                                                     ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:189: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:200: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:218: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:235: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                                                  ^
+/tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:242: error: unreported exception CommandSyntaxException; must be caught or declared to be thrown
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                                                  ^
+11 errors
 
 > Task :compileJava FAILED
 
@@ -268,9 +276,9 @@ Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Com
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 1m 34s
+BUILD FAILED in 1m 45s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.18-1.18.2/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-18/src --template-workspace /tmp/modcompiler-servercore-forge-1-18-lqy3k8m9/workspace --minecraft-version 1.18 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.18-1.18.2/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-18-l_hfmg85/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-18/src --template-workspace /tmp/modcompiler-servercore-forge-1-18-l_hfmg85/workspace --minecraft-version 1.18 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

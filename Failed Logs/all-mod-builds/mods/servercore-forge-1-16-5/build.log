@@ -19,11 +19,11 @@ Java: 1.8.0_482, JVM: 25.482-b08 (Temurin), Arch: amd64
 FAILURE: Build failed with an exception.
 
 * Where:
-Build file '/tmp/modcompiler-servercore-forge-1-16-5-_ymznv5b/workspace/build.gradle' line: 106
+Build file '/tmp/modcompiler-servercore-forge-1-16-5-wfdn5if4/workspace/build.gradle' line: 106
 
 * What went wrong:
 A problem occurred evaluating root project 'servercore'.
-> Could not find method mavenizer() for arguments [repository container] on extension 'minecraft' of type net.minecraftforge.gradle.userdev.UserDevExtension.
+> Could not get unknown property 'forgeMaven' for extension 'fg' of type net.minecraftforge.gradle.userdev.DependencyManagementExtension.
 
 * Try:
 > Run with --info or --debug option to get more log output.
@@ -197,13 +197,12 @@ org.gradle.api.GradleScriptException: A problem occurred evaluating root project
 	at org.gradle.launcher.daemon.server.DaemonStateCoordinator$1.run(DaemonStateCoordinator.java:297)
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
-Caused by: org.gradle.internal.metaobject.AbstractDynamicObject$CustomMessageMissingMethodException: Could not find method mavenizer() for arguments [repository container] on extension 'minecraft' of type net.minecraftforge.gradle.userdev.UserDevExtension.
-	at org.gradle.internal.metaobject.AbstractDynamicObject$CustomMissingMethodExecutionFailed.<init>(AbstractDynamicObject.java:190)
-	at org.gradle.internal.metaobject.AbstractDynamicObject.methodMissingException(AbstractDynamicObject.java:184)
-	at org.gradle.internal.metaobject.AbstractDynamicObject.invokeMethod(AbstractDynamicObject.java:167)
-	at net.minecraftforge.gradle.userdev.UserDevExtension_Decorated.invokeMethod(Unknown Source)
-	at build_fq4b3dodbi0x2ydcr8rbtw3h$_run_closure4.doCall$original(/tmp/modcompiler-servercore-forge-1-16-5-_ymznv5b/workspace/build.gradle:106)
-	at build_fq4b3dodbi0x2ydcr8rbtw3h$_run_closure4.doCall(/tmp/modcompiler-servercore-forge-1-16-5-_ymznv5b/workspace/build.gradle)
+Caused by: groovy.lang.MissingPropertyException: Could not get unknown property 'forgeMaven' for extension 'fg' of type net.minecraftforge.gradle.userdev.DependencyManagementExtension.
+	at org.gradle.internal.metaobject.AbstractDynamicObject.getMissingProperty(AbstractDynamicObject.java:85)
+	at org.gradle.internal.metaobject.AbstractDynamicObject.getProperty(AbstractDynamicObject.java:62)
+	at net.minecraftforge.gradle.userdev.DependencyManagementExtension_Decorated.getProperty(Unknown Source)
+	at build_294yof2rqp689tq8j5jbcy06e$_run_closure4.doCall$original(/tmp/modcompiler-servercore-forge-1-16-5-wfdn5if4/workspace/build.gradle:106)
+	at build_294yof2rqp689tq8j5jbcy06e$_run_closure4.doCall(/tmp/modcompiler-servercore-forge-1-16-5-wfdn5if4/workspace/build.gradle)
 	at org.gradle.util.internal.ClosureBackedAction.execute(ClosureBackedAction.java:73)
 	at org.gradle.util.internal.ConfigureUtil.configureTarget(ConfigureUtil.java:155)
 	at org.gradle.util.internal.ConfigureUtil.configureSelf(ConfigureUtil.java:131)
@@ -219,13 +218,13 @@ Caused by: org.gradle.internal.metaobject.AbstractDynamicObject$CustomMessageMis
 	at org.gradle.internal.metaobject.AbstractDynamicObject.invokeMethod(AbstractDynamicObject.java:163)
 	at org.gradle.api.internal.project.DefaultDynamicLookupRoutine.invokeMethod(DefaultDynamicLookupRoutine.java:58)
 	at org.gradle.groovy.scripts.BasicScript.invokeMethod(BasicScript.java:87)
-	at build_fq4b3dodbi0x2ydcr8rbtw3h.run(/tmp/modcompiler-servercore-forge-1-16-5-_ymznv5b/workspace/build.gradle:105)
+	at build_294yof2rqp689tq8j5jbcy06e.run(/tmp/modcompiler-servercore-forge-1-16-5-wfdn5if4/workspace/build.gradle:105)
 	at org.gradle.groovy.scripts.internal.DefaultScriptRunnerFactory$ScriptRunnerImpl.run(DefaultScriptRunnerFactory.java:91)
 	... 164 more
 
 
-BUILD FAILED in 23s
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.16.5/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-16-5-_ymznv5b/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-16-5/src --template-workspace /tmp/modcompiler-servercore-forge-1-16-5-_ymznv5b/workspace --minecraft-version 1.16.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+BUILD FAILED in 24s
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.16.5/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-16-5-wfdn5if4/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-16-5/src --template-workspace /tmp/modcompiler-servercore-forge-1-16-5-wfdn5if4/workspace --minecraft-version 1.16.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

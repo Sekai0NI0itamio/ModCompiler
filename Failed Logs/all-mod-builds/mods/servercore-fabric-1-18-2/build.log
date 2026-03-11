@@ -19,13 +19,44 @@ Processing file: minecraft-project-@-merged-named.jar
 Processing file: minecraft-project-@-merged-named.jar
 :remapping 46 mods (TinyRemapper, intermediary -> named)
 
+> Task :compileJava
+/tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace/src/main/java/com/itamio/servercore/fabric/MessageUtil.java:12: error: cannot find symbol
+            player.sendMessage(Text.literal(message), false);
+                                   ^
+  symbol:   method literal(String)
+  location: interface Text
+/tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace/src/main/java/com/itamio/servercore/fabric/HomeService.java:30: error: cannot find symbol
+        String dimension = TeleportUtil.dimensionKey(player.getServerWorld());
+                                                           ^
+  symbol:   method getServerWorld()
+  location: variable player of type ServerPlayerEntity
+/tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:38: error: incompatible thrown types Exception in functional expression
+                .executes(ServerCoreCommands::handleTpacceptAll));
+                          ^
+/tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:48: error: incompatible thrown types Exception in functional expression
+                .executes(ServerCoreCommands::handleTpadenyAll));
+                          ^
+/tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:63: error: incompatible thrown types Exception in functional expression
+                        .executes(ServerCoreCommands::handleHomeList))
+                                  ^
+/tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:175: error: cannot find symbol
+            TeleportUtil.teleport(requester, target.getServerWorld(), target.getX(), target.getY(), target.getZ(), target.getYaw(), target.getPitch());
+                                                   ^
+  symbol:   method getServerWorld()
+  location: variable target of type ServerPlayerEntity
+/tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:179: error: cannot find symbol
+            TeleportUtil.teleport(target, requester.getServerWorld(), requester.getX(), requester.getY(), requester.getZ(), requester.getYaw(), requester.getPitch());
+                                                   ^
+  symbol:   method getServerWorld()
+  location: variable requester of type ServerPlayerEntity
+/tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:222: error: cannot find symbol
+        ServerWorld world = TeleportUtil.resolveWorld(ctx.getSource().getServer(), record.getDimension());
+        ^
+  symbol:   class ServerWorld
+  location: class ServerCoreCommands
+8 errors
+
 > Task :compileJava FAILED
-/tmp/modcompiler-servercore-fabric-1-18-2-i4w26_ys/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:16: error: cannot find symbol
-import net.minecraft.world.gen.Heightmap;
-                              ^
-  symbol:   class Heightmap
-  location: package net.minecraft.world.gen
-1 error
 
 FAILURE: Build failed with an exception.
 
@@ -229,9 +260,9 @@ Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Com
 
 * Get more help at https://help.gradle.org
 
-BUILD FAILED in 1m 21s
+BUILD FAILED in 1m 2s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.18-1.18.2/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-18-2-i4w26_ys/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-18-2/src --template-workspace /tmp/modcompiler-servercore-fabric-1-18-2-i4w26_ys/workspace --minecraft-version 1.18.2 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.18-1.18.2/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-18-2/src --template-workspace /tmp/modcompiler-servercore-fabric-1-18-2-45wr8x88/workspace --minecraft-version 1.18.2 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

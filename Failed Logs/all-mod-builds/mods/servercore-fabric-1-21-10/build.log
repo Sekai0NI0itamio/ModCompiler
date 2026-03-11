@@ -23,15 +23,15 @@ Please make sure to read and understand the following license:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Cannot remap method_27640 because it does not exists in any of the targets [net/minecraft/class_5235$class_5241$1] or their parents.
 Cannot remap field_64600 because it does not exists in any of the targets [net/minecraft/class_3065$1] or their parents.
+Cannot remap field_64205 because it does not exists in any of the targets [net/minecraft/class_521$class_4271] or their parents.
+Cannot remap field_64206 because it does not exists in any of the targets [net/minecraft/class_521$class_4271] or their parents.
 Cannot remap field_64570 because it does not exists in any of the targets [net/minecraft/class_775] or their parents.
 Cannot remap field_64571 because it does not exists in any of the targets [net/minecraft/class_775] or their parents.
 Cannot remap field_64568 because it does not exists in any of the targets [net/minecraft/class_775] or their parents.
 Cannot remap field_64569 because it does not exists in any of the targets [net/minecraft/class_775] or their parents.
-Cannot remap field_64205 because it does not exists in any of the targets [net/minecraft/class_521$class_4271] or their parents.
-Cannot remap field_64206 because it does not exists in any of the targets [net/minecraft/class_521$class_4271] or their parents.
 
-Cannot remap method_20762 because it does not exists in any of the targets [net/minecraft/class_3065$1]
 Cannot remap method_7246 because it does not exists in any of the targets [net/minecraft/class_3853$class_4162]
+Cannot remap method_20762 because it does not exists in any of the targets [net/minecraft/class_3065$1]
 Cannot remap <init> because it does not exists in any of the targets [net/minecraft/class_5350]
 Cannot remap method_58296 because it does not exists in any of the targets [net/minecraft/class_5350]
 Cannot remap method_27640 because it does not exists in any of the targets [net/minecraft/class_5235$class_5241$1]
@@ -41,9 +41,9 @@ Cannot remap method_62214 because it does not exists in any of the targets [net/
 Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
 Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
 Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
-Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
-Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
 Cannot remap <init> because it does not exists in any of the targets [net/minecraft/class_5350]
+Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
+Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
 Cannot remap method_13397 because it does not exists in any of the targets [net/minecraft/class_3065] or their parents.
 Cannot remap method_25423 because it does not exists in any of the targets [net/minecraft/class_437]
 Cannot remap method_25423 because it does not exists in any of the targets [net/minecraft/class_437]
@@ -59,450 +59,110 @@ Cannot remap method_18096 because it does not exists in any of the targets [net/
 Cannot remap method_76796 because it does not exists in any of the targets [net/minecraft/class_310]
 
 > Task :compileJava
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:3: error: package com.itamio.servercore.forge.TeleportRequestService does not exist
-import com.itamio.servercore.forge.TeleportRequestService.RequestType;
-                                                         ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:4: error: package com.itamio.servercore.forge.TeleportRequestService does not exist
-import com.itamio.servercore.forge.TeleportRequestService.TeleportRequest;
-                                                         ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:83: error: cannot find symbol
-    private static int handleTpa(CommandContext<CommandSourceStack> ctx, ServerPlayer target, RequestType type) {
-                                                                                              ^
-  symbol:   class RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:164: error: cannot find symbol
-    private static int completeTeleport(ServerPlayer target, TeleportRequest request) {
-                                                             ^
-  symbol:   class TeleportRequest
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/HomeService.java:30: error: cannot find symbol
-        String dimension = TeleportUtil.dimensionKey(player.serverLevel());
-                                                           ^
-  symbol:   method serverLevel()
-  location: variable player of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:23: error: method computeIfAbsent in class DimensionDataStorage cannot be applied to given types;
-        return overworld.getDataStorage().computeIfAbsent(ServerCoreData::load, ServerCoreData::new, DATA_NAME);
-                                         ^
-  required: SavedDataType<T>
-  found:    ServerCore[...]:load,ServerCoreData::new,String
-  reason: cannot infer type-variable(s) T
-    (actual and formal argument lists differ in length)
-  where T is a type-variable:
-    T extends SavedData declared in method <T>computeIfAbsent(SavedDataType<T>)
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:36: error: method getList in class CompoundTag cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
         ListTag players = tag.getList("players", 10);
                              ^
   required: String
   found:    String,int
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:38: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
             CompoundTag playerTag = players.getCompound(i);
                                                        ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:39: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
             UUID uuid = parseUuid(playerTag.getString("uuid"));
                                                      ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:43: error: method getList in class CompoundTag cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
             ListTag homesList = playerTag.getList("homes", 10);
                                          ^
   required: String
   found:    String,int
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:46: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
                 CompoundTag homeTag = homesList.getCompound(j);
                                                            ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:47: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
                 String key = homeTag.getString("key");
                                               ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:48: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
                 String name = homeTag.getString("name");
                                                ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:49: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
                 String dimension = homeTag.getString("dimension");
                                                     ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:57: error: incompatible types: Optional<Double> cannot be converted to double
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
                         homeTag.getDouble("x"),
                                          ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:68: error: method getList in class CompoundTag cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
         ListTag seenList = tag.getList("seen", 8);
                               ^
   required: String
   found:    String,int
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:70: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
             String uuidText = seenList.getString(i);
                                                 ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:78: error: method does not override or implement a method from a supertype
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
     @Override
     ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:24: error: cannot find symbol
-                        .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), RequestType.TPA))));
-                                                                                                 ^
-  symbol:   variable RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:29: error: cannot find symbol
-                        .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), RequestType.TPAHERE))));
-                                                                                                 ^
-  symbol:   variable RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:91: error: cannot find symbol
-                sender.getGameProfile().getName(),
-                                       ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:93: error: cannot find symbol
-                target.getGameProfile().getName(),
-                                       ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:96: error: cannot find symbol
-        MessageUtil.send(sender, "Teleport request sent to " + target.getGameProfile().getName() + ".");
-                                                                                      ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:97: error: cannot find symbol
-        if (type == RequestType.TPA) {
-                    ^
-  symbol:   variable RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                            ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                              ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                                                                    ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                            ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                   ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                                                                         ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:108: error: cannot find symbol
-        TeleportRequest request;
-        ^
-  symbol:   class TeleportRequest
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:124: error: cannot find symbol
-        for (TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.getUUID())) {
-             ^
-  symbol:   class TeleportRequest
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:136: error: cannot find symbol
-        TeleportRequest request;
-        ^
-  symbol:   class TeleportRequest
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:165: error: cannot find symbol
-        MinecraftServer server = target.getServer();
-                                       ^
-  symbol:   method getServer()
-  location: variable target of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:175: error: cannot find symbol
-        if (request.getType() == RequestType.TPA) {
-                                 ^
-  symbol:   variable RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:176: error: cannot find symbol
-            TeleportUtil.teleport(requester, target.serverLevel(), target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
-                                                   ^
-  symbol:   method serverLevel()
-  location: variable target of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:177: error: cannot find symbol
-            MessageUtil.send(requester, "Teleporting to " + target.getGameProfile().getName() + ".");
-                                                                                   ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:178: error: cannot find symbol
-            MessageUtil.send(target, "Accepted teleport request from " + requester.getGameProfile().getName() + ".");
-                                                                                                   ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:180: error: cannot find symbol
-            TeleportUtil.teleport(target, requester.serverLevel(), requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
-                                                   ^
-  symbol:   method serverLevel()
-  location: variable requester of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:181: error: cannot find symbol
-            MessageUtil.send(target, "Teleporting to " + requester.getGameProfile().getName() + ".");
-                                                                                   ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:182: error: cannot find symbol
-            MessageUtil.send(requester, target.getGameProfile().getName() + " accepted your request.");
-                                                               ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:223: error: cannot find symbol
-        ServerLevel level = TeleportUtil.resolveLevel(ctx.getSource().getServer(), record.getDimension());
-        ^
-  symbol:   class ServerLevel
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:32: error: cannot find symbol
-        if (player == null || player.getServer() == null) {
-                                    ^
-  symbol:   method getServer()
-  location: variable player of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:35: error: cannot find symbol
-        MinecraftServer server = player.getServer();
-                                       ^
-  symbol:   method getServer()
-  location: variable player of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:88: error: cannot find symbol
-        int maxY = Math.min(top, level.getMaxBuildHeight() - 2);
-                                      ^
-  symbol:   method getMaxBuildHeight()
-  location: variable level of type ServerLevel
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:89: error: cannot find symbol
-        int minY = level.getMinBuildHeight() + 1;
-                        ^
-  symbol:   method getMinBuildHeight()
-  location: variable level of type ServerLevel
 Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-46 errors
+12 errors
 
 > Task :compileJava FAILED
 
-[Incubating] Problems report is available at: file:///tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
 Execution failed for task ':compileJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:23: error: method computeIfAbsent in class DimensionDataStorage cannot be applied to given types;
-          return overworld.getDataStorage().computeIfAbsent(ServerCoreData::load, ServerCoreData::new, DATA_NAME);
-                                           ^
-    required: SavedDataType<T>
-    found:    ServerCore[...]:load,ServerCoreData::new,String
-    reason: cannot infer type-variable(s) T
-      (actual and formal argument lists differ in length)
-    where T is a type-variable:
-      T extends SavedData declared in method <T>computeIfAbsent(SavedDataType<T>)
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:36: error: method getList in class CompoundTag cannot be applied to given types;
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
           ListTag players = tag.getList("players", 10);
                                ^
     required: String
     found:    String,int
     reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:43: error: method getList in class CompoundTag cannot be applied to given types;
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
               ListTag homesList = playerTag.getList("homes", 10);
                                            ^
     required: String
     found:    String,int
     reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:68: error: method getList in class CompoundTag cannot be applied to given types;
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
           ListTag seenList = tag.getList("seen", 8);
                                 ^
     required: String
     found:    String,int
     reason: actual and formal argument lists differ in length
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:38: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
               CompoundTag playerTag = players.getCompound(i);
                                                          ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:39: error: incompatible types: Optional<String> cannot be converted to String
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
               UUID uuid = parseUuid(playerTag.getString("uuid"));
                                                        ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:46: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
                   CompoundTag homeTag = homesList.getCompound(j);
                                                              ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:47: error: incompatible types: Optional<String> cannot be converted to String
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
                   String key = homeTag.getString("key");
                                                 ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:48: error: incompatible types: Optional<String> cannot be converted to String
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
                   String name = homeTag.getString("name");
                                                  ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:49: error: incompatible types: Optional<String> cannot be converted to String
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
                   String dimension = homeTag.getString("dimension");
                                                       ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:57: error: incompatible types: Optional<Double> cannot be converted to double
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
                           homeTag.getDouble("x"),
                                            ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:70: error: incompatible types: Optional<String> cannot be converted to String
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
               String uuidText = seenList.getString(i);
                                                   ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:83: error: cannot find symbol
-      private static int handleTpa(CommandContext<CommandSourceStack> ctx, ServerPlayer target, RequestType type) {
-                                                                                                ^
-    symbol:   class RequestType
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:164: error: cannot find symbol
-      private static int completeTeleport(ServerPlayer target, TeleportRequest request) {
-                                                               ^
-    symbol:   class TeleportRequest
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:24: error: cannot find symbol
-                          .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), RequestType.TPA))));
-                                                                                                   ^
-    symbol:   variable RequestType
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:29: error: cannot find symbol
-                          .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), RequestType.TPAHERE))));
-                                                                                                   ^
-    symbol:   variable RequestType
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:97: error: cannot find symbol
-          if (type == RequestType.TPA) {
-                      ^
-    symbol:   variable RequestType
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:108: error: cannot find symbol
-          TeleportRequest request;
-          ^
-    symbol:   class TeleportRequest
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:124: error: cannot find symbol
-          for (TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.getUUID())) {
-               ^
-    symbol:   class TeleportRequest
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:136: error: cannot find symbol
-          TeleportRequest request;
-          ^
-    symbol:   class TeleportRequest
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:175: error: cannot find symbol
-          if (request.getType() == RequestType.TPA) {
-                                   ^
-    symbol:   variable RequestType
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:223: error: cannot find symbol
-          ServerLevel level = TeleportUtil.resolveLevel(ctx.getSource().getServer(), record.getDimension());
-          ^
-    symbol:   class ServerLevel
-    location: class ServerCoreCommands
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:78: error: method does not override or implement a method from a supertype
+  /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
       @Override
       ^
   Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/HomeService.java:30: error: cannot find symbol
-          String dimension = TeleportUtil.dimensionKey(player.serverLevel());
-                                                             ^
-    symbol:   method serverLevel()
-    location: variable player of type ServerPlayer
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:91: error: cannot find symbol
-                  sender.getGameProfile().getName(),
-                                         ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:93: error: cannot find symbol
-                  target.getGameProfile().getName(),
-                                         ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:96: error: cannot find symbol
-          MessageUtil.send(sender, "Teleport request sent to " + target.getGameProfile().getName() + ".");
-                                                                                        ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-              MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                              ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-              MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-              MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                                                                      ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-              MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                              ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-              MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                     ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-              MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                                                                           ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:165: error: cannot find symbol
-          MinecraftServer server = target.getServer();
-                                         ^
-    symbol:   method getServer()
-    location: variable target of type ServerPlayer
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:176: error: cannot find symbol
-              TeleportUtil.teleport(requester, target.serverLevel(), target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
-                                                     ^
-    symbol:   method serverLevel()
-    location: variable target of type ServerPlayer
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:177: error: cannot find symbol
-              MessageUtil.send(requester, "Teleporting to " + target.getGameProfile().getName() + ".");
-                                                                                     ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:178: error: cannot find symbol
-              MessageUtil.send(target, "Accepted teleport request from " + requester.getGameProfile().getName() + ".");
-                                                                                                     ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:180: error: cannot find symbol
-              TeleportUtil.teleport(target, requester.serverLevel(), requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
-                                                     ^
-    symbol:   method serverLevel()
-    location: variable requester of type ServerPlayer
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:181: error: cannot find symbol
-              MessageUtil.send(target, "Teleporting to " + requester.getGameProfile().getName() + ".");
-                                                                                     ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:182: error: cannot find symbol
-              MessageUtil.send(requester, target.getGameProfile().getName() + " accepted your request.");
-                                                                 ^
-    symbol:   method getName()
-    location: class GameProfile
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:32: error: cannot find symbol
-          if (player == null || player.getServer() == null) {
-                                      ^
-    symbol:   method getServer()
-    location: variable player of type ServerPlayer
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:35: error: cannot find symbol
-          MinecraftServer server = player.getServer();
-                                         ^
-    symbol:   method getServer()
-    location: variable player of type ServerPlayer
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:88: error: cannot find symbol
-          int maxY = Math.min(top, level.getMaxBuildHeight() - 2);
-                                        ^
-    symbol:   method getMaxBuildHeight()
-    location: variable level of type ServerLevel
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:89: error: cannot find symbol
-          int minY = level.getMinBuildHeight() + 1;
-                          ^
-    symbol:   method getMinBuildHeight()
-    location: variable level of type ServerLevel
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:3: error: package com.itamio.servercore.forge.TeleportRequestService does not exist
-  import com.itamio.servercore.forge.TeleportRequestService.RequestType;
-                                                           ^
-  /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:4: error: package com.itamio.servercore.forge.TeleportRequestService does not exist
-  import com.itamio.servercore.forge.TeleportRequestService.TeleportRequest;
-                                                           ^
-  46 errors
+  12 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
@@ -544,223 +204,53 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:23: error: method computeIfAbsent in class DimensionDataStorage cannot be applied to given types;
-        return overworld.getDataStorage().computeIfAbsent(ServerCoreData::load, ServerCoreData::new, DATA_NAME);
-                                         ^
-  required: SavedDataType<T>
-  found:    ServerCore[...]:load,ServerCoreData::new,String
-  reason: cannot infer type-variable(s) T
-    (actual and formal argument lists differ in length)
-  where T is a type-variable:
-    T extends SavedData declared in method <T>computeIfAbsent(SavedDataType<T>)
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:36: error: method getList in class CompoundTag cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:181: error: method getList in class CompoundTag cannot be applied to given types;
         ListTag players = tag.getList("players", 10);
                              ^
   required: String
   found:    String,int
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:43: error: method getList in class CompoundTag cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:188: error: method getList in class CompoundTag cannot be applied to given types;
             ListTag homesList = playerTag.getList("homes", 10);
                                          ^
   required: String
   found:    String,int
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:68: error: method getList in class CompoundTag cannot be applied to given types;
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:213: error: method getList in class CompoundTag cannot be applied to given types;
         ListTag seenList = tag.getList("seen", 8);
                               ^
   required: String
   found:    String,int
   reason: actual and formal argument lists differ in length
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:38: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:183: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
             CompoundTag playerTag = players.getCompound(i);
                                                        ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:39: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:184: error: incompatible types: Optional<String> cannot be converted to String
             UUID uuid = parseUuid(playerTag.getString("uuid"));
                                                      ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:46: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:191: error: incompatible types: Optional<CompoundTag> cannot be converted to CompoundTag
                 CompoundTag homeTag = homesList.getCompound(j);
                                                            ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:47: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:192: error: incompatible types: Optional<String> cannot be converted to String
                 String key = homeTag.getString("key");
                                               ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:48: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:193: error: incompatible types: Optional<String> cannot be converted to String
                 String name = homeTag.getString("name");
                                                ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:49: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:194: error: incompatible types: Optional<String> cannot be converted to String
                 String dimension = homeTag.getString("dimension");
                                                     ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:57: error: incompatible types: Optional<Double> cannot be converted to double
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:202: error: incompatible types: Optional<Double> cannot be converted to double
                         homeTag.getDouble("x"),
                                          ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:70: error: incompatible types: Optional<String> cannot be converted to String
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:215: error: incompatible types: Optional<String> cannot be converted to String
             String uuidText = seenList.getString(i);
                                                 ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:83: error: cannot find symbol
-    private static int handleTpa(CommandContext<CommandSourceStack> ctx, ServerPlayer target, RequestType type) {
-                                                                                              ^
-  symbol:   class RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:164: error: cannot find symbol
-    private static int completeTeleport(ServerPlayer target, TeleportRequest request) {
-                                                             ^
-  symbol:   class TeleportRequest
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:24: error: cannot find symbol
-                        .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), RequestType.TPA))));
-                                                                                                 ^
-  symbol:   variable RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:29: error: cannot find symbol
-                        .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), RequestType.TPAHERE))));
-                                                                                                 ^
-  symbol:   variable RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:97: error: cannot find symbol
-        if (type == RequestType.TPA) {
-                    ^
-  symbol:   variable RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:108: error: cannot find symbol
-        TeleportRequest request;
-        ^
-  symbol:   class TeleportRequest
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:124: error: cannot find symbol
-        for (TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.getUUID())) {
-             ^
-  symbol:   class TeleportRequest
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:136: error: cannot find symbol
-        TeleportRequest request;
-        ^
-  symbol:   class TeleportRequest
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:175: error: cannot find symbol
-        if (request.getType() == RequestType.TPA) {
-                                 ^
-  symbol:   variable RequestType
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:223: error: cannot find symbol
-        ServerLevel level = TeleportUtil.resolveLevel(ctx.getSource().getServer(), record.getDimension());
-        ^
-  symbol:   class ServerLevel
-  location: class ServerCoreCommands
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:78: error: method does not override or implement a method from a supertype
+/tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreData.java:223: error: method does not override or implement a method from a supertype
     @Override
     ^
 Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/HomeService.java:30: error: cannot find symbol
-        String dimension = TeleportUtil.dimensionKey(player.serverLevel());
-                                                           ^
-  symbol:   method serverLevel()
-  location: variable player of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:91: error: cannot find symbol
-                sender.getGameProfile().getName(),
-                                       ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:93: error: cannot find symbol
-                target.getGameProfile().getName(),
-                                       ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:96: error: cannot find symbol
-        MessageUtil.send(sender, "Teleport request sent to " + target.getGameProfile().getName() + ".");
-                                                                                      ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                            ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                              ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:98: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                                                                    ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                            ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                   ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:100: error: cannot find symbol
-            MessageUtil.send(target, sender.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept " + sender.getGameProfile().getName() + " or /tpadeny " + sender.getGameProfile().getName() + ".");
-                                                                                                                                                                                                         ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:165: error: cannot find symbol
-        MinecraftServer server = target.getServer();
-                                       ^
-  symbol:   method getServer()
-  location: variable target of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:176: error: cannot find symbol
-            TeleportUtil.teleport(requester, target.serverLevel(), target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
-                                                   ^
-  symbol:   method serverLevel()
-  location: variable target of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:177: error: cannot find symbol
-            MessageUtil.send(requester, "Teleporting to " + target.getGameProfile().getName() + ".");
-                                                                                   ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:178: error: cannot find symbol
-            MessageUtil.send(target, "Accepted teleport request from " + requester.getGameProfile().getName() + ".");
-                                                                                                   ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:180: error: cannot find symbol
-            TeleportUtil.teleport(target, requester.serverLevel(), requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
-                                                   ^
-  symbol:   method serverLevel()
-  location: variable requester of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:181: error: cannot find symbol
-            MessageUtil.send(target, "Teleporting to " + requester.getGameProfile().getName() + ".");
-                                                                                   ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:182: error: cannot find symbol
-            MessageUtil.send(requester, target.getGameProfile().getName() + " accepted your request.");
-                                                               ^
-  symbol:   method getName()
-  location: class GameProfile
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:32: error: cannot find symbol
-        if (player == null || player.getServer() == null) {
-                                    ^
-  symbol:   method getServer()
-  location: variable player of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:35: error: cannot find symbol
-        MinecraftServer server = player.getServer();
-                                       ^
-  symbol:   method getServer()
-  location: variable player of type ServerPlayer
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:88: error: cannot find symbol
-        int maxY = Math.min(top, level.getMaxBuildHeight() - 2);
-                                      ^
-  symbol:   method getMaxBuildHeight()
-  location: variable level of type ServerLevel
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/RandomTeleportService.java:89: error: cannot find symbol
-        int minY = level.getMinBuildHeight() + 1;
-                        ^
-  symbol:   method getMinBuildHeight()
-  location: variable level of type ServerLevel
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:3: error: package com.itamio.servercore.forge.TeleportRequestService does not exist
-import com.itamio.servercore.forge.TeleportRequestService.RequestType;
-                                                         ^
-/tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace/src/main/java/com/itamio/servercore/fabric/ServerCoreCommands.java:4: error: package com.itamio.servercore.forge.TeleportRequestService does not exist
-import com.itamio.servercore.forge.TeleportRequestService.TeleportRequest;
-                                                         ^
-46 errors
+12 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -884,9 +374,9 @@ import com.itamio.servercore.forge.TeleportRequestService.TeleportRequest;
 	... 30 more
 
 
-BUILD FAILED in 55s
+BUILD FAILED in 1m 5s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.9-1.21.11/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-21-10/src --template-workspace /tmp/modcompiler-servercore-fabric-1-21-10-qg5hcd7t/workspace --minecraft-version 1.21.10 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.9-1.21.11/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/metadata.json --source-dir .workflow_state/prepared/mods/servercore-fabric-1-21-10/src --template-workspace /tmp/modcompiler-servercore-fabric-1-21-10-r0sldpkj/workspace --minecraft-version 1.21.10 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon
