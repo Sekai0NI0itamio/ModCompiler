@@ -296,7 +296,7 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
         version_spec = version_info["minecraft_version"].strip()
         exact_versions = expand_minecraft_version_spec(version_spec)
         loader = version_info["loader"].strip().lower()
-        if loader not in {"fabric", "forge"}:
+        if loader not in {"fabric", "forge", "neoforge"}:
             raise ModCompilerError(f"{mod_dir.name}: unsupported loader '{loader}'")
         for exact_version in exact_versions:
             slug = make_slug(metadata.mod_id, loader, exact_version)

@@ -24,7 +24,7 @@ from modcompiler.common import (
 
 MANIFEST_PATH = Path("META-INF/MANIFEST.MF")
 FABRIC_METADATA_BASENAME = "fabric.mod.json"
-FORGE_TOML_BASENAME = "mods.toml"
+FORGE_TOML_BASENAMES = ("neoforge.mods.toml", "mods.toml")
 FORGE_MCMOD_BASENAME = "mcmod.info"
 
 
@@ -228,7 +228,11 @@ def inspect_mod_jar(jar_path: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         entries = [info.filename for info in archive.infolist() if not info.is_dir()]
         manifest_attributes = parse_manifest_attributes(read_zip_text(archive, str(MANIFEST_PATH)))
         fabric_entry = find_entry_by_basename(entries, FABRIC_METADATA_BASENAME)
-        forge_toml_entry = find_entry_by_basename(entries, FORGE_TOML_BASENAME)
+        forge_toml_entry = None
+        for basename in FORGE_TOML_BASENAMES:
+            forge_toml_entry = find_entry_by_basename(entries, basename)
+            if forge_toml_entry:
+                break
         forge_mcmod_entry = find_entry_by_basename(entries, FORGE_MCMOD_BASENAME)
 
         if fabric_entry:
@@ -328,16 +332,20 @@ def extract_forge_toml_metadata(payload: dict[str, Any]) -> dict[str, Any]:
     dependencies = payload.get("dependencies", {})
     minecraft_range = ""
     forge_range = ""
+    loader = "forge"
     if isinstance(dependencies, dict):
         for dep in dependencies.get(mod_id, []) or []:
             dep_id = str(dep.get("modId", "")).strip()
             version_range = str(dep.get("versionRange", "")).strip()
             if dep_id == "minecraft":
                 minecraft_range = version_range
-            if dep_id in {"forge", "neoforge"}:
+            if dep_id == "neoforge":
+                loader = "neoforge"
+                forge_range = version_range
+            elif dep_id == "forge":
                 forge_range = version_range
     return {
-        "loader": "forge",
+        "loader": loader,
         "loader_detail": str(payload.get("modLoader", "")).strip(),
         "supported_minecraft": minecraft_range,
         "loader_version": forge_range or str(payload.get("loaderVersion", "")).strip(),
@@ -448,7 +456,7 @@ def apply_manifest_fallbacks(metadata: dict[str, Any], attributes: dict[str, str
 
 
 def infer_range_folders(manifest: dict[str, Any], loader: str, supported_minecraft: str) -> list[str]:
-    if not supported_minecraft or loader not in {"fabric", "forge"}:
+    if not supported_minecraft or loader not in {"fabric", "forge", "neoforge"}:
         return []
     raw = supported_minecraft.strip()
     exact = re.fullmatch(r"\d+\.\d+(?:\.\d+)?", raw)

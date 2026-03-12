@@ -17,6 +17,7 @@ from modcompiler.common import (
     format_java_constant,
     get_range_by_folder,
     load_json,
+    parse_version_tuple,
     next_major_range,
     replace_known_placeholders_in_entrypoint,
     resolve_dependency_overrides,
@@ -114,6 +115,14 @@ def prepare_workspace(
         )
     elif adapter_family.startswith("forge_mods_toml"):
         apply_mods_toml_forge_adapter(
+            workspace=workspace,
+            metadata=metadata,
+            minecraft_version=minecraft_version,
+            java_version=java_version,
+            dependency_overrides=dependency_overrides,
+        )
+    elif adapter_family.startswith("neoforge_mods_toml"):
+        apply_neoforge_adapter(
             workspace=workspace,
             metadata=metadata,
             minecraft_version=minecraft_version,
@@ -321,6 +330,77 @@ def apply_mods_toml_forge_adapter(
 
     pack_mcmeta = workspace / "src/main/resources/pack.mcmeta"
     ensure_parent(pack_mcmeta)
+    pack_payload = build_pack_mcmeta(metadata.mod_id, effective_minecraft_version)
+    pack_mcmeta.write_text(json.dumps(pack_payload, indent=2) + "\n", encoding="utf-8")
+
+
+def neoforge_version_base(minecraft_version: str) -> str:
+    major, minor, patch = parse_version_tuple(minecraft_version)
+    if major == 1:
+        return f"{minor}.{patch}"
+    return f"{major}.{minor}.{patch}"
+
+
+def apply_neoforge_adapter(
+    *,
+    workspace: Path,
+    metadata: ModMetadata,
+    minecraft_version: str,
+    java_version: int,
+    dependency_overrides: dict[str, str],
+) -> None:
+    gradle_properties = workspace / "gradle.properties"
+    build_gradle = workspace / "build.gradle"
+
+    effective_minecraft_version = dependency_overrides.get("minecraft_version", minecraft_version)
+    base_version = neoforge_version_base(effective_minecraft_version)
+    neo_version = dependency_overrides.get("neo_version", f"{base_version}.+")
+    neo_version_range = dependency_overrides.get("neo_version_range", f"[{base_version},)")
+
+    if gradle_properties.exists():
+        update_key_value_assignment(gradle_properties, "minecraft_version", effective_minecraft_version)
+        update_key_value_assignment(gradle_properties, "minecraft_version_range", next_major_range(effective_minecraft_version))
+        update_key_value_assignment(gradle_properties, "neo_version", neo_version)
+        update_key_value_assignment(gradle_properties, "neo_version_range", neo_version_range)
+        update_key_value_assignment(gradle_properties, "mod_id", metadata.mod_id)
+        update_key_value_assignment(gradle_properties, "mod_name", metadata.name)
+        update_key_value_assignment(gradle_properties, "mod_license", metadata.license)
+        update_key_value_assignment(gradle_properties, "mod_version", metadata.mod_version)
+        update_key_value_assignment(gradle_properties, "mod_group_id", metadata.group)
+        update_key_value_assignment(gradle_properties, "mod_authors", ", ".join(metadata.authors))
+        update_key_value_assignment(
+            gradle_properties,
+            "mod_description",
+            metadata.description.replace("\n", "\\n"),
+        )
+        for key, value in dependency_overrides.items():
+            update_key_value_assignment(gradle_properties, key, value)
+
+    if build_gradle.exists():
+        text = build_gradle.read_text(encoding="utf-8")
+        text = re.sub(
+            r"(JavaLanguageVersion\.of\()\d+(\))",
+            rf"\g<1>{java_version}\2",
+            text,
+        )
+        text = re.sub(r"(?m)^version\s*=\s*['\"][^'\"]+['\"]", f"version = '{metadata.mod_version}'", text)
+        text = re.sub(r"(?m)^group\s*=\s*['\"][^'\"]+['\"]", f"group = '{metadata.group}'", text)
+        text = re.sub(
+            r"(?m)^\s*archivesName\s*=\s*['\"][^'\"]+['\"]",
+            f"archivesName = '{metadata.mod_id}'",
+            text,
+        )
+        build_gradle.write_text(text, encoding="utf-8")
+
+    mods_toml = workspace / "src/main/resources/META-INF/neoforge.mods.toml"
+    ensure_parent(mods_toml)
+    mods_toml.write_text(
+        build_neoforge_mods_toml(metadata, effective_minecraft_version, neo_version_range),
+        encoding="utf-8",
+    )
+
+    pack_mcmeta = workspace / "src/main/resources/pack.mcmeta"
+    ensure_parent(pack_mcmeta)
     pack_payload = load_or_build_pack_mcmeta(pack_mcmeta, metadata.mod_id, effective_minecraft_version)
     pack_mcmeta.write_text(json.dumps(pack_payload, indent=2) + "\n", encoding="utf-8")
 
@@ -441,6 +521,41 @@ def build_mods_toml(metadata: ModMetadata, minecraft_version: str) -> str:
         'modId="forge"\n'
         "mandatory=true\n"
         'versionRange="*"\n'
+        'ordering="NONE"\n'
+        'side="BOTH"\n'
+        "\n"
+        f"[[dependencies.{metadata.mod_id}]]\n"
+        'modId="minecraft"\n'
+        "mandatory=true\n"
+        f"versionRange={toml_quote(next_major_range(minecraft_version))}\n"
+        'ordering="NONE"\n'
+        'side="BOTH"\n'
+    )
+
+
+def build_neoforge_mods_toml(metadata: ModMetadata, minecraft_version: str, neo_version_range: str) -> str:
+    runtime_lines = ""
+    if metadata.runtime_side == "client":
+        runtime_lines = 'clientSideOnly=true\n' 'displayTest="IGNORE_ALL_VERSION"\n'
+    elif metadata.runtime_side == "server":
+        runtime_lines = 'displayTest="IGNORE_SERVER_VERSION"\n'
+    return (
+        'modLoader="javafml"\n'
+        'loaderVersion="[1,)"\n'
+        f'license={toml_quote(metadata.license)}\n'
+        f"{runtime_lines}"
+        "\n"
+        "[[mods]]\n"
+        f'modId={toml_quote(metadata.mod_id)}\n'
+        f'version={toml_quote(metadata.mod_version)}\n'
+        f'displayName={toml_quote(metadata.name)}\n'
+        f'authors={toml_quote(", ".join(metadata.authors))}\n'
+        f"description={toml_multiline(metadata.description)}\n"
+        "\n"
+        f"[[dependencies.{metadata.mod_id}]]\n"
+        'modId="neoforge"\n'
+        "mandatory=true\n"
+        f"versionRange={toml_quote(neo_version_range)}\n"
         'ordering="NONE"\n'
         'side="BOTH"\n'
         "\n"

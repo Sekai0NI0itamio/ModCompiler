@@ -41,6 +41,7 @@ Inside each version folder are supported loader templates:
 
 - `forge/`
 - `fabric/`
+- `neoforge/` (only in ranges where NeoForge exists)
 
 Each template is vendored into the repository.
 That means GitHub Actions does not fetch a template project at build time.
@@ -54,7 +55,7 @@ This is the source of truth for:
 
 - supported version folders
 - minimum and maximum versions covered by each folder
-- whether Forge and/or Fabric are supported in that folder
+- whether Forge, Fabric, and/or NeoForge are supported in that folder
 - Java version rules
 - which template directory is used
 - which adapter family is used
@@ -93,12 +94,13 @@ This folder contains the shared Python implementation:
 ### `<range>/build_adapter.py`
 
 Each range folder has a small adapter entrypoint that delegates to the shared adapter system.
-This exists because Forge/Fabric metadata formats differ across eras.
+This exists because Forge/Fabric/NeoForge metadata formats differ across eras.
 For example:
 
 - old Forge uses `mcmod.info`
 - newer Forge uses `mods.toml`
 - Fabric uses `fabric.mod.json`
+- NeoForge uses `neoforge.mods.toml`
 
 The adapter knows how to patch the correct files for that generation.
 
@@ -287,7 +289,7 @@ Important behavior:
 - `minecraft_version` can be one exact version or one inclusive same-minor range
 - valid range example: `1.21-1.21.8`
 - invalid range example: `1.19-1.20` because cross-minor ranges are not expanded automatically
-- `loader` must be `forge` or `fabric`
+- `loader` must be `forge`, `fabric`, or `neoforge`
 - each exact version is resolved into the matching repo range folder automatically
 - if one exact version from a range fails, the workflow preserves that failure and continues with the remaining exact versions
 
@@ -506,6 +508,7 @@ The decompiler tries to read metadata from:
 
 - `fabric.mod.json`
 - `META-INF/mods.toml`
+- `META-INF/neoforge.mods.toml`
 - `mcmod.info`
 - `META-INF/MANIFEST.MF`
 
