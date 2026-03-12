@@ -50,7 +50,7 @@ public final class ServerCoreData extends WorldSavedData {
         return data == null ? new ServerCoreData() : data;
     }
 
-    public static ServerCoreData load(CompoundNBT nbt) {
+    public static ServerCoreData fromNbt(CompoundNBT nbt) {
         ServerCoreData data = new ServerCoreData();
         data.read(nbt);
         return data;
@@ -248,7 +248,7 @@ public final class ServerCoreData extends WorldSavedData {
         }
         try {
             Method method = storage.getClass().getMethod("getOrCreate", Function.class, String.class);
-            Object result = method.invoke(storage, (Function<CompoundNBT, ServerCoreData>) ServerCoreData::load, DATA_NAME);
+            Object result = method.invoke(storage, (Function<CompoundNBT, ServerCoreData>) ServerCoreData::fromNbt, DATA_NAME);
             return result instanceof ServerCoreData ? (ServerCoreData) result : null;
         } catch (ReflectiveOperationException ignored) {
         }
@@ -262,7 +262,7 @@ public final class ServerCoreData extends WorldSavedData {
             Method method = storage.getClass().getMethod("getOrCreate", Function.class, Supplier.class, String.class);
             Object result = method.invoke(
                     storage,
-                    (Function<CompoundNBT, ServerCoreData>) ServerCoreData::load,
+                    (Function<CompoundNBT, ServerCoreData>) ServerCoreData::fromNbt,
                     (Supplier<ServerCoreData>) ServerCoreData::new,
                     DATA_NAME
             );

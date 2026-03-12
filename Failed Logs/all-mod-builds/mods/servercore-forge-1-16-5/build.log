@@ -29,32 +29,28 @@ Executing steps
  > Running 'merge'
  > Running 'rename'
 Stopping at requested step: /home/runner/.gradle/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.16.5-20210115.111550/joined/rename/output.jar
-[00:36:22] [main/INFO]: Writing debug log file accesstransform.log
-[00:36:22] [main/INFO]: Access Transformer processor running version 8.2.1
-[00:36:22] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar, --logFile, accesstransform.log, --atFile, /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/build/_atJar_5/parent_at.cfg]
-[00:36:22] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-injected.jar
-[00:36:22] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar
-[00:36:22] [main/INFO]: Transformer file /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/build/_atJar_5/parent_at.cfg
-[00:36:22] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar, overwriting
-[00:36:25] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar
+[00:54:57] [main/INFO]: Writing debug log file accesstransform.log
+[00:54:57] [main/INFO]: Access Transformer processor running version 8.2.1
+[00:54:57] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar, --logFile, accesstransform.log, --atFile, /tmp/modcompiler-servercore-forge-1-16-5-duze1hny/workspace/build/_atJar_5/parent_at.cfg]
+[00:54:57] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-injected.jar
+[00:54:57] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar
+[00:54:57] [main/INFO]: Transformer file /tmp/modcompiler-servercore-forge-1-16-5-duze1hny/workspace/build/_atJar_5/parent_at.cfg
+[00:54:57] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar, overwriting
+[00:55:00] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar
 Creating SRG -> MCP TSRG
-/tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:19: error: com.itamio.servercore.forge.ServerCoreData is not abstract and does not override abstract method load(net.minecraft.nbt.CompoundNBT) in net.minecraft.world.storage.WorldSavedData
+/tmp/modcompiler-servercore-forge-1-16-5-duze1hny/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:60: error: method load(net.minecraft.nbt.CompoundNBT) is already defined in class com.itamio.servercore.forge.ServerCoreData
+    public void load(CompoundNBT nbt) {
+                ^
+/tmp/modcompiler-servercore-forge-1-16-5-duze1hny/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:20: error: com.itamio.servercore.forge.ServerCoreData is not abstract and does not override abstract method load(net.minecraft.nbt.CompoundNBT) in net.minecraft.world.storage.WorldSavedData
 public final class ServerCoreData extends WorldSavedData {
              ^
-/tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:49: error: cannot find symbol
-            return ((DimensionSavedDataManager) storage).getOrCreate(ServerCoreData::new, DATA_NAME);
-                                                        ^
-  symbol:   method getOrCreate(ServerCoreData::new,java.lang.String)
-  location: class net.minecraft.world.storage.DimensionSavedDataManager
-/tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:60: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-/tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:106: error: method does not override or implement a method from a supertype
-    @Override
-    ^
-Note: /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java uses or overrides a deprecated API.
+/tmp/modcompiler-servercore-forge-1-16-5-duze1hny/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:53: error: load(net.minecraft.nbt.CompoundNBT) in com.itamio.servercore.forge.ServerCoreData cannot override load(net.minecraft.nbt.CompoundNBT) in net.minecraft.world.storage.WorldSavedData
+    public static ServerCoreData load(CompoundNBT nbt) {
+                                 ^
+  overriding method is static
+Note: /tmp/modcompiler-servercore-forge-1-16-5-duze1hny/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java uses or overrides a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
-4 errors
+3 errors
 
 > Task :compileJava FAILED
 
@@ -256,9 +252,9 @@ Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Com
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 1m 28s
+BUILD FAILED in 1m 53s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.16.5/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-16-5/src --template-workspace /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace --minecraft-version 1.16.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.16.5/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-16-5-duze1hny/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-16-5/src --template-workspace /tmp/modcompiler-servercore-forge-1-16-5-duze1hny/workspace --minecraft-version 1.16.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon
