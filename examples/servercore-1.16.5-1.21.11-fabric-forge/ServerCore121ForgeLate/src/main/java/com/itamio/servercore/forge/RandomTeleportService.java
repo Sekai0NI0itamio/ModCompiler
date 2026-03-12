@@ -134,16 +134,17 @@ public final class RandomTeleportService {
     }
 
     private String dimensionName(ServerLevel level) {
-        if (level.dimension().equals(Level.OVERWORLD)) {
+        String dimensionKey = TeleportUtil.dimensionKey(level);
+        if ("minecraft:overworld".equals(dimensionKey)) {
             return "the Overworld";
         }
-        if (level.dimension().equals(Level.NETHER)) {
+        if ("minecraft:the_nether".equals(dimensionKey)) {
             return "the Nether";
         }
-        if (level.dimension().equals(Level.END)) {
+        if ("minecraft:the_end".equals(dimensionKey)) {
             return "the End";
         }
-        return level.dimension().location().toString();
+        return dimensionKey == null ? "unknown dimension" : dimensionKey;
     }
 
     public static final class RtpResult {

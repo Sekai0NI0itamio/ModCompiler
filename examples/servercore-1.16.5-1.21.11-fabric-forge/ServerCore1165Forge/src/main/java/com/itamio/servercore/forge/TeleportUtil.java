@@ -42,17 +42,7 @@ public final class TeleportUtil {
         if (OVERWORLD_KEY.equals(key)) {
             return getWorldByKey(server, World.OVERWORLD);
         }
-        if (NETHER_KEY.equals(key)) {
-            return getWorldByKey(server, World.THE_NETHER);
-        }
-        if (END_KEY.equals(key)) {
-            return getWorldByKey(server, World.THE_END);
-        }
-        ServerWorld candidate = findWorldByKey(server, key);
-        if (candidate != null) {
-            return candidate;
-        }
-        return null;
+        return findWorldByKey(server, key);
     }
 
     public static void teleport(ServerPlayerEntity player, ServerWorld world, double x, double y, double z, float yaw, float pitch) {

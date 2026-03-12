@@ -135,6 +135,11 @@ public final class ServerCoreData extends WorldSavedData {
         return nbt;
     }
 
+    @Override
+    public CompoundNBT save(CompoundNBT nbt) {
+        return write(nbt);
+    }
+
     public Collection<HomeRecord> listHomes(UUID playerUuid) {
         if (playerUuid == null) {
             return java.util.Collections.emptyList();

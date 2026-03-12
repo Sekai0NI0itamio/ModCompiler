@@ -5,7 +5,6 @@ import com.itamio.servercore.fabric.TeleportRequestService.TeleportRequest;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
@@ -287,7 +286,7 @@ public final class ServerCoreCommands {
     private static ServerPlayerEntity requirePlayer(CommandContext<ServerCommandSource> ctx) {
         try {
             return ctx.getSource().getPlayer();
-        } catch (CommandSyntaxException ignored) {
+        } catch (Exception ignored) {
             return null;
         }
     }
