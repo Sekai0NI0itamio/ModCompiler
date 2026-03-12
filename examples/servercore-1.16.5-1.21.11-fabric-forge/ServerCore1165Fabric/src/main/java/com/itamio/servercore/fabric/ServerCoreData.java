@@ -21,6 +21,10 @@ public final class ServerCoreData extends PersistentState {
     private final Map<UUID, Map<String, HomeRecord>> homesByPlayer = new LinkedHashMap<>();
     private final Set<UUID> seenPlayers = new LinkedHashSet<>();
 
+    public ServerCoreData() {
+        super(DATA_NAME);
+    }
+
     public static ServerCoreData get(MinecraftServer server) {
         ServerWorld overworld = server.getWorld(World.OVERWORLD);
         PersistentStateManager manager = overworld.getPersistentStateManager();

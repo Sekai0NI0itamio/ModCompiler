@@ -288,6 +288,16 @@ def apply_mods_toml_forge_adapter(
         text = re.sub(r"(?m)^version\s*=\s*['\"][^'\"]+['\"]", f"version = '{metadata.mod_version}'", text)
         text = re.sub(r"(?m)^group\s*=\s*['\"][^'\"]+['\"]", f"group = '{metadata.group}'", text)
         text = re.sub(
+            r"(?m)^\s*archivesBaseName\s*=\s*['\"][^'\"]+['\"]",
+            f"archivesBaseName = '{metadata.mod_id}'",
+            text,
+        )
+        text = re.sub(
+            r"(?m)^\s*archivesName\s*=\s*['\"][^'\"]+['\"]",
+            f"archivesName = '{metadata.mod_id}'",
+            text,
+        )
+        text = re.sub(
             r"(?m)^\s*annotationProcessor\s+['\"]net\.minecraftforge:eventbus-validator:[^'\"]+['\"]\s*\n",
             "",
             text,
