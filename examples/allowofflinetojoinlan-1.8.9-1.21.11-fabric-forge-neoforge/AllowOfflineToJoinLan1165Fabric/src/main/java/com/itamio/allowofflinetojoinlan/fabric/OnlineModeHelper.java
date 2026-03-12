@@ -3,7 +3,7 @@ package com.itamio.allowofflinetojoinlan.fabric;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import net.minecraft.server.MinecraftServer;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 public final class OnlineModeHelper {
     private OnlineModeHelper() {
