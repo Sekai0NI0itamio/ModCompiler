@@ -1,35 +1,27 @@
 {
-  "asd/itamio/servercore/ServerCoreMod": {
-    "name": "asd/itamio/servercore/ServerCoreMod",
+  "com/itamio/allowofflinetojoinlan/AllowOfflineToJoinLan": {
+    "name": "com/itamio/allowofflinetojoinlan/AllowOfflineToJoinLan",
     "annotations": [
       {
         "type": "CLASS",
         "name": "Lnet/minecraftforge/fml/common/Mod;",
-        "target": "asd/itamio/servercore/ServerCoreMod",
+        "target": "com/itamio/allowofflinetojoinlan/AllowOfflineToJoinLan",
         "values": {
           "acceptableRemoteVersions": {
             "value": "*"
           },
           "acceptedMinecraftVersions": {
-            "value": "[1.12.2]"
+            "value": "[1.12,1.12.2]"
           },
           "modid": {
-            "value": "servercore"
+            "value": "allowofflinetojoinlan"
           },
           "name": {
-            "value": "ServerCore"
+            "value": "Allow Offline Players (LAN)"
           },
           "version": {
             "value": "1.0.0"
           }
-        }
-      },
-      {
-        "type": "FIELD",
-        "name": "Lnet/minecraftforge/fml/common/Mod$Instance;",
-        "target": "INSTANCE",
-        "value": {
-          "value": "servercore"
         }
       },
       {
@@ -40,30 +32,13 @@
       {
         "type": "METHOD",
         "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
-        "target": "serverStarting(Lnet/minecraftforge/fml/common/event/FMLServerStartingEvent;)V"
-      }
-    ]
-  },
-  "asd/itamio/servercore/event/ServerCoreEvents": {
-    "name": "asd/itamio/servercore/event/ServerCoreEvents",
-    "annotations": [
+        "target": "onServerAboutToStart(Lnet/minecraftforge/fml/common/event/FMLServerAboutToStartEvent;)V"
+      },
       {
         "type": "METHOD",
-        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
-        "target": "onPlayerLogin(Lnet/minecraftforge/fml/common/gameevent/PlayerEvent$PlayerLoggedInEvent;)V"
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "onServerStarting(Lnet/minecraftforge/fml/common/event/FMLServerStartingEvent;)V"
       }
-    ]
-  },
-  "asd/itamio/servercore/service/HomeService$1": {
-    "name": "asd/itamio/servercore/service/HomeService$1",
-    "interfaces": [
-      "java/util/Comparator"
-    ]
-  },
-  "asd/itamio/servercore/service/TeleportRequestService$1": {
-    "name": "asd/itamio/servercore/service/TeleportRequestService$1",
-    "interfaces": [
-      "java/util/Comparator"
     ]
   }
 }

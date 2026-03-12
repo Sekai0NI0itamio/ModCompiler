@@ -74,6 +74,7 @@ runtime_side=client
 ```
 
 `runtime_side` is optional. Omit it for normal client+server mods. Set it to `client` for client-only mods such as HUD, keybind, or movement-toggle mods. The scaffold will then generate a Fabric client entrypoint and client-only Forge metadata.
+`loader` may be `forge`, `fabric`, or `neoforge` (where available).
 
 ## Build Behavior
 
@@ -128,7 +129,9 @@ The Fabric side uses:
 - Official `FabricMC/fabric-example-mod` `1.21` branch retargeted to `1.21.2-1.21.8`
 - Official `FabricMC/fabric-example-mod` `1.21` branch for `1.21.9-1.21.11`
 
-Some range folders are intentionally marked as `anchor_only` in `version-manifest.json`. That means the scaffold resolves the exact Minecraft version correctly, but the underlying dependency versions are still anchored to the vendored template snapshot. Before first production use, extend the manifest and adapters if you need exact Forge/Fabric dependency resolution across every patch version in those broad ranges.
+The NeoForge side uses the official NeoForge MDK templates (NeoGradle) for `1.20.2`, `1.20.4-1.20.6`, and `1.21.x`.
+
+Some range folders are intentionally marked as `anchor_only` in `version-manifest.json`. That means the scaffold resolves the exact Minecraft version correctly, but the underlying dependency versions are still anchored to the vendored template snapshot. Before first production use, extend the manifest and adapters if you need exact Forge/Fabric/NeoForge dependency resolution across every patch version in those broad ranges.
 
 ## First GitHub Test
 
