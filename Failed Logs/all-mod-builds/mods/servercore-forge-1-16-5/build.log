@@ -29,367 +29,32 @@ Executing steps
  > Running 'merge'
  > Running 'rename'
 Stopping at requested step: /home/runner/.gradle/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.16.5-20210115.111550/joined/rename/output.jar
-[12:23:01] [main/INFO]: Writing debug log file accesstransform.log
-[12:23:01] [main/INFO]: Access Transformer processor running version 8.2.1
-[12:23:01] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar, --logFile, accesstransform.log, --atFile, /tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/build/_atJar_5/parent_at.cfg]
-[12:23:01] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-injected.jar
-[12:23:01] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar
-[12:23:01] [main/INFO]: Transformer file /tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/build/_atJar_5/parent_at.cfg
-[12:23:01] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar, overwriting
-[12:23:03] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar
+[00:36:22] [main/INFO]: Writing debug log file accesstransform.log
+[00:36:22] [main/INFO]: Access Transformer processor running version 8.2.1
+[00:36:22] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar, --logFile, accesstransform.log, --atFile, /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/build/_atJar_5/parent_at.cfg]
+[00:36:22] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42/forge-1.16.5-36.2.42-injected.jar
+[00:36:22] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar
+[00:36:22] [main/INFO]: Transformer file /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/build/_atJar_5/parent_at.cfg
+[00:36:22] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar, overwriting
+[00:36:25] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.16.5-36.2.42_mapped_official_1.16.5/forge-1.16.5-36.2.42_mapped_official_1.16.5.jar
 Creating SRG -> MCP TSRG
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/MessageUtil.java:26: error: cannot find symbol
-            method.invoke(player, component, player.getUniqueID());
-                                                   ^
-  symbol:   method getUniqueID()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/TeleportUtil.java:15: error: cannot find symbol
-        return world.getDimensionKey().getLocation().toString().toLowerCase(Locale.ROOT);
-                    ^
-  symbol:   method getDimensionKey()
-  location: variable world of type net.minecraft.world.server.ServerWorld
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/TeleportUtil.java:23: error: cannot find symbol
-        if (World.OVERWORLD.getLocation().toString().equals(key)) {
-                           ^
-  symbol:   method getLocation()
-  location: variable OVERWORLD of type net.minecraft.util.RegistryKey<net.minecraft.world.World>
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/TeleportUtil.java:24: error: cannot find symbol
-            return server.getWorld(World.OVERWORLD);
-                         ^
-  symbol:   method getWorld(net.minecraft.util.RegistryKey<net.minecraft.world.World>)
-  location: variable server of type net.minecraft.server.MinecraftServer
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/TeleportUtil.java:26: error: cannot find symbol
-        if (World.THE_NETHER.getLocation().toString().equals(key)) {
-                 ^
-  symbol:   variable THE_NETHER
-  location: class net.minecraft.world.World
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/TeleportUtil.java:27: error: cannot find symbol
-            return server.getWorld(World.THE_NETHER);
-                                        ^
-  symbol:   variable THE_NETHER
-  location: class net.minecraft.world.World
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/TeleportUtil.java:29: error: cannot find symbol
-        if (World.THE_END.getLocation().toString().equals(key)) {
-                 ^
-  symbol:   variable THE_END
-  location: class net.minecraft.world.World
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/TeleportUtil.java:30: error: cannot find symbol
-            return server.getWorld(World.THE_END);
-                                        ^
-  symbol:   variable THE_END
-  location: class net.minecraft.world.World
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/HomeService.java:30: error: cannot find symbol
-        String dimension = TeleportUtil.dimensionKey(player.getServerWorld());
-                                                           ^
-  symbol:   method getServerWorld()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/HomeService.java:35: error: cannot find symbol
-                player.getPosX(),
-                      ^
-  symbol:   method getPosX()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/HomeService.java:36: error: cannot find symbol
-                player.getPosY(),
-                      ^
-  symbol:   method getPosY()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/HomeService.java:37: error: cannot find symbol
-                player.getPosZ(),
-                      ^
-  symbol:   method getPosZ()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/HomeService.java:42: error: cannot find symbol
-        data.putHome(player.getUniqueID(), record);
-                           ^
-  symbol:   method getUniqueID()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:17: error: com.itamio.servercore.forge.ServerCoreData is not abstract and does not override abstract method save(net.minecraft.nbt.CompoundNBT) in net.minecraft.world.storage.WorldSavedData
+/tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:19: error: com.itamio.servercore.forge.ServerCoreData is not abstract and does not override abstract method load(net.minecraft.nbt.CompoundNBT) in net.minecraft.world.storage.WorldSavedData
 public final class ServerCoreData extends WorldSavedData {
              ^
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:32: error: cannot find symbol
-        ServerWorld overworld = server.getWorld(net.minecraft.world.World.OVERWORLD);
-                                      ^
-  symbol:   method getWorld(net.minecraft.util.RegistryKey<net.minecraft.world.World>)
-  location: variable server of type net.minecraft.server.MinecraftServer
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:33: error: cannot find symbol
-        DimensionSavedDataManager storage = overworld.getSavedData();
-                                                     ^
-  symbol:   method getSavedData()
-  location: variable overworld of type net.minecraft.world.server.ServerWorld
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:34: error: cannot find symbol
-        return storage.getOrCreate(ServerCoreData::new, DATA_NAME);
-                      ^
+/tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:49: error: cannot find symbol
+            return ((DimensionSavedDataManager) storage).getOrCreate(ServerCoreData::new, DATA_NAME);
+                                                        ^
   symbol:   method getOrCreate(ServerCoreData::new,java.lang.String)
-  location: variable storage of type net.minecraft.world.storage.DimensionSavedDataManager
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:37: error: method does not override or implement a method from a supertype
+  location: class net.minecraft.world.storage.DimensionSavedDataManager
+/tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:60: error: method does not override or implement a method from a supertype
     @Override
     ^
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:83: error: method does not override or implement a method from a supertype
+/tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:106: error: method does not override or implement a method from a supertype
     @Override
     ^
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:125: error: cannot find symbol
-        markDirty();
-        ^
-  symbol:   method markDirty()
-  location: class com.itamio.servercore.forge.ServerCoreData
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:131: error: cannot find symbol
-            markDirty();
-            ^
-  symbol:   method markDirty()
-  location: class com.itamio.servercore.forge.ServerCoreData
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreData.java:142: error: cannot find symbol
-            markDirty();
-            ^
-  symbol:   method markDirty()
-  location: class com.itamio.servercore.forge.ServerCoreData
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:80: error: cannot find symbol
-                        .executes(ctx -> handleRtp(ctx, World.THE_END.getLocation().toString()))));
-                                                             ^
-  symbol:   variable THE_END
-  location: class net.minecraft.world.World
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:78: error: cannot find symbol
-                        .executes(ctx -> handleRtp(ctx, World.THE_NETHER.getLocation().toString())))
-                                                             ^
-  symbol:   variable THE_NETHER
-  location: class net.minecraft.world.World
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:76: error: cannot find symbol
-                        .executes(ctx -> handleRtp(ctx, World.OVERWORLD.getLocation().toString())))
-                                                                       ^
-  symbol:   method getLocation()
-  location: variable OVERWORLD of type net.minecraft.util.RegistryKey<net.minecraft.world.World>
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:84: error: cannot find symbol
-        ServerPlayerEntity sender = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:85: error: cannot find symbol
-        if (sender.getUniqueID().equals(target.getUniqueID())) {
-                                              ^
-  symbol:   method getUniqueID()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:85: error: cannot find symbol
-        if (sender.getUniqueID().equals(target.getUniqueID())) {
-                  ^
-  symbol:   method getUniqueID()
-  location: variable sender of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:90: error: cannot find symbol
-                sender.getUniqueID(),
-                      ^
-  symbol:   method getUniqueID()
-  location: variable sender of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:92: error: cannot find symbol
-                target.getUniqueID(),
-                      ^
-  symbol:   method getUniqueID()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:106: error: cannot find symbol
-        ServerPlayerEntity target = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:110: error: cannot find symbol
-            request = service.popAllIncoming(target.getUniqueID()).stream().findFirst().orElse(null);
-                                                   ^
-  symbol:   method getUniqueID()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:112: error: cannot find symbol
-            request = service.popIncoming(target.getUniqueID(), requesterName);
-                                                ^
-  symbol:   method getUniqueID()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:122: error: cannot find symbol
-        ServerPlayerEntity target = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:124: error: cannot find symbol
-        for (TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.getUniqueID())) {
-                                                                                                 ^
-  symbol:   method getUniqueID()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:134: error: cannot find symbol
-        ServerPlayerEntity target = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:138: error: cannot find symbol
-            request = service.popAllIncoming(target.getUniqueID()).stream().findFirst().orElse(null);
-                                                   ^
-  symbol:   method getUniqueID()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:140: error: cannot find symbol
-            request = service.popIncoming(target.getUniqueID(), requesterName);
-                                                ^
-  symbol:   method getUniqueID()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:151: error: cannot find symbol
-        ServerPlayerEntity target = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:152: error: cannot find symbol
-        int denied = TeleportRequestService.getInstance().popAllIncoming(target.getUniqueID()).size();
-                                                                               ^
-  symbol:   method getUniqueID()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:158: error: cannot find symbol
-        ServerPlayerEntity requester = ctx.getSource().asPlayer();
-                                                      ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:159: error: cannot find symbol
-        int removed = TeleportRequestService.getInstance().cancelOutgoing(requester.getUniqueID(), targetNameOrAll);
-                                                                                   ^
-  symbol:   method getUniqueID()
-  location: variable requester of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:170: error: cannot find symbol
-        ServerPlayerEntity requester = server.getPlayerList().getPlayerByUUID(request.getRequesterUuid());
-                                                             ^
-  symbol:   method getPlayerByUUID(java.util.UUID)
-  location: class net.minecraft.server.management.PlayerList
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:176: error: cannot find symbol
-            TeleportUtil.teleport(requester, target.getServerWorld(), target.getPosX(), target.getPosY(), target.getPosZ(), RotationUtil.getYaw(target), RotationUtil.getPitch(target));
-                                                   ^
-  symbol:   method getServerWorld()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:176: error: cannot find symbol
-            TeleportUtil.teleport(requester, target.getServerWorld(), target.getPosX(), target.getPosY(), target.getPosZ(), RotationUtil.getYaw(target), RotationUtil.getPitch(target));
-                                                                            ^
-  symbol:   method getPosX()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:176: error: cannot find symbol
-            TeleportUtil.teleport(requester, target.getServerWorld(), target.getPosX(), target.getPosY(), target.getPosZ(), RotationUtil.getYaw(target), RotationUtil.getPitch(target));
-                                                                                              ^
-  symbol:   method getPosY()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:176: error: cannot find symbol
-            TeleportUtil.teleport(requester, target.getServerWorld(), target.getPosX(), target.getPosY(), target.getPosZ(), RotationUtil.getYaw(target), RotationUtil.getPitch(target));
-                                                                                                                ^
-  symbol:   method getPosZ()
-  location: variable target of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:180: error: cannot find symbol
-            TeleportUtil.teleport(target, requester.getServerWorld(), requester.getPosX(), requester.getPosY(), requester.getPosZ(), RotationUtil.getYaw(requester), RotationUtil.getPitch(requester));
-                                                   ^
-  symbol:   method getServerWorld()
-  location: variable requester of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:180: error: cannot find symbol
-            TeleportUtil.teleport(target, requester.getServerWorld(), requester.getPosX(), requester.getPosY(), requester.getPosZ(), RotationUtil.getYaw(requester), RotationUtil.getPitch(requester));
-                                                                               ^
-  symbol:   method getPosX()
-  location: variable requester of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:180: error: cannot find symbol
-            TeleportUtil.teleport(target, requester.getServerWorld(), requester.getPosX(), requester.getPosY(), requester.getPosZ(), RotationUtil.getYaw(requester), RotationUtil.getPitch(requester));
-                                                                                                    ^
-  symbol:   method getPosY()
-  location: variable requester of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:180: error: cannot find symbol
-            TeleportUtil.teleport(target, requester.getServerWorld(), requester.getPosX(), requester.getPosY(), requester.getPosZ(), RotationUtil.getYaw(requester), RotationUtil.getPitch(requester));
-                                                                                                                         ^
-  symbol:   method getPosZ()
-  location: variable requester of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:188: error: cannot find symbol
-        ServerPlayerEntity player = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:199: error: cannot find symbol
-        ServerPlayerEntity player = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:200: error: cannot find symbol
-        var homes = HomeService.getInstance().listHomes(ctx.getSource().getServer(), player.getUniqueID());
-        ^
-  symbol:   class var
-  location: class com.itamio.servercore.forge.ServerCoreCommands
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:200: error: cannot find symbol
-        var homes = HomeService.getInstance().listHomes(ctx.getSource().getServer(), player.getUniqueID());
-                                                                                           ^
-  symbol:   method getUniqueID()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:217: error: cannot find symbol
-        ServerPlayerEntity player = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:218: error: cannot find symbol
-        HomeRecord record = HomeService.getInstance().getHome(ctx.getSource().getServer(), player.getUniqueID(), name);
-                                                                                                 ^
-  symbol:   method getUniqueID()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:234: error: cannot find symbol
-        ServerPlayerEntity player = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:235: error: cannot find symbol
-        boolean removed = HomeService.getInstance().deleteHome(ctx.getSource().getServer(), player.getUniqueID(), name);
-                                                                                                  ^
-  symbol:   method getUniqueID()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreCommands.java:241: error: cannot find symbol
-        ServerPlayerEntity player = ctx.getSource().asPlayer();
-                                                   ^
-  symbol:   method asPlayer()
-  location: class net.minecraft.command.CommandSource
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:31: error: cannot find symbol
-        if (data.hasSeen(player.getUniqueID())) {
-                               ^
-  symbol:   method getUniqueID()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/ServerCoreForgeMod.java:34: error: cannot find symbol
-        data.markSeen(player.getUniqueID());
-                            ^
-  symbol:   method getUniqueID()
-  location: variable player of type net.minecraft.entity.player.ServerPlayerEntity
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:83: error: cannot find symbol
-        int maxY = Math.min(top, world.getMaxHeight() - 2);
-                                      ^
-  symbol:   method getMaxHeight()
-  location: variable world of type net.minecraft.world.server.ServerWorld
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:95: error: cannot find symbol
-        BlockPos head = feet.up();
-                            ^
-  symbol:   method up()
-  location: variable feet of type net.minecraft.util.math.BlockPos
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:96: error: cannot find symbol
-        BlockPos ground = feet.down();
-                              ^
-  symbol:   method down()
-  location: variable feet of type net.minecraft.util.math.BlockPos
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:131: error: cannot find symbol
-        if (world.getDimensionKey().equals(World.OVERWORLD)) {
-                 ^
-  symbol:   method getDimensionKey()
-  location: variable world of type net.minecraft.world.server.ServerWorld
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:134: error: cannot find symbol
-        if (world.getDimensionKey().equals(World.THE_NETHER)) {
-                                                ^
-  symbol:   variable THE_NETHER
-  location: class net.minecraft.world.World
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:134: error: cannot find symbol
-        if (world.getDimensionKey().equals(World.THE_NETHER)) {
-                 ^
-  symbol:   method getDimensionKey()
-  location: variable world of type net.minecraft.world.server.ServerWorld
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:137: error: cannot find symbol
-        if (world.getDimensionKey().equals(World.THE_END)) {
-                                                ^
-  symbol:   variable THE_END
-  location: class net.minecraft.world.World
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:137: error: cannot find symbol
-        if (world.getDimensionKey().equals(World.THE_END)) {
-                 ^
-  symbol:   method getDimensionKey()
-  location: variable world of type net.minecraft.world.server.ServerWorld
-/tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java:140: error: cannot find symbol
-        return world.getDimensionKey().getLocation().toString();
-                    ^
-  symbol:   method getDimensionKey()
-  location: variable world of type net.minecraft.world.server.ServerWorld
-Note: /tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java uses or overrides a deprecated API.
+Note: /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace/src/main/java/com/itamio/servercore/forge/RandomTeleportService.java uses or overrides a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
-71 errors
+4 errors
 
 > Task :compileJava FAILED
 
@@ -591,9 +256,9 @@ Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Com
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 1m 39s
+BUILD FAILED in 1m 28s
 1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.16.5/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-16-5/src --template-workspace /tmp/modcompiler-servercore-forge-1-16-5-dnpblerw/workspace --minecraft-version 1.16.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.16.5/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/metadata.json --source-dir .workflow_state/prepared/mods/servercore-forge-1-16-5/src --template-workspace /tmp/modcompiler-servercore-forge-1-16-5-q8sarqxc/workspace --minecraft-version 1.16.5 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon
