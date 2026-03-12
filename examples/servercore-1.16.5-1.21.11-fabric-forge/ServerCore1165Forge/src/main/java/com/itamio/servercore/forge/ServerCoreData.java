@@ -7,13 +7,14 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraft.nbt.StringNBT;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
-import net.minecraft.world.storage.DimensionSavedDataManager;
 import net.minecraft.world.storage.WorldSavedData;
 
 public final class ServerCoreData extends WorldSavedData {
@@ -45,19 +46,21 @@ public final class ServerCoreData extends WorldSavedData {
         if (storage == null) {
             return new ServerCoreData();
         }
-        if (storage instanceof DimensionSavedDataManager) {
-            return ((DimensionSavedDataManager) storage).getOrCreate(ServerCoreData::new, DATA_NAME);
-        }
-        try {
-            Method method = storage.getClass().getMethod("getOrCreate", java.util.function.Supplier.class, String.class);
-            Object result = method.invoke(storage, (java.util.function.Supplier<ServerCoreData>) ServerCoreData::new, DATA_NAME);
-            return result instanceof ServerCoreData ? (ServerCoreData) result : new ServerCoreData();
-        } catch (ReflectiveOperationException ignored) {
-            return new ServerCoreData();
-        }
+        ServerCoreData data = tryGetOrCreate(storage);
+        return data == null ? new ServerCoreData() : data;
+    }
+
+    public static ServerCoreData load(CompoundNBT nbt) {
+        ServerCoreData data = new ServerCoreData();
+        data.read(nbt);
+        return data;
     }
 
     @Override
+    public void load(CompoundNBT nbt) {
+        read(nbt);
+    }
+
     public void read(CompoundNBT nbt) {
         homesByPlayer.clear();
         seenPlayers.clear();
@@ -103,7 +106,6 @@ public final class ServerCoreData extends WorldSavedData {
         }
     }
 
-    @Override
     public CompoundNBT write(CompoundNBT nbt) {
         ListNBT players = new ListNBT();
         for (Map.Entry<UUID, Map<String, HomeRecord>> entry : homesByPlayer.entrySet()) {
@@ -235,6 +237,36 @@ public final class ServerCoreData extends WorldSavedData {
         try {
             Method method = target.getClass().getMethod(name, param);
             return method.invoke(target, arg);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
+    }
+
+    private static ServerCoreData tryGetOrCreate(Object storage) {
+        if (storage == null) {
+            return null;
+        }
+        try {
+            Method method = storage.getClass().getMethod("getOrCreate", Function.class, String.class);
+            Object result = method.invoke(storage, (Function<CompoundNBT, ServerCoreData>) ServerCoreData::load, DATA_NAME);
+            return result instanceof ServerCoreData ? (ServerCoreData) result : null;
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Method method = storage.getClass().getMethod("getOrCreate", Supplier.class, String.class);
+            Object result = method.invoke(storage, (Supplier<ServerCoreData>) ServerCoreData::new, DATA_NAME);
+            return result instanceof ServerCoreData ? (ServerCoreData) result : null;
+        } catch (ReflectiveOperationException ignored) {
+        }
+        try {
+            Method method = storage.getClass().getMethod("getOrCreate", Function.class, Supplier.class, String.class);
+            Object result = method.invoke(
+                    storage,
+                    (Function<CompoundNBT, ServerCoreData>) ServerCoreData::load,
+                    (Supplier<ServerCoreData>) ServerCoreData::new,
+                    DATA_NAME
+            );
+            return result instanceof ServerCoreData ? (ServerCoreData) result : null;
         } catch (ReflectiveOperationException ignored) {
             return null;
         }
