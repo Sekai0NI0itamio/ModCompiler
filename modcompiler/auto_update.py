@@ -651,6 +651,7 @@ Please start by reading the key source files to understand the mod structure, th
                 function = tool_call.get("function", {})
                 name = function.get("name", "")
                 arguments_str = function.get("arguments", "{}")
+                print(f"DEBUG: Processing tool_call: name={name}, args={arguments_str[:100]}...", file=sys.stderr)
 
                 try:
                     arguments = json.loads(arguments_str) if arguments_str else {}
@@ -658,27 +659,38 @@ Please start by reading the key source files to understand the mod structure, th
                     arguments = {}
 
                 result_msg = ""
-                if name == "read_file":
-                    result_msg = _tool_read_file(version_dir, arguments)
-                elif name == "list_files":
-                    result_msg = _tool_list_files(version_dir, arguments)
-                elif name == "file_write":
-                    result_msg = _tool_file_write(version_dir, arguments)
-                elif name == "file_edit":
-                    result_msg = _tool_file_edit(version_dir, arguments)
-                elif name == "move_file":
-                    result_msg = _tool_move_file(version_dir, arguments)
-                elif name == "build":
-                    result_msg, build_success = _tool_build(version_dir, artifact_dir, context, arguments)
-                    build_attempted = True
-                elif name == "complete":
-                    if build_attempted and build_success:
-                        result["status"] = "success"
-                        result_msg = "Marked as complete. Build was successful."
+                try:
+                    if name == "read_file":
+                        print(f"DEBUG: Calling _tool_read_file...", file=sys.stderr)
+                        result_msg = _tool_read_file(version_dir, arguments)
+                    elif name == "list_files":
+                        print(f"DEBUG: Calling _tool_list_files...", file=sys.stderr)
+                        result_msg = _tool_list_files(version_dir, arguments)
+                    elif name == "file_write":
+                        print(f"DEBUG: Calling _tool_file_write...", file=sys.stderr)
+                        result_msg = _tool_file_write(version_dir, arguments)
+                    elif name == "file_edit":
+                        print(f"DEBUG: Calling _tool_file_edit...", file=sys.stderr)
+                        result_msg = _tool_file_edit(version_dir, arguments)
+                    elif name == "move_file":
+                        print(f"DEBUG: Calling _tool_move_file...", file=sys.stderr)
+                        result_msg = _tool_move_file(version_dir, arguments)
+                    elif name == "build":
+                        print(f"DEBUG: Calling _tool_build...", file=sys.stderr)
+                        result_msg, build_success = _tool_build(version_dir, artifact_dir, context, arguments)
+                        build_attempted = True
+                    elif name == "complete":
+                        print(f"DEBUG: Processing complete tool...", file=sys.stderr)
+                        if build_attempted and build_success:
+                            result["status"] = "success"
+                            result_msg = "Marked as complete. Build was successful."
+                        else:
+                            result_msg = "Cannot complete: No successful build found. Use Build tool first."
                     else:
-                        result_msg = "Cannot complete: No successful build found. Use Build tool first."
-                else:
-                    result_msg = f"Unknown tool: {name}"
+                        result_msg = f"Unknown tool: {name}"
+                except Exception as tool_e:
+                    print(f"DEBUG: Tool execution error: {tool_e}", file=sys.stderr)
+                    result_msg = f"Error executing tool: {tool_e}"
 
                 messages.append({
                     "role": "tool",
@@ -687,12 +699,16 @@ Please start by reading the key source files to understand the mod structure, th
                 })
 
             if result["status"] == "success":
+                print(f"DEBUG: Build successful, exiting loop", file=sys.stderr)
                 break
 
+        print(f"DEBUG: AI loop completed. result_status={result['status']}, build_attempted={build_attempted}, build_success={build_success}", file=sys.stderr)
         result["chat_history"] = messages[:50]
 
     except Exception as e:
         import traceback
+        print(f"DEBUG: Exception caught: {e}", file=sys.stderr)
+        print(f"DEBUG: Traceback: {traceback.format_exc()}", file=sys.stderr)
         result["warnings"].append(str(e))
         with log_path.open("w", encoding="utf-8") as f:
             f.write(f"AI rebuild error: {e}\n")
@@ -701,7 +717,9 @@ Please start by reading the key source files to understand the mod structure, th
                 f.write("\n--- Messages ---\n")
                 f.write("\n".join(str(m) for m in messages))
 
+    print(f"DEBUG: Writing result.json with status: {result.get('status')}", file=sys.stderr)
     write_json(artifact_dir / "result.json", result)
+    print(f"DEBUG: Returning exit code: {0 if result['status'] == 'success' else 1}", file=sys.stderr)
     return 0 if result["status"] == "success" else 1
 
 
@@ -824,17 +842,30 @@ def _tool_move_file(version_dir: Path, args: dict[str, str]) -> str:
 
 
 def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], args: dict[str, str]) -> tuple[str, bool]:
+    import sys
+    print(f"DEBUG[_tool_build]: Starting build for {context.get('target_version')}-{context.get('target_loader')}", file=sys.stderr)
+    
     target_version = context["target_version"]
     target_loader = context["target_loader"]
     metadata = context["mod_info"]
+    
+    print(f"DEBUG[_tool_build]: target_version={target_version}, target_loader={target_loader}", file=sys.stderr)
 
-    manifest = load_json(Path("version-manifest.json"))
+    manifest_path = Path("version-manifest.json")
+    print(f"DEBUG[_tool_build]: manifest_path={manifest_path}, exists={manifest_path.exists()}", file=sys.stderr)
+    
+    if not manifest_path.exists():
+        return f"Error: version-manifest.json not found at {manifest_path.absolute()}", False
+        
+    manifest = load_json(manifest_path)
 
     try:
         resolved_range = None
         for range_entry in manifest["ranges"]:
+            print(f"DEBUG[_tool_build]: Checking range {range_entry.get('folder')}: min={range_entry.get('min_version')}, max={range_entry.get('max_version')}", file=sys.stderr)
             if target_version >= range_entry["min_version"] and target_version <= range_entry["max_version"]:
                 resolved_range = range_entry
+                print(f"DEBUG[_tool_build]: Matched range: {resolved_range['folder']}", file=sys.stderr)
                 break
 
         if not resolved_range:
@@ -845,6 +876,8 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
 
         loader_config = resolved_range["loaders"][target_loader]
         template_dir = loader_config["template_dir"]
+        
+        print(f"DEBUG[_tool_build]: template_dir={template_dir}", file=sys.stderr)
 
     except Exception as e:
         return f"Error resolving build configuration: {e}", False
