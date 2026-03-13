@@ -2,14 +2,14 @@ package com.itamio.fpsdisplay.neoforge;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 
 public class FpsDisplayOverlay {
     private long lastSampleTime = System.currentTimeMillis();
     private int frames = 0;
     private int currentFps = 0;
 
-    public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+    public void onRenderOverlay(RenderGuiEvent.Post event) {
         if (!FpsDisplayNeoForgeMod.CONFIG.isEnabled()) {
             return;
         }

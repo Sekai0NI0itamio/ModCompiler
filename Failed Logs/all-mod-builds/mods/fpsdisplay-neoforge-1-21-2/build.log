@@ -47,48 +47,32 @@ Note: Recompile with -Xlint:unchecked for details.
 > Task :selectRawArtifactNg_dummy_ng.net.neoforged_neoforge_21.2.1-beta
 
 > Task :compileJava FAILED
-/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:5: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:5: error: cannot find symbol
 import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
                                           ^
   symbol:   class RenderGuiOverlayEvent
   location: package net.neoforged.neoforge.client.event
-/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:6: error: package net.neoforged.neoforge.client.gui.overlay does not exist
-import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
-                                                ^
-/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:13: error: package RenderGuiOverlayEvent does not exist
+/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:12: error: package RenderGuiOverlayEvent does not exist
     public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
                                                      ^
-/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:14: error: cannot find symbol
-        if (event.getOverlay() != VanillaGuiOverlay.HOTBAR) {
-                                  ^
-  symbol:   variable VanillaGuiOverlay
-  location: class FpsDisplayOverlay
-4 errors
+2 errors
 
-[Incubating] Problems report is available at: file:///tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
 Execution failed for task ':compileJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:5: error: cannot find symbol
+  /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:5: error: cannot find symbol
   import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
                                             ^
     symbol:   class RenderGuiOverlayEvent
     location: package net.neoforged.neoforge.client.event
-  /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:6: error: package net.neoforged.neoforge.client.gui.overlay does not exist
-  import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
-                                                  ^
-  /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:13: error: package RenderGuiOverlayEvent does not exist
+  /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:12: error: package RenderGuiOverlayEvent does not exist
       public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
                                                        ^
-  /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:14: error: cannot find symbol
-          if (event.getOverlay() != VanillaGuiOverlay.HOTBAR) {
-                                    ^
-    symbol:   variable VanillaGuiOverlay
-    location: class FpsDisplayOverlay
-  4 errors
+  2 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
@@ -126,55 +110,18 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
-	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
-	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:138)
-	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:123)
-	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
-	at org.gradle.execution.DryRunBuildExecutionAction.execute(DryRunBuildExecutionAction.java:51)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
-	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
-	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
-	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
-	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:46)
-	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
-	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
-	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
-	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
-	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
-	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
-	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:5: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:5: error: cannot find symbol
 import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
                                           ^
   symbol:   class RenderGuiOverlayEvent
   location: package net.neoforged.neoforge.client.event
-/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:6: error: package net.neoforged.neoforge.client.gui.overlay does not exist
-import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
-                                                ^
-/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:13: error: package RenderGuiOverlayEvent does not exist
+/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:12: error: package RenderGuiOverlayEvent does not exist
     public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
                                                      ^
-/tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace/src/main/java/com/itamio/fpsdisplay/neoforge/FpsDisplayOverlay.java:14: error: cannot find symbol
-        if (event.getOverlay() != VanillaGuiOverlay.HOTBAR) {
-                                  ^
-  symbol:   variable VanillaGuiOverlay
-  location: class FpsDisplayOverlay
-4 errors
+2 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -323,42 +270,13 @@ import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
-	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
-	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:138)
-	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:123)
-	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
-	at org.gradle.execution.DryRunBuildExecutionAction.execute(DryRunBuildExecutionAction.java:51)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
-	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
-	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
-	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
-	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:46)
-	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
-	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
-	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
-	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
-	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
-	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
-	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
 
 
-BUILD FAILED in 3m 47s
+BUILD FAILED in 3m 50s
 27 actionable tasks: 27 executed
-$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.21.2-1.21.8/build_adapter.py --loader neoforge --metadata-json /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/metadata.json --source-dir .workflow_state/prepared/mods/fpsdisplay-neoforge-1-21-2/src --template-workspace /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-k3jm9u2u/workspace --minecraft-version 1.21.2 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.2-1.21.8/build_adapter.py --loader neoforge --metadata-json /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/metadata.json --source-dir .workflow_state/prepared/mods/fpsdisplay-neoforge-1-21-2/src --template-workspace /tmp/modcompiler-fpsdisplay-neoforge-1-21-2-roukszp2/workspace --minecraft-version 1.21.2 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon
