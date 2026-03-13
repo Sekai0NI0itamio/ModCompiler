@@ -581,6 +581,8 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
         from modcompiler.openrouter import OpenRouterClient
 
         client = OpenRouterClient()
+        if not client.key_states:
+            raise ModCompilerError("No OpenRouter API keys available. Please set OPENROUTER_API_KEY_1 through OPENROUTER_API_KEY_20 secrets.")
 
         system_prompt = build_ai_system_prompt(context)
         messages = [
@@ -656,10 +658,14 @@ Please start by reading the key source files to understand the mod structure, th
         result["chat_history"] = messages[:50]
 
     except Exception as e:
+        import traceback
         result["warnings"].append(str(e))
         with log_path.open("w", encoding="utf-8") as f:
             f.write(f"AI rebuild error: {e}\n")
-            f.write("\n".join(str(m) for m in messages))
+            f.write(traceback.format_exc())
+            if messages:
+                f.write("\n--- Messages ---\n")
+                f.write("\n".join(str(m) for m in messages))
 
     write_json(artifact_dir / "result.json", result)
     return 0 if result["status"] == "success" else 1
