@@ -540,9 +540,16 @@ def load_state(state_path: Path) -> dict[str, Any]:
 
 
 def command_ai_rebuild(args: argparse.Namespace) -> int:
+    import sys
+    print(f"DEBUG: Starting ai-rebuild", file=sys.stderr)
+    
     version_dir = Path(args.version_dir)
     output_dir = Path(args.output_dir)
     artifact_dir = Path(args.artifact_dir)
+    
+    print(f"DEBUG: version_dir={version_dir}, exists={version_dir.exists()}", file=sys.stderr)
+    print(f"DEBUG: output_dir={output_dir}, exists={output_dir.exists()}", file=sys.stderr)
+    print(f"DEBUG: artifact_dir={artifact_dir}", file=sys.stderr)
 
     safe_rmtree(artifact_dir)
     artifact_dir.mkdir(parents=True)
@@ -558,6 +565,9 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
 
     version_info = load_json(versions_txt)
     context = load_json(context_json)
+    
+    print(f"DEBUG: Loaded version_info={version_info}", file=sys.stderr)
+    print(f"DEBUG: context target_version={context.get('target_version')}", file=sys.stderr)
 
     target_version = version_info["minecraft_version"]
     target_loader = version_info["loader"]
@@ -578,9 +588,17 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
     build_success = False
 
     try:
+        import os
+        print(f"DEBUG: Checking for OpenRouter keys in env...", file=sys.stderr)
+        for i in range(1, 6):
+            key_val = os.environ.get(f"OPENROUTER_API_KEY_{i}", "")
+            print(f"DEBUG: OPENROUTER_API_KEY_{i} = {'set' if key_val else 'not set'}", file=sys.stderr)
+        
         from modcompiler.openrouter import OpenRouterClient
 
         client = OpenRouterClient()
+        print(f"DEBUG: OpenRouterClient initialized with {len(client.key_states)} keys", file=sys.stderr)
+        
         if not client.key_states:
             raise ModCompilerError("No OpenRouter API keys available. Please set OPENROUTER_API_KEY_1 through OPENROUTER_API_KEY_20 secrets.")
 
