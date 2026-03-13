@@ -28,6 +28,7 @@ from modcompiler.common import (
 )
 from modcompiler.decompile import command_decompile_jar
 from modcompiler.modrinth import command_publish_modrinth
+from modcompiler.auto_update import command_auto_update_decompose, command_ai_rebuild
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -61,6 +62,21 @@ def main(argv: list[str] | None = None) -> int:
     publish_parser.add_argument("--project", required=True)
     publish_parser.add_argument("--artifact-dir", required=True)
 
+    auto_update_decompose_parser = subparsers.add_parser("auto-update-decompose")
+    auto_update_decompose_parser.add_argument("--mod-jar-path", required=True)
+    auto_update_decompose_parser.add_argument("--modrinth-project-url", required=False, default="")
+    auto_update_decompose_parser.add_argument("--info-txt-path", required=False, default="")
+    auto_update_decompose_parser.add_argument("--version-range", required=False, default="all")
+    auto_update_decompose_parser.add_argument("--update-mode", required=False, default="all-versions")
+    auto_update_decompose_parser.add_argument("--publish-mode", required=False, default="bundle-only")
+    auto_update_decompose_parser.add_argument("--manifest", required=True)
+    auto_update_decompose_parser.add_argument("--output-dir", required=True)
+
+    ai_rebuild_parser = subparsers.add_parser("ai-rebuild")
+    ai_rebuild_parser.add_argument("--version-dir", required=True)
+    ai_rebuild_parser.add_argument("--output-dir", required=True)
+    ai_rebuild_parser.add_argument("--artifact-dir", required=True)
+
     args = parser.parse_args(argv)
     try:
         if args.command == "prepare":
@@ -73,6 +89,10 @@ def main(argv: list[str] | None = None) -> int:
             return command_decompile_jar(args)
         if args.command == "publish-modrinth":
             return command_publish_modrinth(args)
+        if args.command == "auto-update-decompose":
+            return command_auto_update_decompose(args)
+        if args.command == "ai-rebuild":
+            return command_ai_rebuild(args)
     except ModCompilerError as error:
         print(str(error), file=sys.stderr)
         return 1

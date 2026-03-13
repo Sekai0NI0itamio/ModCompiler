@@ -1,0 +1,309 @@
+name: Auto Update Mod
+
+on:
+  workflow_dispatch:
+    inputs:
+      mod_jar_path:
+        description: Repo-relative path to mod jar (e.g., "To Be Decompiled/my-mod.jar")
+        required: true
+        type: string
+      modrinth_project_url:
+        description: Optional Modrinth project URL or slug
+        required: false
+        default: ""
+        type: string
+      info_txt_path:
+        description: Path to info.txt file with mod description
+        required: false
+        default: ""
+        type: string
+      version_range:
+        description: "Version range to update (e.g., 1.20-1.21.8, 1.20.1fabric,1.21neoforge, or all)"
+        required: false
+        default: "all"
+        type: string
+      update_mode:
+        description: Update mode
+        required: true
+        default: "all-versions"
+        type: choice
+        options:
+          - "all-versions"
+          - "missing-only"
+      publish_mode:
+        description: Publish mode (if modrinth project provided)
+        required: true
+        default: "bundle-only"
+        type: choice
+        options:
+          - "immediately"
+          - "bundle-only"
+      resume_from:
+        description: Resume from previous run (provide previous run ID or leave blank for fresh start)
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  decompose:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.decompose.outputs.matrix }}
+      state_json: ${{ steps.decompose.outputs.state_json }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - id: decompose
+        shell: bash
+        env:
+          MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
+          VERSION_RANGE: ${{ inputs.version_range }}
+          UPDATE_MODE: ${{ inputs.update_mode }}
+          PUBLISH_MODE: ${{ inputs.publish_mode }}
+          INFO_TXT_PATH: ${{ inputs.info_txt_path }}
+          MOD_JAR_PATH: ${{ inputs.mod_jar_path }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          mkdir -p .workflow_state/decomposed
+          
+          python build_mods.py auto-update-decompose \
+            --mod-jar-path "$MOD_JAR_PATH" \
+            --modrinth-project-url "$MODRINTH_PROJECT_URL" \
+            --info-txt-path "$INFO_TXT_PATH" \
+            --version-range "$VERSION_RANGE" \
+            --update-mode "$UPDATE_MODE" \
+            --publish-mode "$PUBLISH_MODE" \
+            --manifest version-manifest.json \
+            --output-dir .workflow_state/decomposed
+          
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          
+          matrix = json.loads(Path(".workflow_state/decomposed/matrix.json").read_text(encoding="utf-8"))
+          state = json.loads(Path(".workflow_state/decomposed/state.json").read_text(encoding="utf-8"))
+          
+          count = len(matrix.get("include", []))
+          print(f"Generated {count} version targets")
+          
+          import base64
+          state_b64 = base64.b64encode(json.dumps(state).encode()).decode()
+          Path(".workflow_state/decompose_state.txt").write_text(state_b64, encoding="utf-8")
+          PY
+          
+          printf 'matrix=%s\n' "$(tr -d '\n' < .workflow_state/decomposed/matrix.json)" >> "$GITHUB_OUTPUT"
+          printf 'state_json=%s\n' "$(tr -d '\n' < .workflow_state/decompose_state.txt)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decomposed-state
+          path: .workflow_state/decomposed
+
+  ai-rebuild:
+    needs: decompose
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.decompose.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            16
+            17
+            21
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: decomposed-state
+          path: .workflow_state/decomposed
+
+      - name: Decode state
+        shell: bash
+        env:
+          STATE_JSON: ${{ needs.decompose.outputs.state_json }}
+        run: |
+          echo "$STATE_JSON" | base64 -d > .workflow_state/state.json
+
+      - id: setup-key-rotation
+        shell: bash
+        env:
+          OPENROUTER_API_KEY_1: ${{ secrets.OPENROUTER_API_KEY_1 }}
+          OPENROUTER_API_KEY_2: ${{ secrets.OPENROUTER_API_KEY_2 }}
+          OPENROUTER_API_KEY_3: ${{ secrets.OPENROUTER_API_KEY_3 }}
+          OPENROUTER_API_KEY_4: ${{ secrets.OPENROUTER_API_KEY_4 }}
+          OPENROUTER_API_KEY_5: ${{ secrets.OPENROUTER_API_KEY_5 }}
+          OPENROUTER_API_KEY_6: ${{ secrets.OPENROUTER_API_KEY_6 }}
+          OPENROUTER_API_KEY_7: ${{ secrets.OPENROUTER_API_KEY_7 }}
+          OPENROUTER_API_KEY_8: ${{ secrets.OPENROUTER_API_KEY_8 }}
+          OPENROUTER_API_KEY_9: ${{ secrets.OPENROUTER_API_KEY_9 }}
+          OPENROUTER_API_KEY_10: ${{ secrets.OPENROUTER_API_KEY_10 }}
+          OPENROUTER_API_KEY_11: ${{ secrets.OPENROUTER_API_KEY_11 }}
+          OPENROUTER_API_KEY_12: ${{ secrets.OPENROUTER_API_KEY_12 }}
+          OPENROUTER_API_KEY_13: ${{ secrets.OPENROUTER_API_KEY_13 }}
+          OPENROUTER_API_KEY_14: ${{ secrets.OPENROUTER_API_KEY_14 }}
+          OPENROUTER_API_KEY_15: ${{ secrets.OPENROUTER_API_KEY_15 }}
+          OPENROUTER_API_KEY_16: ${{ secrets.OPENROUTER_API_KEY_16 }}
+          OPENROUTER_API_KEY_17: ${{ secrets.OPENROUTER_API_KEY_17 }}
+          OPENROUTER_API_KEY_18: ${{ secrets.OPENROUTER_API_KEY_18 }}
+          OPENROUTER_API_KEY_19: ${{ secrets.OPENROUTER_API_KEY_19 }}
+          OPENROUTER_API_KEY_20: ${{ secrets.OPENROUTER_API_KEY_20 }}
+        run: |
+          for i in $(seq 1 20); do
+            key_var="OPENROUTER_API_KEY_$i"
+            if [ -n "${!key_var}" ]; then
+              echo "Key $i available"
+            fi
+          done
+
+      - name: Setup workspace
+        shell: bash
+        run: |
+          mkdir -p .workflow_artifacts/ai-${{ matrix.slug }}
+          VERSION_DIR=".workflow_state/decomposed/${{ matrix.version }}-${{ matrix.loader }}"
+          if [ -d "$VERSION_DIR" ]; then
+            cp -r "$VERSION_DIR"/* .workflow_artifacts/ai-${{ matrix.slug }}/
+          else
+            echo "Version folder not found: $VERSION_DIR"
+            ls -la .workflow_state/decomposed/
+          fi
+
+      - name: Run AI rebuild
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          python build_mods.py ai-rebuild \
+            --version-dir ".workflow_artifacts/ai-${{ matrix.slug }}" \
+            --output-dir ".workflow_artifacts/ai-${{ matrix.slug }}" \
+            --artifact-dir ".workflow_artifacts/per-mod/${{ matrix.slug }}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-mod-${{ matrix.slug }}
+          path: .workflow_artifacts/per-mod/${{ matrix.slug }}
+
+  bundle:
+    needs:
+      - decompose
+      - ai-rebuild
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-mod-*
+          path: .workflow_downloads
+
+      - id: bundle
+        shell: bash
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p .workflow_artifacts/combined/mods
+          mkdir -p .workflow_artifacts/combined/progress
+          
+          for dir in .workflow_downloads/*/; do
+            slug=$(basename "$dir" | sed 's/ai-mod-//')
+            if [ -f "$dir/result.json" ]; then
+              cp -r "$dir"/* .workflow_artifacts/combined/mods/"$slug"/
+            fi
+            if [ -d "$dir" ]; then
+              zip -r ".workflow_artifacts/combined/progress/${slug}.zip" "$dir" 2>/dev/null || true
+            fi
+          done
+          
+          echo "# Auto Update Summary" > .workflow_artifacts/combined/SUMMARY.md
+          echo "" >> .workflow_artifacts/combined/SUMMARY.md
+          echo "## Results" >> .workflow_artifacts/combined/SUMMARY.md
+          echo "" >> .workflow_artifacts/combined/SUMMARY.md
+          
+          for result in .workflow_downloads/*/result.json; do
+            if [ -f "$result" ]; then
+              status=$(python -c "import json; print(json.load(open('$result')).get('status', 'unknown'))" 2>/dev/null || echo "unknown")
+              slug=$(basename $(dirname "$result") | sed 's/ai-mod-//')
+              echo "- $slug: $status" >> .workflow_artifacts/combined/SUMMARY.md
+            fi
+          done
+          
+          zip -r results.zip .workflow_artifacts/combined/mods 2>/dev/null || true
+          zip -r progress.zip .workflow_artifacts/combined/progress 2>/dev/null || true
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: final-results
+          path: |
+            .workflow_artifacts/combined
+            results.zip
+            progress.zip
+
+  publish-modrinth:
+    needs:
+      - decompose
+      - ai-rebuild
+      - bundle
+    if: ${{ always() && inputs.modrinth_project_url != '' && inputs.publish_mode == 'bundle-only' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: final-results
+          path: .workflow_downloads
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - id: publish
+        shell: bash
+        continue-on-error: true
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set +e
+          python build_mods.py publish-modrinth \
+            --artifacts-root .workflow_downloads \
+            --project "${{ inputs.modrinth_project_url }}" \
+            --artifact-dir .workflow_artifacts/modrinth-publish
+          exit_code=$?
+          set -e
+          printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: modrinth-publish
+          path: .workflow_artifacts/modrinth-publish

@@ -7,6 +7,7 @@ import tempfile
 import traceback
 import tomllib
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -623,3 +624,54 @@ def render_decompile_summary_markdown(metadata: dict[str, Any]) -> str:
             "",
         ]
     )
+
+
+@dataclass
+class DecompileResult:
+    extracted_src: Path
+    metadata: dict[str, Any]
+    status: str
+
+
+def decompile_jar_internal(jar_path: Path, manifest: dict[str, Any]) -> DecompileResult:
+    metadata = inspect_mod_jar(jar_path, manifest)
+    slug = make_slug(metadata["primary_mod_id"], metadata["loader"], "decompiled")
+
+    with tempfile.TemporaryDirectory(prefix=f"modcompiler-internal-{slug}-") as temp_dir:
+        temp_root = Path(temp_dir)
+        expanded_jar = temp_root / "expanded-jar"
+        java_output = temp_root / "java-output"
+        package_root = temp_root / "package"
+        package_src = package_root / "src" / "main" / "java"
+        package_root.mkdir(parents=True, exist_ok=True)
+        expanded_jar.mkdir(parents=True, exist_ok=True)
+        java_output.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(jar_path) as archive:
+            archive.extractall(expanded_jar)
+
+        decompiler_jar_path = temp_root / "vineflower.jar"
+        if not decompiler_jar_path.exists():
+            import urllib.request
+            url = "https://github.com/Vineflower/vineflower/releases/download/1.9.3/vineflower-1.9.3.jar"
+            urllib.request.urlretrieve(url, decompiler_jar_path)
+
+        command = ["java", "-jar", str(decompiler_jar_path), str(expanded_jar), str(java_output)]
+        subprocess.run(command, capture_output=True)
+
+        for source_file in sorted(java_output.rglob("*")):
+            if not source_file.is_file():
+                continue
+            relative = source_file.relative_to(java_output)
+            destination = package_src / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            copy_file(source_file, destination)
+
+        mod_info_txt = package_src.parent / "mod_info.txt"
+        mod_info_txt.write_text(render_mod_info(metadata), encoding="utf-8")
+
+        return DecompileResult(
+            extracted_src=package_src.parent,
+            metadata=metadata,
+            status="success" if list(package_src.rglob("*.java")) or list(package_src.rglob("*.kt")) else "failed",
+        )
