@@ -14,6 +14,7 @@ from typing import Any
 from modcompiler.common import (
     ModCompilerError,
     copy_file,
+    copy_tree,
     load_json,
     make_slug,
     parse_version_tuple,
@@ -633,12 +634,18 @@ class DecompileResult:
     status: str
 
 
-def decompile_jar_internal(jar_path: Path, manifest: dict[str, Any]) -> DecompileResult:
+def decompile_jar_internal(jar_path: Path, manifest: dict[str, Any], output_dir: Path | None = None) -> DecompileResult:
     metadata = inspect_mod_jar(jar_path, manifest)
     slug = make_slug(metadata["primary_mod_id"], metadata["loader"], "decompiled")
 
-    with tempfile.TemporaryDirectory(prefix=f"modcompiler-internal-{slug}-") as temp_dir:
-        temp_root = Path(temp_dir)
+    if output_dir is None:
+        output_dir = Path.cwd() / f"decompiled-{slug}"
+
+    safe_rmtree(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    temp_root = Path(tempfile.mkdtemp(prefix=f"modcompiler-decompile-{slug}-"))
+    try:
         expanded_jar = temp_root / "expanded-jar"
         java_output = temp_root / "java-output"
         package_root = temp_root / "package"
@@ -670,8 +677,12 @@ def decompile_jar_internal(jar_path: Path, manifest: dict[str, Any]) -> Decompil
         mod_info_txt = package_src.parent / "mod_info.txt"
         mod_info_txt.write_text(render_mod_info(metadata), encoding="utf-8")
 
+        copy_tree(package_src.parent, output_dir)
+
         return DecompileResult(
-            extracted_src=package_src.parent,
+            extracted_src=output_dir,
             metadata=metadata,
             status="success" if list(package_src.rglob("*.java")) or list(package_src.rglob("*.kt")) else "failed",
         )
+    finally:
+        safe_rmtree(temp_root)
