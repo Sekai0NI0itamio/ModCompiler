@@ -392,7 +392,8 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
 
     manifest = load_json(Path(config.manifest_path))
 
-    decomp_result = decompile_jar_internal(jar_path, manifest)
+    decomp_dir = config.output_dir / "_decompiled"
+    decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
     src_path = decomp_result.extracted_src
     mod_info = _parse_mod_info(src_path)
 
