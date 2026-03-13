@@ -295,6 +295,9 @@ def generate_version_context(
                     template_dir = loader_config.get("template_dir", "")
                     break
     
+    lib_sources = _get_library_sources(Path("."), target.minecraft_version, target.loader)
+    library_sources_path = str(lib_sources) if lib_sources else ""
+    
     return {
         "target_version": target.minecraft_version,
         "target_loader": target.loader,
@@ -304,6 +307,7 @@ def generate_version_context(
         "user_description": info_txt,
         "src_size": sum(f.stat().st_size for f in trimmed_src.rglob("*") if f.is_file()),
         "template_dir": template_dir,
+        "library_sources": library_sources_path,
     }
 
 
@@ -453,6 +457,60 @@ def get_tools_definition() -> list[dict[str, Any]]:
                 "parameters": {
                     "type": "object",
                     "properties": {}
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "library_dir",
+                "description": "List directory structure of decompiled Minecraft sources for the target version",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Directory path relative to Minecraft sources root, e.g., 'net/minecraft/client' or 'net/minecraftforge/fml/common'"
+                        },
+                        "depth": {
+                            "type": "integer",
+                            "description": "Depth of directory listing (default: 2)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "library_read",
+                "description": "Read a decompiled Minecraft source file to understand API patterns",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Full path to Minecraft source file, e.g., 'net/minecraft/client/Minecraft.java'"
+                        }
+                    },
+                    "required": ["path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "library_search",
+                "description": "Search for a class or method in Minecraft sources",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query - class name, method name, or pattern"
+                        }
+                    },
+                    "required": ["query"]
                 }
             }
         }
@@ -817,68 +875,71 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
             {"role": "system", "content": system_prompt},
         ]
 
-        src_files = _list_src_files(version_dir / "src")
-        key_files = _identify_key_files(src_files)
-        
-        key_files_list = "\n".join([f"  - {path}" for path, _ in key_files[:10]])
-        other_count = len(key_files) - 10 if len(key_files) > 10 else 0
-
         src_dir = version_dir / "src"
-        src_contents = ""
-        for path, _ in key_files[:8]:
-            file_path = src_dir / path
-            if file_path.exists():
-                try:
-                    content = file_path.read_text(encoding="utf-8")
-                    if len(content) > 8000:
-                        content = content[:8000] + "\n... (truncated)"
-                    src_contents += f"\n\n=== FILE: {path} ===\n{content}"
-                except Exception:
-                    pass
-
         ref_dir = version_dir / "reference"
-        ref_files_list = ""
-        if ref_dir.exists():
-            ref_items = []
-            for item in sorted(ref_dir.rglob("*.java"))[:10]:
-                rel_path = item.relative_to(ref_dir)
-                ref_items.append(f"  - {rel_path}")
-            ref_files_list = "\n".join(ref_items)
 
-        ref_contents = ""
-        if ref_dir.exists():
-            ref_java_files = sorted(ref_dir.rglob("*.java"))[:5]
-            for item in ref_java_files:
-                try:
-                    content = item.read_text(encoding="utf-8")
-                    if len(content) > 8000:
-                        content = content[:8000] + "\n... (truncated)"
-                    rel_path = item.relative_to(ref_dir)
-                    ref_contents += f"\n\n=== REFERENCE: {rel_path} ===\n{content}"
-                except Exception:
-                    pass
-            
-            ref_resource_files = sorted(ref_dir.rglob("*.info")) + sorted(ref_dir.rglob("*.mcmeta")) + sorted(ref_dir.rglob("*.json"))
-            for item in ref_resource_files[:3]:
-                try:
-                    content = item.read_text(encoding="utf-8")
-                    rel_path = item.relative_to(ref_dir)
-                    ref_contents += f"\n\n=== REFERENCE: {rel_path} ===\n{content}"
-                except Exception:
-                    pass
+        def get_dir_tree(path: Path, prefix: str = "") -> str:
+            if not path.exists():
+                return ""
+            items = []
+            for item in sorted(path.iterdir()):
+                rel = item.relative_to(path)
+                items.append(f"{prefix}{rel}{'/' if item.is_dir() else ''}")
+            return "\n".join(items)
+
+        def get_all_files_content(base_dir: Path, extensions: list[str] | None = None) -> str:
+            if not base_dir.exists():
+                return ""
+            contents = []
+            for f in sorted(base_dir.rglob("*")):
+                if f.is_file():
+                    if extensions and not any(f.suffix == ext for ext in extensions):
+                        continue
+                    try:
+                        content = f.read_text(encoding="utf-8")
+                        rel_path = f.relative_to(base_dir)
+                        contents.append(f"\n\n=== FILE: {rel_path} ===\n{content}")
+                    except Exception:
+                        pass
+            return "".join(contents)
+
+        src_tree = get_dir_tree(src_dir)
+        ref_tree = get_dir_tree(ref_dir) if ref_dir.exists() else ""
+        
+        src_contents = get_all_files_content(src_dir, [".java"])
+        ref_contents = get_all_files_content(ref_dir)
+
+        full_context = f"""DIRECTORY STRUCTURE - ORIGINAL SOURCE:
+{src_tree}
+
+DIRECTORY STRUCTURE - REFERENCE TEMPLATE:
+{ref_tree}
+
+=== ORIGINAL SOURCE FILES ===
+{src_contents}
+
+=== REFERENCE TEMPLATE FILES ===
+{ref_contents}"""
+
+        context_limit = 150 * 1024
+        if len(full_context) > context_limit:
+            full_context = full_context[:context_limit] + f"\n\n[CONTEXT TRUNCATED - {len(full_context) - context_limit} chars removed]"
+
+        key_files_list = f"All {len([f for f in src_dir.rglob('*.java')])} Java files included in context below"
 
         initial_message = f"""Update this mod for {target_loader} {target_version}.
 
 USER DESCRIPTION:
 {context.get('user_description', 'No description provided')}
 
-KEY SOURCE FILES TO UPDATE:{src_contents}
+{full_context}
 
-EXAMPLES FOR {target_version}:{ref_contents}
+LIBRARY TOOLS (Minecraft {target_version} API):
+- library_dir: List Minecraft source directories (e.g., path="net/minecraft/client", depth=2)
+- library_search: Search for classes/methods (e.g., query="Minecraft" or "getDebugFPS")
+- library_read: Read Minecraft source files (e.g., path="net/minecraft/client/Minecraft.java")
 
-FILE LIST (for reference):
-{key_files_list}
-{'' if other_count <= 0 else f'  ... and {other_count} more'}
+Use these to understand how {target_version} APIs work!
 
 ACTION: Write updated files to src/main/java/ then call build.
 
@@ -975,6 +1036,18 @@ Go!"""
                         result_msg, build_success = _tool_build(version_dir, artifact_dir, context, arguments)
                         build_attempted = True
                         tools_without_build = 0
+                    elif name == "library_dir":
+                        print(f"DEBUG: Calling _tool_library_dir...", file=sys.stderr)
+                        lib_sources = _get_library_sources(version_dir, context.get("target_version", ""), context.get("target_loader", ""))
+                        result_msg = _tool_library_dir(arguments, lib_sources)
+                    elif name == "library_read":
+                        print(f"DEBUG: Calling _tool_library_read...", file=sys.stderr)
+                        lib_sources = _get_library_sources(version_dir, context.get("target_version", ""), context.get("target_loader", ""))
+                        result_msg = _tool_library_read(arguments, lib_sources)
+                    elif name == "library_search":
+                        print(f"DEBUG: Calling _tool_library_search...", file=sys.stderr)
+                        lib_sources = _get_library_sources(version_dir, context.get("target_version", ""), context.get("target_loader", ""))
+                        result_msg = _tool_library_search(arguments, lib_sources)
                     elif name == "write_mod_file" or name == "write_resource":
                         files_written_count += 1
                         tools_without_build += 1
@@ -1269,6 +1342,169 @@ def _tool_copy_to_structure(version_dir: Path, args: dict[str, str]) -> str:
         return f"Copied directory {source_path} to {dest_path}"
 
 
+def _ensure_library_sources(target_version: str, target_loader: str, workspace: Path) -> Path | None:
+    import subprocess
+    
+    gradle_cache = Path.home() / ".gradle" / "caches"
+    
+    library_paths = [
+        gradle_cache / "forge-loom" / f"{target_version}-{target_loader}" / "minecraft-project-@-common-merged-intermediary-named" / "sources",
+        gradle_cache / "forge-loom" / target_version / "minecraft-project-@-common-merged-intermediary-named" / "sources",
+        gradle_cache / "fabric-loom" / target_version / "mine" / "sources",
+        gradle_cache / "minecraft" / "client" / target_version / "sources",
+    ]
+    
+    for lib_path in library_paths:
+        if lib_path.exists():
+            return lib_path
+    
+    gradle_bootstrap = workspace / "build.gradle"
+    if not gradle_bootstrap.exists():
+        return None
+    
+    print(f"DEBUG[_ensure_library_sources]: Setting up Minecraft sources for {target_version}...", file=sys.stderr)
+    
+    try:
+        result = subprocess.run(
+            ["./gradlew", "setupDecompWorkspace", "--no-daemon"],
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        
+        if result.returncode == 0:
+            for lib_path in library_paths:
+                if lib_path.exists():
+                    print(f"DEBUG[_ensure_library_sources]: Found sources at {lib_path}", file=sys.stderr)
+                    return lib_path
+    except Exception as e:
+        print(f"DEBUG[_ensure_library_sources]: Failed to setup: {e}", file=sys.stderr)
+    
+    return None
+
+
+_library_sources_cache: dict[str, Path] = {}
+
+
+def _get_library_sources(version_dir: Path, target_version: str, target_loader: str) -> Path | None:
+    cache_key = f"{target_version}-{target_loader}"
+    
+    if cache_key in _library_sources_cache:
+        cached_path = _library_sources_cache[cache_key]
+        if cached_path.exists():
+            return cached_path
+    
+    gradle_caches = Path.home() / ".gradle" / "caches"
+    
+    patterns = [
+        f"forge-loom/{target_version}*/minecraft-project-@-common-merged-intermediary-named/sources",
+        f"forge-loom/{target_version}-{target_loader}/minecraft-project-@-common-merged-intermediary-named/sources",
+        f"fabric-loom/{target_version}/mine/sources",
+        f"minecraft/client/{target_version}/sources",
+    ]
+    
+    for pattern in patterns:
+        for path in gradle_caches.rglob("sources"):
+            if path.is_dir() and len(list(path.glob("net/minecraft/*"))) > 0:
+                _library_sources_cache[cache_key] = path
+                return path
+    
+    return None
+
+
+def _tool_library_dir(args: dict[str, str], library_sources: Path | None) -> str:
+    if not library_sources:
+        return "Error: Minecraft library sources not available. Run build first to download/setup Minecraft sources."
+    
+    path = args.get("path", "")
+    depth = int(args.get("depth", 2))
+    
+    base_path = library_sources
+    if path:
+        base_path = library_sources / path
+        if not base_path.exists():
+            return f"Error: Directory not found: {path}"
+    
+    def list_dir_tree(p: Path, current_depth: int, max_depth: int) -> str:
+        if current_depth >= max_depth:
+            return ""
+        items = []
+        try:
+            for item in sorted(p.iterdir()):
+                items.append(f"{'  ' * current_depth}{item.name}{'/' if item.is_dir() else ''}")
+                if item.is_dir():
+                    items.append(list_dir_tree(item, current_depth + 1, max_depth))
+        except PermissionError:
+            return f"{'  ' * current_depth}[permission denied]"
+        return "\n".join(items)
+    
+    result = f"Minecraft sources ({library_sources.name}):\n"
+    result += list_dir_tree(base_path, 0, depth)
+    return result
+
+
+def _tool_library_read(args: dict[str, str], library_sources: Path | None) -> str:
+    if not library_sources:
+        return "Error: Minecraft library sources not available."
+    
+    path = args.get("path", "")
+    if not path:
+        return "Error: path is required"
+    
+    if not path.endswith(".java"):
+        path = path.replace(".", "/") + ".java"
+    
+    file_path = library_sources / path
+    if not file_path.exists():
+        return f"Error: File not found: {path}\n\nSearch for it using library_search first."
+    
+    try:
+        content = file_path.read_text(encoding="utf-8")
+        if len(content) > 15000:
+            content = content[:15000] + "\n... (truncated)"
+        return f"=== Minecraft: {path} ===\n{content}"
+    except Exception as e:
+        return f"Error reading file: {e}"
+
+
+def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> str:
+    if not library_sources:
+        return "Error: Minecraft library sources not available."
+    
+    query = args.get("query", "").lower()
+    if not query:
+        return "Error: query is required"
+    
+    results = []
+    query_parts = query.replace(".", "/").split("/")
+    
+    search_pattern = f"*{query}*.java"
+    if len(query_parts) > 1:
+        search_pattern = f"*{query_parts[-1]}*.java"
+    
+    try:
+        for java_file in library_sources.rglob(search_pattern):
+            if java_file.is_file():
+                rel = java_file.relative_to(library_sources)
+                results.append(str(rel))
+    except Exception:
+        pass
+    
+    if not results:
+        for java_file in library_sources.rglob("*.java"):
+            if query in java_file.stem.lower():
+                rel = java_file.relative_to(library_sources)
+                results.append(str(rel))
+                if len(results) >= 20:
+                    break
+    
+    if not results:
+        return f"No results found for: {query}"
+    
+    return f"Found {len(results)} matches for '{query}':\n" + "\n".join(f"  - {r}" for r in results[:30])
+
+
 def _tool_file_write(version_dir: Path, args: dict[str, str]) -> str:
     path = args.get("path", "")
     content = args.get("content", "")
@@ -1336,9 +1572,13 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
     
     target_version = context["target_version"]
     target_loader = context["target_loader"]
-    metadata = context["mod_info"]
+    metadata = context["mod_info"].copy()
+    
+    if "mod_id" not in metadata and "primary_mod_id" in metadata:
+        metadata["mod_id"] = metadata["primary_mod_id"]
     
     print(f"DEBUG[_tool_build]: target_version={target_version}, target_loader={target_loader}", file=sys.stderr)
+    print(f"DEBUG[_tool_build]: metadata keys: {list(metadata.keys())}", file=sys.stderr)
 
     local_template = version_dir / "template"
     resolved_range_folder = ""
