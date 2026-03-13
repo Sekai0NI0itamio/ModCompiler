@@ -313,13 +313,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "read_file",
-                "description": "Read the contents of a file in the mod source",
+                "description": "Read a Java source file. Use paths like 'src/main/java/com/example/mod/Mod.java'",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Relative path to the file from src/ folder"
+                            "description": "Relative path to the file (e.g., 'src/main/java/com/itamio/fpsdisplay/FpsDisplay.java')"
                         }
                     },
                     "required": ["path"]
@@ -330,13 +330,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "list_files",
-                "description": "List files and folders in a directory",
+                "description": "List files in a directory. Use '.' for root, 'src' to see src structure",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Relative path from the version folder (default: src)"
+                            "description": "Directory to list (e.g., '.', 'src', 'src/main/java')"
                         }
                     }
                 }
@@ -345,18 +345,18 @@ def get_tools_definition() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "file_write",
-                "description": "Write content to a file (create or overwrite)",
+                "name": "write_mod_file",
+                "description": "Write a Java file. Creates directories automatically. Path should be like 'src/main/java/com/package/Mod.java'",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Relative path for the file to write"
+                            "description": "Path for the file (e.g., 'src/main/java/com/itamio/fpsdisplay/FpsDisplay.java')"
                         },
                         "content": {
                             "type": "string",
-                            "description": "Content to write to the file"
+                            "description": "Java source code content"
                         }
                     },
                     "required": ["path", "content"]
@@ -366,79 +366,38 @@ def get_tools_definition() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
-                "name": "file_edit",
-                "description": "Edit a file by replacing old content with new content",
+                "name": "write_resource",
+                "description": "Write a resource file (lang, config, etc). Path should be like 'src/main/resources/lang/en_us.lang'",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Relative path to the file to edit"
+                            "description": "Path for the resource (e.g., 'src/main/resources/pack.mcmeta')"
                         },
-                        "old_content": {
+                        "content": {
                             "type": "string",
-                            "description": "The exact content to find and replace"
-                        },
-                        "new_content": {
-                            "type": "string",
-                            "description": "The new content to replace it with"
+                            "description": "Resource content"
                         }
                     },
-                    "required": ["path", "old_content", "new_content"]
+                    "required": ["path", "content"]
                 }
             }
         },
         {
             "type": "function",
             "function": {
-                "name": "move_file",
-                "description": "Move or rename a file or folder",
+                "name": "copy_to_structure",
+                "description": "Copies a source file from the original src to the proper build structure. Example: copy_to_structure('src/java/com/itamio/fpsdisplay/FpsDisplay.java') automatically places it in src/main/java/com/itamio/fpsdisplay/FpsDisplay.java",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "source": {
+                        "source_path": {
                             "type": "string",
-                            "description": "Current relative path"
-                        },
-                        "destination": {
-                            "type": "string",
-                            "description": "New relative path"
+                            "description": "Path to the source file in src/ (e.g., 'src/java/com/itamio/fpsdisplay/FpsDisplay.java')"
                         }
                     },
-                    "required": ["source", "destination"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "read_template",
-                "description": "Read a file from the build template (read-only reference). Use this to understand the gradle setup and mod metadata format for the target version.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Relative path to the file in the template folder"
-                        }
-                    },
-                    "required": ["path"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "list_template",
-                "description": "List files in the build template folder (read-only reference). Use this to see what files are available in the template.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Relative path in the template folder (default: root)"
-                        }
-                    }
+                    "required": ["source_path"]
                 }
             }
         },
@@ -446,7 +405,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "build",
-                "description": "Build the mod using Gradle to verify everything compiles correctly",
+                "description": "Build the mod using Gradle. This handles all compilation automatically.",
                 "parameters": {
                     "type": "object",
                     "properties": {}
@@ -457,7 +416,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "complete",
-                "description": "Mark the mod update as complete. Only use this after a successful build.",
+                "description": "Mark the mod update as complete. Only use after successful build.",
                 "parameters": {
                     "type": "object",
                     "properties": {}
@@ -475,28 +434,7 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     mod_info = context["mod_info"]
     desc = context["user_description"]
 
-    pre_history = f"""USER: Help me update this Minecraft mod from {current_l} {current_v} to {target_l} {target_v}. The mod is called "{mod_info.get('name', 'Unknown')}".
-
-ASSISTANT: I'll help you update this mod! Let me start by exploring the project structure to understand what we're working with. I'll first look at the template folder to see the build setup for {target_l} {target_v}, then examine your source files.
-
-USER: That sounds good. Let me know what you find.
-
-ASSISTANT: I've analyzed both the template and source files. Here's what I need to do:
-1. Copy gradle files from template/ to the root directory
-2. Move source files from src/java to src/main/java (proper structure for {target_l})
-3. Update mcmod.info for {target_v} format
-4. Fix any API changes needed for the new Minecraft version
-5. Build and verify it compiles
-
-Let me start now. First, I'll read the template build.gradle to understand the structure, then make the necessary changes.
-
-[AI proceeds to make changes and run build]
-
-ASSISTANT: The build succeeded! The mod has been successfully updated to {target_l} {target_v}. Let me use the Complete tool to finalize this."""
-
     return f"""You are an expert Minecraft mod developer. Your task is to update this mod from {current_l} {current_v} to {target_l} {target_v}.
-
-{pre_history}
 
 MOD INFORMATION:
 - Name: {mod_info.get('name', 'Unknown')}
@@ -504,39 +442,50 @@ MOD INFORMATION:
 - Current Version: {mod_info.get('mod_version', '1.0.0')}
 - Description: {desc}
 
-PROJECT STRUCTURE - VERY IMPORTANT:
-- Your working directory contains:
-  - "src/" folder: The decompiled source code from the original mod (1.8.9 version)
-  - "template/" folder: The build template for {target_l} {target_v} (READ ONLY REFERENCE)
-  - "versions.txt" file: Contains version info
-  - Root directory: Where you should create build files (build.gradle, settings.gradle, gradle.properties, etc.)
+{current_v} uses SRG names (e.g., Minecraft.func_71410_x()), {target_v} uses MCP names (e.g., Minecraft.getMinecraft()).
 
-- The template/ folder contains the complete gradle build setup - COPY FROM IT, DON'T EDIT IT
-- The src/ folder contains the source Java files - these need to be moved to src/main/java/
+**Guide Sheet: How This Build System Works**
 
-KEY INSTRUCTIONS:
-1. Explore template/ to understand the build setup for {target_l} {target_v}
-2. Copy gradle files from template/ to ROOT directory (build.gradle, settings.gradle, gradle.properties, gradlew, etc.)
-3. Move source files from src/java to src/main/java/ (maintain package structure)
-4. Update mcmod.info (for Forge) or fabric.mod.json (for Fabric) to the new version format
-5. Fix any API breaking changes between {current_v} and {target_v}
-6. Use Build tool when ready - it will compile using the gradle setup
-7. Use Complete when build succeeds
+1. YOUR JOB IS SIMPLE:
+   - Read source files from src/ folder
+   - Fix code for {target_v} API changes
+   - Write updated Java files to src/main/java/ (proper package structure)
+   - DON'T create gradle files - the build system handles that!
+   - DON'T create mcmod.info or fabric.mod.json - adapters generate these!
 
-COMMON ISSUES TO WATCH FOR:
-- 1.8.9 uses SRG names (Minecraft.func_71410_x()), {target_v} uses MCP names (Minecraft.getMinecraft())
-- Forge 1.12.2 uses different event registration than 1.8.9
-- Make sure mcmod.info has correct format for the target version
+2. FOLDER STRUCTURE - IMPORTANT:
+   - Original source is in: src/java/ (decompiled from jar)
+   - You MUST write to: src/main/java/YOUR/PACKAGE/Mod.java
+   - Resources go to: src/main/resources/
 
-TOOLS:
-- Read File/List Files: Work with src/ folder
-- Read Template/List Template: View template/ for reference (read-only)
-- File Write: Create files in root or src/
-- Move File: Move source files to proper location
-- Build: Run gradle build (this handles all compilation automatically)
-- Complete: Mark as done after successful build
+3. EXAMPLE WORKFLOW:
+   a) List files in 'src' to see what's in the original source
+   b) Read each .java file from src/java/
+   c) For each file:
+      - Update imports for {target_v}
+      - Fix method names (SRG→MCP: func_71410_x → getMinecraft())
+      - Update event registration if needed
+      - Write to src/main/java/package/path/filename.java
+   d) Run Build tool when done
 
-REMEMBER: The Build tool automatically handles the gradle build process - you don't need to run gradle commands manually. Just use Build when you think the mod is ready!"""
+4. COMMON CHANGES NEEDED FOR {target_v}:
+   - Update acceptedMinecraftVersions in @Mod annotation
+   - Change method calls from SRG to MCP names
+   - Update field names (e.g., mc.field_71466_p → mc.fontRenderer)
+   - Update imports for any moved classes
+
+5. TOOLS:
+   - list_files: See folder structure (use 'src', 'src/java')
+   - read_file: Read original source files
+   - write_mod_file: Write Java files to src/main/java/
+   - write_resource: Write resource files to src/main/resources/
+   - copy_to_structure: Quick-copy from src/java/ to src/main/java/
+   - build: Compile (build system handles gradle automatically!)
+   - complete: Mark done after successful build
+
+**IMPORTANT**: The Build tool automatically sets up gradle, runs the build adapter, and compiles. You just need to have your Java files in the right place!
+
+Start by listing files in 'src' to see the original source structure."""
 
 
 def create_version_folder(
@@ -572,14 +521,6 @@ def create_version_folder(
 
     src_dest = version_folder / "src"
     shutil.copytree(trimmed_src, src_dest)
-
-    template_dir = context.get("template_dir", "")
-    if template_dir:
-        template_source = Path(template_dir)
-        if template_source.exists():
-            template_dest = version_folder / "template"
-            shutil.copytree(template_source, template_dest)
-            print(f"DEBUG: Copied template from {template_source} to {template_dest}")
 
     return version_folder
 
@@ -866,7 +807,12 @@ Please start by reading the key source files to understand the mod structure, th
             if not tool_calls:
                 msg_preview = (assistant_message[:200] + "...") if assistant_message else "(no content)"
                 print(f"DEBUG: No tool calls, assistant message: {msg_preview}", file=sys.stderr)
-                break
+                print(f"DEBUG: Sending continue prompt...", file=sys.stderr)
+                messages.append({
+                    "role": "user", 
+                    "content": "Please continue with a tool call. Don't respond without using a tool - use Read File, List Files, File Write, Move File, or Build when ready to continue updating the mod."
+                })
+                continue
 
             for tool_call in tool_calls:
                 function = tool_call.get("function", {})
@@ -887,6 +833,15 @@ Please start by reading the key source files to understand the mod structure, th
                     elif name == "list_files":
                         print(f"DEBUG: Calling _tool_list_files...", file=sys.stderr)
                         result_msg = _tool_list_files(version_dir, arguments)
+                    elif name == "write_mod_file":
+                        print(f"DEBUG: Calling _tool_write_mod_file...", file=sys.stderr)
+                        result_msg = _tool_write_mod_file(version_dir, arguments)
+                    elif name == "write_resource":
+                        print(f"DEBUG: Calling _tool_write_resource...", file=sys.stderr)
+                        result_msg = _tool_write_resource(version_dir, arguments)
+                    elif name == "copy_to_structure":
+                        print(f"DEBUG: Calling _tool_copy_to_structure...", file=sys.stderr)
+                        result_msg = _tool_copy_to_structure(version_dir, arguments)
                     elif name == "file_write":
                         print(f"DEBUG: Calling _tool_file_write...", file=sys.stderr)
                         result_msg = _tool_file_write(version_dir, arguments)
@@ -896,12 +851,6 @@ Please start by reading the key source files to understand the mod structure, th
                     elif name == "move_file":
                         print(f"DEBUG: Calling _tool_move_file...", file=sys.stderr)
                         result_msg = _tool_move_file(version_dir, arguments)
-                    elif name == "read_template":
-                        print(f"DEBUG: Calling _tool_read_template...", file=sys.stderr)
-                        result_msg = _tool_read_template(version_dir, context, arguments)
-                    elif name == "list_template":
-                        print(f"DEBUG: Calling _tool_list_template...", file=sys.stderr)
-                        result_msg = _tool_list_template(version_dir, context, arguments)
                     elif name == "build":
                         print(f"DEBUG: Calling _tool_build...", file=sys.stderr)
                         result_msg, build_success = _tool_build(version_dir, artifact_dir, context, arguments)
@@ -1048,6 +997,84 @@ def _tool_list_template(version_dir: Path, context: dict[str, Any], args: dict[s
             items.append(f"  - {rel_path}")
     
     return "\n".join(items) if items else "  (empty)"
+
+
+def _tool_write_mod_file(version_dir: Path, args: dict[str, str]) -> str:
+    path = args.get("path", "")
+    content = args.get("content", "")
+
+    if not path:
+        return "Error: path is required"
+    
+    if not path.startswith("src/main/java/"):
+        if path.startswith("src/java/"):
+            path = path.replace("src/java/", "src/main/java/")
+        elif not path.startswith("src/main/"):
+            path = "src/main/java/" + path
+
+    file_path = version_dir / path
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(content, encoding="utf-8")
+
+    return f"Java file written to {path} ({len(content)} bytes)"
+
+
+def _tool_write_resource(version_dir: Path, args: dict[str, str]) -> str:
+    path = args.get("path", "")
+    content = args.get("content", "")
+
+    if not path:
+        return "Error: path is required"
+    
+    if not path.startswith("src/main/resources/"):
+        if path.startswith("src/resources/"):
+            path = path.replace("src/resources/", "src/main/resources/")
+        elif not path.startswith("src/main/"):
+            path = "src/main/resources/" + path
+
+    file_path = version_dir / path
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(content, encoding="utf-8")
+
+    return f"Resource written to {path} ({len(content)} bytes)"
+
+
+def _tool_copy_to_structure(version_dir: Path, args: dict[str, str]) -> str:
+    source_path = args.get("source_path", "")
+
+    if not source_path:
+        return "Error: source_path is required"
+    
+    src_dir = version_dir / "src"
+    
+    if not source_path.startswith("src/"):
+        source_path = "src/" + source_path
+    
+    source_file = version_dir / source_path
+    
+    if not source_file.exists():
+        return f"Error: source file not found: {source_path}"
+    
+    if source_path.startswith("src/java/"):
+        dest_path = source_path.replace("src/java/", "src/main/java/")
+    elif source_path.startswith("src/resources/"):
+        dest_path = source_path.replace("src/resources/", "src/main/resources/")
+    else:
+        dest_path = source_path.replace("src/", "src/main/")
+    
+    dest_file = version_dir / dest_path
+    dest_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    if source_file.is_file():
+        import shutil
+        shutil.copy2(source_file, dest_file)
+        return f"Copied {source_path} to {dest_path}"
+    else:
+        import shutil
+        if dest_file.exists():
+            shutil.rmtree(dest_file)
+        shutil.copytree(source_file, dest_file)
+        return f"Copied directory {source_path} to {dest_path}"
 
 
 def _tool_file_write(version_dir: Path, args: dict[str, str]) -> str:
