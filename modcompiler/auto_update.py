@@ -283,7 +283,17 @@ def generate_version_context(
     target: VersionTarget,
     info_txt: str,
     trimmed_src: Path,
+    manifest: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    template_dir = ""
+    if manifest:
+        for range_entry in manifest.get("ranges", []):
+            if target.minecraft_version >= range_entry.get("min_version", "") and target.minecraft_version <= range_entry.get("max_version", ""):
+                if target.loader in range_entry.get("loaders", {}):
+                    loader_config = range_entry["loaders"][target.loader]
+                    template_dir = loader_config.get("template_dir", "")
+                    break
+    
     return {
         "target_version": target.minecraft_version,
         "target_loader": target.loader,
@@ -292,6 +302,7 @@ def generate_version_context(
         "mod_info": decomposed.metadata,
         "user_description": info_txt,
         "src_size": sum(f.stat().st_size for f in trimmed_src.rglob("*") if f.is_file()),
+        "template_dir": template_dir,
     }
 
 
@@ -400,6 +411,39 @@ def get_tools_definition() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "read_template",
+                "description": "Read a file from the build template (read-only reference). Use this to understand the gradle setup and mod metadata format for the target version.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path to the file in the template folder"
+                        }
+                    },
+                    "required": ["path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_template",
+                "description": "List files in the build template folder (read-only reference). Use this to see what files are available in the template.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path in the template folder (default: root)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "build",
                 "description": "Build the mod using Gradle to verify everything compiles correctly",
                 "parameters": {
@@ -429,6 +473,7 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     current_l = context["current_loader"]
     mod_info = context["mod_info"]
     desc = context["user_description"]
+    template_dir = context.get("template_dir", f"{target_v}/{target_l}/template")
 
     return f"""You are an expert Minecraft mod developer. Your task is to update this mod from {current_l} {current_v} to {target_l} {target_v}.
 
@@ -438,25 +483,35 @@ MOD INFORMATION:
 - Current Version: {mod_info.get('mod_version', '1.0.0')}
 - Description: {desc}
 
-INSTRUCTIONS:
-1. Read all source files in src/ to understand the mod structure
-2. Update gradle/build files for {target_l} {target_v}
-3. Update mod metadata (fabric.mod.json / mods.toml) for the new version
-4. Fix any breaking API changes between {current_v} and {target_v}
-5. Update any version-specific imports, dependencies, or registrations
-6. Use the Build tool to compile and verify success
-7. Use Complete when the mod builds successfully
+PROJECT STRUCTURE:
+- The mod source code is in the "src/" folder (your working directory)
+- The build template for {target_l} {target_v} is in the template folder at: {template_dir}/
+- The template contains build.gradle, settings.gradle, and mod metadata files for the target version
+
+IMPORTANT - HOW TO UPDATE A MOD:
+1. First, read the template files from {template_dir}/ to understand the build setup for {target_l} {target_v}
+2. Read all source files in src/ to understand the current mod structure
+3. Copy/create the necessary gradle files from the template to your working directory
+4. Update mod metadata files (fabric.mod.json / mods.toml / mcmod.info) for the new version
+5. Fix any breaking API changes between {current_v} and {target_v}
+6. Update any version-specific imports, dependencies, or registrations
+7. Use the Build tool to compile and verify success
+8. Use Complete when the mod builds successfully
 
 TOOLS AVAILABLE:
-- Read File: Read source files to understand the code
-- List Files: See directory structure
-- File Write: Create or overwrite files
-- File Edit: Modify existing files using diff format
-- Move File: Move files within this version folder
+- Read File: Read source files in src/ folder
+- List Files: See directory structure in src/
+- Read Template: Read files from the build template (read-only reference)
+- List Template: List files in the template folder (read-only reference)
+- File Write: Create or overwrite files in src/
+- File Edit: Modify existing files in src/ using diff format
+- Move File: Move files within src/
 - Build: Compile the mod using Gradle
 - Complete: Mark the update as done (only after successful build)
 
-The workspace is contained in this version's folder. You cannot access files outside of it."""
+NOTE: The Build tool will automatically use the correct gradle wrapper and build configuration from the template. You should NOT manually create gradle files - use the template files as reference and adapt them as needed.
+
+The workspace is contained in this version's folder. You cannot modify files outside of src/."""
 
 
 def create_version_folder(
@@ -573,7 +628,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     )
 
     for target in filtered_targets:
-        context = generate_version_context(decomposed, target, info_txt, trimmed_src)
+        context = generate_version_context(decomposed, target, info_txt, trimmed_src, manifest)
         create_version_folder(config.output_dir, decomposed, target, context, trimmed_src)
 
     state = {
@@ -807,6 +862,12 @@ Please start by reading the key source files to understand the mod structure, th
                     elif name == "move_file":
                         print(f"DEBUG: Calling _tool_move_file...", file=sys.stderr)
                         result_msg = _tool_move_file(version_dir, arguments)
+                    elif name == "read_template":
+                        print(f"DEBUG: Calling _tool_read_template...", file=sys.stderr)
+                        result_msg = _tool_read_template(version_dir, context, arguments)
+                    elif name == "list_template":
+                        print(f"DEBUG: Calling _tool_list_template...", file=sys.stderr)
+                        result_msg = _tool_list_template(version_dir, context, arguments)
                     elif name == "build":
                         print(f"DEBUG: Calling _tool_build...", file=sys.stderr)
                         result_msg, build_success = _tool_build(version_dir, artifact_dir, context, arguments)
@@ -910,6 +971,48 @@ def _tool_list_files(version_dir: Path, args: dict[str, str]) -> str:
         rel_path = item.relative_to(version_dir)
         items.append(f"  - {rel_path}{'/' if item.is_dir() else ''}")
 
+    return "\n".join(items) if items else "  (empty)"
+
+
+def _tool_read_template(version_dir: Path, context: dict[str, Any], args: dict[str, str]) -> str:
+    path = args.get("path", "")
+    if not path:
+        return "Error: path is required"
+    
+    template_dir = context.get("template_dir", "")
+    if not template_dir:
+        return "Error: No template directory configured"
+    
+    full_template_path = Path(template_dir) / path
+    if not full_template_path.exists():
+        return f"Error: template file not found: {path}"
+    
+    try:
+        content = full_template_path.read_text(encoding="utf-8")
+        if len(content) > 15000:
+            content = content[:15000] + "\n... (truncated)"
+        return f"Template file: {path}\n```\n{content}\n```"
+    except Exception as e:
+        return f"Error reading template file: {e}"
+
+
+def _tool_list_template(version_dir: Path, context: dict[str, Any], args: dict[str, str]) -> str:
+    path = args.get("path", "")
+    
+    template_dir = context.get("template_dir", "")
+    if not template_dir:
+        return "Error: No template directory configured"
+    
+    full_template_path = Path(template_dir) / path if path else Path(template_dir)
+    if not full_template_path.exists():
+        return f"Error: template directory not found: {path or template_dir}"
+    
+    items = []
+    for item in sorted(full_template_path.rglob("*")):
+        if item.is_file():
+            rel_path = item.relative_to(Path(template_dir))
+            items.append(f"  - {rel_path}")
+    
     return "\n".join(items) if items else "  (empty)"
 
 
