@@ -2,14 +2,14 @@
 
 | Mod ID | Name | Minecraft | Folder | Loader | Status | Jar | Log |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| fpsdisplay | FPS Display | 1.20.6 | 1.20-1.20.6 | forge | failed | - | build.log |
-| fpsdisplay | FPS Display | 1.21 | 1.21-1.21.1 | forge | failed | - | build.log |
-| fpsdisplay | FPS Display | 1.21.1 | 1.21-1.21.1 | forge | failed | - | build.log |
+| fpsdisplay | FPS Display | 1.20.6 | 1.20-1.20.6 | forge | success | fpsdisplay-1.0.0.jar | build.log |
+| fpsdisplay | FPS Display | 1.21 | 1.21-1.21.1 | forge | success | fpsdisplay-1.0.0.jar | build.log |
+| fpsdisplay | FPS Display | 1.21.1 | 1.21-1.21.1 | forge | success | fpsdisplay-1.0.0.jar | build.log |
 | fpsdisplay | FPS Display | 1.21.10 | 1.21.9-1.21.11 | forge | failed | - | build.log |
 | fpsdisplay | FPS Display | 1.21.11 | 1.21.9-1.21.11 | forge | failed | - | build.log |
-| fpsdisplay | FPS Display | 1.21.3 | 1.21.2-1.21.8 | forge | failed | - | build.log |
-| fpsdisplay | FPS Display | 1.21.4 | 1.21.2-1.21.8 | forge | failed | - | build.log |
-| fpsdisplay | FPS Display | 1.21.5 | 1.21.2-1.21.8 | forge | failed | - | build.log |
+| fpsdisplay | FPS Display | 1.21.3 | 1.21.2-1.21.8 | forge | success | fpsdisplay-1.0.0.jar | build.log |
+| fpsdisplay | FPS Display | 1.21.4 | 1.21.2-1.21.8 | forge | success | fpsdisplay-1.0.0.jar | build.log |
+| fpsdisplay | FPS Display | 1.21.5 | 1.21.2-1.21.8 | forge | success | fpsdisplay-1.0.0.jar | build.log |
 | fpsdisplay | FPS Display | 1.21.6 | 1.21.2-1.21.8 | forge | failed | - | build.log |
 | fpsdisplay | FPS Display | 1.21.7 | 1.21.2-1.21.8 | forge | failed | - | build.log |
 | fpsdisplay | FPS Display | 1.21.8 | 1.21.2-1.21.8 | forge | failed | - | build.log |
