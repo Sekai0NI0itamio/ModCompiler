@@ -475,7 +475,28 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     mod_info = context["mod_info"]
     desc = context["user_description"]
 
+    pre_history = f"""USER: Help me update this Minecraft mod from {current_l} {current_v} to {target_l} {target_v}. The mod is called "{mod_info.get('name', 'Unknown')}".
+
+ASSISTANT: I'll help you update this mod! Let me start by exploring the project structure to understand what we're working with. I'll first look at the template folder to see the build setup for {target_l} {target_v}, then examine your source files.
+
+USER: That sounds good. Let me know what you find.
+
+ASSISTANT: I've analyzed both the template and source files. Here's what I need to do:
+1. Copy gradle files from template/ to the root directory
+2. Move source files from src/java to src/main/java (proper structure for {target_l})
+3. Update mcmod.info for {target_v} format
+4. Fix any API changes needed for the new Minecraft version
+5. Build and verify it compiles
+
+Let me start now. First, I'll read the template build.gradle to understand the structure, then make the necessary changes.
+
+[AI proceeds to make changes and run build]
+
+ASSISTANT: The build succeeded! The mod has been successfully updated to {target_l} {target_v}. Let me use the Complete tool to finalize this."""
+
     return f"""You are an expert Minecraft mod developer. Your task is to update this mod from {current_l} {current_v} to {target_l} {target_v}.
+
+{pre_history}
 
 MOD INFORMATION:
 - Name: {mod_info.get('name', 'Unknown')}
@@ -483,33 +504,39 @@ MOD INFORMATION:
 - Current Version: {mod_info.get('mod_version', '1.0.0')}
 - Description: {desc}
 
-PROJECT STRUCTURE:
-- The mod source code is in the "src/" folder (your working directory)
-- The build template for {target_l} {target_v} is in the "template/" folder (already copied for you)
-- The template contains build.gradle, settings.gradle, and mod metadata files for the target version
+PROJECT STRUCTURE - VERY IMPORTANT:
+- Your working directory contains:
+  - "src/" folder: The decompiled source code from the original mod (1.8.9 version)
+  - "template/" folder: The build template for {target_l} {target_v} (READ ONLY REFERENCE)
+  - "versions.txt" file: Contains version info
+  - Root directory: Where you should create build files (build.gradle, settings.gradle, gradle.properties, etc.)
 
-IMPORTANT - HOW TO UPDATE A MOD:
-1. First, explore the template/ folder to understand the build setup for {target_l} {target_v}
-2. Read all source files in src/ to understand the current mod structure
-3. Copy the gradle files from template/ to the root of your working directory
-4. Update mod metadata files (fabric.mod.json / mods.toml / mcmod.info) for the new version
-5. Fix any breaking API changes between {current_v} and {target_v}
-6. Update any version-specific imports, dependencies, or registrations
-7. Use the Build tool to compile and verify success
-8. Use Complete when the mod builds successfully
+- The template/ folder contains the complete gradle build setup - COPY FROM IT, DON'T EDIT IT
+- The src/ folder contains the source Java files - these need to be moved to src/main/java/
 
-TOOLS AVAILABLE:
-- Read File: Read source files in src/ folder
-- List Files: See directory structure in src/
-- Read Template: Read files from the template/ folder
-- List Template: List files in the template/ folder
-- File Write: Create or overwrite files in src/ or root directory
-- File Edit: Modify existing files using diff format
-- Move File: Move files within src/
-- Build: Compile the mod using Gradle (automatically uses the template)
-- Complete: Mark the update as done (only after successful build)
+KEY INSTRUCTIONS:
+1. Explore template/ to understand the build setup for {target_l} {target_v}
+2. Copy gradle files from template/ to ROOT directory (build.gradle, settings.gradle, gradle.properties, gradlew, etc.)
+3. Move source files from src/java to src/main/java/ (maintain package structure)
+4. Update mcmod.info (for Forge) or fabric.mod.json (for Fabric) to the new version format
+5. Fix any API breaking changes between {current_v} and {target_v}
+6. Use Build tool when ready - it will compile using the gradle setup
+7. Use Complete when build succeeds
 
-The workspace is contained in this version's folder. You cannot modify files outside of src/ and the root."""
+COMMON ISSUES TO WATCH FOR:
+- 1.8.9 uses SRG names (Minecraft.func_71410_x()), {target_v} uses MCP names (Minecraft.getMinecraft())
+- Forge 1.12.2 uses different event registration than 1.8.9
+- Make sure mcmod.info has correct format for the target version
+
+TOOLS:
+- Read File/List Files: Work with src/ folder
+- Read Template/List Template: View template/ for reference (read-only)
+- File Write: Create files in root or src/
+- Move File: Move source files to proper location
+- Build: Run gradle build (this handles all compilation automatically)
+- Complete: Mark as done after successful build
+
+REMEMBER: The Build tool automatically handles the gradle build process - you don't need to run gradle commands manually. Just use Build when you think the mod is ready!"""
 
 
 def create_version_folder(
@@ -1143,7 +1170,11 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
     try:
         from modcompiler.common import copy_tree
 
-        copy_tree(Path(template_dir) / "template", workspace)
+        source_path = Path(template_dir)
+        if (source_path / "template").exists():
+            copy_tree(source_path / "template", workspace)
+        else:
+            copy_tree(source_path, workspace)
 
         mod_dir = workspace / "src" / "main"
         if (version_dir / "src").exists():
