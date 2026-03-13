@@ -2,7 +2,7 @@ package com.itamio.fpsdisplay.forge;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public class FpsDisplayOverlay {
@@ -11,14 +11,20 @@ public class FpsDisplayOverlay {
     private int currentFps = 0;
 
     @SubscribeEvent
-    public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+    public void onForgeEvent(Event event) {
+        if (!isOverlayEvent(event)) {
+            return;
+        }
         if (!FpsDisplayForgeMod.CONFIG.isEnabled()) {
+            return;
+        }
+        GuiGraphics gui = extractGuiGraphics(event);
+        if (gui == null) {
             return;
         }
         int fps = sampleFps();
         String text = "FPS: " + fps;
         int color = colorForFps(fps);
-        GuiGraphics gui = event.getGuiGraphics();
         gui.drawString(Minecraft.getInstance().font, text, 2, 2, color, true);
     }
 
@@ -45,5 +51,23 @@ public class FpsDisplayOverlay {
             return 0x55FF55;
         }
         return 0xAA55FF;
+    }
+
+    private static boolean isOverlayEvent(Event event) {
+        String name = event.getClass().getName();
+        return name.endsWith("RenderGuiOverlayEvent$Post")
+            || name.endsWith("RenderGuiEvent$Post")
+            || name.endsWith("RenderGuiLayerEvent$Post");
+    }
+
+    private static GuiGraphics extractGuiGraphics(Event event) {
+        try {
+            Object value = event.getClass().getMethod("getGuiGraphics").invoke(event);
+            if (value instanceof GuiGraphics gui) {
+                return gui;
+            }
+        } catch (ReflectiveOperationException ignored) {
+        }
+        return null;
     }
 }
