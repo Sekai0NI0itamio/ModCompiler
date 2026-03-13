@@ -95,6 +95,13 @@ def _get_all_supported_versions(manifest: dict[str, Any], current_loader: str) -
             continue
         loader_config = loaders[current_loader]
         supported_versions = loader_config.get("supported_versions", [])
+        
+        if not supported_versions:
+            min_ver = range_entry.get("min_version", "")
+            max_ver = range_entry.get("max_version", "")
+            if min_ver and max_ver:
+                supported_versions = [max_ver]
+        
         if not supported_versions:
             continue
         for mc_version in supported_versions:
@@ -149,6 +156,13 @@ def _parse_version_range(version_input: str, manifest: dict[str, Any], current_l
 
         loader_config = loaders[current_loader]
         supported_versions = loader_config.get("supported_versions", [])
+        
+        if not supported_versions:
+            min_ver = range_entry.get("min_version", "")
+            max_ver = range_entry.get("max_version", "")
+            if min_ver and max_ver:
+                supported_versions = [max_ver]
+        
         for mc_ver in supported_versions:
             targets.append(VersionTarget(
                 minecraft_version=mc_ver,
