@@ -22,80 +22,90 @@ Please make sure to read and understand the following license:
 # (c) 2020 Microsoft Corporation. These mappings are provided "as-is" and you bear the risk of using them. You may copy and use the mappings for development purposes, but you may not redistribute the mappings complete and unmodified. Microsoft makes no warranties, express or implied, with respect to the mappings provided here.  Use and modification of this document or the source code (in any form) of Minecraft: Java Edition is governed by the Minecraft End User License Agreement available at https://account.mojang.com/documents/minecraft_eula.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-> Task :compileJava
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:4: error: package net.fabricmc.fabric.api.client.rendering.v1 does not exist
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-                                                  ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: package net.minecraft.client does not exist
+> Task :compileJava NO-SOURCE
+> Task :processResources
+> Task :classes
+
+> Task :compileClientJava
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: cannot find symbol
 import net.minecraft.client.MinecraftClient;
                            ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: package net.minecraft.client.gui does not exist
+  symbol:   class MinecraftClient
+  location: package net.minecraft.client
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: cannot find symbol
 import net.minecraft.client.gui.DrawContext;
                                ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
+  symbol:   class DrawContext
+  location: package net.minecraft.client.gui
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
     public void onHudRender(DrawContext drawContext, float tickDelta) {
                             ^
   symbol:   class DrawContext
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: package HudRenderCallback does not exist
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: incompatible types: invalid method reference
         HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
-                         ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+                                         ^
+    incompatible types: DeltaTracker cannot be converted to float
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
         MinecraftClient client = MinecraftClient.getInstance();
         ^
   symbol:   class MinecraftClient
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
         MinecraftClient client = MinecraftClient.getInstance();
                                  ^
   symbol:   variable MinecraftClient
   location: class FpsDisplayOverlay
-7 errors
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+6 errors
 
-> Task :compileJava FAILED
+> Task :compileClientJava FAILED
 
-[Incubating] Problems report is available at: file:///tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':compileJava'.
+Execution failed for task ':compileClientJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: incompatible types: invalid method reference
+          HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
+                                           ^
+      incompatible types: DeltaTracker cannot be converted to float
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: cannot find symbol
+  import net.minecraft.client.MinecraftClient;
+                             ^
+    symbol:   class MinecraftClient
+    location: package net.minecraft.client
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: cannot find symbol
+  import net.minecraft.client.gui.DrawContext;
+                                 ^
+    symbol:   class DrawContext
+    location: package net.minecraft.client.gui
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
       public void onHudRender(DrawContext drawContext, float tickDelta) {
                               ^
     symbol:   class DrawContext
     location: class FpsDisplayOverlay
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
           MinecraftClient client = MinecraftClient.getInstance();
           ^
     symbol:   class MinecraftClient
     location: class FpsDisplayOverlay
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
           MinecraftClient client = MinecraftClient.getInstance();
                                    ^
     symbol:   variable MinecraftClient
     location: class FpsDisplayOverlay
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:4: error: package net.fabricmc.fabric.api.client.rendering.v1 does not exist
-  import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-                                                    ^
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: package net.minecraft.client does not exist
-  import net.minecraft.client.MinecraftClient;
-                             ^
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: package net.minecraft.client.gui does not exist
-  import net.minecraft.client.gui.DrawContext;
-                                 ^
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: package HudRenderCallback does not exist
-          HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
-                           ^
-  7 errors
+  Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+  6 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
 > Run with --scan to generate a Build Scan (powered by Develocity).
 
 * Exception is:
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compileJava'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compileClientJava'.
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:133)
@@ -130,34 +140,37 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: incompatible types: invalid method reference
+        HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
+                                         ^
+    incompatible types: DeltaTracker cannot be converted to float
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: cannot find symbol
+import net.minecraft.client.MinecraftClient;
+                           ^
+  symbol:   class MinecraftClient
+  location: package net.minecraft.client
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: cannot find symbol
+import net.minecraft.client.gui.DrawContext;
+                               ^
+  symbol:   class DrawContext
+  location: package net.minecraft.client.gui
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
     public void onHudRender(DrawContext drawContext, float tickDelta) {
                             ^
   symbol:   class DrawContext
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
         MinecraftClient client = MinecraftClient.getInstance();
         ^
   symbol:   class MinecraftClient
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
         MinecraftClient client = MinecraftClient.getInstance();
                                  ^
   symbol:   variable MinecraftClient
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:4: error: package net.fabricmc.fabric.api.client.rendering.v1 does not exist
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-                                                  ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: package net.minecraft.client does not exist
-import net.minecraft.client.MinecraftClient;
-                           ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: package net.minecraft.client.gui does not exist
-import net.minecraft.client.gui.DrawContext;
-                               ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: package HudRenderCallback does not exist
-        HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
-                         ^
-7 errors
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+6 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -281,9 +294,9 @@ import net.minecraft.client.gui.DrawContext;
 	... 30 more
 
 
-BUILD FAILED in 58s
-1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.21-1.21.1/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/metadata.json --source-dir .workflow_state/prepared/mods/fpsdisplay-fabric-1-21/src --template-workspace /tmp/modcompiler-fpsdisplay-fabric-1-21-s0arucoz/workspace --minecraft-version 1.21 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+BUILD FAILED in 1m 25s
+2 actionable tasks: 2 executed
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21-1.21.1/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/metadata.json --source-dir .workflow_state/prepared/mods/fpsdisplay-fabric-1-21/src --template-workspace /tmp/modcompiler-fpsdisplay-fabric-1-21-pw0jv0m3/workspace --minecraft-version 1.21 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

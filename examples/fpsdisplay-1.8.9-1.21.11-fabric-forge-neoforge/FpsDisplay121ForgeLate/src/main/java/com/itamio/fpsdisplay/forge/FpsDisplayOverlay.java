@@ -2,12 +2,13 @@ package com.itamio.fpsdisplay.forge;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraftforge.client.event.RegisterGuiLayersEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = FpsDisplayForgeMod.MOD_ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = FpsDisplayForgeMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class FpsDisplayOverlay {
     private static long lastSampleTime = System.currentTimeMillis();
     private static int frames = 0;
@@ -17,15 +18,19 @@ public final class FpsDisplayOverlay {
     }
 
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (!FpsDisplayForgeMod.CONFIG.isEnabled()) {
-            return;
-        }
-        int fps = sampleFps();
-        String text = "FPS: " + fps;
-        int color = colorForFps(fps);
-        GuiGraphics gui = event.getGuiGraphics();
-        gui.drawString(Minecraft.getInstance().font, text, 2, 2, color, true);
+    public static void onRegisterLayers(RegisterGuiLayersEvent event) {
+        event.registerAboveAll(
+            new ResourceLocation(FpsDisplayForgeMod.MOD_ID, "fps_display"),
+            (guiGraphics, deltaTracker) -> {
+                if (!FpsDisplayForgeMod.CONFIG.isEnabled()) {
+                    return;
+                }
+                int fps = sampleFps();
+                String text = "FPS: " + fps;
+                int color = colorForFps(fps);
+                guiGraphics.drawString(Minecraft.getInstance().font, text, 2, 2, color, true);
+            }
+        );
     }
 
     private static int sampleFps() {

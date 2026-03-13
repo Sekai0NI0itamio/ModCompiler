@@ -23,14 +23,14 @@ Please make sure to read and understand the following license:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Cannot remap field_56986 because it does not exists in any of the targets [net/minecraft/class_1088] or their parents.
 Cannot remap method_60903 because it does not exists in any of the targets [net/minecraft/class_9810] or their parents.
-Cannot remap method_3367 because it does not exists in any of the targets [net/minecraft/class_778] or their parents.
 Cannot remap field_59980 because it does not exists in any of the targets [net/minecraft/class_10430] or their parents.
-Cannot remap field_5434 because it does not exists in any of the targets [net/minecraft/class_1097] or their parents.
 Cannot remap field_60921 because it does not exists in any of the targets [net/minecraft/class_4696] or their parents.
+Cannot remap field_5434 because it does not exists in any of the targets [net/minecraft/class_1097] or their parents.
+Cannot remap method_3367 because it does not exists in any of the targets [net/minecraft/class_778] or their parents.
 
 Cannot remap method_10764 because it does not exists in any of the targets [net/minecraft/class_2535]
-Cannot remap method_10764 because it does not exists in any of the targets [net/minecraft/class_2535]
 Cannot remap method_62657 because it does not exists in any of the targets [net/minecraft/class_1092]
+Cannot remap method_10764 because it does not exists in any of the targets [net/minecraft/class_2535]
 Cannot remap method_71927 because it does not exists in any of the targets [net/minecraft/class_634]
 Cannot remap method_23067 because it does not exists in any of the targets [net/minecraft/class_4603]
 Cannot remap method_7727 because it does not exists in any of the targets [net/minecraft/class_1755]
@@ -40,10 +40,10 @@ Cannot remap method_67991 because it does not exists in any of the targets [net/
 Cannot remap method_71138 because it does not exists in any of the targets [net/minecraft/class_918] or their parents.
 Cannot remap method_67194 because it does not exists in any of the targets [net/minecraft/class_1799]
 Cannot remap method_67194 because it does not exists in any of the targets [net/minecraft/class_1799]
+Cannot remap method_67194 because it does not exists in any of the targets [net/minecraft/class_1799]
+Cannot remap method_67194 because it does not exists in any of the targets [net/minecraft/class_1799]
+Cannot remap method_67194 because it does not exists in any of the targets [net/minecraft/class_1799]
 Cannot remap method_40378 because it does not exists in any of the targets [net/minecraft/class_6306]
-Cannot remap method_67194 because it does not exists in any of the targets [net/minecraft/class_1799]
-Cannot remap method_67194 because it does not exists in any of the targets [net/minecraft/class_1799]
-Cannot remap method_67194 because it does not exists in any of the targets [net/minecraft/class_1799]
 Cannot remap method_5651 because it does not exists in any of the targets [net/minecraft/class_1297]
 Cannot remap method_5647 because it does not exists in any of the targets [net/minecraft/class_1297]
 Cannot remap <init> because it does not exists in any of the targets [net/minecraft/class_1088]
@@ -59,10 +59,10 @@ Cannot remap method_16020 because it does not exists in any of the targets [net/
 Cannot remap method_39969 because it does not exists in any of the targets [net/minecraft/class_6850]
 Cannot remap method_39969 because it does not exists in any of the targets [net/minecraft/class_6850]
 Cannot remap method_22710 because it does not exists in any of the targets [net/minecraft/class_761]
-Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
-Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
-Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
 Cannot remap method_4854 because it does not exists in any of the targets [net/minecraft/class_1140]
+Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
+Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
+Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
 Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
 Cannot remap method_62214 because it does not exists in any of the targets [net/minecraft/class_761]
 Cannot remap method_22710 because it does not exists in any of the targets [net/minecraft/class_761]
@@ -74,80 +74,94 @@ Cannot remap method_62200 because it does not exists in any of the targets [net/
 Cannot remap method_58690 because it does not exists in any of the targets [net/minecraft/class_2586]
 Cannot remap method_71400 because it does not exists in any of the targets [net/minecraft/class_2586]
 
-> Task :compileJava
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:4: error: package net.fabricmc.fabric.api.client.rendering.v1 does not exist
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-                                                  ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: package net.minecraft.client does not exist
+> Task :compileJava NO-SOURCE
+> Task :processResources
+> Task :classes
+
+> Task :compileClientJava
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: cannot find symbol
 import net.minecraft.client.MinecraftClient;
                            ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: package net.minecraft.client.gui does not exist
+  symbol:   class MinecraftClient
+  location: package net.minecraft.client
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: cannot find symbol
 import net.minecraft.client.gui.DrawContext;
                                ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
+  symbol:   class DrawContext
+  location: package net.minecraft.client.gui
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
     public void onHudRender(DrawContext drawContext, float tickDelta) {
                             ^
   symbol:   class DrawContext
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: package HudRenderCallback does not exist
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: incompatible types: invalid method reference
         HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
-                         ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+                                         ^
+    incompatible types: DeltaTracker cannot be converted to float
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
         MinecraftClient client = MinecraftClient.getInstance();
         ^
   symbol:   class MinecraftClient
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
         MinecraftClient client = MinecraftClient.getInstance();
                                  ^
   symbol:   variable MinecraftClient
   location: class FpsDisplayOverlay
-7 errors
+Note: /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+6 errors
 
-> Task :compileJava FAILED
+> Task :compileClientJava FAILED
 
-[Incubating] Problems report is available at: file:///tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':compileJava'.
+Execution failed for task ':compileClientJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
+  Note: /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java uses or overrides a deprecated API.
+  Note: Recompile with -Xlint:deprecation for details.
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: incompatible types: invalid method reference
+          HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
+                                           ^
+      incompatible types: DeltaTracker cannot be converted to float
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: cannot find symbol
+  import net.minecraft.client.MinecraftClient;
+                             ^
+    symbol:   class MinecraftClient
+    location: package net.minecraft.client
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: cannot find symbol
+  import net.minecraft.client.gui.DrawContext;
+                                 ^
+    symbol:   class DrawContext
+    location: package net.minecraft.client.gui
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
       public void onHudRender(DrawContext drawContext, float tickDelta) {
                               ^
     symbol:   class DrawContext
     location: class FpsDisplayOverlay
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
           MinecraftClient client = MinecraftClient.getInstance();
           ^
     symbol:   class MinecraftClient
     location: class FpsDisplayOverlay
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
           MinecraftClient client = MinecraftClient.getInstance();
                                    ^
     symbol:   variable MinecraftClient
     location: class FpsDisplayOverlay
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:4: error: package net.fabricmc.fabric.api.client.rendering.v1 does not exist
-  import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-                                                    ^
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: package net.minecraft.client does not exist
-  import net.minecraft.client.MinecraftClient;
-                             ^
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: package net.minecraft.client.gui does not exist
-  import net.minecraft.client.gui.DrawContext;
-                                 ^
-  /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: package HudRenderCallback does not exist
-          HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
-                           ^
-  7 errors
+  Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+  6 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
 > Run with --scan to generate a Build Scan (powered by Develocity).
 
 * Exception is:
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compileJava'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compileClientJava'.
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:133)
@@ -179,37 +193,73 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:328)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:146)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:131)
+	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
+	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:45)
+	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
+	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:269)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:42)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:267)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:259)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
+	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
+Note: /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: incompatible types: invalid method reference
+        HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
+                                         ^
+    incompatible types: DeltaTracker cannot be converted to float
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: cannot find symbol
+import net.minecraft.client.MinecraftClient;
+                           ^
+  symbol:   class MinecraftClient
+  location: package net.minecraft.client
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: cannot find symbol
+import net.minecraft.client.gui.DrawContext;
+                               ^
+  symbol:   class DrawContext
+  location: package net.minecraft.client.gui
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:11: error: cannot find symbol
     public void onHudRender(DrawContext drawContext, float tickDelta) {
                             ^
   symbol:   class DrawContext
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
         MinecraftClient client = MinecraftClient.getInstance();
         ^
   symbol:   class MinecraftClient
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
+/tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace/src/client/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:18: error: cannot find symbol
         MinecraftClient client = MinecraftClient.getInstance();
                                  ^
   symbol:   variable MinecraftClient
   location: class FpsDisplayOverlay
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:4: error: package net.fabricmc.fabric.api.client.rendering.v1 does not exist
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-                                                  ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:3: error: package net.minecraft.client does not exist
-import net.minecraft.client.MinecraftClient;
-                           ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayOverlay.java:4: error: package net.minecraft.client.gui does not exist
-import net.minecraft.client.gui.DrawContext;
-                               ^
-/tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace/src/main/java/com/itamio/fpsdisplay/fabric/FpsDisplayFabricMod.java:16: error: package HudRenderCallback does not exist
-        HudRenderCallback.EVENT.register(new FpsDisplayOverlay()::onHudRender);
-                         ^
-7 errors
+Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+6 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -330,12 +380,12 @@ import net.minecraft.client.gui.DrawContext;
 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:31)
 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:64)
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
-	... 30 more
+	... 61 more
 
 
-BUILD FAILED in 1m 57s
-1 actionable task: 1 executed
-$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.21.2-1.21.8/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/metadata.json --source-dir .workflow_state/prepared/mods/fpsdisplay-fabric-1-21-4/src --template-workspace /tmp/modcompiler-fpsdisplay-fabric-1-21-4-1b3l_e69/workspace --minecraft-version 1.21.4 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+BUILD FAILED in 1m 6s
+2 actionable tasks: 2 executed
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.2-1.21.8/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/metadata.json --source-dir .workflow_state/prepared/mods/fpsdisplay-fabric-1-21-4/src --template-workspace /tmp/modcompiler-fpsdisplay-fabric-1-21-4-sare3qbf/workspace --minecraft-version 1.21.4 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon

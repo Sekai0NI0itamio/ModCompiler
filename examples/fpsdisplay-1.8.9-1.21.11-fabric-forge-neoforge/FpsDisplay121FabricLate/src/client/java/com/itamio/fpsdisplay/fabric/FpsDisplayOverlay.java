@@ -1,22 +1,23 @@
 package com.itamio.fpsdisplay.fabric;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class FpsDisplayOverlay {
     private long lastSampleTime = System.currentTimeMillis();
     private int frames = 0;
     private int currentFps = 0;
 
-    public void onHudRender(DrawContext drawContext, float tickDelta) {
+    public void onHudRender(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
         if (!FpsDisplayFabricMod.CONFIG.isEnabled()) {
             return;
         }
         int fps = sampleFps();
         String text = "FPS: " + fps;
         int color = colorForFps(fps);
-        MinecraftClient client = MinecraftClient.getInstance();
-        drawContext.drawTextWithShadow(client.textRenderer, text, 2, 2, color);
+        Minecraft minecraft = Minecraft.getInstance();
+        guiGraphics.drawString(minecraft.font, text, 2, 2, color, true);
     }
 
     private int sampleFps() {
