@@ -634,11 +634,17 @@ Please start by reading the key source files to understand the mod structure, th
                 raise
             
             print(f"DEBUG: Got response, processing...", file=sys.stderr)
+            print(f"DEBUG: response keys: {response.keys()}", file=sys.stderr)
+            print(f"DEBUG: choices: {response.get('choices', [])[:1]}", file=sys.stderr)
+            
             assistant_message = response["choices"][0]["message"]["content"]
             messages.append({"role": "assistant", "content": assistant_message})
 
             tool_calls = response["choices"][0].get("message", {}).get("tool_calls", [])
+            print(f"DEBUG: tool_calls: {len(tool_calls)} found", file=sys.stderr)
+            
             if not tool_calls:
+                print(f"DEBUG: No tool calls, assistant message: {assistant_message[:200]}...", file=sys.stderr)
                 break
 
             for tool_call in tool_calls:
