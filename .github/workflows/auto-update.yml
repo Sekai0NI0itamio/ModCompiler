@@ -12,8 +12,8 @@ on:
         required: false
         default: ""
         type: string
-      info_txt_path:
-        description: Path to info.txt file with mod description
+      mod_description:
+        description: "Mod description: either a file path (e.g., info.txt) or direct text"
         required: false
         default: ""
         type: string
@@ -64,7 +64,7 @@ jobs:
           VERSION_RANGE: ${{ inputs.version_range }}
           UPDATE_MODE: ${{ inputs.update_mode }}
           PUBLISH_MODE: ${{ inputs.publish_mode }}
-          INFO_TXT_PATH: ${{ inputs.info_txt_path }}
+          MOD_DESCRIPTION: ${{ inputs.mod_description }}
           MOD_JAR_PATH: ${{ inputs.mod_jar_path }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: |
@@ -73,7 +73,7 @@ jobs:
           python build_mods.py auto-update-decompose \
             --mod-jar-path "$MOD_JAR_PATH" \
             --modrinth-project-url "$MODRINTH_PROJECT_URL" \
-            --info-txt-path "$INFO_TXT_PATH" \
+            --mod-description "$MOD_DESCRIPTION" \
             --version-range "$VERSION_RANGE" \
             --update-mode "$UPDATE_MODE" \
             --publish-mode "$PUBLISH_MODE" \

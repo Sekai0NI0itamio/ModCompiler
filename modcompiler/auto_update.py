@@ -40,7 +40,7 @@ EXCLUDE_EXTENSIONS = {".json", ".lang", ".properties", ".png", ".ogg", ".txt", "
 class AutoUpdateConfig:
     mod_jar_path: str
     modrinth_project_url: str | None
-    info_txt_path: str | None
+    mod_description: str
     version_range: str
     update_mode: str
     publish_mode: str
@@ -372,7 +372,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     config = AutoUpdateConfig(
         mod_jar_path=args.mod_jar_path,
         modrinth_project_url=args.modrinth_project_url if hasattr(args, "modrinth_project_url") else None,
-        info_txt_path=args.info_txt_path if hasattr(args, "info_txt_path") else None,
+        mod_description=args.mod_description if hasattr(args, "mod_description") else "",
         version_range=args.version_range if hasattr(args, "version_range") else "all",
         update_mode=args.update_mode if hasattr(args, "update_mode") else "all-versions",
         publish_mode=args.publish_mode if hasattr(args, "publish_mode") else "bundle-only",
@@ -397,10 +397,13 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     mod_info = _parse_mod_info(src_path)
 
     info_txt = ""
-    if config.info_txt_path:
-        info_path = Path(config.info_txt_path)
-        if info_path.exists():
-            info_txt = info_path.read_text(encoding="utf-8")
+    mod_description_input = config.mod_description.strip()
+    if mod_description_input:
+        potential_path = Path(mod_description_input)
+        if potential_path.exists() and potential_path.is_file():
+            info_txt = potential_path.read_text(encoding="utf-8")
+        else:
+            info_txt = mod_description_input
 
     current_loader = mod_info.get("loader", "fabric")
     current_version = mod_info.get("supported_minecraft", "1.20.1")
