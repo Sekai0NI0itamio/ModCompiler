@@ -1330,9 +1330,26 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
 
         build_command = list(build_command_list)
 
+        version_info = f"""=== BUILD VERSION INFO ===
+Target Version: {target_version}
+Target Loader: {target_loader}
+Range Folder: {resolved_range_folder}
+Template Dir: {template_dir}
+Build Command: {build_command}
+Java Version: {java_version}
+Java Home: {java_home}
+Manifest: version-manifest.json
+==================="""
+
+        print(f"DEBUG[_tool_build]: {version_info}", file=sys.stderr)
+
         log_path = artifact_dir / "build.log"
+        version_log_path = artifact_dir / "build_version_info.log"
+        version_log_path.write_text(version_info, encoding="utf-8")
+        
         build_output = ""
         with log_path.open("w", encoding="utf-8") as log_file:
+            log_file.write(version_info + "\n\n")
             log_file.write("$ " + " ".join(adapter_command) + "\n\n")
             adapter_run = subprocess.run(
                 adapter_command,
@@ -1348,8 +1365,9 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
                 log_file.write(f"\n\n=== ADAPTER FAILED with exit code {adapter_run.returncode} ===\n")
                 log_file.write(f"STDOUT: {adapter_run.stdout}\n")
                 log_file.write(f"STDERR: {adapter_run.stderr}\n")
+                log_file.write(f"\n{version_info}\n")
                 log_content = log_path.read_text(encoding="utf-8")
-                return f"Build failed (exit {adapter_run.returncode}). Here's the build log:\n\n{log_content[-8000:]}", False
+                return f"Build failed (exit {adapter_run.returncode}). VERSION INFO: {version_info}\n\nBuild log:\n\n{log_content[-8000:]}", False
 
             log_file.write("\n$ " + " ".join(build_command) + "\n\n")
             build_run = subprocess.run(
@@ -1365,7 +1383,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
 
         if not jars:
             log_content = log_path.read_text(encoding="utf-8")
-            return f"Build completed but no jar found. Here's the build log:\n\n{log_content[-8000:]}", False
+            return f"Build completed but no jar found. VERSION INFO: {version_info}\n\nBuild log:\n\n{log_content[-8000:]}", False
 
         jars_dir = artifact_dir / "jars"
         jars_dir.mkdir(parents=True, exist_ok=True)
