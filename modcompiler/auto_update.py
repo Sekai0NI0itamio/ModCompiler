@@ -206,7 +206,6 @@ def filter_versions_to_build(
 def trim_src_for_context(src_path: Path) -> Path:
     temp_dir = src_path.parent / "_trimmed_src"
     safe_rmtree(temp_dir)
-    temp_dir.mkdir(parents=True)
 
     all_files = list(src_path.rglob("*"))
     total_size = sum(f.stat().st_size for f in all_files if f.is_file())
@@ -214,6 +213,8 @@ def trim_src_for_context(src_path: Path) -> Path:
     if total_size <= MAX_SRC_SIZE_BYTES:
         shutil.copytree(src_path, temp_dir)
         return temp_dir
+
+    temp_dir.mkdir(parents=True)
 
     java_files = [f for f in all_files if f.suffix == ".java" and f.is_file()]
     resource_files = [f for f in all_files if f.suffix.lower() in EXCLUDE_EXTENSIONS and f.is_file()]
