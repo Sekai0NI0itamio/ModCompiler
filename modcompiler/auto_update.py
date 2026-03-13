@@ -1443,29 +1443,39 @@ Manifest: version-manifest.json
         version_log_path = artifact_dir / "build_version_info.log"
         version_log_path.write_text(version_info, encoding="utf-8")
         
-        build_output = ""
+        print(f"DEBUG[_tool_build]: adapter_command={' '.join(str(x) for x in adapter_command)}", file=sys.stderr)
+        
+        repo_root = Path.cwd()
+        adapter_cwd = repo_root
+        print(f"DEBUG[_tool_build]: adapter_cwd (repo root): {adapter_cwd}", file=sys.stderr)
+        print(f"DEBUG[_tool_build]: adapter_script exists: {adapter_script.exists()}", file=sys.stderr)
         with log_path.open("w", encoding="utf-8") as log_file:
             log_file.write(version_info + "\n\n")
-            log_file.write("$ " + " ".join(adapter_command) + "\n\n")
+            log_file.write(f"Working directory: {adapter_cwd}\n")
+            log_file.write("$ " + " ".join(str(x) for x in adapter_command) + "\n\n")
+            log_file.flush()
             adapter_run = subprocess.run(
                 adapter_command,
-                cwd=Path.cwd(),
+                cwd=adapter_cwd,
                 env=env,
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 text=True,
             )
-            build_output += log_file.read() if hasattr(log_file, 'read') else ""
+            log_file.flush()
             
             if adapter_run.returncode != 0:
                 log_file.write(f"\n\n=== ADAPTER FAILED with exit code {adapter_run.returncode} ===\n")
                 log_file.write(f"STDOUT: {adapter_run.stdout}\n")
                 log_file.write(f"STDERR: {adapter_run.stderr}\n")
                 log_file.write(f"\n{version_info}\n")
+                log_file.flush()
                 log_content = log_path.read_text(encoding="utf-8")
-                return f"Build failed (exit {adapter_run.returncode}). VERSION INFO: {version_info}\n\nBuild log:\n\n{log_content[-8000:]}", False
+                print(f"DEBUG[_tool_build]: Adapter failed with exit {adapter_run.returncode}", file=sys.stderr)
+                return f"Build failed (exit {adapter_run.returncode}). Adapter script error. Check build.log for details.\n\nLast 3000 chars of log:\n\n{log_content[-3000:]}", False
 
             log_file.write("\n$ " + " ".join(build_command) + "\n\n")
+            log_file.flush()
             build_run = subprocess.run(
                 build_command,
                 cwd=workspace,
@@ -1474,12 +1484,21 @@ Manifest: version-manifest.json
                 stderr=subprocess.STDOUT,
                 text=True,
             )
+            log_file.flush()
+            
+            if build_run.returncode != 0:
+                log_file.write(f"\n\n=== GRADLE BUILD FAILED with exit code {build_run.returncode} ===\n")
+                log_file.write(f"STDOUT: {build_run.stdout}\n")
+                log_file.write(f"STDERR: {build_run.stderr}\n")
+                log_file.flush()
 
         jars = find_built_jars(workspace, jar_glob_pattern)
+        print(f"DEBUG[_tool_build]: Found jars: {jars}", file=sys.stderr)
 
         if not jars:
             log_content = log_path.read_text(encoding="utf-8")
-            return f"Build completed but no jar found. VERSION INFO: {version_info}\n\nBuild log:\n\n{log_content[-8000:]}", False
+            print(f"DEBUG[_tool_build]: No jars found, log content length: {len(log_content)}", file=sys.stderr)
+            return f"Build completed but no jar found. Check build.log for errors.\n\nLast 3000 chars:\n\n{log_content[-3000:]}", False
 
         jars_dir = artifact_dir / "jars"
         jars_dir.mkdir(parents=True, exist_ok=True)
