@@ -749,7 +749,7 @@ The user description for this mod:
 Please start by reading the key source files to understand the mod structure, then update it for {target_loader} {target_version}. Use the Build tool when ready to compile."""
         messages.append({"role": "user", "content": initial_message})
 
-        max_iterations = 20
+        max_iterations = 1000
         print(f"DEBUG: Starting AI conversation loop (max {max_iterations} iterations)...", file=sys.stderr)
         
         for iteration in range(max_iterations):
@@ -764,14 +764,19 @@ Please start by reading the key source files to understand the mod structure, th
             print(f"DEBUG: response keys: {response.keys()}", file=sys.stderr)
             print(f"DEBUG: choices: {response.get('choices', [])[:1]}", file=sys.stderr)
             
-            assistant_message = response["choices"][0]["message"]["content"]
-            messages.append({"role": "assistant", "content": assistant_message})
+            choice = response["choices"][0]
+            assistant_message = choice.get("message", {}).get("content")
+            if assistant_message:
+                messages.append({"role": "assistant", "content": assistant_message})
+            else:
+                messages.append({"role": "assistant", "content": ""})
 
-            tool_calls = response["choices"][0].get("message", {}).get("tool_calls", [])
+            tool_calls = choice.get("message", {}).get("tool_calls", [])
             print(f"DEBUG: tool_calls: {len(tool_calls)} found", file=sys.stderr)
             
             if not tool_calls:
-                print(f"DEBUG: No tool calls, assistant message: {assistant_message[:200]}...", file=sys.stderr)
+                msg_preview = (assistant_message[:200] + "...") if assistant_message else "(no content)"
+                print(f"DEBUG: No tool calls, assistant message: {msg_preview}", file=sys.stderr)
                 break
 
             for tool_call in tool_calls:
