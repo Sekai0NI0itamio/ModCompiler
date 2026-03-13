@@ -13,7 +13,7 @@ from typing import Any
 
 DEFAULT_PRIMARY_MODEL = "openrouter/hunter-alpha"
 DEFAULT_FALLBACK_MODEL = "stepfun/step-3.5-flash:free"
-UNAVAILABLE_THRESHOLD = 10
+UNAVAILABLE_THRESHOLD = 20
 WINDOW_SECONDS = 60
 MAX_KEYS = 20
 
