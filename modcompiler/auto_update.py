@@ -602,6 +602,7 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
         if not client.key_states:
             raise ModCompilerError("No OpenRouter API keys available. Please set OPENROUTER_API_KEY_1 through OPENROUTER_API_KEY_20 secrets.")
 
+        print(f"DEBUG: Building system prompt...", file=sys.stderr)
         system_prompt = build_ai_system_prompt(context)
         messages = [
             {"role": "system", "content": system_prompt},
@@ -622,8 +623,17 @@ Please start by reading the key source files to understand the mod structure, th
         messages.append({"role": "user", "content": initial_message})
 
         max_iterations = 20
+        print(f"DEBUG: Starting AI conversation loop (max {max_iterations} iterations)...", file=sys.stderr)
+        
         for iteration in range(max_iterations):
-            response = client.chat_completion_with_fallback(messages, temperature=0.7, max_tokens=4000)
+            print(f"DEBUG: Iteration {iteration+1}: Calling API...", file=sys.stderr)
+            try:
+                response = client.chat_completion_with_fallback(messages, temperature=0.7, max_tokens=4000)
+            except Exception as e:
+                print(f"DEBUG: API call failed: {e}", file=sys.stderr)
+                raise
+            
+            print(f"DEBUG: Got response, processing...", file=sys.stderr)
             assistant_message = response["choices"][0]["message"]["content"]
             messages.append({"role": "assistant", "content": assistant_message})
 
