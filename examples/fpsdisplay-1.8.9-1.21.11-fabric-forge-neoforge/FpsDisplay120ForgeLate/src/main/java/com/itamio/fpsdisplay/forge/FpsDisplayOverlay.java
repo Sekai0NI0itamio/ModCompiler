@@ -3,7 +3,6 @@ package com.itamio.fpsdisplay.forge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public class FpsDisplayOverlay {
@@ -13,9 +12,6 @@ public class FpsDisplayOverlay {
 
     @SubscribeEvent
     public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() != VanillaGuiOverlay.HOTBAR) {
-            return;
-        }
         if (!FpsDisplayForgeMod.CONFIG.isEnabled()) {
             return;
         }
