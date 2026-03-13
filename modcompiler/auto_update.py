@@ -313,13 +313,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "read_file",
-                "description": "Read a Java source file from the original mod source",
+                "description": "Read original mod source. Use path like 'java/com/package/ClassName.java'",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Relative path (e.g., 'src/java/com/itamio/fpsdisplay/FpsDisplay.java')"
+                            "description": "Path from src/ root, e.g., 'java/com/itamio/fpsdisplay/FpsDisplay.java'"
                         }
                     },
                     "required": ["path"]
@@ -329,14 +329,14 @@ def get_tools_definition() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "description": "List original source files in src/",
                 "name": "list_files",
-                "description": "List files in a directory",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Directory path (e.g., '.', 'src', 'src/java')"
+                            "description": "Directory: '.', 'src', 'java', 'java/com/package'"
                         }
                     }
                 }
@@ -346,13 +346,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "read_reference",
-                "description": "Read an example file from the reference/template folder to see correct imports and patterns for the target version",
+                "description": "Read example mod file. Use path like 'src/main/java/com/example/ExampleMod.java'",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Path in reference folder (e.g., 'src/main/java/com/example/ExampleMod.java')"
+                            "description": "Path in reference/, e.g., 'src/main/java/com/example/ExampleMod.java'"
                         }
                     },
                     "required": ["path"]
@@ -363,13 +363,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "list_reference",
-                "description": "List files in the reference folder to see available example files",
+                "description": "List example files available for target version",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Directory in reference (default: root)"
+                            "description": "Directory in reference/ (default: root)"
                         }
                     }
                 }
@@ -379,13 +379,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "write_mod_file",
-                "description": "Write a Java file. Auto-adds src/main/java/ prefix if needed.",
+                "description": "Write updated Java file. Auto-adds 'src/main/java/' prefix. Use path like 'com/package/ClassName.java'",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Path like 'com/itamio/fpsdisplay/FpsDisplay.java' or full path"
+                            "description": "Package path: 'com/itamio/fpsdisplay/FpsDisplay.java'"
                         },
                         "content": {
                             "type": "string",
@@ -400,13 +400,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "write_resource",
-                "description": "Write a resource file. Auto-adds src/main/resources/ prefix.",
+                "description": "Write resource file (mcmod.info, pack.mcmeta). Auto-adds 'src/main/resources/' prefix.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Path like 'pack.mcmeta'"
+                            "description": "Filename: 'mcmod.info', 'pack.mcmeta'"
                         },
                         "content": {
                             "type": "string",
@@ -421,13 +421,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "copy_to_structure",
-                "description": "Copy a source file to the proper build location. E.g., 'src/java/com/example/Mod.java' → 'src/main/java/com/example/Mod.java'",
+                "description": "Copy file from original src/ to build src/main/java/",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "source_path": {
                             "type": "string",
-                            "description": "Source path like 'src/java/com/itamio/fpsdisplay/FpsDisplay.java'"
+                            "description": "Path like 'java/com/itamio/fpsdisplay/FpsDisplay.java'"
                         }
                     },
                     "required": ["source_path"]
@@ -438,7 +438,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "build",
-                "description": "Build the mod - handles gradle setup automatically",
+                "description": "Build the mod. Gradle setup is automatic - just call this when ready!",
                 "parameters": {
                     "type": "object",
                     "properties": {}
@@ -449,7 +449,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "complete",
-                "description": "Mark as complete after successful build",
+                "description": "Mark task complete after successful build",
                 "parameters": {
                     "type": "object",
                     "properties": {}
@@ -457,6 +457,32 @@ def get_tools_definition() -> list[dict[str, Any]]:
             }
         }
     ]
+
+
+def _identify_key_files(files: list[dict[str, Any]]) -> list[tuple[str, str]]:
+    priority_patterns = [
+        r".*[Mm]od\.java$",
+        r".*[Cc]lient\.java$",
+        r".*[Cc]ommon\.java$",
+        r".*[Ii]nit\.java$",
+        r".*[Rr]egistry\.java$",
+        r".*[Mm]ain\.java$",
+    ]
+    import re
+    
+    key_files = []
+    for f in files:
+        path = f["path"]
+        for pattern in priority_patterns:
+            if re.search(pattern, path):
+                key_files.append((path, "priority"))
+                break
+    
+    for f in files:
+        if f not in [x[0] for x in key_files]:
+            key_files.append((f["path"], "other"))
+    
+    return key_files[:15]
 
 
 def build_ai_system_prompt(context: dict[str, Any]) -> str:
@@ -477,41 +503,33 @@ MOD INFORMATION:
 
 {current_v} uses SRG names (e.g., Minecraft.func_71410_x()), {target_v} uses MCP names (e.g., Minecraft.getMinecraft()).
 
-**HOW THIS BUILD SYSTEM WORKS:**
+**FOLDER STRUCTURE - IMPORTANT:**
+- Original source files: `src/` (read with read_file using paths like "java/com/examplemod/Mod.java")
+- Reference examples: `reference/` (read with read_reference - these show correct {target_v} patterns!)
+- YOUR output: `src/main/java/` (write with write_mod_file - auto-adds prefix)
+- Resources output: `src/main/resources/` (write with write_resource)
 
-1. FOLDER STRUCTURE:
-   - Original source: src/java/ (decompiled from original jar)
-   - Reference files: reference/ (example mod for {target_v} - READ THESE!)
-   - Your output: src/main/java/ (where you write updated Java files)
-   - Resources go to: src/main/resources/
+**PATHS: The original source is under src/java/ NOT src/main/java/**
 
-2. YOUR JOB:
-   a) Read reference/ files to understand correct imports and patterns for {target_v}
-   b) Read original source from src/java/
-   c) Update code for {target_v} API changes
-   d) Write updated files to src/main/java/
-   e) Run Build when ready
+**YOUR TASK - DO THIS QUICKLY:**
+1. Read 2-3 key files from reference/ first (these show correct imports/patterns)
+2. Read the main mod file from src/java/ (use path like "java/com/package/Mod.java")
+3. Read any other key files needed
+4. Write updated files to src/main/java/ using write_mod_file
+5. IMMEDIATELY call Build when ready - don't keep exploring!
 
-3. REFERENCE FILES - IMPORTANT!
-   - Use list_reference to see available examples
-   - Use read_reference to see correct imports, annotations, event registration
-   - These show you exactly what the target version expects!
+**CRITICAL RULES:**
+- Call Build as soon as you have written the essential files - don't wait!
+- The build system handles gradle automatically
+- If build fails, fix the errors and rebuild
+- Don't re-read files you've already read - use the info you have
 
-4. TOOLS:
-   - list_files/read_file: Work with src/ (original source)
-   - list_reference/read_reference: See example files for {target_v}
-   - write_mod_file: Write Java to src/main/java/ (auto-adds prefix)
-   - write_resource: Write resources to src/main/resources/
-   - copy_to_structure: Quick-copy from src/java/ to src/main/java/
-   - build: Compile (build system handles gradle automatically!)
-   - complete: Done after successful build
-
-**CRITICAL**: Always check reference/ files first to see correct patterns for {target_v}!
-
-Start by:
-1. list_reference to see available examples
-2. read_reference to see correct imports and structure
-3. list_files to see original source files"""
+**TOOLS:**
+- read_file: Use path "java/com/package/File.java" (src/ prefix is auto-added)
+- write_mod_file: Use path "com/package/File.java" (src/main/java/ prefix auto-added)
+- write_resource: Just filename like "mcmod.info" (src/main/resources/ prefix auto-added)
+- build: Compile the mod - do this as soon as possible!
+- complete: Mark done after successful build"""
 
 
 def create_version_folder(
@@ -800,21 +818,72 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
         ]
 
         src_files = _list_src_files(version_dir / "src")
-        src_summary = _generate_src_summary(version_dir / "src", src_files)
+        key_files = _identify_key_files(src_files)
+        
+        key_files_list = "\n".join([f"  - {path}" for path, _ in key_files[:10]])
+        other_count = len(key_files) - 10 if len(key_files) > 10 else 0
 
-        initial_message = f"""Please analyze and update this mod for {target_loader} {target_version}.
+        src_dir = version_dir / "src"
+        src_contents = ""
+        for path, _ in key_files[:5]:
+            file_path = src_dir / path
+            if file_path.exists():
+                try:
+                    content = file_path.read_text(encoding="utf-8")
+                    if len(content) > 3000:
+                        content = content[:3000] + "\n... (truncated)"
+                    src_contents += f"\n\n=== FILE: {path} ===\n{content}"
+                except Exception:
+                    pass
 
-Current source files ({len(src_files)} files):
-{src_summary}
+        ref_dir = version_dir / "reference"
+        ref_files_list = ""
+        if ref_dir.exists():
+            ref_items = []
+            for item in sorted(ref_dir.rglob("*.java"))[:10]:
+                rel_path = item.relative_to(ref_dir)
+                ref_items.append(f"  - {rel_path}")
+            ref_files_list = "\n".join(ref_items)
 
-The user description for this mod:
+        ref_contents = ""
+        ref_java_files = sorted(ref_dir.rglob("*.java"))[:2] if ref_dir.exists() else []
+        for item in ref_java_files:
+            try:
+                content = item.read_text(encoding="utf-8")
+                if len(content) > 2500:
+                    content = content[:2500] + "\n... (truncated)"
+                rel_path = item.relative_to(ref_dir)
+                ref_contents += f"\n\n=== REFERENCE: {rel_path} ===\n{content}"
+            except Exception:
+                pass
+
+        initial_message = f"""Update this mod for {target_loader} {target_version}.
+
+USER DESCRIPTION:
 {context.get('user_description', 'No description provided')}
 
-Please start by reading the key source files to understand the mod structure, then update it for {target_loader} {target_version}. Use the Build tool when ready to compile."""
+KEY SOURCE FILES TO UPDATE:{src_contents}
+
+EXAMPLES FOR {target_version}:{ref_contents}
+
+FILE LIST (for reference):
+{key_files_list}
+{'' if other_count <= 0 else f'  ... and {other_count} more'}
+
+ACTION: Write updated files to src/main/java/ then call build.
+
+READ path: "java/com/package/File.java"
+WRITE path: "com/package/File.java"
+
+Go!"""
         messages.append({"role": "user", "content": initial_message})
 
         max_iterations = 1000
         print(f"DEBUG: Starting AI conversation loop (max {max_iterations} iterations)...", file=sys.stderr)
+        
+        files_written_count = 0
+        last_tool = None
+        tools_without_build = 0
         
         for iteration in range(max_iterations):
             print(f"DEBUG: Iteration {iteration+1}: Calling API...", file=sys.stderr)
@@ -895,6 +964,10 @@ Please start by reading the key source files to understand the mod structure, th
                         print(f"DEBUG: Calling _tool_build...", file=sys.stderr)
                         result_msg, build_success = _tool_build(version_dir, artifact_dir, context, arguments)
                         build_attempted = True
+                        tools_without_build = 0
+                    elif name == "write_mod_file" or name == "write_resource":
+                        files_written_count += 1
+                        tools_without_build += 1
                     elif name == "complete":
                         print(f"DEBUG: Processing complete tool...", file=sys.stderr)
                         if build_attempted and build_success:
@@ -913,6 +986,12 @@ Please start by reading the key source files to understand the mod structure, th
                     "tool_call_id": tool_call.get("id", "unknown"),
                     "content": result_msg,
                 })
+
+            if tools_without_build >= 3 and not build_attempted:
+                nudge = f"\n\n[HINT: You've written {files_written_count} files but haven't tried building yet. Call 'build' now to compile!]"
+                messages.append({"role": "user", "content": nudge})
+                tools_without_build = 0
+                print(f"DEBUG: Sending build nudge...", file=sys.stderr)
 
             if result["status"] == "success":
                 print(f"DEBUG: Build successful, exiting loop", file=sys.stderr)
@@ -970,9 +1049,22 @@ def _tool_read_file(version_dir: Path, args: dict[str, str]) -> str:
     if not path:
         return "Error: path is required"
 
+    if not path.startswith("java/"):
+        if path.startswith("src/java/"):
+            path = path.replace("src/java/", "java/")
+        elif not path.startswith("src/"):
+            path = "java/" + path
+
     file_path = version_dir / "src" / path
     if not file_path.exists():
-        return f"Error: file not found: {path}"
+        available = []
+        src_dir = version_dir / "src"
+        if src_dir.exists():
+            for f in sorted(src_dir.rglob("*.java"))[:10]:
+                rel = f.relative_to(src_dir)
+                available.append(str(rel))
+        avail_str = "\n  - ".join(available) if available else "none"
+        return f"File not found: {path}\n\nAvailable Java files:\n  - {avail_str}\n\nTip: Use path like 'java/com/package/ClassName.java'"
 
     try:
         content = file_path.read_text(encoding="utf-8")
@@ -984,14 +1076,18 @@ def _tool_read_file(version_dir: Path, args: dict[str, str]) -> str:
 
 
 def _tool_list_files(version_dir: Path, args: dict[str, str]) -> str:
-    path = args.get("path", "src")
-    dir_path = version_dir / path
+    path = args.get("path", ".")
+    
+    if not path.startswith("java/") and path != "." and path != "src" and not path.startswith("src/"):
+        path = "java/" + path if not path.startswith("src/") else path.replace("src/", "")
+
+    dir_path = version_dir / "src" / path
     if not dir_path.exists():
-        return f"Error: directory not found: {path}"
+        return f"Directory not found: src/{path}\n\nOriginal source is in src/java/. Try 'java' or 'java/com/yourpackage'"
 
     items = []
     for item in sorted(dir_path.iterdir()):
-        rel_path = item.relative_to(version_dir)
+        rel_path = item.relative_to(version_dir / "src")
         items.append(f"  - {rel_path}{'/' if item.is_dir() else ''}")
 
     return "\n".join(items) if items else "  (empty)"
