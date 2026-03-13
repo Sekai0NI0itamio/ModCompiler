@@ -14,6 +14,7 @@ from typing import Any
 
 from modcompiler.common import (
     ModCompilerError,
+    copy_tree,
     expand_minecraft_version_spec,
     find_text_files,
     load_json,
@@ -473,7 +474,6 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     current_l = context["current_loader"]
     mod_info = context["mod_info"]
     desc = context["user_description"]
-    template_dir = context.get("template_dir", f"{target_v}/{target_l}/template")
 
     return f"""You are an expert Minecraft mod developer. Your task is to update this mod from {current_l} {current_v} to {target_l} {target_v}.
 
@@ -485,13 +485,13 @@ MOD INFORMATION:
 
 PROJECT STRUCTURE:
 - The mod source code is in the "src/" folder (your working directory)
-- The build template for {target_l} {target_v} is in the template folder at: {template_dir}/
+- The build template for {target_l} {target_v} is in the "template/" folder (already copied for you)
 - The template contains build.gradle, settings.gradle, and mod metadata files for the target version
 
 IMPORTANT - HOW TO UPDATE A MOD:
-1. First, read the template files from {template_dir}/ to understand the build setup for {target_l} {target_v}
+1. First, explore the template/ folder to understand the build setup for {target_l} {target_v}
 2. Read all source files in src/ to understand the current mod structure
-3. Copy/create the necessary gradle files from the template to your working directory
+3. Copy the gradle files from template/ to the root of your working directory
 4. Update mod metadata files (fabric.mod.json / mods.toml / mcmod.info) for the new version
 5. Fix any breaking API changes between {current_v} and {target_v}
 6. Update any version-specific imports, dependencies, or registrations
@@ -501,17 +501,15 @@ IMPORTANT - HOW TO UPDATE A MOD:
 TOOLS AVAILABLE:
 - Read File: Read source files in src/ folder
 - List Files: See directory structure in src/
-- Read Template: Read files from the build template (read-only reference)
-- List Template: List files in the template folder (read-only reference)
-- File Write: Create or overwrite files in src/
-- File Edit: Modify existing files in src/ using diff format
+- Read Template: Read files from the template/ folder
+- List Template: List files in the template/ folder
+- File Write: Create or overwrite files in src/ or root directory
+- File Edit: Modify existing files using diff format
 - Move File: Move files within src/
-- Build: Compile the mod using Gradle
+- Build: Compile the mod using Gradle (automatically uses the template)
 - Complete: Mark the update as done (only after successful build)
 
-NOTE: The Build tool will automatically use the correct gradle wrapper and build configuration from the template. You should NOT manually create gradle files - use the template files as reference and adapt them as needed.
-
-The workspace is contained in this version's folder. You cannot modify files outside of src/."""
+The workspace is contained in this version's folder. You cannot modify files outside of src/ and the root."""
 
 
 def create_version_folder(
@@ -520,6 +518,7 @@ def create_version_folder(
     target: VersionTarget,
     context: dict[str, Any],
     trimmed_src: Path,
+    manifest: dict[str, Any] | None = None,
 ) -> Path:
     version_folder = output_dir / f"{target.minecraft_version}-{target.loader}"
     safe_rmtree(version_folder)
@@ -546,6 +545,14 @@ def create_version_folder(
 
     src_dest = version_folder / "src"
     shutil.copytree(trimmed_src, src_dest)
+
+    template_dir = context.get("template_dir", "")
+    if template_dir:
+        template_source = Path(template_dir)
+        if template_source.exists():
+            template_dest = version_folder / "template"
+            shutil.copytree(template_source, template_dest)
+            print(f"DEBUG: Copied template from {template_source} to {template_dest}")
 
     return version_folder
 
@@ -629,7 +636,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
 
     for target in filtered_targets:
         context = generate_version_context(decomposed, target, info_txt, trimmed_src, manifest)
-        create_version_folder(config.output_dir, decomposed, target, context, trimmed_src)
+        create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
 
     state = {
         "mod_jar_path": str(jar_path),
@@ -1078,6 +1085,7 @@ def _tool_move_file(version_dir: Path, args: dict[str, str]) -> str:
 
 def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], args: dict[str, str]) -> tuple[str, bool]:
     import sys
+    from modcompiler.common import load_json
     print(f"DEBUG[_tool_build]: Starting build for {context.get('target_version')}-{context.get('target_loader')}", file=sys.stderr)
     
     target_version = context["target_version"]
@@ -1086,36 +1094,47 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
     
     print(f"DEBUG[_tool_build]: target_version={target_version}, target_loader={target_loader}", file=sys.stderr)
 
-    manifest_path = Path("version-manifest.json")
-    print(f"DEBUG[_tool_build]: manifest_path={manifest_path}, exists={manifest_path.exists()}", file=sys.stderr)
+    local_template = version_dir / "template"
+    resolved_range_folder = ""
+    build_command_list = []
+    jar_glob_pattern = "build/libs/*.jar"
+    template_dir = ""
     
-    if not manifest_path.exists():
-        return f"Error: version-manifest.json not found at {manifest_path.absolute()}", False
+    if local_template.exists():
+        template_dir = str(local_template)
+        print(f"DEBUG[_tool_build]: Using local template: {template_dir}", file=sys.stderr)
         
-    manifest = load_json(manifest_path)
-
-    try:
-        resolved_range = None
+        manifest = load_json(Path("version-manifest.json"))
+        
         for range_entry in manifest["ranges"]:
-            print(f"DEBUG[_tool_build]: Checking range {range_entry.get('folder')}: min={range_entry.get('min_version')}, max={range_entry.get('max_version')}", file=sys.stderr)
             if target_version >= range_entry["min_version"] and target_version <= range_entry["max_version"]:
-                resolved_range = range_entry
-                print(f"DEBUG[_tool_build]: Matched range: {resolved_range['folder']}", file=sys.stderr)
-                break
+                if target_loader in range_entry["loaders"]:
+                    resolved_range_folder = range_entry["folder"]
+                    loader_config = range_entry["loaders"][target_loader]
+                    build_command_list = loader_config.get("build_command", ["./gradlew", "build", "--stacktrace", "--no-daemon"])
+                    jar_glob_pattern = loader_config.get("jar_glob", "build/libs/*.jar")
+                    print(f"DEBUG[_tool_build]: Found range folder: {resolved_range_folder}", file=sys.stderr)
+                    break
+    else:
+        manifest_path = Path("version-manifest.json")
+        if not manifest_path.exists():
+            return f"Error: version-manifest.json not found", False
+            
+        manifest = load_json(manifest_path)
 
-        if not resolved_range:
-            return "Error: No version folder found for " + target_version, False
-
-        if target_loader not in resolved_range["loaders"]:
-            return f"Error: {target_loader} not supported for {target_version}", False
-
-        loader_config = resolved_range["loaders"][target_loader]
-        template_dir = loader_config["template_dir"]
+        for range_entry in manifest["ranges"]:
+            if target_version >= range_entry["min_version"] and target_version <= range_entry["max_version"]:
+                if target_loader in range_entry["loaders"]:
+                    resolved_range_folder = range_entry["folder"]
+                    loader_config = range_entry["loaders"][target_loader]
+                    template_dir = loader_config["template_dir"]
+                    build_command_list = loader_config.get("build_command", ["./gradlew", "build", "--stacktrace", "--no-daemon"])
+                    jar_glob_pattern = loader_config.get("jar_glob", "build/libs/*.jar")
+                    print(f"DEBUG[_tool_build]: Found range folder: {resolved_range_folder}, template: {template_dir}", file=sys.stderr)
+                    break
         
-        print(f"DEBUG[_tool_build]: template_dir={template_dir}", file=sys.stderr)
-
-    except Exception as e:
-        return f"Error resolving build configuration: {e}", False
+        if not resolved_range_folder:
+            return f"Error: No version folder found for {target_version}", False
 
     workspace = version_dir / "_build_workspace"
     safe_rmtree(workspace)
@@ -1134,7 +1153,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
         from modcompiler.common import write_json
         write_json(metadata_json, metadata)
 
-        adapter_script = Path(resolved_range["folder"]) / "build_adapter.py"
+        adapter_script = Path(resolved_range_folder) / "build_adapter.py"
         adapter_command = [
             sys.executable,
             str(adapter_script),
@@ -1165,7 +1184,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
         env["JAVA_HOME"] = java_home
         env["PATH"] = sanitize_env_path(java_home, env.get("PATH"))
 
-        build_command = list(loader_config["build_command"])
+        build_command = list(build_command_list)
 
         log_path = artifact_dir / "build.log"
         with log_path.open("w", encoding="utf-8") as log_file:
@@ -1193,7 +1212,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
                 text=True,
             )
 
-        jars = find_built_jars(workspace, loader_config["jar_glob"])
+        jars = find_built_jars(workspace, jar_glob_pattern)
 
         if not jars:
             return f"Build completed but no jar found. Check {log_path}", False
