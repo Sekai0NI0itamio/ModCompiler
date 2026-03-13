@@ -825,13 +825,13 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
 
         src_dir = version_dir / "src"
         src_contents = ""
-        for path, _ in key_files[:5]:
+        for path, _ in key_files[:8]:
             file_path = src_dir / path
             if file_path.exists():
                 try:
                     content = file_path.read_text(encoding="utf-8")
-                    if len(content) > 3000:
-                        content = content[:3000] + "\n... (truncated)"
+                    if len(content) > 8000:
+                        content = content[:8000] + "\n... (truncated)"
                     src_contents += f"\n\n=== FILE: {path} ===\n{content}"
                 except Exception:
                     pass
@@ -846,16 +846,26 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
             ref_files_list = "\n".join(ref_items)
 
         ref_contents = ""
-        ref_java_files = sorted(ref_dir.rglob("*.java"))[:2] if ref_dir.exists() else []
-        for item in ref_java_files:
-            try:
-                content = item.read_text(encoding="utf-8")
-                if len(content) > 2500:
-                    content = content[:2500] + "\n... (truncated)"
-                rel_path = item.relative_to(ref_dir)
-                ref_contents += f"\n\n=== REFERENCE: {rel_path} ===\n{content}"
-            except Exception:
-                pass
+        if ref_dir.exists():
+            ref_java_files = sorted(ref_dir.rglob("*.java"))[:5]
+            for item in ref_java_files:
+                try:
+                    content = item.read_text(encoding="utf-8")
+                    if len(content) > 8000:
+                        content = content[:8000] + "\n... (truncated)"
+                    rel_path = item.relative_to(ref_dir)
+                    ref_contents += f"\n\n=== REFERENCE: {rel_path} ===\n{content}"
+                except Exception:
+                    pass
+            
+            ref_resource_files = sorted(ref_dir.rglob("*.info")) + sorted(ref_dir.rglob("*.mcmeta")) + sorted(ref_dir.rglob("*.json"))
+            for item in ref_resource_files[:3]:
+                try:
+                    content = item.read_text(encoding="utf-8")
+                    rel_path = item.relative_to(ref_dir)
+                    ref_contents += f"\n\n=== REFERENCE: {rel_path} ===\n{content}"
+                except Exception:
+                    pass
 
         initial_message = f"""Update this mod for {target_loader} {target_version}.
 
@@ -1472,7 +1482,8 @@ Manifest: version-manifest.json
                 log_file.flush()
                 log_content = log_path.read_text(encoding="utf-8")
                 print(f"DEBUG[_tool_build]: Adapter failed with exit {adapter_run.returncode}", file=sys.stderr)
-                return f"Build failed (exit {adapter_run.returncode}). Adapter script error. Check build.log for details.\n\nLast 3000 chars of log:\n\n{log_content[-3000:]}", False
+                print(f"DEBUG[_tool_build]: Adapter output (first 2000 chars): {log_content[:2000]}", file=sys.stderr)
+                return f"Build failed (exit {adapter_run.returncode}). Adapter error:\n\n{adapter_run.stderr[:1500] if adapter_run.stderr else 'No stderr'}\n\nCheck build.log for full details.", False
 
             log_file.write("\n$ " + " ".join(build_command) + "\n\n")
             log_file.flush()
