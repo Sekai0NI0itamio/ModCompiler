@@ -109,6 +109,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.decompose.outputs.matrix) }}
+    env:
+      OPENROUTER_API_KEY_1: ${{ secrets.OPENROUTER_API_KEY_1 }}
+      OPENROUTER_API_KEY_2: ${{ secrets.OPENROUTER_API_KEY_2 }}
+      OPENROUTER_API_KEY_3: ${{ secrets.OPENROUTER_API_KEY_3 }}
+      OPENROUTER_API_KEY_4: ${{ secrets.OPENROUTER_API_KEY_4 }}
+      OPENROUTER_API_KEY_5: ${{ secrets.OPENROUTER_API_KEY_5 }}
+      OPENROUTER_API_KEY_6: ${{ secrets.OPENROUTER_API_KEY_6 }}
+      OPENROUTER_API_KEY_7: ${{ secrets.OPENROUTER_API_KEY_7 }}
+      OPENROUTER_API_KEY_8: ${{ secrets.OPENROUTER_API_KEY_8 }}
+      OPENROUTER_API_KEY_9: ${{ secrets.OPENROUTER_API_KEY_9 }}
+      OPENROUTER_API_KEY_10: ${{ secrets.OPENROUTER_API_KEY_10 }}
+      OPENROUTER_API_KEY_11: ${{ secrets.OPENROUTER_API_KEY_11 }}
+      OPENROUTER_API_KEY_12: ${{ secrets.OPENROUTER_API_KEY_12 }}
+      OPENROUTER_API_KEY_13: ${{ secrets.OPENROUTER_API_KEY_13 }}
+      OPENROUTER_API_KEY_14: ${{ secrets.OPENROUTER_API_KEY_14 }}
+      OPENROUTER_API_KEY_15: ${{ secrets.OPENROUTER_API_KEY_15 }}
+      OPENROUTER_API_KEY_16: ${{ secrets.OPENROUTER_API_KEY_16 }}
+      OPENROUTER_API_KEY_17: ${{ secrets.OPENROUTER_API_KEY_17 }}
+      OPENROUTER_API_KEY_18: ${{ secrets.OPENROUTER_API_KEY_18 }}
+      OPENROUTER_API_KEY_19: ${{ secrets.OPENROUTER_API_KEY_19 }}
+      OPENROUTER_API_KEY_20: ${{ secrets.OPENROUTER_API_KEY_20 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -137,29 +158,8 @@ jobs:
         run: |
           echo "$STATE_JSON" | base64 -d > .workflow_state/state.json
 
-      - id: setup-key-rotation
+      - name: Verify API keys loaded
         shell: bash
-        env:
-          OPENROUTER_API_KEY_1: ${{ secrets.OPENROUTER_API_KEY_1 }}
-          OPENROUTER_API_KEY_2: ${{ secrets.OPENROUTER_API_KEY_2 }}
-          OPENROUTER_API_KEY_3: ${{ secrets.OPENROUTER_API_KEY_3 }}
-          OPENROUTER_API_KEY_4: ${{ secrets.OPENROUTER_API_KEY_4 }}
-          OPENROUTER_API_KEY_5: ${{ secrets.OPENROUTER_API_KEY_5 }}
-          OPENROUTER_API_KEY_6: ${{ secrets.OPENROUTER_API_KEY_6 }}
-          OPENROUTER_API_KEY_7: ${{ secrets.OPENROUTER_API_KEY_7 }}
-          OPENROUTER_API_KEY_8: ${{ secrets.OPENROUTER_API_KEY_8 }}
-          OPENROUTER_API_KEY_9: ${{ secrets.OPENROUTER_API_KEY_9 }}
-          OPENROUTER_API_KEY_10: ${{ secrets.OPENROUTER_API_KEY_10 }}
-          OPENROUTER_API_KEY_11: ${{ secrets.OPENROUTER_API_KEY_11 }}
-          OPENROUTER_API_KEY_12: ${{ secrets.OPENROUTER_API_KEY_12 }}
-          OPENROUTER_API_KEY_13: ${{ secrets.OPENROUTER_API_KEY_13 }}
-          OPENROUTER_API_KEY_14: ${{ secrets.OPENROUTER_API_KEY_14 }}
-          OPENROUTER_API_KEY_15: ${{ secrets.OPENROUTER_API_KEY_15 }}
-          OPENROUTER_API_KEY_16: ${{ secrets.OPENROUTER_API_KEY_16 }}
-          OPENROUTER_API_KEY_17: ${{ secrets.OPENROUTER_API_KEY_17 }}
-          OPENROUTER_API_KEY_18: ${{ secrets.OPENROUTER_API_KEY_18 }}
-          OPENROUTER_API_KEY_19: ${{ secrets.OPENROUTER_API_KEY_19 }}
-          OPENROUTER_API_KEY_20: ${{ secrets.OPENROUTER_API_KEY_20 }}
         run: |
           for i in $(seq 1 20); do
             key_var="OPENROUTER_API_KEY_$i"
