@@ -1331,6 +1331,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
         build_command = list(build_command_list)
 
         log_path = artifact_dir / "build.log"
+        build_output = ""
         with log_path.open("w", encoding="utf-8") as log_file:
             log_file.write("$ " + " ".join(adapter_command) + "\n\n")
             adapter_run = subprocess.run(
@@ -1341,10 +1342,14 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
                 stderr=subprocess.STDOUT,
                 text=True,
             )
-
+            build_output += log_file.read() if hasattr(log_file, 'read') else ""
+            
             if adapter_run.returncode != 0:
-                log_file.write(f"\nAdapter failed with exit code {adapter_run.returncode}")
-                return f"Build failed. Check {log_path}", False
+                log_file.write(f"\n\n=== ADAPTER FAILED with exit code {adapter_run.returncode} ===\n")
+                log_file.write(f"STDOUT: {adapter_run.stdout}\n")
+                log_file.write(f"STDERR: {adapter_run.stderr}\n")
+                log_content = log_path.read_text(encoding="utf-8")
+                return f"Build failed (exit {adapter_run.returncode}). Here's the build log:\n\n{log_content[-8000:]}", False
 
             log_file.write("\n$ " + " ".join(build_command) + "\n\n")
             build_run = subprocess.run(
@@ -1359,7 +1364,8 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
         jars = find_built_jars(workspace, jar_glob_pattern)
 
         if not jars:
-            return f"Build completed but no jar found. Check {log_path}", False
+            log_content = log_path.read_text(encoding="utf-8")
+            return f"Build completed but no jar found. Here's the build log:\n\n{log_content[-8000:]}", False
 
         jars_dir = artifact_dir / "jars"
         jars_dir.mkdir(parents=True, exist_ok=True)
