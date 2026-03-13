@@ -18,8 +18,8 @@ Calculating task graph as no cached configuration is available for tasks: build
 
 > Configure project :
 Minecraft Mavenizer 0.4.48 by Forge Development LLC
-  Output:             /tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/.gradle/mavenizer/repo
-  Output JSON:        /tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/.gradle/mavenizer/dependencies/default.json
+  Output:             /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/.gradle/mavenizer/repo
+  Output JSON:        /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/.gradle/mavenizer/dependencies/default.json
   Dependencies Only:  false
   Cache:              /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
   JDK Cache:          /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
@@ -96,40 +96,66 @@ Maven POM
 Metadata
   metadata[forge]
   metadata[forge][variants]
-Minecraft Maven has finished, took 3:41.058
+Minecraft Maven has finished, took 3:48.773
 
 > Task :processTestResources NO-SOURCE
 > Task :processResources
 
 > Task :compileJava
-/tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:6: error: cannot find symbol
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:7: error: cannot find symbol
+import net.minecraftforge.client.event.RegisterGuiLayersEvent;
                                       ^
-  symbol:   class RenderGuiOverlayEvent
+  symbol:   class RegisterGuiLayersEvent
   location: package net.minecraftforge.client.event
-/tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:20: error: package RenderGuiOverlayEvent does not exist
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-                                                            ^
-2 errors
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:8: error: package net.minecraftforge.eventbus.api does not exist
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+                                      ^
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:21: error: cannot find symbol
+    public static void onRegisterLayers(RegisterGuiLayersEvent event) {
+                                        ^
+  symbol:   class RegisterGuiLayersEvent
+  location: class FpsDisplayOverlay
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:20: error: cannot find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class FpsDisplayOverlay
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:23: error: ResourceLocation(String,String) has private access in ResourceLocation
+            new ResourceLocation(FpsDisplayForgeMod.MOD_ID, "fps_display"),
+            ^
+5 errors
 
 > Task :compileJava FAILED
 
-[Incubating] Problems report is available at: file:///tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
 Execution failed for task ':compileJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:6: error: cannot find symbol
-  import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+  /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:7: error: cannot find symbol
+  import net.minecraftforge.client.event.RegisterGuiLayersEvent;
                                         ^
-    symbol:   class RenderGuiOverlayEvent
+    symbol:   class RegisterGuiLayersEvent
     location: package net.minecraftforge.client.event
-  /tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:20: error: package RenderGuiOverlayEvent does not exist
-      public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-                                                              ^
-  2 errors
+  /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:21: error: cannot find symbol
+      public static void onRegisterLayers(RegisterGuiLayersEvent event) {
+                                          ^
+    symbol:   class RegisterGuiLayersEvent
+    location: class FpsDisplayOverlay
+  /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:20: error: cannot find symbol
+      @SubscribeEvent
+       ^
+    symbol:   class SubscribeEvent
+    location: class FpsDisplayOverlay
+  /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:23: error: ResourceLocation(String,String) has private access in ResourceLocation
+              new ResourceLocation(FpsDisplayForgeMod.MOD_ID, "fps_display"),
+              ^
+  /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:8: error: package net.minecraftforge.eventbus.api does not exist
+  import net.minecraftforge.eventbus.api.SubscribeEvent;
+                                        ^
+  5 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
@@ -171,15 +197,28 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:6: error: cannot find symbol
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:7: error: cannot find symbol
+import net.minecraftforge.client.event.RegisterGuiLayersEvent;
                                       ^
-  symbol:   class RenderGuiOverlayEvent
+  symbol:   class RegisterGuiLayersEvent
   location: package net.minecraftforge.client.event
-/tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:20: error: package RenderGuiOverlayEvent does not exist
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-                                                            ^
-2 errors
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:8: error: package net.minecraftforge.eventbus.api does not exist
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+                                      ^
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:21: error: cannot find symbol
+    public static void onRegisterLayers(RegisterGuiLayersEvent event) {
+                                        ^
+  symbol:   class RegisterGuiLayersEvent
+  location: class FpsDisplayOverlay
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:20: error: cannot find symbol
+    @SubscribeEvent
+     ^
+  symbol:   class SubscribeEvent
+  location: class FpsDisplayOverlay
+/tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace/src/main/java/com/itamio/fpsdisplay/forge/FpsDisplayOverlay.java:23: error: ResourceLocation(String,String) has private access in ResourceLocation
+            new ResourceLocation(FpsDisplayForgeMod.MOD_ID, "fps_display"),
+            ^
+5 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -307,10 +346,10 @@ import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 	... 30 more
 
 
-BUILD FAILED in 4m 14s
+BUILD FAILED in 4m 25s
 2 actionable tasks: 2 executed
 Configuration cache entry stored.
-$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.21.9-1.21.11/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/metadata.json --source-dir .workflow_state/prepared/mods/fpsdisplay-forge-1-21-10/src --template-workspace /tmp/modcompiler-fpsdisplay-forge-1-21-10-tva4fnwr/workspace --minecraft-version 1.21.10 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+$ /opt/hostedtoolcache/Python/3.12.12/x64/bin/python 1.21.9-1.21.11/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/metadata.json --source-dir .workflow_state/prepared/mods/fpsdisplay-forge-1-21-10/src --template-workspace /tmp/modcompiler-fpsdisplay-forge-1-21-10-uav8bpvc/workspace --minecraft-version 1.21.10 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
 
 
 $ ./gradlew build --stacktrace --no-daemon
