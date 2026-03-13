@@ -2,16 +2,21 @@ package com.itamio.fpsdisplay.forge;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.event.RenderGuiLayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public class FpsDisplayOverlay {
+    private static final ResourceLocation HOTBAR_LAYER = ResourceLocation.fromNamespaceAndPath("minecraft", "hotbar");
     private long lastSampleTime = System.currentTimeMillis();
     private int frames = 0;
     private int currentFps = 0;
 
     @SubscribeEvent
-    public void onRenderOverlay(RenderGuiEvent.Post event) {
+    public void onRenderOverlay(RenderGuiLayerEvent.Post event) {
+        if (!HOTBAR_LAYER.equals(event.getName())) {
+            return;
+        }
         if (!FpsDisplayForgeMod.CONFIG.isEnabled()) {
             return;
         }

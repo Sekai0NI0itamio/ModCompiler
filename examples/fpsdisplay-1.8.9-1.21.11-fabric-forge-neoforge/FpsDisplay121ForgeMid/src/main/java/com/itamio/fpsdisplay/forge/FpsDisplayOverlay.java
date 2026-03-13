@@ -4,12 +4,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterGuiLayersEvent;
+import net.minecraftforge.client.event.RenderGuiLayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = FpsDisplayForgeMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = FpsDisplayForgeMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class FpsDisplayOverlay {
+    private static final ResourceLocation HOTBAR_LAYER = ResourceLocation.fromNamespaceAndPath("minecraft", "hotbar");
     private static long lastSampleTime = System.currentTimeMillis();
     private static int frames = 0;
     private static int currentFps = 0;
@@ -18,19 +19,18 @@ public final class FpsDisplayOverlay {
     }
 
     @SubscribeEvent
-    public static void onRegisterLayers(RegisterGuiLayersEvent event) {
-        event.registerAboveAll(
-            new ResourceLocation(FpsDisplayForgeMod.MOD_ID, "fps_display"),
-            (guiGraphics, deltaTracker) -> {
-                if (!FpsDisplayForgeMod.CONFIG.isEnabled()) {
-                    return;
-                }
-                int fps = sampleFps();
-                String text = "FPS: " + fps;
-                int color = colorForFps(fps);
-                guiGraphics.drawString(Minecraft.getInstance().font, text, 2, 2, color, true);
-            }
-        );
+    public static void onRenderOverlay(RenderGuiLayerEvent.Post event) {
+        if (!HOTBAR_LAYER.equals(event.getName())) {
+            return;
+        }
+        if (!FpsDisplayForgeMod.CONFIG.isEnabled()) {
+            return;
+        }
+        int fps = sampleFps();
+        String text = "FPS: " + fps;
+        int color = colorForFps(fps);
+        GuiGraphics guiGraphics = event.getGuiGraphics();
+        guiGraphics.drawString(Minecraft.getInstance().font, text, 2, 2, color, true);
     }
 
     private static int sampleFps() {
