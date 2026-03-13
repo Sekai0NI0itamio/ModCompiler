@@ -295,6 +295,133 @@ def generate_version_context(
     }
 
 
+def get_tools_definition() -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "read_file",
+                "description": "Read the contents of a file in the mod source",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path to the file from src/ folder"
+                        }
+                    },
+                    "required": ["path"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_files",
+                "description": "List files and folders in a directory",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path from the version folder (default: src)"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "file_write",
+                "description": "Write content to a file (create or overwrite)",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path for the file to write"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Content to write to the file"
+                        }
+                    },
+                    "required": ["path", "content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "file_edit",
+                "description": "Edit a file by replacing old content with new content",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path to the file to edit"
+                        },
+                        "old_content": {
+                            "type": "string",
+                            "description": "The exact content to find and replace"
+                        },
+                        "new_content": {
+                            "type": "string",
+                            "description": "The new content to replace it with"
+                        }
+                    },
+                    "required": ["path", "old_content", "new_content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "move_file",
+                "description": "Move or rename a file or folder",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "source": {
+                            "type": "string",
+                            "description": "Current relative path"
+                        },
+                        "destination": {
+                            "type": "string",
+                            "description": "New relative path"
+                        }
+                    },
+                    "required": ["source", "destination"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "build",
+                "description": "Build the mod using Gradle to verify everything compiles correctly",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "complete",
+                "description": "Mark the mod update as complete. Only use this after a successful build.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        }
+    ]
+
+
 def build_ai_system_prompt(context: dict[str, Any]) -> str:
     target_v = context["target_version"]
     target_l = context["target_loader"]
@@ -628,7 +755,7 @@ Please start by reading the key source files to understand the mod structure, th
         for iteration in range(max_iterations):
             print(f"DEBUG: Iteration {iteration+1}: Calling API...", file=sys.stderr)
             try:
-                response = client.chat_completion_with_fallback(messages, temperature=0.7, max_tokens=4000)
+                response = client.chat_completion_with_fallback(messages, temperature=0.7, max_tokens=4000, tools=get_tools_definition())
             except Exception as e:
                 print(f"DEBUG: API call failed: {e}", file=sys.stderr)
                 raise

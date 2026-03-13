@@ -74,6 +74,7 @@ class OpenRouterClient:
         model: str | None = None,
         temperature: float = 0.7,
         max_tokens: int | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         key_state = self.select_key()
         if key_state is None:
@@ -96,6 +97,8 @@ class OpenRouterClient:
         }
         if max_tokens:
             payload["max_tokens"] = max_tokens
+        if tools:
+            payload["tools"] = tools
 
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -130,14 +133,15 @@ class OpenRouterClient:
         messages: list[dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int | None = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         try:
-            return self.chat_completion(messages, model=None, temperature=temperature, max_tokens=max_tokens)
+            return self.chat_completion(messages, model=None, temperature=temperature, max_tokens=max_tokens, tools=tools)
         except ModCompilerError as e:
             if "rate limited" in str(e).lower() or "429" in str(e):
                 time.sleep(5)
                 try:
-                    return self.chat_completion(messages, model=None, temperature=temperature, max_tokens=max_tokens)
+                    return self.chat_completion(messages, model=None, temperature=temperature, max_tokens=max_tokens, tools=tools)
                 except Exception:
                     pass
             try:
@@ -146,6 +150,7 @@ class OpenRouterClient:
                     model=self.fallback_model,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    tools=tools,
                 )
             except Exception:
                 raise e
