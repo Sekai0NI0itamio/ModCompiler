@@ -180,15 +180,25 @@ jobs:
             ls -la .workflow_state/decomposed/
           fi
 
+      - name: Debug version dir
+        run: |
+          echo "=== Version dir contents ==="
+          ls -la ".workflow_artifacts/ai-${{ matrix.slug }}/"
+          echo "=== versions.txt ==="
+          cat ".workflow_artifacts/ai-${{ matrix.slug }}/versions.txt" 2>/dev/null || echo "versions.txt not found"
+          echo "=== context.json ==="
+          cat ".workflow_artifacts/ai-${{ matrix.slug }}/context.json" 2>/dev/null || echo "context.json not found"
+
       - name: Run AI rebuild
         shell: bash
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: |
+          set -x
           python build_mods.py ai-rebuild \
             --version-dir ".workflow_artifacts/ai-${{ matrix.slug }}" \
             --output-dir ".workflow_artifacts/ai-${{ matrix.slug }}" \
-            --artifact-dir ".workflow_artifacts/per-mod/${{ matrix.slug }}"
+            --artifact-dir ".workflow_artifacts/per-mod/${{ matrix.slug }}" 2>&1
 
       - uses: actions/upload-artifact@v4
         if: always()
