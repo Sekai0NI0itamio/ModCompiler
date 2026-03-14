@@ -8,6 +8,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 
+import java.util.Objects;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -44,9 +45,20 @@ public class Config
     public static String magicNumberIntroduction;
     public static Set<Item> items;
 
+    private static ResourceLocation parseItemName(String name) {
+        int sep = name.indexOf(':');
+        if (sep > 0 && sep < name.length() - 1) {
+            return new ResourceLocation(name.substring(0, sep), name.substring(sep + 1));
+        }
+        return new ResourceLocation("minecraft", name);
+    }
+
     private static boolean validateItemName(final Object obj)
     {
-        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
+        if (!(obj instanceof String)) {
+            return false;
+        }
+        return ForgeRegistries.ITEMS.containsKey(parseItemName((String) obj));
     }
 
     @SubscribeEvent
@@ -58,7 +70,10 @@ public class Config
 
         // convert the list of strings into a set of items
         items = ITEM_STRINGS.get().stream()
-                .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
+                .map(String::valueOf)
+                .map(Config::parseItemName)
+                .map(ForgeRegistries.ITEMS::getValue)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     }
 }
