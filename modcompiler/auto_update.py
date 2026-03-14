@@ -954,12 +954,6 @@ ACTION: Read files, update them, write to src/java/, then call build."""
 USER DESCRIPTION:
 {context.get('user_description', 'No description provided')}
 
-DIRECTORY STRUCTURE - ORIGINAL SOURCE:
-{src_tree}
-
-DIRECTORY STRUCTURE - REFERENCE TEMPLATE:
-{ref_tree}
-
 === ORIGINAL SOURCE FILES ===
 {''.join(all_src_contents)}
 
@@ -975,9 +969,62 @@ ACTION: Update these files for {target_version}, write to src/java/, then build.
 
         messages.append({"role": "user", "content": full_context})
 
+        src_files_for_history = get_all_java_files(src_dir)
+        ref_files_for_history = get_all_ref_files(ref_dir) if ref_dir.exists() else []
+
+        tool_idx = 1
+        
         messages.append({
             "role": "assistant",
-            "content": f"Alright. I have all the source files and reference examples. I should now update the mod from {context.get('current_loader')} {context.get('current_version')} to {target_loader} {target_version}. I'll write the updated files to src/java/ and then call build. If I need to confirm library/API names for {target_version}, I can use library_search, library_dir, and library_read."
+            "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "list_files", "arguments": json.dumps({"path": "."})}}]
+        })
+        messages.append({
+            "role": "tool",
+            "tool_call_id": f"hist_{tool_idx}",
+            "content": src_tree
+        })
+        tool_idx += 1
+
+        messages.append({
+            "role": "assistant",
+            "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "list_reference", "arguments": json.dumps({"path": "."})}}]
+        })
+        messages.append({
+            "role": "tool",
+            "tool_call_id": f"hist_{tool_idx}",
+            "content": ref_tree
+        })
+        tool_idx += 1
+
+        for rel_path, content in ref_files_for_history:
+            truncated = content[:4000] + ("... (truncated)" if len(content) > 4000 else "")
+            messages.append({
+                "role": "assistant",
+                "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}}]
+            })
+            messages.append({
+                "role": "tool",
+                "tool_call_id": f"hist_{tool_idx}",
+                "content": f"=== REFERENCE: {rel_path} ===\n{truncated}"
+            })
+            tool_idx += 1
+
+        for rel_path, content in src_files_for_history:
+            truncated = content[:4000] + ("... (truncated)" if len(content) > 4000 else "")
+            messages.append({
+                "role": "assistant",
+                "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}}]
+            })
+            messages.append({
+                "role": "tool",
+                "tool_call_id": f"hist_{tool_idx}",
+                "content": f"=== FILE: {rel_path} ===\n{truncated}"
+            })
+            tool_idx += 1
+
+        messages.append({
+            "role": "assistant",
+            "content": f"I have read all reference files and source files. Now I'll update the mod from {context.get('current_loader')} {context.get('current_version')} to {target_loader} {target_version}. I'll write updated files to src/java/ with SRG->MCP name changes, updated imports, updated mcmod.info, then build."
         })
 
         debug_history_path = artifact_dir / "ai_context_debug.txt" if artifact_dir else None
@@ -1697,7 +1744,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
             "--metadata-json",
             str(metadata_json),
             "--source-dir",
-            str(mod_dir / "java"),
+            str(version_dir / "src"),
             "--template-workspace",
             str(workspace),
             "--minecraft-version",
