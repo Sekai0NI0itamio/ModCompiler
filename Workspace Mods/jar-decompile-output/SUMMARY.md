@@ -2,6 +2,6 @@
 
 | Status | Requested Path | Resolved Path | Jar | Loader | Mod ID | Name | Version | Supported Minecraft | Repo Folders | Zip |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| success | fpsdisplay-1.0.0.jar | To Be Decompiled/fpsdisplay-1.0.0.jar | fpsdisplay-1.0.0.jar | forge | fpsdisplay | FPS Display | 1.0.0 | 1.8.9 | 1.8.9 | fpsdisplay-forge-decompiled.zip |
+| success | createliquidfuel-2.1.1-1.20.1.jar | To Be Decompiled/createliquidfuel-2.1.1-1.20.1.jar | createliquidfuel-2.1.1-1.20.1.jar | forge | createliquidfuel | Create Liquid Fuel | 2.1.1-1.20.1 | [1.20,1.21) | 1.20-1.20.6 | createliquidfuel-forge-decompiled.zip |
 
 Warnings: -
