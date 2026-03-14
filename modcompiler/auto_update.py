@@ -937,39 +937,43 @@ ACTION: Read files, update them, write to src/java/, then call build."""
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": initial_msg},
         ]
 
-        src_java_files = get_all_java_files(src_dir)
-        for i, (rel_path, content) in enumerate(src_java_files[:10]):
-            messages.append({
-                "role": "assistant",
-                "tool_calls": [{"id": f"init_{i}", "type": "function", "function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}}]
-            })
-            truncated = content[:8000] + ("... (truncated)" if len(content) > 8000 else "")
-            messages.append({
-                "role": "tool",
-                "tool_call_id": f"init_{i}",
-                "content": f"=== FILE: {rel_path} ===\n{truncated}"
-            })
+        all_src_contents = []
+        for rel_path, content in get_all_java_files(src_dir):
+            truncated = content[:5000] + ("... (truncated)" if len(content) > 5000 else "")
+            all_src_contents.append(f"\n=== FILE: {rel_path} ===\n{truncated}")
 
-        ref_files = get_all_ref_files(ref_dir) if ref_dir.exists() else []
-        for i, (rel_path, content) in enumerate(ref_files[:5]):
-            messages.append({
-                "role": "assistant",
-                "tool_calls": [{"id": f"init_ref_{i}", "type": "function", "function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}}]
-            })
-            truncated = content[:6000] + ("... (truncated)" if len(content) > 6000 else "")
-            messages.append({
-                "role": "tool",
-                "tool_call_id": f"init_ref_{i}",
-                "content": f"=== REFERENCE: {rel_path} ===\n{truncated}"
-            })
+        all_ref_contents = []
+        for rel_path, content in get_all_ref_files(ref_dir) if ref_dir.exists() else []:
+            truncated = content[:4000] + ("... (truncated)" if len(content) > 4000 else "")
+            all_ref_contents.append(f"\n=== REFERENCE: {rel_path} ===\n{truncated}")
 
-        messages.append({
-            "role": "assistant",
-            "content": "I've read the source files and reference examples. Now I'll update the mod files for " + target_version + " and write them to src/java/, then build."
-        })
+        full_context = f"""Update this mod for {target_loader} {target_version}.
+
+USER DESCRIPTION:
+{context.get('user_description', 'No description provided')}
+
+DIRECTORY STRUCTURE - ORIGINAL SOURCE:
+{src_tree}
+
+DIRECTORY STRUCTURE - REFERENCE TEMPLATE:
+{ref_tree}
+
+=== ORIGINAL SOURCE FILES ===
+{''.join(all_src_contents)}
+
+=== REFERENCE FILES ===
+{''.join(all_ref_contents)}
+
+PATH INFO:
+- READ: "java/com/package/File.java"
+- WRITE: "com/package/File.java" (goes to src/java/)
+- RESOURCES: "mcmod.info" (goes to src/resources/)
+
+ACTION: Update these files for {target_version}, write to src/java/, then build."""
+
+        messages.append({"role": "user", "content": full_context})
 
         max_iterations = 1000
         print(f"DEBUG: Starting AI conversation loop (max {max_iterations} iterations)...", file=sys.stderr)
