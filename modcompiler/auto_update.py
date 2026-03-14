@@ -19,8 +19,10 @@ from modcompiler.common import (
     expand_minecraft_version_spec,
     find_text_files,
     load_json,
+    parse_version_tuple,
     safe_extract_zip,
     safe_rmtree,
+    version_inclusive_between,
     write_json,
 )
 from modcompiler.decompile import DecompileResult, decompile_jar_internal
@@ -295,16 +297,42 @@ def generate_version_context(
     manifest: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     template_dir = ""
+    supported_versions_for_loader: list[str] = []
+    supported_versions_for_range: list[str] = []
+    latest_supported_version = ""
     if manifest:
         for range_entry in manifest.get("ranges", []):
-            if target.minecraft_version >= range_entry.get("min_version", "") and target.minecraft_version <= range_entry.get("max_version", ""):
-                if target.loader in range_entry.get("loaders", {}):
-                    loader_config = range_entry["loaders"][target.loader]
-                    template_dir = loader_config.get("template_dir", "")
-                    break
+            loaders = range_entry.get("loaders", {})
+            if target.loader not in loaders:
+                continue
+            loader_config = loaders[target.loader]
+            if version_inclusive_between(
+                target.minecraft_version,
+                range_entry.get("min_version", ""),
+                range_entry.get("max_version", ""),
+            ):
+                template_dir = loader_config.get("template_dir", "")
+                supported_versions_for_range = (
+                    loader_config.get("supported_versions")
+                    or expand_minecraft_version_spec(f"{range_entry.get('min_version', '')}-{range_entry.get('max_version', '')}")
+                )
+            supported_versions_for_loader.extend(
+                loader_config.get("supported_versions")
+                or expand_minecraft_version_spec(f"{range_entry.get('min_version', '')}-{range_entry.get('max_version', '')}")
+            )
+
+        if supported_versions_for_loader:
+            supported_versions_for_loader = sorted(set(supported_versions_for_loader), key=parse_version_tuple)
+            latest_supported_version = supported_versions_for_loader[-1]
+        if supported_versions_for_range:
+            supported_versions_for_range = sorted(set(supported_versions_for_range), key=parse_version_tuple)
     
     lib_sources = _get_library_sources(Path("."), target.minecraft_version, target.loader)
     library_sources_path = str(lib_sources) if lib_sources else ""
+
+    import datetime
+    today = datetime.date.today()
+    current_date = f"{today.strftime('%B')} {today.day}, {today.year}"
     
     return {
         "target_version": target.minecraft_version,
@@ -316,6 +344,11 @@ def generate_version_context(
         "src_size": sum(f.stat().st_size for f in trimmed_src.rglob("*") if f.is_file()),
         "template_dir": template_dir,
         "library_sources": library_sources_path,
+        "supported_versions_for_loader": supported_versions_for_loader,
+        "supported_versions_for_range": supported_versions_for_range,
+        "latest_supported_version": latest_supported_version,
+        "current_year": today.year,
+        "current_date": current_date,
     }
 
 
@@ -558,8 +591,22 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     current_l = context["current_loader"]
     mod_info = context["mod_info"]
     desc = context["user_description"]
+    current_date = context.get("current_date", "")
+    current_year = context.get("current_year", "")
+    supported_versions = context.get("supported_versions_for_loader", [])
+    supported_versions_for_range = context.get("supported_versions_for_range", [])
+    latest_supported = context.get("latest_supported_version", "")
+    supported_versions_text = ", ".join(supported_versions) if supported_versions else "unknown"
+    range_versions_text = ", ".join(supported_versions_for_range) if supported_versions_for_range else "unknown"
 
     return f"""You are an expert Minecraft mod developer. Your task is to update this mod from {current_l} {current_v} to {target_l} {target_v}.
+
+CURRENT DATE: {current_date} (Year {current_year})
+
+SUPPORTED MINECRAFT VERSIONS IN THIS SYSTEM (loader={target_l}): {supported_versions_text}
+SUPPORTED VERSIONS FOR THIS TARGET RANGE: {range_versions_text}
+LATEST SUPPORTED VERSION: {latest_supported or "unknown"}
+TARGET VERSION: {target_v} (authoritative and valid in this system — do NOT change it, do NOT "correct" it, and do NOT switch versions)
 
 MOD INFORMATION:
 - Name: {mod_info.get('name', 'Unknown')}
@@ -589,6 +636,9 @@ MOD INFORMATION:
 - The build system handles gradle automatically
 - If build fails, fix the errors and rebuild
 - Don't re-read files you've already read - use the info you have
+- Never change the target Minecraft version or loader
+- Do NOT create or edit gradle/build config files (gradle.properties, build.gradle, settings.gradle)
+- Avoid using library_* tools unless you have a specific missing class; some library context is preloaded
 
 **TOOLS:**
 - read_file: Use path "java/com/package/File.java" (src/ prefix is auto-added)
@@ -888,6 +938,14 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
 
         src_dir = version_dir / "src"
         ref_dir = version_dir / "reference"
+        template_dir = context.get("template_dir", "")
+        if template_dir and not ref_dir.exists():
+            template_source = Path(template_dir)
+            if template_source.exists():
+                shutil.copytree(template_source, ref_dir)
+                print(f"DEBUG: Copied template to reference folder: {ref_dir}", file=sys.stderr)
+            else:
+                print(f"DEBUG: Template directory missing: {template_source}", file=sys.stderr)
 
         def get_dir_tree(path: Path, prefix: str = "") -> str:
             if not path.exists():
@@ -922,6 +980,36 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
                         except Exception:
                             pass
             return files
+
+        def guess_library_queries(source_files: list[tuple[str, str]]) -> list[str]:
+            combined = "\n".join(content for _, content in source_files).lower()
+            queries: list[str] = []
+
+            def add(query: str) -> None:
+                if query not in queries:
+                    queries.append(query)
+
+            add("Minecraft")
+            if any(token in combined for token in ("overlay", "hud", "gui", "render", "screen")):
+                add("GuiGraphics")
+                add("Screen")
+                add("Font")
+            if "entity" in combined:
+                add("Entity")
+            if "world" in combined or "level" in combined:
+                add("Level")
+            if "block" in combined:
+                add("Block")
+            if "item" in combined:
+                add("Item")
+            return queries[:5]
+
+        def extract_first_match(search_result: str) -> str | None:
+            for line in search_result.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("- "):
+                    return stripped[2:].strip()
+            return None
 
         src_tree = get_dir_tree(src_dir)
         ref_tree = get_dir_tree(ref_dir) if ref_dir.exists() else ""
@@ -962,6 +1050,8 @@ ACTION: Read files, update them, write to src/java/, then call build."""
 
 USER DESCRIPTION:
 {context.get('user_description', 'No description provided')}
+
+TARGET VERSION: {target_version} (valid in this system — do NOT change it)
 
 PATH INFO:
 - READ original source: "java/com/package/File.java"
@@ -1039,6 +1129,60 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
             "tool_calls": all_file_read_calls,
         })
         messages.extend(all_file_read_results)
+
+        lib_sources = _get_library_sources(version_dir, target_version, target_loader)
+        if lib_sources:
+            library_queries = guess_library_queries(all_src_contents)
+            search_calls: list[dict[str, Any]] = []
+            search_results: list[dict[str, str]] = []
+            read_calls: list[dict[str, Any]] = []
+            read_results: list[dict[str, str]] = []
+            reads_used = 0
+
+            for query in library_queries:
+                call_id = f"call_lib_search_{len(search_calls) + 1}"
+                search_calls.append({
+                    "id": call_id,
+                    "type": "function",
+                    "function": {"name": "library_search", "arguments": json.dumps({"query": query})},
+                })
+                result = _tool_library_search({"query": query}, lib_sources)
+                search_results.append({
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "content": result,
+                })
+
+                if reads_used < 2 and result.startswith("Found"):
+                    match_path = extract_first_match(result)
+                    if match_path:
+                        read_id = f"call_lib_read_{len(read_calls) + 1}"
+                        read_calls.append({
+                            "id": read_id,
+                            "type": "function",
+                            "function": {"name": "library_read", "arguments": json.dumps({"path": match_path})},
+                        })
+                        read_results.append({
+                            "role": "tool",
+                            "tool_call_id": read_id,
+                            "content": _tool_library_read({"path": match_path}, lib_sources),
+                        })
+                        reads_used += 1
+
+            if search_calls:
+                messages.append({
+                    "role": "assistant",
+                    "content": "",
+                    "tool_calls": search_calls,
+                })
+                messages.extend(search_results)
+            if read_calls:
+                messages.append({
+                    "role": "assistant",
+                    "content": "",
+                    "tool_calls": read_calls,
+                })
+                messages.extend(read_results)
 
         messages.append({
             "role": "assistant",
@@ -1711,7 +1855,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
         manifest = load_json(Path("version-manifest.json"))
         
         for range_entry in manifest["ranges"]:
-            if target_version >= range_entry["min_version"] and target_version <= range_entry["max_version"]:
+            if version_inclusive_between(target_version, range_entry["min_version"], range_entry["max_version"]):
                 if target_loader in range_entry["loaders"]:
                     resolved_range_folder = range_entry["folder"]
                     loader_config = range_entry["loaders"][target_loader]
@@ -1727,7 +1871,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
         manifest = load_json(manifest_path)
 
         for range_entry in manifest["ranges"]:
-            if target_version >= range_entry["min_version"] and target_version <= range_entry["max_version"]:
+            if version_inclusive_between(target_version, range_entry["min_version"], range_entry["max_version"]):
                 if target_loader in range_entry["loaders"]:
                     resolved_range_folder = range_entry["folder"]
                     loader_config = range_entry["loaders"][target_loader]
