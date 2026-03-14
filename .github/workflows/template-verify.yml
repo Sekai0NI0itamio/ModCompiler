@@ -79,6 +79,7 @@ jobs:
         shell: bash
         env:
           VERSIONS_OVERRIDE: ${{ inputs.versions }}
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           out_dir=".workflow_artifacts/template-verify/${{ matrix.range_folder }}-${{ matrix.loader }}"
           args=(--range-folder "${{ matrix.range_folder }}" --loader "${{ matrix.loader }}" --output-dir "$out_dir")

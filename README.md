@@ -119,7 +119,6 @@ The Forge side uses pinned official MDK snapshots for:
 
 The Fabric side uses:
 
-- Legacy Fabric example mod for `1.8.9`
 - Official `FabricMC/fabric-example-mod` `1.17` branch as an adapted fallback for `1.16.5`
 - Official `FabricMC/fabric-example-mod` `1.17` branch for `1.17-1.17.1`
 - Official `FabricMC/fabric-example-mod` `1.18` branch for `1.18-1.18.2`
