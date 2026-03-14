@@ -116,6 +116,7 @@ jobs:
           exit "$exit_code"
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: template-verify-${{ matrix.range_folder }}-${{ matrix.loader }}
           path: .workflow_artifacts/template-verify/${{ matrix.range_folder }}-${{ matrix.loader }}
@@ -153,7 +154,7 @@ jobs:
               cols = [c.strip() for c in rows[1].strip("|").split("|")]
               if len(cols) >= 6:
                   summary_lines.append("| " + " | ".join(cols[:6]) + " |")
-          (bundle_root / "SUMMARY.md").write_text("\\n".join(summary_lines) + "\\n", encoding="utf-8")
+          (bundle_root / "SUMMARY.md").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
           PY
 
       - uses: actions/upload-artifact@v4

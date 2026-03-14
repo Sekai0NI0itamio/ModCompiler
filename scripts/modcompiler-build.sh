@@ -11,7 +11,31 @@ if [ ! -x "$GRADLEW" ]; then
 fi
 
 TASKS=(${MODCOMPILER_GRADLE_TASKS:-build})
-BASE_ARGS=("${TASKS[@]}" "--stacktrace" "--no-daemon" "--build-cache" "-Dorg.gradle.caching=true" "-Dorg.gradle.parallel=true")
+
+gradle_version=""
+if [ -f "gradle/wrapper/gradle-wrapper.properties" ]; then
+  dist_url=$(grep -E '^distributionUrl=' gradle/wrapper/gradle-wrapper.properties | cut -d= -f2- || true)
+  dist_url=${dist_url//\\:/:}
+  if [[ "$dist_url" =~ gradle-([0-9.]+)- ]]; then
+    gradle_version="${BASH_REMATCH[1]}"
+  fi
+fi
+
+version_ge() {
+  local a="$1"
+  local b="$2"
+  if [ -z "$a" ] || [ -z "$b" ]; then
+    return 0
+  fi
+  local first
+  first=$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -n1)
+  [ "$first" = "$b" ]
+}
+
+BASE_ARGS=("${TASKS[@]}" "--stacktrace" "--no-daemon" "-Dorg.gradle.parallel=true")
+if version_ge "$gradle_version" "3.5"; then
+  BASE_ARGS+=("--build-cache" "-Dorg.gradle.caching=true")
+fi
 
 EXCLUDES=()
 if [ "${MODCOMPILER_SKIP_TESTS:-1}" = "1" ]; then
