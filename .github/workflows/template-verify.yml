@@ -135,6 +135,7 @@ jobs:
       - name: Build combined summary
         shell: bash
         run: |
+          mkdir -p .workflow_downloads/template-verify
           python3 - <<'PY'
           from pathlib import Path
           bundle_root = Path(".workflow_downloads/template-verify")
