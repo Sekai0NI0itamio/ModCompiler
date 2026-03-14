@@ -887,72 +887,89 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
                 items.append(f"{prefix}{rel}{'/' if item.is_dir() else ''}")
             return "\n".join(items)
 
-        def get_all_files_content(base_dir: Path, extensions: list[str] | None = None) -> str:
-            if not base_dir.exists():
-                return ""
-            contents = []
-            for f in sorted(base_dir.rglob("*")):
-                if f.is_file():
-                    if extensions and not any(f.suffix == ext for ext in extensions):
-                        continue
+        def get_all_java_files(base_dir: Path) -> list[tuple[str, str]]:
+            files = []
+            if base_dir.exists():
+                for f in sorted(base_dir.rglob("*.java")):
                     try:
                         content = f.read_text(encoding="utf-8")
-                        rel_path = f.relative_to(base_dir)
-                        contents.append(f"\n\n=== FILE: {rel_path} ===\n{content}")
+                        rel_path = str(f.relative_to(base_dir))
+                        files.append((rel_path, content))
                     except Exception:
                         pass
-            return "".join(contents)
+            return files
+
+        def get_all_ref_files(base_dir: Path) -> list[tuple[str, str]]:
+            files = []
+            if base_dir.exists():
+                for f in sorted(base_dir.rglob("*")):
+                    if f.is_file() and f.suffix in [".java", ".info", ".mcmeta", ".json"]:
+                        try:
+                            content = f.read_text(encoding="utf-8")
+                            rel_path = str(f.relative_to(base_dir))
+                            files.append((rel_path, content))
+                        except Exception:
+                            pass
+            return files
 
         src_tree = get_dir_tree(src_dir)
         ref_tree = get_dir_tree(ref_dir) if ref_dir.exists() else ""
         
-        src_contents = get_all_files_content(src_dir, [".java"])
-        ref_contents = get_all_files_content(ref_dir)
+        initial_msg = f"""Update this mod for {target_loader} {target_version}.
 
-        full_context = f"""DIRECTORY STRUCTURE - ORIGINAL SOURCE:
+USER DESCRIPTION:
+{context.get('user_description', 'No description provided')}
+
+DIRECTORY STRUCTURE - ORIGINAL SOURCE:
 {src_tree}
 
 DIRECTORY STRUCTURE - REFERENCE TEMPLATE:
 {ref_tree}
 
-=== ORIGINAL SOURCE FILES ===
-{src_contents}
+The above shows all available files. Use read_file, read_reference tools to read them.
 
-=== REFERENCE TEMPLATE FILES ===
-{ref_contents}"""
+PATH INFO:
+- READ original source: "java/com/package/File.java"
+- WRITE updated source: "com/package/File.java" (goes to src/java/)
+- Resources: "mcmod.info" (goes to src/resources/)
 
-        context_limit = 150 * 1024
-        if len(full_context) > context_limit:
-            full_context = full_context[:context_limit] + f"\n\n[CONTEXT TRUNCATED - {len(full_context) - context_limit} chars removed]"
+ACTION: Read files, update them, write to src/java/, then call build."""
 
-        key_files_list = f"All {len([f for f in src_dir.rglob('*.java')])} Java files included in context below"
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": initial_msg},
+        ]
 
-        initial_message = f"""Update this mod for {target_loader} {target_version}.
+        src_java_files = get_all_java_files(src_dir)
+        for rel_path, content in src_java_files[:10]:
+            messages.append({
+                "role": "assistant",
+                "tool_calls": [{"function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}}]
+            })
+            truncated = content[:8000] + ("... (truncated)" if len(content) > 8000 else "")
+            messages.append({
+                "role": "tool",
+                "tool_call_id": "init_read",
+                "content": f"=== FILE: {rel_path} ===\n{truncated}"
+            })
 
-USER DESCRIPTION:
-{context.get('user_description', 'No description provided')}
+        ref_files = get_all_ref_files(ref_dir) if ref_dir.exists() else []
+        for rel_path, content in ref_files[:5]:
+            messages.append({
+                "role": "assistant",
+                "tool_calls": [{"function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}}]
+            })
+            truncated = content[:6000] + ("... (truncated)" if len(content) > 6000 else "")
+            messages.append({
+                "role": "tool",
+                "tool_call_id": "init_ref",
+                "content": f"=== REFERENCE: {rel_path} ===\n{truncated}"
+            })
 
-{full_context}
-
-LIBRARY TOOLS (Minecraft {target_version} API):
-- library_dir: List Minecraft source directories (e.g., path="net/minecraft/client", depth=2)
-- library_search: Search for classes/methods (e.g., query="Minecraft" or "getDebugFPS")
-- library_read: Read Minecraft source files (e.g., path="net/minecraft/client/Minecraft.java")
-
-Use these to understand how {target_version} APIs work!
-
-ACTION: Write updated files to src/java/ (NOT src/main/java/) then call build.
-
-IMPORTANT PATH INFO:
-- READ original source: "java/com/package/File.java" (in src/ folder)
-- WRITE updated source: "com/package/File.java" (auto-prefixed to src/java/)
-- Resources go to: "mcmod.info" (auto-prefixed to src/resources/)
-
-READ path: "java/com/package/File.java"
-WRITE path: "com/package/File.java"
-
-Go!"""
-        messages.append({"role": "user", "content": initial_message})
+        messages.append({
+            "role": "assistant",
+            "content": "I've read the source files and reference examples. Now I'll update the mod files for " + target_version + " and write them to src/java/, then build."
+        })
 
         max_iterations = 1000
         print(f"DEBUG: Starting AI conversation loop (max {max_iterations} iterations)...", file=sys.stderr)
@@ -1645,8 +1662,12 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
             copy_tree(source_path, workspace)
 
         mod_dir = workspace / "src" / "main"
-        if (version_dir / "src").exists():
-            copy_tree(version_dir / "src", mod_dir / "java")
+        src_dir = version_dir / "src"
+        if src_dir.exists():
+            if (src_dir / "java").exists():
+                copy_tree(src_dir / "java", mod_dir / "java")
+            if (src_dir / "resources").exists():
+                copy_tree(src_dir / "resources", mod_dir / "resources")
 
         metadata_json = workspace / "metadata.json"
         from modcompiler.common import write_json
