@@ -15,7 +15,6 @@ DEFAULT_PRIMARY_MODEL = "openrouter/hunter-alpha"
 DEFAULT_FALLBACK_MODEL = "stepfun/step-3.5-flash:free"
 UNAVAILABLE_THRESHOLD = 20
 WINDOW_SECONDS = 60
-MAX_KEYS = 20
 
 
 @dataclass
@@ -54,9 +53,12 @@ class OpenRouterClient:
         self._lock = threading.Lock()
 
     def _load_keys_from_env(self) -> list[str]:
+        raw_keys = os.environ.get("OPENROUTER_API_KEY", "")
+        if not raw_keys:
+            return []
         keys = []
-        for i in range(1, MAX_KEYS + 1):
-            key = os.environ.get(f"OPENROUTER_API_KEY_{i}", "").strip()
+        for line in raw_keys.splitlines():
+            key = line.strip()
             if key:
                 keys.append(key)
         return keys

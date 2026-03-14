@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -184,7 +185,14 @@ def check_modrinth_versions(modrinth_project_url: str, loader: str) -> dict[str,
     client = ModrinthClient(token=token, user_agent=user_agent)
 
     project = client.resolve_project(project_ref)
-    versions = client.request_json("GET", f"/project/{project_ref}/version")
+    params = {"include_changelog": "false"}
+    if loader:
+        params["loaders"] = json.dumps([loader])
+    versions = client.request_json(
+        "GET",
+        f"/project/{urllib.parse.quote(project_ref, safe='')}/version",
+        params=params,
+    )
 
     existing = {"versions": [], "loaders": set()}
     if isinstance(versions, list):
@@ -857,9 +865,12 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
     try:
         import os
         print(f"DEBUG: Checking for OpenRouter keys in env...", file=sys.stderr)
-        for i in range(1, 6):
-            key_val = os.environ.get(f"OPENROUTER_API_KEY_{i}", "")
-            print(f"DEBUG: OPENROUTER_API_KEY_{i} = {'set' if key_val else 'not set'}", file=sys.stderr)
+        raw_keys = os.environ.get("OPENROUTER_API_KEY", "")
+        parsed_keys = [line.strip() for line in raw_keys.splitlines() if line.strip()] if raw_keys else []
+        print(
+            f"DEBUG: OPENROUTER_API_KEY = {'set' if raw_keys else 'not set'}; parsed_keys={len(parsed_keys)}",
+            file=sys.stderr,
+        )
         
         from modcompiler.openrouter import OpenRouterClient
 
@@ -867,7 +878,7 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
         print(f"DEBUG: OpenRouterClient initialized with {len(client.key_states)} keys", file=sys.stderr)
         
         if not client.key_states:
-            raise ModCompilerError("No OpenRouter API keys available. Please set OPENROUTER_API_KEY_1 through OPENROUTER_API_KEY_20 secrets.")
+            raise ModCompilerError("No OpenRouter API keys available. Please set the OPENROUTER_API_KEY secret.")
 
         print(f"DEBUG: Building system prompt...", file=sys.stderr)
         system_prompt = build_ai_system_prompt(context)
