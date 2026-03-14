@@ -941,12 +941,12 @@ ACTION: Read files, update them, write to src/java/, then call build."""
 
         all_src_contents = []
         for rel_path, content in get_all_java_files(src_dir):
-            truncated = content[:5000] + ("... (truncated)" if len(content) > 5000 else "")
+            truncated = content[:2000] + ("... (truncated)" if len(content) > 2000 else "")
             all_src_contents.append(f"\n=== FILE: {rel_path} ===\n{truncated}")
 
         all_ref_contents = []
         for rel_path, content in get_all_ref_files(ref_dir) if ref_dir.exists() else []:
-            truncated = content[:4000] + ("... (truncated)" if len(content) > 4000 else "")
+            truncated = content[:1500] + ("... (truncated)" if len(content) > 1500 else "")
             all_ref_contents.append(f"\n=== REFERENCE: {rel_path} ===\n{truncated}")
 
         full_context = f"""Update this mod for {target_loader} {target_version}.
@@ -997,7 +997,7 @@ ACTION: Update these files for {target_version}, write to src/java/, then build.
         tool_idx += 1
 
         for rel_path, content in ref_files_for_history:
-            truncated = content[:4000] + ("... (truncated)" if len(content) > 4000 else "")
+            truncated = content[:1500] + ("... (truncated)" if len(content) > 1500 else "")
             messages.append({
                 "role": "assistant",
                 "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}}]
@@ -1010,7 +1010,7 @@ ACTION: Update these files for {target_version}, write to src/java/, then build.
             tool_idx += 1
 
         for rel_path, content in src_files_for_history:
-            truncated = content[:4000] + ("... (truncated)" if len(content) > 4000 else "")
+            truncated = content[:1500] + ("... (truncated)" if len(content) > 1500 else "")
             messages.append({
                 "role": "assistant",
                 "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}}]
