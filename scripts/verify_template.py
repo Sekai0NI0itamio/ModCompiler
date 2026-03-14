@@ -38,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--loader", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--versions", default="")
+    parser.add_argument("--timeout-minutes", type=int, default=0)
     return parser.parse_args()
 
 
@@ -96,6 +97,9 @@ def build_metadata(entrypoint_class: str) -> ModMetadata:
 def resolve_versions(range_entry: dict[str, Any], loader_config: dict[str, Any], override: str) -> list[str]:
     if override:
         return [v.strip() for v in override.split(",") if v.strip()]
+    anchor = loader_config.get("anchor_version")
+    if anchor:
+        return [anchor]
     if loader_config.get("supported_versions"):
         return list(loader_config["supported_versions"])
     return expand_minecraft_version_spec(f"{range_entry['min_version']}-{range_entry['max_version']}")
@@ -111,6 +115,7 @@ def run_build(
     minecraft_version: str,
     template_dir: Path,
     output_dir: Path,
+    timeout_seconds: int | None,
 ) -> dict[str, Any]:
     result = {
         "range_folder": range_folder,
@@ -168,14 +173,20 @@ def run_build(
 
         with log_path.open("w", encoding="utf-8") as log_file:
             log_file.write("$ " + " ".join(build_command) + "\n\n")
-            build_run = subprocess.run(
-                build_command,
-                cwd=workspace,
-                env=env,
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
+            try:
+                build_run = subprocess.run(
+                    build_command,
+                    cwd=workspace,
+                    env=env,
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    timeout=timeout_seconds,
+                )
+            except subprocess.TimeoutExpired:
+                result["error"] = f"Build timed out after {timeout_seconds} seconds."
+                log_file.write(f\"\\n[modcompiler] Build timed out after {timeout_seconds} seconds.\\n\")
+                return result
 
         if build_run.returncode != 0:
             result["error"] = f"Build exited with {build_run.returncode}"
@@ -254,6 +265,7 @@ def main() -> int:
             minecraft_version=version,
             template_dir=template_dir,
             output_dir=output_dir,
+            timeout_seconds=args.timeout_minutes * 60 if args.timeout_minutes else None,
         )
         results.append(result)
 
