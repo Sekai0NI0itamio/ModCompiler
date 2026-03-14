@@ -19,7 +19,7 @@ Calculating task graph as no cached configuration is available for tasks: build
 FAILURE: Build failed with an exception.
 
 * Where:
-Build file '/tmp/template-1.21.2-1.21.8-forge-1.21.8-0z6jx80l/workspace/build.gradle' line: 9
+Build file '/tmp/template-1.21.2-1.21.8-forge-1.21.8-7gutz8q7/workspace/build.gradle' line: 9
 
 * What went wrong:
 Plugin [id: 'net.minecraftforge.gradle', version: '[7.0.3,8)'] was not found in any of the following sources:
@@ -29,6 +29,7 @@ Plugin [id: 'net.minecraftforge.gradle', version: '[7.0.3,8)'] was not found in 
 - Plugin Repositories (could not resolve plugin artifact 'net.minecraftforge.gradle:net.minecraftforge.gradle.gradle.plugin:[7.0.3,8)')
   Searched in the following repositories:
     Gradle Central Plugin Repository
+    MinecraftForge(https://maven.minecraftforge.net/)
 
 * Try:
 > Run with --info or --debug option to get more log output.
@@ -43,6 +44,7 @@ org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'net.minecraftforge.g
 - Plugin Repositories (could not resolve plugin artifact 'net.minecraftforge.gradle:net.minecraftforge.gradle.gradle.plugin:[7.0.3,8)')
   Searched in the following repositories:
     Gradle Central Plugin Repository
+    MinecraftForge(https://maven.minecraftforge.net/)
 	at org.gradle.plugin.use.resolve.internal.PluginResolutionResult.getFound(PluginResolutionResult.java:112)
 	at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator.resolvePluginRequest(DefaultPluginRequestApplicator.java:198)
 	at org.gradle.plugin.use.internal.DefaultPluginRequestApplicator.applyPlugins(DefaultPluginRequestApplicator.java:102)
@@ -239,7 +241,7 @@ org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'net.minecraftforge.g
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 13s
+BUILD FAILED in 14s
 Configuration cache entry stored.
 Fast build failed (exit 1). Retrying full build.
 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
@@ -250,8 +252,8 @@ Calculating task graph as no cached configuration is available for tasks: build
 
 > Configure project :
 Minecraft Mavenizer 0.4.48 by Forge Development LLC
-  Output:             /tmp/template-1.21.2-1.21.8-forge-1.21.8-0z6jx80l/workspace/.gradle/mavenizer/repo
-  Output JSON:        /tmp/template-1.21.2-1.21.8-forge-1.21.8-0z6jx80l/workspace/.gradle/mavenizer/dependencies/default.json
+  Output:             /tmp/template-1.21.2-1.21.8-forge-1.21.8-7gutz8q7/workspace/.gradle/mavenizer/repo
+  Output JSON:        /tmp/template-1.21.2-1.21.8-forge-1.21.8-7gutz8q7/workspace/.gradle/mavenizer/dependencies/default.json
   Dependencies Only:  false
   Cache:              /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
   JDK Cache:          /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
@@ -301,12 +303,12 @@ Client Extra
 Client Maven POM
   pom[client-extra]
 Sources
-  stripClient
+  listLibraries
   download[1.21.8][server]
   extractServer
   stripServer
+  stripClient
   merge
-  listLibraries
   rename
   modifyAccess
   stripSides
