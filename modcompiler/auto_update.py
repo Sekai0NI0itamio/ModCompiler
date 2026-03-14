@@ -964,45 +964,70 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
             {"id": "call_2", "type": "function", "function": {"name": "list_reference", "arguments": json.dumps({"path": "."})}},
         ]
 
-        tool_results_1 = f"""list_files result:
-{src_tree}
+        list_files_result = _tool_list_files(version_dir, {"path": "."})
+        list_reference_result = _tool_list_reference(version_dir, {"path": "."}) if ref_dir.exists() else "Error: reference folder not found"
 
-list_reference result:
-{ref_tree}"""
+        def _format_read_file_result(path: str, content: str) -> str:
+            if len(content) > 10000:
+                content = content[:10000] + "\n... (truncated)"
+            return f"File: {path}\n```\n{content}\n```"
+
+        def _format_read_reference_result(path: str, content: str) -> str:
+            if len(content) > 15000:
+                content = content[:15000] + "\n... (truncated)"
+            return f"Reference file: {path}\n```\n{content}\n```"
 
         all_file_read_calls = []
-        for rel_path, _ in all_ref_contents:
-            all_file_read_calls.append({"id": f"call_ref_{len(all_file_read_calls)+1}", "type": "function", "function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}})
-        for rel_path, _ in all_src_contents:
-            all_file_read_calls.append({"id": f"call_src_{len(all_file_read_calls)+1}", "type": "function", "function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}})
-
-        file_contents_response = ""
+        all_file_read_results: list[dict[str, str]] = []
         for rel_path, content in all_ref_contents:
-            file_contents_response += f"\n=== REFERENCE: {rel_path} ===\n{content}\n"
+            call_id = f"call_ref_{len(all_file_read_calls)+1}"
+            all_file_read_calls.append({
+                "id": call_id,
+                "type": "function",
+                "function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})},
+            })
+            all_file_read_results.append({
+                "role": "tool",
+                "tool_call_id": call_id,
+                "content": _format_read_reference_result(rel_path, content),
+            })
         for rel_path, content in all_src_contents:
-            file_contents_response += f"\n=== FILE: {rel_path} ===\n{content}\n"
+            call_id = f"call_src_{len(all_file_read_calls)+1}"
+            all_file_read_calls.append({
+                "id": call_id,
+                "type": "function",
+                "function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})},
+            })
+            all_file_read_results.append({
+                "role": "tool",
+                "tool_call_id": call_id,
+                "content": _format_read_file_result(rel_path, content),
+            })
 
         messages.append({"role": "user", "content": user_msg_1})
-        
+
         messages.append({
             "role": "assistant",
-            "tool_calls": tool_calls_1
+            "content": "",
+            "tool_calls": tool_calls_1,
         })
         messages.append({
             "role": "tool",
             "tool_call_id": "call_1",
-            "content": tool_results_1
+            "content": list_files_result,
+        })
+        messages.append({
+            "role": "tool",
+            "tool_call_id": "call_2",
+            "content": list_reference_result,
         })
 
         messages.append({
             "role": "assistant",
-            "tool_calls": all_file_read_calls
+            "content": "",
+            "tool_calls": all_file_read_calls,
         })
-        messages.append({
-            "role": "tool",
-            "tool_call_id": "call_src_1",
-            "content": file_contents_response
-        })
+        messages.extend(all_file_read_results)
 
         messages.append({
             "role": "assistant",
@@ -1046,13 +1071,14 @@ list_reference result:
             print(f"DEBUG: choices: {response.get('choices', [])[:1]}", file=sys.stderr)
             
             choice = response["choices"][0]
-            assistant_message = choice.get("message", {}).get("content")
-            if assistant_message:
-                messages.append({"role": "assistant", "content": assistant_message})
-            else:
-                messages.append({"role": "assistant", "content": ""})
+            assistant_payload = choice.get("message", {})
+            assistant_message = assistant_payload.get("content") or ""
+            tool_calls = assistant_payload.get("tool_calls", [])
 
-            tool_calls = choice.get("message", {}).get("tool_calls", [])
+            assistant_entry: dict[str, Any] = {"role": "assistant", "content": assistant_message}
+            if tool_calls:
+                assistant_entry["tool_calls"] = tool_calls
+            messages.append(assistant_entry)
             print(f"DEBUG: tool_calls: {len(tool_calls)} found", file=sys.stderr)
             
             if not tool_calls:
@@ -1848,4 +1874,3 @@ Manifest: version-manifest.json
         return f"Build error: {e}", False
     finally:
         safe_rmtree(workspace)
-
