@@ -34,7 +34,7 @@ jobs:
           RANGE_FILTER: ${{ inputs.range_folder }}
           LOADER_FILTER: ${{ inputs.loader }}
         run: |
-          python3 - <<'PY'
+          python3 - <<'PY' > /tmp/template-matrix.json
           import json
           import os
           manifest = json.load(open("version-manifest.json"))
@@ -48,8 +48,10 @@ jobs:
               if loader_filter not in ("all", "") and loader != loader_filter:
                 continue
               entries.append({"range_folder": entry["folder"], "loader": loader})
-          print("matrix=" + json.dumps({"include": entries}))
+          print(json.dumps({"include": entries}))
           PY
+          echo "matrix=$(cat /tmp/template-matrix.json)" >> "$GITHUB_OUTPUT"
+          cat /tmp/template-matrix.json
 
   verify:
     needs: matrix
