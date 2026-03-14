@@ -19,7 +19,7 @@ Calculating task graph as no cached configuration is available for tasks: build
 FAILURE: Build failed with an exception.
 
 * Where:
-Build file '/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/build.gradle' line: 9
+Build file '/tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/build.gradle' line: 9
 
 * What went wrong:
 Plugin [id: 'net.minecraftforge.gradle', version: '7.0.6'] was not found in any of the following sources:
@@ -241,7 +241,7 @@ org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'net.minecraftforge.g
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 13s
+BUILD FAILED in 12s
 Configuration cache entry stored.
 Fast build failed (exit 1). Retrying full build.
 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
@@ -252,8 +252,8 @@ Calculating task graph as no cached configuration is available for tasks: build
 
 > Configure project :
 Minecraft Mavenizer 0.4.25 by Forge Development LLC
-  Output:             /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/.gradle/mavenizer/repo
-  Output JSON:        /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/.gradle/mavenizer/dependencies/default.json
+  Output:             /tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/.gradle/mavenizer/repo
+  Output JSON:        /tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/.gradle/mavenizer/dependencies/default.json
   Dependencies Only:  false
   Cache:              /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
   JDK Cache:          /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
@@ -289,12 +289,12 @@ Client Extra
 Client Maven POM
   pom[client-extra]
 Sources
-  stripClient
+  listLibraries
   download[1.21.1][server]
   extractServer
   stripServer
+  stripClient
   merge
-  listLibraries
   rename
   modifyAccess
   stripSides
@@ -317,149 +317,65 @@ Maven POM
 Metadata
   metadata[forge]
   metadata[forge][variants]
-Minecraft Maven has finished, took 6:22.588
+Minecraft Maven has finished, took 6:11.219
 
 > Task :processResources
 
 > Task :compileJava
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:17: error: package net.minecraftforge.eventbus.api.listener does not exist
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-                                               ^
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:3: error: cannot find symbol
-import net.minecraft.resources.Identifier;
-                              ^
-  symbol:   class Identifier
-  location: package net.minecraft.resources
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:6: error: package net.minecraftforge.eventbus.api.listener does not exist
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-                                               ^
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:116: error: cannot find symbol
-        @SubscribeEvent
-         ^
-  symbol:   class SubscribeEvent
-  location: class ClientModEvents
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:49: error: cannot find symbol
-    @SubscribeEvent
-     ^
-  symbol:   class SubscribeEvent
-  location: class Config
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:45: error: cannot find symbol
-            .setId(BLOCKS.key("example_block"))
-                         ^
-  symbol:   method key(String)
-  location: variable BLOCKS of type DeferredRegister<Block>
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:51: error: cannot find symbol
-        () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties().setId(ITEMS.key("example_block")))
-                                                                                  ^
-  symbol:   method key(String)
-  location: variable ITEMS of type DeferredRegister<Item>
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:57: error: cannot find symbol
-            .setId(ITEMS.key("example_item"))
-                        ^
-  symbol:   method key(String)
-  location: variable ITEMS of type DeferredRegister<Item>
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:76: error: cannot find symbol
-        var modBusGroup = context.getModBusGroup();
-                                 ^
-  symbol:   method getModBusGroup()
-  location: variable context of type FMLJavaModLoadingContext
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:89: error: cannot find symbol
-        BuildCreativeModeTabContentsEvent.BUS.addListener(ExampleMod::addCreative);
-                                         ^
-  symbol:   variable BUS
-  location: class BuildCreativeModeTabContentsEvent
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:46: error: cannot find symbol
-        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(Identifier.tryParse(itemName));
+/tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:49: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
+        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
                                                                                          ^
-  symbol:   variable Identifier
-  location: class Config
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:57: error: cannot find symbol
-                .map(itemName -> ForgeRegistries.ITEMS.getValue(Identifier.tryParse(itemName)))
+  required: String,String
+  found:    String
+  reason: actual and formal argument lists differ in length
+/tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:61: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
+                .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
                                                                 ^
-  symbol:   variable Identifier
-  location: class Config
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:58: error: incompatible types: inference variable T has incompatible bounds
+  required: String,String
+  found:    CAP#1
+  reason: actual and formal argument lists differ in length
+  where CAP#1 is a fresh type-variable:
+    CAP#1 extends String from capture of ? extends String
+/tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:62: error: incompatible types: inference variable T has incompatible bounds
                 .collect(Collectors.toSet());
                         ^
     equality constraints: Item
     lower bounds: Object
   where T is a type-variable:
     T extends Object declared in method <T>toSet()
-13 errors
+3 errors
 
 > Task :compileJava FAILED
 
-[Incubating] Problems report is available at: file:///tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
 Execution failed for task ':compileJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:58: error: incompatible types: inference variable T has incompatible bounds
+  /tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:49: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
+          return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
+                                                                                           ^
+    required: String,String
+    found:    String
+    reason: actual and formal argument lists differ in length
+  /tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:61: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
+                  .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
+                                                                  ^
+    required: String,String
+    found:    CAP#1
+    reason: actual and formal argument lists differ in length
+    where CAP#1 is a fresh type-variable:
+      CAP#1 extends String from capture of ? extends String
+  /tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:62: error: incompatible types: inference variable T has incompatible bounds
                   .collect(Collectors.toSet());
                           ^
       equality constraints: Item
       lower bounds: Object
     where T is a type-variable:
       T extends Object declared in method <T>toSet()
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:3: error: cannot find symbol
-  import net.minecraft.resources.Identifier;
-                                ^
-    symbol:   class Identifier
-    location: package net.minecraft.resources
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:116: error: cannot find symbol
-          @SubscribeEvent
-           ^
-    symbol:   class SubscribeEvent
-    location: class ClientModEvents
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:49: error: cannot find symbol
-      @SubscribeEvent
-       ^
-    symbol:   class SubscribeEvent
-    location: class Config
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:89: error: cannot find symbol
-          BuildCreativeModeTabContentsEvent.BUS.addListener(ExampleMod::addCreative);
-                                           ^
-    symbol:   variable BUS
-    location: class BuildCreativeModeTabContentsEvent
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:46: error: cannot find symbol
-          return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(Identifier.tryParse(itemName));
-                                                                                           ^
-    symbol:   variable Identifier
-    location: class Config
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:57: error: cannot find symbol
-                  .map(itemName -> ForgeRegistries.ITEMS.getValue(Identifier.tryParse(itemName)))
-                                                                  ^
-    symbol:   variable Identifier
-    location: class Config
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:45: error: cannot find symbol
-              .setId(BLOCKS.key("example_block"))
-                           ^
-    symbol:   method key(String)
-    location: variable BLOCKS of type DeferredRegister<Block>
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:51: error: cannot find symbol
-          () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties().setId(ITEMS.key("example_block")))
-                                                                                    ^
-    symbol:   method key(String)
-    location: variable ITEMS of type DeferredRegister<Item>
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:57: error: cannot find symbol
-              .setId(ITEMS.key("example_item"))
-                          ^
-    symbol:   method key(String)
-    location: variable ITEMS of type DeferredRegister<Item>
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:76: error: cannot find symbol
-          var modBusGroup = context.getModBusGroup();
-                                   ^
-    symbol:   method getModBusGroup()
-    location: variable context of type FMLJavaModLoadingContext
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:17: error: package net.minecraftforge.eventbus.api.listener does not exist
-  import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-                                                 ^
-  /tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:6: error: package net.minecraftforge.eventbus.api.listener does not exist
-  import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-                                                 ^
-  13 errors
+  3 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
@@ -498,104 +414,31 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:328)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
-	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
-	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:146)
-	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:131)
-	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
-	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
-	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
-	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:276)
-	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:187)
-	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:45)
-	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:187)
-	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
-	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:269)
-	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:42)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:267)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:259)
-	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
-	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
-	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
-	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
-	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
-	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:17: error: package net.minecraftforge.eventbus.api.listener does not exist
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-                                               ^
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:3: error: cannot find symbol
-import net.minecraft.resources.Identifier;
-                              ^
-  symbol:   class Identifier
-  location: package net.minecraft.resources
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:6: error: package net.minecraftforge.eventbus.api.listener does not exist
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
-                                               ^
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:116: error: cannot find symbol
-        @SubscribeEvent
-         ^
-  symbol:   class SubscribeEvent
-  location: class ClientModEvents
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:49: error: cannot find symbol
-    @SubscribeEvent
-     ^
-  symbol:   class SubscribeEvent
-  location: class Config
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:45: error: cannot find symbol
-            .setId(BLOCKS.key("example_block"))
-                         ^
-  symbol:   method key(String)
-  location: variable BLOCKS of type DeferredRegister<Block>
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:51: error: cannot find symbol
-        () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties().setId(ITEMS.key("example_block")))
-                                                                                  ^
-  symbol:   method key(String)
-  location: variable ITEMS of type DeferredRegister<Item>
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:57: error: cannot find symbol
-            .setId(ITEMS.key("example_item"))
-                        ^
-  symbol:   method key(String)
-  location: variable ITEMS of type DeferredRegister<Item>
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:76: error: cannot find symbol
-        var modBusGroup = context.getModBusGroup();
-                                 ^
-  symbol:   method getModBusGroup()
-  location: variable context of type FMLJavaModLoadingContext
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/ExampleMod.java:89: error: cannot find symbol
-        BuildCreativeModeTabContentsEvent.BUS.addListener(ExampleMod::addCreative);
-                                         ^
-  symbol:   variable BUS
-  location: class BuildCreativeModeTabContentsEvent
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:46: error: cannot find symbol
-        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(Identifier.tryParse(itemName));
+/tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:49: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
+        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
                                                                                          ^
-  symbol:   variable Identifier
-  location: class Config
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:57: error: cannot find symbol
-                .map(itemName -> ForgeRegistries.ITEMS.getValue(Identifier.tryParse(itemName)))
+  required: String,String
+  found:    String
+  reason: actual and formal argument lists differ in length
+/tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:61: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
+                .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
                                                                 ^
-  symbol:   variable Identifier
-  location: class Config
-/tmp/template-1.21-1.21.1-forge-1.21.1-tgtvfrtd/workspace/src/main/java/com/example/examplemod/Config.java:58: error: incompatible types: inference variable T has incompatible bounds
+  required: String,String
+  found:    CAP#1
+  reason: actual and formal argument lists differ in length
+  where CAP#1 is a fresh type-variable:
+    CAP#1 extends String from capture of ? extends String
+/tmp/template-1.21-1.21.1-forge-1.21.1-wmjotr4y/workspace/src/main/java/com/example/examplemod/Config.java:62: error: incompatible types: inference variable T has incompatible bounds
                 .collect(Collectors.toSet());
                         ^
     equality constraints: Item
     lower bounds: Object
   where T is a type-variable:
     T extends Object declared in method <T>toSet()
-13 errors
+3 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -720,10 +563,10 @@ import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:31)
 	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:68)
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
-	... 61 more
+	... 30 more
 
 
-BUILD FAILED in 6m 59s
+BUILD FAILED in 6m 51s
 2 actionable tasks: 2 executed
 Configuration cache entry stored.
 $ ./modcompiler-build.sh
