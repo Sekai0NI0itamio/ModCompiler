@@ -941,28 +941,28 @@ ACTION: Read files, update them, write to src/java/, then call build."""
         ]
 
         src_java_files = get_all_java_files(src_dir)
-        for rel_path, content in src_java_files[:10]:
+        for i, (rel_path, content) in enumerate(src_java_files[:10]):
             messages.append({
                 "role": "assistant",
-                "tool_calls": [{"function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}}]
+                "tool_calls": [{"id": f"init_{i}", "type": "function", "function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}}]
             })
             truncated = content[:8000] + ("... (truncated)" if len(content) > 8000 else "")
             messages.append({
                 "role": "tool",
-                "tool_call_id": "init_read",
+                "tool_call_id": f"init_{i}",
                 "content": f"=== FILE: {rel_path} ===\n{truncated}"
             })
 
         ref_files = get_all_ref_files(ref_dir) if ref_dir.exists() else []
-        for rel_path, content in ref_files[:5]:
+        for i, (rel_path, content) in enumerate(ref_files[:5]):
             messages.append({
                 "role": "assistant",
-                "tool_calls": [{"function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}}]
+                "tool_calls": [{"id": f"init_ref_{i}", "type": "function", "function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}}]
             })
             truncated = content[:6000] + ("... (truncated)" if len(content) > 6000 else "")
             messages.append({
                 "role": "tool",
-                "tool_call_id": "init_ref",
+                "tool_call_id": f"init_ref_{i}",
                 "content": f"=== REFERENCE: {rel_path} ===\n{truncated}"
             })
 
