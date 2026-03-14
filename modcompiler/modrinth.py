@@ -292,6 +292,7 @@ class ModrinthClient:
         params = {
             "loaders": json.dumps([loader]),
             "game_versions": json.dumps([minecraft_version]),
+            "include_changelog": "false",
         }
         versions = self.request_json(
             "GET",
