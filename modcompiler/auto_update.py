@@ -383,7 +383,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "write_mod_file",
-                "description": "Write updated Java file. Auto-adds 'src/main/java/' prefix. Use path like 'com/package/ClassName.java'",
+                "description": "Write updated Java file. CRITICAL: Write to 'src/java/' (not src/main/java/). Auto-adds src/java/ prefix. Use path like 'com/package/ClassName.java'",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -565,7 +565,7 @@ MOD INFORMATION:
 - Original source files: `src/` (read with read_file using paths like "java/com/examplemod/Mod.java")
 - Reference examples: `reference/` (read with read_reference - these show correct {target_v} patterns!)
 - YOUR output: `src/main/java/` (write with write_mod_file - auto-adds prefix)
-- Resources output: `src/main/resources/` (write with write_resource)
+- Resources output: `src/resources/` (write with write_resource)
 
 **PATHS: The original source is under src/java/ NOT src/main/java/**
 
@@ -585,7 +585,7 @@ MOD INFORMATION:
 **TOOLS:**
 - read_file: Use path "java/com/package/File.java" (src/ prefix is auto-added)
 - write_mod_file: Use path "com/package/File.java" (src/main/java/ prefix auto-added)
-- write_resource: Just filename like "mcmod.info" (src/main/resources/ prefix auto-added)
+- write_resource: Just filename like "mcmod.info" (src/resources/ prefix auto-added)
 - build: Compile the mod - do this as soon as possible!
 - complete: Mark done after successful build"""
 
@@ -941,7 +941,12 @@ LIBRARY TOOLS (Minecraft {target_version} API):
 
 Use these to understand how {target_version} APIs work!
 
-ACTION: Write updated files to src/main/java/ then call build.
+ACTION: Write updated files to src/java/ (NOT src/main/java/) then call build.
+
+IMPORTANT PATH INFO:
+- READ original source: "java/com/package/File.java" (in src/ folder)
+- WRITE updated source: "com/package/File.java" (auto-prefixed to src/java/)
+- Resources go to: "mcmod.info" (auto-prefixed to src/resources/)
 
 READ path: "java/com/package/File.java"
 WRITE path: "com/package/File.java"
@@ -1225,11 +1230,13 @@ def _tool_write_mod_file(version_dir: Path, args: dict[str, str]) -> str:
     if not path:
         return "Error: path is required"
     
-    if not path.startswith("src/main/java/"):
-        if path.startswith("src/java/"):
-            path = path.replace("src/java/", "src/main/java/")
-        elif not path.startswith("src/main/"):
-            path = "src/main/java/" + path
+    if not path.startswith("src/java/"):
+        if path.startswith("src/main/java/"):
+            path = path.replace("src/main/java/", "src/java/")
+        elif path.startswith("main/java/"):
+            path = path.replace("main/java/", "src/java/")
+        elif not path.startswith("src/"):
+            path = "src/java/" + path
 
     file_path = version_dir / path
     file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1245,11 +1252,13 @@ def _tool_write_resource(version_dir: Path, args: dict[str, str]) -> str:
     if not path:
         return "Error: path is required"
     
-    if not path.startswith("src/main/resources/"):
-        if path.startswith("src/resources/"):
-            path = path.replace("src/resources/", "src/main/resources/")
-        elif not path.startswith("src/main/"):
-            path = "src/main/resources/" + path
+    if not path.startswith("src/resources/"):
+        if path.startswith("src/main/resources/"):
+            path = path.replace("src/main/resources/", "src/resources/")
+        elif path.startswith("main/resources/"):
+            path = path.replace("main/resources/", "src/resources/")
+        elif not path.startswith("src/"):
+            path = "src/resources/" + path
 
     file_path = version_dir / path
     file_path.parent.mkdir(parents=True, exist_ok=True)
