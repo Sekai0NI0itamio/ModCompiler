@@ -185,7 +185,7 @@ def run_build(
                 )
             except subprocess.TimeoutExpired:
                 result["error"] = f"Build timed out after {timeout_seconds} seconds."
-                log_file.write(f\"\\n[modcompiler] Build timed out after {timeout_seconds} seconds.\\n\")
+                log_file.write(f"\n[modcompiler] Build timed out after {timeout_seconds} seconds.\n")
                 return result
 
         if build_run.returncode != 0:
