@@ -16,14 +16,14 @@ Daemon will be stopped at the end of the build
 FAILURE: Build failed with an exception.
 
 * Where:
-Settings file '/tmp/template-1.19-1.19.4-forge-1.19.4-9n_9bv7w/workspace/settings.gradle' line: 12
+Build file '/tmp/template-1.19-1.19.4-forge-1.19.4-0vsykvgz/workspace/build.gradle' line: 5
 
 * What went wrong:
-Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '0.7.0'] was not found in any of the following sources:
+Plugin [id: 'net.minecraftforge.gradle', version: '[6.0,6.2)'] was not found in any of the following sources:
 
 - Gradle Core Plugins (plugin is not in 'org.gradle' namespace)
 - Included Builds (No included builds contain this plugin)
-- Plugin Repositories (could not resolve plugin artifact 'org.gradle.toolchains.foojay-resolver-convention:org.gradle.toolchains.foojay-resolver-convention.gradle.plugin:0.7.0')
+- Plugin Repositories (could not resolve plugin artifact 'net.minecraftforge.gradle:net.minecraftforge.gradle.gradle.plugin:[6.0,6.2)')
   Searched in the following repositories:
     Gradle Central Plugin Repository
     MinecraftForge(https://maven.minecraftforge.net/)
@@ -34,11 +34,11 @@ Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '0.7.0'
 > Get more help at https://help.gradle.org.
 
 * Exception is:
-org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '0.7.0'] was not found in any of the following sources:
+org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'net.minecraftforge.gradle', version: '[6.0,6.2)'] was not found in any of the following sources:
 
 - Gradle Core Plugins (plugin is not in 'org.gradle' namespace)
 - Included Builds (No included builds contain this plugin)
-- Plugin Repositories (could not resolve plugin artifact 'org.gradle.toolchains.foojay-resolver-convention:org.gradle.toolchains.foojay-resolver-convention.gradle.plugin:0.7.0')
+- Plugin Repositories (could not resolve plugin artifact 'net.minecraftforge.gradle:net.minecraftforge.gradle.gradle.plugin:[6.0,6.2)')
   Searched in the following repositories:
     Gradle Central Plugin Repository
     MinecraftForge(https://maven.minecraftforge.net/)
@@ -57,32 +57,19 @@ org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'org.gradle.toolchain
 	at org.gradle.configuration.BuildOperationScriptPlugin.lambda$apply$0(BuildOperationScriptPlugin.java:65)
 	at org.gradle.internal.code.DefaultUserCodeApplicationContext.apply(DefaultUserCodeApplicationContext.java:43)
 	at org.gradle.configuration.BuildOperationScriptPlugin.apply(BuildOperationScriptPlugin.java:65)
-	at org.gradle.initialization.ScriptEvaluatingSettingsProcessor.applySettingsScript(ScriptEvaluatingSettingsProcessor.java:75)
-	at org.gradle.initialization.ScriptEvaluatingSettingsProcessor.process(ScriptEvaluatingSettingsProcessor.java:68)
-	at org.gradle.initialization.SettingsEvaluatedCallbackFiringSettingsProcessor.process(SettingsEvaluatedCallbackFiringSettingsProcessor.java:34)
-	at org.gradle.initialization.RootBuildCacheControllerSettingsProcessor.process(RootBuildCacheControllerSettingsProcessor.java:47)
-	at org.gradle.initialization.BuildOperationSettingsProcessor$2.call(BuildOperationSettingsProcessor.java:49)
-	at org.gradle.initialization.BuildOperationSettingsProcessor$2.call(BuildOperationSettingsProcessor.java:46)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
-	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
-	at org.gradle.initialization.BuildOperationSettingsProcessor.process(BuildOperationSettingsProcessor.java:46)
-	at org.gradle.initialization.DefaultSettingsLoader.findSettingsAndLoadIfAppropriate(DefaultSettingsLoader.java:143)
-	at org.gradle.initialization.DefaultSettingsLoader.findAndLoadSettings(DefaultSettingsLoader.java:63)
-	at org.gradle.initialization.SettingsAttachingSettingsLoader.findAndLoadSettings(SettingsAttachingSettingsLoader.java:33)
-	at org.gradle.internal.composite.CommandLineIncludedBuildSettingsLoader.findAndLoadSettings(CommandLineIncludedBuildSettingsLoader.java:35)
-	at org.gradle.internal.composite.ChildBuildRegisteringSettingsLoader.findAndLoadSettings(ChildBuildRegisteringSettingsLoader.java:44)
-	at org.gradle.internal.composite.CompositeBuildSettingsLoader.findAndLoadSettings(CompositeBuildSettingsLoader.java:35)
-	at org.gradle.initialization.InitScriptHandlingSettingsLoader.findAndLoadSettings(InitScriptHandlingSettingsLoader.java:33)
-	at org.gradle.api.internal.initialization.CacheConfigurationsHandlingSettingsLoader.findAndLoadSettings(CacheConfigurationsHandlingSettingsLoader.java:36)
-	at org.gradle.initialization.GradlePropertiesHandlingSettingsLoader.findAndLoadSettings(GradlePropertiesHandlingSettingsLoader.java:38)
-	at org.gradle.initialization.DefaultSettingsPreparer.prepareSettings(DefaultSettingsPreparer.java:31)
-	at org.gradle.initialization.BuildOperationFiringSettingsPreparer$LoadBuild.doLoadBuild(BuildOperationFiringSettingsPreparer.java:71)
-	at org.gradle.initialization.BuildOperationFiringSettingsPreparer$LoadBuild.run(BuildOperationFiringSettingsPreparer.java:66)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$applyToMutableState$1(DefaultProjectStateRegistry.java:407)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.fromMutableState(DefaultProjectStateRegistry.java:425)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.applyToMutableState(DefaultProjectStateRegistry.java:406)
+	at org.gradle.configuration.project.BuildScriptProcessor.execute(BuildScriptProcessor.java:46)
+	at org.gradle.configuration.project.BuildScriptProcessor.execute(BuildScriptProcessor.java:27)
+	at org.gradle.configuration.project.ConfigureActionsProjectEvaluator.evaluate(ConfigureActionsProjectEvaluator.java:35)
+	at org.gradle.configuration.project.LifecycleProjectEvaluator$EvaluateProject.lambda$run$0(LifecycleProjectEvaluator.java:109)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$applyToMutableState$1(DefaultProjectStateRegistry.java:407)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.lambda$fromMutableState$2(DefaultProjectStateRegistry.java:430)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withReplacedLocks(DefaultWorkerLeaseService.java:360)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.fromMutableState(DefaultProjectStateRegistry.java:430)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.applyToMutableState(DefaultProjectStateRegistry.java:406)
+	at org.gradle.configuration.project.LifecycleProjectEvaluator$EvaluateProject.run(LifecycleProjectEvaluator.java:100)
 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
 	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
@@ -90,16 +77,40 @@ org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'org.gradle.toolchain
 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
 	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
-	at org.gradle.initialization.BuildOperationFiringSettingsPreparer.prepareSettings(BuildOperationFiringSettingsPreparer.java:54)
-	at org.gradle.initialization.VintageBuildModelController.lambda$prepareSettings$1(VintageBuildModelController.java:80)
+	at org.gradle.configuration.project.LifecycleProjectEvaluator.evaluate(LifecycleProjectEvaluator.java:72)
+	at org.gradle.api.internal.project.DefaultProject.evaluate(DefaultProject.java:785)
+	at org.gradle.api.internal.project.DefaultProject.evaluate(DefaultProject.java:155)
+	at org.gradle.api.internal.project.ProjectLifecycleController.lambda$ensureSelfConfigured$2(ProjectLifecycleController.java:84)
+	at org.gradle.internal.model.StateTransitionController.lambda$doTransition$14(StateTransitionController.java:255)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:254)
+	at org.gradle.internal.model.StateTransitionController.lambda$maybeTransitionIfNotCurrentlyTransitioning$10(StateTransitionController.java:199)
+	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:34)
+	at org.gradle.internal.model.StateTransitionController.maybeTransitionIfNotCurrentlyTransitioning(StateTransitionController.java:195)
+	at org.gradle.api.internal.project.ProjectLifecycleController.ensureSelfConfigured(ProjectLifecycleController.java:84)
+	at org.gradle.api.internal.project.DefaultProjectStateRegistry$ProjectStateImpl.ensureConfigured(DefaultProjectStateRegistry.java:381)
+	at org.gradle.execution.TaskPathProjectEvaluator.configure(TaskPathProjectEvaluator.java:34)
+	at org.gradle.execution.TaskPathProjectEvaluator.configureHierarchy(TaskPathProjectEvaluator.java:48)
+	at org.gradle.configuration.DefaultProjectsPreparer.prepareProjects(DefaultProjectsPreparer.java:42)
+	at org.gradle.configuration.BuildTreePreparingProjectsPreparer.prepareProjects(BuildTreePreparingProjectsPreparer.java:65)
+	at org.gradle.configuration.BuildOperationFiringProjectsPreparer$ConfigureBuild.run(BuildOperationFiringProjectsPreparer.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+	at org.gradle.configuration.BuildOperationFiringProjectsPreparer.prepareProjects(BuildOperationFiringProjectsPreparer.java:40)
+	at org.gradle.initialization.VintageBuildModelController.lambda$prepareProjects$2(VintageBuildModelController.java:84)
 	at org.gradle.internal.model.StateTransitionController.lambda$doTransition$14(StateTransitionController.java:255)
 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:254)
 	at org.gradle.internal.model.StateTransitionController.lambda$transitionIfNotPreviously$11(StateTransitionController.java:213)
 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:34)
 	at org.gradle.internal.model.StateTransitionController.transitionIfNotPreviously(StateTransitionController.java:209)
-	at org.gradle.initialization.VintageBuildModelController.prepareSettings(VintageBuildModelController.java:80)
-	at org.gradle.initialization.VintageBuildModelController.prepareToScheduleTasks(VintageBuildModelController.java:70)
+	at org.gradle.initialization.VintageBuildModelController.prepareProjects(VintageBuildModelController.java:84)
+	at org.gradle.initialization.VintageBuildModelController.prepareToScheduleTasks(VintageBuildModelController.java:71)
 	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$prepareToScheduleTasks$6(DefaultBuildLifecycleController.java:175)
 	at org.gradle.internal.model.StateTransitionController.lambda$doTransition$14(StateTransitionController.java:255)
 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
@@ -193,7 +204,7 @@ org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'org.gradle.toolchain
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 11s
+BUILD FAILED in 13s
 Fast build failed (exit 1). Retrying full build.
 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.8/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
 Daemon will be stopped at the end of the build 
@@ -218,19 +229,19 @@ Executing steps
  > Running 'listLibraries'
  > Running 'rename'
 Stopping at requested step: /home/runner/.gradle/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.19.4-20230314.122934/joined/rename/output.jar
-[08:18:50] [main/INFO]: Writing debug log file accesstransform.log
-[08:18:50] [main/INFO]: Access Transformer processor running version 8.2.14
-[08:18:50] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3/forge-1.19.4-45.4.3-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3_mapped_official_1.19.4/forge-1.19.4-45.4.3_mapped_official_1.19.4.jar, --logFile, accesstransform.log, --atFile, /tmp/template-1.19-1.19.4-forge-1.19.4-9n_9bv7w/workspace/build/_atJar_4/parent_at.cfg]
-[08:18:50] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3/forge-1.19.4-45.4.3-injected.jar
-[08:18:50] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3_mapped_official_1.19.4/forge-1.19.4-45.4.3_mapped_official_1.19.4.jar
-[08:18:50] [main/INFO]: Transformer file /tmp/template-1.19-1.19.4-forge-1.19.4-9n_9bv7w/workspace/build/_atJar_4/parent_at.cfg
-[08:18:50] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3_mapped_official_1.19.4/forge-1.19.4-45.4.3_mapped_official_1.19.4.jar, overwriting
-[08:18:55] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3_mapped_official_1.19.4/forge-1.19.4-45.4.3_mapped_official_1.19.4.jar
+[09:02:16] [main/INFO]: Writing debug log file accesstransform.log
+[09:02:16] [main/INFO]: Access Transformer processor running version 8.2.14
+[09:02:16] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3/forge-1.19.4-45.4.3-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3_mapped_official_1.19.4/forge-1.19.4-45.4.3_mapped_official_1.19.4.jar, --logFile, accesstransform.log, --atFile, /tmp/template-1.19-1.19.4-forge-1.19.4-0vsykvgz/workspace/build/_atJar_4/parent_at.cfg]
+[09:02:16] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3/forge-1.19.4-45.4.3-injected.jar
+[09:02:16] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3_mapped_official_1.19.4/forge-1.19.4-45.4.3_mapped_official_1.19.4.jar
+[09:02:16] [main/INFO]: Transformer file /tmp/template-1.19-1.19.4-forge-1.19.4-0vsykvgz/workspace/build/_atJar_4/parent_at.cfg
+[09:02:16] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3_mapped_official_1.19.4/forge-1.19.4-45.4.3_mapped_official_1.19.4.jar, overwriting
+[09:02:21] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.19.4-45.4.3_mapped_official_1.19.4/forge-1.19.4-45.4.3_mapped_official_1.19.4.jar
 Creating SRG -> MCP TSRG
-/tmp/template-1.19-1.19.4-forge-1.19.4-9n_9bv7w/workspace/src/main/java/com/example/examplemod/Config.java:49: warning: [removal] ResourceLocation(String) in ResourceLocation has been deprecated and marked for removal
+/tmp/template-1.19-1.19.4-forge-1.19.4-0vsykvgz/workspace/src/main/java/com/example/examplemod/Config.java:49: warning: [removal] ResourceLocation(String) in ResourceLocation has been deprecated and marked for removal
         return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
                                                                                          ^
-/tmp/template-1.19-1.19.4-forge-1.19.4-9n_9bv7w/workspace/src/main/java/com/example/examplemod/Config.java:61: warning: [removal] ResourceLocation(String) in ResourceLocation has been deprecated and marked for removal
+/tmp/template-1.19-1.19.4-forge-1.19.4-0vsykvgz/workspace/src/main/java/com/example/examplemod/Config.java:61: warning: [removal] ResourceLocation(String) in ResourceLocation has been deprecated and marked for removal
                 .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
                                                                 ^
 2 warnings
@@ -247,7 +258,7 @@ Creating SRG -> MCP TSRG
 > Task :assemble
 > Task :build
 
-BUILD SUCCESSFUL in 2m 26s
+BUILD SUCCESSFUL in 2m 47s
 7 actionable tasks: 7 executed
 $ ./modcompiler-build.sh
 
