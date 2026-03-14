@@ -1897,6 +1897,15 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
         else:
             copy_tree(source_path, workspace)
 
+        build_script_source = Path(__file__).resolve().parents[1] / "scripts" / "modcompiler-build.sh"
+        if build_script_source.exists():
+            target_script = workspace / "modcompiler-build.sh"
+            shutil.copy2(build_script_source, target_script)
+            try:
+                target_script.chmod(target_script.stat().st_mode | 0o111)
+            except OSError:
+                pass
+
         mod_dir = workspace / "src" / "main"
         src_dir = version_dir / "src"
         if src_dir.exists():
