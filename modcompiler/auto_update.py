@@ -941,93 +941,90 @@ ACTION: Read files, update them, write to src/java/, then call build."""
 
         all_src_contents = []
         for rel_path, content in get_all_java_files(src_dir):
-            all_src_contents.append(f"\n=== FILE: {rel_path} ===\n{content}")
+            all_src_contents.append((rel_path, content))
 
         all_ref_contents = []
         for rel_path, content in get_all_ref_files(ref_dir) if ref_dir.exists() else []:
-            all_ref_contents.append(f"\n=== REFERENCE: {rel_path} ===\n{content}")
+            all_ref_contents.append((rel_path, content))
 
-        full_context = f"""Update this mod for {target_loader} {target_version}.
+        user_msg_1 = f"""Update this mod for {target_loader} {target_version}.
 
 USER DESCRIPTION:
 {context.get('user_description', 'No description provided')}
 
-=== ORIGINAL SOURCE FILES ===
-{''.join(all_src_contents)}
-
-=== REFERENCE FILES ===
-{''.join(all_ref_contents)}
-
 PATH INFO:
-- READ: "java/com/package/File.java"
-- WRITE: "com/package/File.java" (goes to src/java/)
+- READ original source: "java/com/package/File.java"
+- WRITE updated source: "com/package/File.java" (goes to src/java/)
 - RESOURCES: "mcmod.info" (goes to src/resources/)
 
-ACTION: Update these files for {target_version}, write to src/java/, then build."""
+ACTION: Update files for {target_version}, write to src/java/, then build."""
 
-        messages.append({"role": "user", "content": full_context})
+        tool_calls_1 = [
+            {"id": "call_1", "type": "function", "function": {"name": "list_files", "arguments": json.dumps({"path": "."})}},
+            {"id": "call_2", "type": "function", "function": {"name": "list_reference", "arguments": json.dumps({"path": "."})}},
+        ]
 
-        src_files_for_history = get_all_java_files(src_dir)
-        ref_files_for_history = get_all_ref_files(ref_dir) if ref_dir.exists() else []
+        tool_results_1 = f"""list_files result:
+{src_tree}
 
-        tool_idx = 1
+list_reference result:
+{ref_tree}"""
+
+        all_file_read_calls = []
+        for rel_path, _ in all_ref_contents:
+            all_file_read_calls.append({"id": f"call_ref_{len(all_file_read_calls)+1}", "type": "function", "function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}})
+        for rel_path, _ in all_src_contents:
+            all_file_read_calls.append({"id": f"call_src_{len(all_file_read_calls)+1}", "type": "function", "function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}})
+
+        file_contents_response = ""
+        for rel_path, content in all_ref_contents:
+            file_contents_response += f"\n=== REFERENCE: {rel_path} ===\n{content}\n"
+        for rel_path, content in all_src_contents:
+            file_contents_response += f"\n=== FILE: {rel_path} ===\n{content}\n"
+
+        messages.append({"role": "user", "content": user_msg_1})
         
         messages.append({
             "role": "assistant",
-            "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "list_files", "arguments": json.dumps({"path": "."})}}]
+            "tool_calls": tool_calls_1
         })
         messages.append({
             "role": "tool",
-            "tool_call_id": f"hist_{tool_idx}",
-            "content": src_tree
+            "tool_call_id": "call_1",
+            "content": tool_results_1
         })
-        tool_idx += 1
 
         messages.append({
             "role": "assistant",
-            "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "list_reference", "arguments": json.dumps({"path": "."})}}]
+            "tool_calls": all_file_read_calls
         })
         messages.append({
             "role": "tool",
-            "tool_call_id": f"hist_{tool_idx}",
-            "content": ref_tree
+            "tool_call_id": "call_src_1",
+            "content": file_contents_response
         })
-        tool_idx += 1
-
-        for rel_path, content in ref_files_for_history:
-            messages.append({
-                "role": "assistant",
-                "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "read_reference", "arguments": json.dumps({"path": rel_path})}}]
-            })
-            messages.append({
-                "role": "tool",
-                "tool_call_id": f"hist_{tool_idx}",
-                "content": f"=== REFERENCE: {rel_path} ===\n{content}"
-            })
-            tool_idx += 1
-
-        for rel_path, content in src_files_for_history:
-            messages.append({
-                "role": "assistant",
-                "tool_calls": [{"id": f"hist_{tool_idx}", "type": "function", "function": {"name": "read_file", "arguments": json.dumps({"path": rel_path})}}]
-            })
-            messages.append({
-                "role": "tool",
-                "tool_call_id": f"hist_{tool_idx}",
-                "content": f"=== FILE: {rel_path} ===\n{content}"
-            })
-            tool_idx += 1
 
         messages.append({
             "role": "assistant",
-            "content": f"I have read all reference files and source files. Now I'll update the mod from {context.get('current_loader')} {context.get('current_version')} to {target_loader} {target_version}. I'll write updated files to src/java/ with SRG->MCP name changes, updated imports, updated mcmod.info, then build."
+            "content": f"I have all the source and reference files. Now I'll update the mod from {context.get('current_loader')} {context.get('current_version')} to {target_loader} {target_version}. I'll write updated files to src/java/ and then build."
         })
 
         debug_history_path = artifact_dir / "ai_context_debug.txt" if artifact_dir else None
         if debug_history_path:
-            debug_content = f"=== SYSTEM PROMPT ===\n{system_prompt}\n\n=== USER MESSAGE (first 15000 chars) ===\n{full_context[:15000]}"
+            debug_lines = []
+            for i, m in enumerate(messages):
+                debug_lines.append(f"\n=== MESSAGE {i}: role={m.get('role')} ===")
+                if "tool_calls" in m:
+                    debug_lines.append(f"tool_calls: {len(m.get('tool_calls', []))} calls")
+                content = m.get("content", "")
+                if len(content) > 1500:
+                    debug_lines.append(content)
+                else:
+                    debug_lines.append(content)
+            debug_content = "\n".join(debug_lines)
             debug_history_path.write_text(debug_content, encoding="utf-8")
             print(f"DEBUG: Saved AI context to {debug_history_path}", file=sys.stderr)
+            print(f"DEBUG: Total messages: {len(messages)}", file=sys.stderr)
 
         max_iterations = 1000
         print(f"DEBUG: Starting AI conversation loop (max {max_iterations} iterations)...", file=sys.stderr)
