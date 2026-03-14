@@ -132,6 +132,16 @@ The NeoForge side uses the official NeoForge MDK templates (NeoGradle) for `1.20
 
 Some range folders are intentionally marked as `anchor_only` in `version-manifest.json`. That means the scaffold resolves the exact Minecraft version correctly, but the underlying dependency versions are still anchored to the vendored template snapshot. Before first production use, extend the manifest and adapters if you need exact Forge/Fabric/NeoForge dependency resolution across every patch version in those broad ranges.
 
+## Build Script
+
+All builds (template verify, normal builds, and AI rebuilds) now use `scripts/modcompiler-build.sh`, which is copied into each temporary workspace as `./modcompiler-build.sh`. The script defaults to a fast path that skips download tasks (and runs offline) and falls back to a full build if the fast path fails. You can control this with:
+
+- `MODCOMPILER_FAST_BUILD=0` to disable the fast path
+- `MODCOMPILER_FAST_ONLY=1` to fail instead of falling back
+- `MODCOMPILER_SKIP_DOWNLOADS=0` to allow downloads even in fast mode
+- `MODCOMPILER_SKIP_TESTS=0` to keep `test`/`check` tasks
+- `MODCOMPILER_GRADLE_TASKS` to override the task list (defaults to `build`)
+
 ## First GitHub Test
 
 This repo now includes a ready-to-commit example package at `incoming/example-1.12.2-forge.zip`. Its unpacked source lives under `examples/example-1.12.2-forge/` if you want to inspect or edit it before pushing.

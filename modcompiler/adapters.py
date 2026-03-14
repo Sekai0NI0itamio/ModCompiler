@@ -67,6 +67,50 @@ def run_range_adapter(range_folder: str, argv: list[str] | None = None) -> int:
     return 0
 
 
+def load_extra_gradle(source_dir: Path) -> dict[str, list[str]]:
+    path = source_dir / ".modcompiler" / "deps.json"
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    repos = [str(item).strip() for item in payload.get("repositories", []) if str(item).strip()]
+    deps = [str(item).strip() for item in payload.get("dependencies", []) if str(item).strip()]
+    if not repos and not deps:
+        return {}
+    return {"repositories": repos, "dependencies": deps}
+
+
+def apply_gradle_extras(build_gradle: Path, extras: dict[str, list[str]]) -> None:
+    if not build_gradle.exists():
+        return
+    text = build_gradle.read_text(encoding="utf-8")
+    repo_lines: list[str] = []
+    for repo in extras.get("repositories", []):
+        if repo.startswith("maven"):
+            repo_lines.append(repo)
+        else:
+            repo_lines.append(f'maven {{ url "{repo}" }}')
+    dep_lines = list(extras.get("dependencies", []))
+
+    if repo_lines:
+        text = inject_gradle_block(text, "repositories", repo_lines)
+    if dep_lines:
+        text = inject_gradle_block(text, "dependencies", dep_lines)
+    build_gradle.write_text(text, encoding="utf-8")
+
+
+def inject_gradle_block(text: str, block_name: str, lines: list[str]) -> str:
+    existing = {line.strip() for line in text.splitlines() if line.strip()}
+    to_add = [line for line in lines if line.strip() and line.strip() not in existing]
+    if not to_add:
+        return text
+    pattern = re.compile(rf"({block_name}\s*\{{)([^}}]*)(\}})", re.DOTALL)
+    match = pattern.search(text)
+    if not match:
+        raise ModCompilerError(f"Missing {block_name} block in build.gradle")
+    insertion = "\n" + "\n".join(f"    {line}" for line in to_add) + "\n"
+    return pattern.sub(lambda m: m.group(1) + m.group(2) + insertion + m.group(3), text, count=1)
+
+
 def prepare_workspace(
     *,
     manifest: dict[str, Any],
@@ -84,6 +128,7 @@ def prepare_workspace(
     java_version = resolve_java_version(loader_config, minecraft_version)
     dependency_overrides = resolve_dependency_overrides(loader_config, minecraft_version)
 
+    extra_gradle = load_extra_gradle(source_dir)
     if adapter_family.startswith("fabric"):
         if (workspace / "src").exists():
             shutil.rmtree(workspace / "src")
@@ -95,6 +140,17 @@ def prepare_workspace(
                 shutil.rmtree(candidate)
         shutil.copytree(source_dir, workspace / "src", dirs_exist_ok=True)
     update_settings_gradle(workspace / "settings.gradle", metadata.mod_id)
+    if extra_gradle:
+        apply_gradle_extras(workspace / "build.gradle", extra_gradle)
+
+    build_script_source = Path(__file__).resolve().parents[1] / "scripts" / "modcompiler-build.sh"
+    if build_script_source.exists():
+        target_script = workspace / "modcompiler-build.sh"
+        shutil.copy2(build_script_source, target_script)
+        try:
+            target_script.chmod(target_script.stat().st_mode | 0o111)
+        except OSError:
+            pass
 
     for candidate in entrypoint_source_candidates(workspace, metadata.entrypoint_class):
         replace_known_placeholders_in_entrypoint(candidate, metadata)
