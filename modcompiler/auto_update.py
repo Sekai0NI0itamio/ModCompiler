@@ -561,28 +561,33 @@ MOD INFORMATION:
 
 {current_v} uses SRG names (e.g., Minecraft.func_71410_x()), {target_v} uses MCP names (e.g., Minecraft.getMinecraft()).
 
-**IMPORTANT - ALL FILES ALREADY PROVIDED IN MESSAGE:**
-The original source files AND reference examples are ALREADY INCLUDED in the user message below. 
-DO NOT re-read files that are already provided - use the content directly!
-The directory structure is also provided showing all available files.
+**FOLDER STRUCTURE - IMPORTANT:**
+- Original source files: `src/` (read with read_file using paths like "java/com/examplemod/Mod.java")
+- Reference examples: `reference/` (read with read_reference - these show correct {target_v} patterns!)
+- YOUR output: `src/main/java/` (write with write_mod_file - auto-adds prefix)
+- Resources output: `src/resources/` (write with write_resource)
 
-**PATH RULES:**
-- Original source: src/java/ (already in message)
-- Reference: reference/ (already in message)
-- YOUR output: src/java/ (use write_mod_file)
-- Resources: src/resources/ (use write_resource)
+**PATHS: The original source is under src/java/ NOT src/main/java/**
 
-**CRITICAL - YOUR TASK:**
-1. The file contents are already in the message below - START WRITING updated code now
-2. Write updated files to src/java/ using write_mod_file (path like "com/package/File.java")
-3. Write resources like mcmod.info using write_resource
-4. Call build IMMEDIATELY after writing files - don't explore more!
+**YOUR TASK - DO THIS QUICKLY:**
+1. Read 2-3 key files from reference/ first (these show correct imports/patterns)
+2. Read the main mod file from src/java/ (use path like "java/com/package/Mod.java")
+3. Read any other key files needed
+4. Write updated files to src/main/java/ using write_mod_file
+5. IMMEDIATELY call Build when ready - don't keep exploring!
 
 **CRITICAL RULES:**
-- All source and reference files are already provided - don't use list_files, read_file, or list_reference!
-- Just write the updated files and call build
+- Call Build as soon as you have written the essential files - don't wait!
 - The build system handles gradle automatically
-- If build fails, fix errors and rebuild"""
+- If build fails, fix the errors and rebuild
+- Don't re-read files you've already read - use the info you have
+
+**TOOLS:**
+- read_file: Use path "java/com/package/File.java" (src/ prefix is auto-added)
+- write_mod_file: Use path "com/package/File.java" (src/main/java/ prefix auto-added)
+- write_resource: Just filename like "mcmod.info" (src/resources/ prefix auto-added)
+- build: Compile the mod - do this as soon as possible!
+- complete: Mark done after successful build"""
 
 
 def create_version_folder(
@@ -969,6 +974,11 @@ PATH INFO:
 ACTION: Update these files for {target_version}, write to src/java/, then build."""
 
         messages.append({"role": "user", "content": full_context})
+
+        messages.append({
+            "role": "assistant",
+            "content": f"Alright. I have all the source files and reference examples. I should now update the mod from {context.get('current_loader')} {context.get('current_version')} to {target_loader} {target_version}. I'll write the updated files to src/java/ and then call build. If I need to confirm library/API names for {target_version}, I can use library_search, library_dir, and library_read."
+        })
 
         debug_history_path = artifact_dir / "ai_context_debug.txt" if artifact_dir else None
         if debug_history_path:
