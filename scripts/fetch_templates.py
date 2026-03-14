@@ -5,10 +5,16 @@ import argparse
 import os
 import re
 import shutil
+import sys
+import subprocess
 import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from modcompiler.common import ModCompilerError, load_json
 
@@ -54,6 +60,36 @@ def resolve_download_url(source_url: str, branch_hint: str | None) -> str | None
         branch = branch_hint or "main"
         return f"{repo}/archive/refs/heads/{branch}.zip"
     return None
+
+
+def try_git_clone(source_url: str, branch_hint: str | None, dest_dir: Path) -> bool:
+    if "github.com" not in source_url or source_url.endswith(".zip"):
+        return False
+    branch = branch_hint or "main"
+    with tempfile.TemporaryDirectory(prefix="template-git-") as temp_dir:
+        clone_dir = Path(temp_dir) / "repo"
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth", "1", "--branch", branch, source_url, str(clone_dir)],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception:
+            return False
+
+        if dest_dir.exists():
+            shutil.rmtree(dest_dir)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        for item in clone_dir.iterdir():
+            if item.name == ".git":
+                continue
+            target = dest_dir / item.name
+            if item.is_dir():
+                shutil.copytree(item, target)
+            else:
+                shutil.copy2(item, target)
+        return True
 
 
 def download_and_extract(url: str, dest_dir: Path, force: bool) -> None:
@@ -111,14 +147,18 @@ def main() -> int:
                 failures += 1
                 continue
 
-            download_url = resolve_download_url(source_url, branch_hint)
-            if not download_url:
-                print(f"[WARN] Unsupported Source URL: {source_url}")
-                failures += 1
-                continue
-
             try:
-                download_and_extract(download_url, template_dir, args.force)
+                if not args.force and template_dir.exists():
+                    print(f"[SKIP] Template exists for {entry['folder']} {loader}")
+                    continue
+                cloned = try_git_clone(source_url, branch_hint, template_dir)
+                if not cloned:
+                    download_url = resolve_download_url(source_url, branch_hint)
+                    if not download_url:
+                        print(f"[WARN] Unsupported Source URL: {source_url}")
+                        failures += 1
+                        continue
+                    download_and_extract(download_url, template_dir, True)
                 print(f"[OK] Fetched template for {entry['folder']} {loader} -> {template_dir}")
             except Exception as exc:
                 print(f"[ERROR] Failed to fetch {entry['folder']} {loader}: {exc}")

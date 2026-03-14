@@ -1,5 +1,7 @@
 # Template Provenance
 
+- Source: `https://github.com/NeoForgeMDKs/MDK-1.21.1-NeoGradle`
+- Snapshot: `main` branch shallow clone on March 8, 2026
 - Base guidance: NeoForge getting started + Mod Files documentation.
 - Template reference: NeoForge MDK list (MDK-1.21.1-NeoGradle).
 - Java target: 21

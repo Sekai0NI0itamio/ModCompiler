@@ -1,6 +1,6 @@
 # Template Provenance
 
-- Base source: `https://maven.minecraftforge.net/net/minecraftforge/forge/1.21.11-61.1.3/forge-1.21.11-61.1.3-mdk.zip`
+- Source: `https://maven.minecraftforge.net/net/minecraftforge/forge/1.21.8-58.1.14/forge-1.21.8-58.1.14-mdk.zip`
 - Retargeted anchor: official Forge coordinates `1.21.8-58.1.14`
 - Reason: separate mid `1.21.2-1.21.8` scaffold because `1.21` and `1.21.1` are tracked independently in this repo
 - Java target: 21
