@@ -44,12 +44,6 @@ def command_decompile_jar(args: Any) -> int:
         if jar_path.suffix.lower() != ".jar":
             raise ModCompilerError(f"Expected a .jar file but got: {jar_path.name}")
 
-        decompiler_jar = Path(args.decompiler_jar)
-        if not decompiler_jar.is_absolute():
-            decompiler_jar = Path.cwd() / decompiler_jar
-        if not decompiler_jar.exists():
-            raise ModCompilerError(f"Decompiler jar does not exist: {decompiler_jar}")
-
         manifest = load_json(Path(args.manifest))
         inspected = inspect_mod_jar(jar_path, manifest)
         metadata.update(inspected)
@@ -61,58 +55,69 @@ def command_decompile_jar(args: Any) -> int:
         info_path = artifact_dir / "mod_info.txt"
         info_path.write_text(render_mod_info(metadata), encoding="utf-8")
 
-        with tempfile.TemporaryDirectory(prefix=f"modcompiler-decompile-{slug}-") as temp_dir:
-            temp_root = Path(temp_dir)
-            expanded_jar = temp_root / "expanded-jar"
-            java_output = temp_root / "java-output"
-            package_root = temp_root / "package"
-            package_src = package_root / "src" / "main" / "java"
-            package_root.mkdir(parents=True, exist_ok=True)
-            expanded_jar.mkdir(parents=True, exist_ok=True)
-            java_output.mkdir(parents=True, exist_ok=True)
+        if not jar_has_class_files(jar_path):
+            metadata["warnings"].append("Jar contains no .class files; skipping decompiler.")
+            metadata["status"] = "skipped"
+            exit_code = 0
+        else:
+            decompiler_jar = Path(args.decompiler_jar)
+            if not decompiler_jar.is_absolute():
+                decompiler_jar = Path.cwd() / decompiler_jar
+            if not decompiler_jar.exists():
+                raise ModCompilerError(f"Decompiler jar does not exist: {decompiler_jar}")
 
-            with zipfile.ZipFile(jar_path) as archive:
-                archive.extractall(expanded_jar)
+            with tempfile.TemporaryDirectory(prefix=f"modcompiler-decompile-{slug}-") as temp_dir:
+                temp_root = Path(temp_dir)
+                expanded_jar = temp_root / "expanded-jar"
+                java_output = temp_root / "java-output"
+                package_root = temp_root / "package"
+                package_src = package_root / "src" / "main" / "java"
+                package_root.mkdir(parents=True, exist_ok=True)
+                expanded_jar.mkdir(parents=True, exist_ok=True)
+                java_output.mkdir(parents=True, exist_ok=True)
 
-            command = [
-                "java",
-                "-jar",
-                str(decompiler_jar),
-                str(expanded_jar),
-                str(java_output),
-            ]
-            with log_path.open("w", encoding="utf-8") as log_file:
-                log_file.write("$ " + " ".join(command) + "\n\n")
-                run = subprocess.run(
-                    command,
-                    cwd=Path.cwd(),
-                    stdout=log_file,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
-            if run.returncode != 0:
-                metadata["warnings"].append("Decompiler exited with a non-zero status.")
-            else:
-                for source_file in sorted(java_output.rglob("*")):
-                    if not source_file.is_file():
-                        continue
-                    relative = source_file.relative_to(java_output)
-                    destination = package_src / relative
-                    destination.parent.mkdir(parents=True, exist_ok=True)
-                    copy_file(source_file, destination)
-                if not list(package_src.rglob("*.java")) and not list(package_src.rglob("*.kt")):
-                    metadata["warnings"].append("Decompiler finished without producing Java or Kotlin source files.")
+                with zipfile.ZipFile(jar_path) as archive:
+                    archive.extractall(expanded_jar)
+
+                command = [
+                    "java",
+                    "-jar",
+                    str(decompiler_jar),
+                    str(expanded_jar),
+                    str(java_output),
+                ]
+                with log_path.open("w", encoding="utf-8") as log_file:
+                    log_file.write("$ " + " ".join(command) + "\n\n")
+                    run = subprocess.run(
+                        command,
+                        cwd=Path.cwd(),
+                        stdout=log_file,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                    )
+                if run.returncode != 0:
+                    metadata["warnings"].append("Decompiler exited with a non-zero status.")
                 else:
-                    inferred_entrypoint = detect_forge_entrypoint(package_root / "src", metadata["primary_mod_id"])
-                    if inferred_entrypoint and not metadata["metadata"]["entrypoint_class"]:
-                        metadata["metadata"]["entrypoint_class"] = inferred_entrypoint
-                        metadata["metadata"]["group"] = entrypoint_group(inferred_entrypoint)
-                        info_path.write_text(render_mod_info(metadata), encoding="utf-8")
-                    zip_path = artifact_dir / f"{slug}.zip"
-                    create_decompile_zip(package_root, zip_path)
-                    metadata["status"] = "success"
-                    metadata["zip_name"] = zip_path.name
-                    exit_code = 0
+                    for source_file in sorted(java_output.rglob("*")):
+                        if not source_file.is_file():
+                            continue
+                        relative = source_file.relative_to(java_output)
+                        destination = package_src / relative
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        copy_file(source_file, destination)
+                    if not list(package_src.rglob("*.java")) and not list(package_src.rglob("*.kt")):
+                        metadata["warnings"].append("Decompiler finished without producing Java or Kotlin source files.")
+                    else:
+                        inferred_entrypoint = detect_forge_entrypoint(package_root / "src", metadata["primary_mod_id"])
+                        if inferred_entrypoint and not metadata["metadata"]["entrypoint_class"]:
+                            metadata["metadata"]["entrypoint_class"] = inferred_entrypoint
+                            metadata["metadata"]["group"] = entrypoint_group(inferred_entrypoint)
+                            info_path.write_text(render_mod_info(metadata), encoding="utf-8")
+                        zip_path = artifact_dir / f"{slug}.zip"
+                        create_decompile_zip(package_root, zip_path)
+                        metadata["status"] = "success"
+                        metadata["zip_name"] = zip_path.name
+                        exit_code = 0
     except ModCompilerError as error:
         metadata["warnings"].append(str(error))
         append_failure_log(log_path, str(error))
@@ -123,7 +128,7 @@ def command_decompile_jar(args: Any) -> int:
             "Unhandled decompile exception:\n" + "".join(traceback.format_exception(error)),
         )
 
-    if metadata["status"] != "success":
+    if metadata["status"] not in {"success", "skipped"}:
         metadata["status"] = "failed"
     metadata["log_relpath"] = "decompile.log"
     if (artifact_dir / "mod_info.txt").exists():
@@ -184,6 +189,15 @@ def resolve_input_jar_path(raw_path: str) -> Path:
             return candidate
     searched = ", ".join(str(candidate) for candidate in candidates) or raw_path
     raise ModCompilerError(f"Jar path does not exist. Checked: {searched}")
+
+
+def jar_has_class_files(jar_path: Path) -> bool:
+    with zipfile.ZipFile(jar_path) as archive:
+        return any(
+            info.filename.endswith(".class")
+            for info in archive.infolist()
+            if not info.is_dir()
+        )
 
 
 def relativize_to_cwd(path: Path) -> str:
