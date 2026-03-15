@@ -25,7 +25,6 @@ MANIFEST_PATH = REPO_ROOT / "version-manifest.json"
 
 class DecompileTests(unittest.TestCase):
     def test_inspect_mod_jar_reads_fabric_metadata(self) -> None:
-        manifest = load_json(MANIFEST_PATH)
         with tempfile.TemporaryDirectory() as temp_dir:
             jar_path = Path(temp_dir) / "fabric-test.jar"
             with zipfile.ZipFile(jar_path, "w") as archive:
@@ -140,6 +139,40 @@ class DecompileTests(unittest.TestCase):
             result_json = json.loads((artifact_dir / "result.json").read_text(encoding="utf-8"))
             self.assertEqual(result_json["status"], "failed")
             self.assertIn("Jar path does not exist.", " ".join(result_json["warnings"]))
+
+    def test_command_decompile_jar_skips_when_no_class_files(self) -> None:
+        manifest = load_json(MANIFEST_PATH)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            jar_path = Path(temp_dir) / "empty.jar"
+            with zipfile.ZipFile(jar_path, "w") as archive:
+                archive.writestr(
+                    "META-INF/mods.toml",
+                    "\n".join(
+                        [
+                            'modLoader="javafml"',
+                            'loaderVersion="*"',
+                            'license="MIT"',
+                            "",
+                            "[[mods]]",
+                            'modId="emptytest"',
+                            'version="1.0.0"',
+                            'displayName="Empty Test"',
+                        ]
+                    ),
+                )
+            artifact_dir = Path(temp_dir) / "artifacts"
+            result = command_decompile_jar(
+                SimpleNamespace(
+                    jar_path=str(jar_path),
+                    manifest=str(MANIFEST_PATH),
+                    decompiler_jar=str(jar_path),
+                    artifact_dir=str(artifact_dir),
+                )
+            )
+            self.assertEqual(result, 0)
+            result_json = json.loads((artifact_dir / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(result_json["status"], "skipped")
+            self.assertTrue(any("no .class files" in warning.lower() for warning in result_json["warnings"]))
 
     def test_detect_forge_entrypoint_finds_mod_annotation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
