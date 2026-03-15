@@ -190,6 +190,23 @@ When Modrinth publishing runs, it:
 
 If authentication fails, the workflow reports that the Modrinth token is invalid or missing, but it does not print the token.
 
+### Publish Modrinth Bundle (Standalone)
+
+If you already have a bundle artifact from a prior run (for example `final-results` from auto-update or `all-mod-builds` from the build workflow) and want to publish later, use the `Publish Modrinth Bundle` workflow. It:
+
+1. downloads the artifact from the run ID you provide
+2. normalizes the bundle structure if needed
+3. uploads any missing versions to the Modrinth project you supply
+
+Inputs you provide:
+
+- `run_id`: the workflow run ID that produced the artifact
+- `artifact_name`: usually `final-results` or `all-mod-builds`
+- `modrinth_project_url`: the target Modrinth project URL or slug
+- `bundle_subdir` (optional): if the bundle lives in a subfolder of the artifact
+
+As with the main publish stage, it requires the `MODRINTH_TOKEN` repository secret.
+
 ## What The Build Input Must Look Like
 
 The builder expects one committed zip file under `incoming/`.
