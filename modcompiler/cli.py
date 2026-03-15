@@ -19,6 +19,7 @@ from modcompiler.common import (
     copy_tree,
     find_built_jars,
     find_plan_entry,
+    jar_contains_classes,
     java_home_for_version,
     load_json,
     load_plan,
@@ -73,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     auto_update_decompose_parser.add_argument("--modrinth-project-url", required=False, default="")
     auto_update_decompose_parser.add_argument("--mod-description", required=False, default="")
     auto_update_decompose_parser.add_argument("--auto-fetch-modrinth", required=False, default="true")
+    auto_update_decompose_parser.add_argument("--auto-fix-corrupted", required=False, default="false")
     auto_update_decompose_parser.add_argument("--version-range", required=False, default="all")
     auto_update_decompose_parser.add_argument("--update-mode", required=False, default="all-versions")
     auto_update_decompose_parser.add_argument("--publish-mode", required=False, default="bundle-only")
@@ -237,6 +239,15 @@ def command_build_one(args: argparse.Namespace) -> int:
                     result["warnings"].append("Gradle exited successfully but no primary jar was found.")
                     build_exit = 1
                 else:
+                    classful = [jar_path for jar_path in jars if jar_contains_classes(jar_path)]
+                    if not classful:
+                        result["warnings"].append("Built jars contain no .class files.")
+                        with log_path.open("a", encoding="utf-8") as log_file:
+                            log_file.write(
+                                "\nBuild produced jars without .class files. "
+                                "Check source layout (expected under src/main/java).\n"
+                            )
+                        build_exit = 1
                     jar_dir = artifact_dir / "jars"
                     jar_dir.mkdir(parents=True, exist_ok=True)
                     for jar_path in jars:

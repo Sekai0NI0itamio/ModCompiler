@@ -428,6 +428,17 @@ def find_built_jars(workspace: Path, jar_glob: str) -> list[Path]:
     return select_primary_jars(list(workspace.glob(jar_glob)))
 
 
+def jar_contains_classes(jar_path: Path) -> bool:
+    try:
+        with zipfile.ZipFile(jar_path) as archive:
+            for name in archive.namelist():
+                if name.endswith(".class"):
+                    return True
+    except zipfile.BadZipFile:
+        return False
+    return False
+
+
 def render_summary_markdown(results: list[dict[str, Any]]) -> str:
     header = [
         "# Build Summary",
