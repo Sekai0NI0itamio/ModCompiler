@@ -64,6 +64,7 @@ class AutoUpdateConfig:
     auto_fix_only: bool
     auto_fix_corrupted_downloads_dir: str | None
     auto_fix_corrupted_decompiled_dir: str | None
+    auto_fix_corrupted_report_dir: str | None
     version_range: str
     update_mode: str
     publish_mode: str
@@ -400,6 +401,7 @@ def _run_auto_fix_corrupted(
     output_dir: Path,
     downloads_dir: Path | None = None,
     predecompiled_dir: Path | None = None,
+    verification_entries: list[dict[str, Any]] | None = None,
 ) -> tuple[list[VersionTarget], dict[str, dict[str, Any]], dict[str, dict[str, Any]], Path]:
     token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
     project_ref = normalize_modrinth_project_ref(modrinth_project_url)
@@ -408,10 +410,12 @@ def _run_auto_fix_corrupted(
     project_name = str(project.get("title") or project.get("name") or project.get("slug") or project_ref)
     project_description = _extract_modrinth_description(project) or str(project.get("description", "") or "")
 
-    from modcompiler.openrouter import OpenRouterClient
-    client = OpenRouterClient()
-    if not client.key_states:
-        raise ModCompilerError("auto-fix-corrupted requires OPENROUTER_API_KEY to be set.")
+    client = None
+    if verification_entries is None:
+        from modcompiler.openrouter import OpenRouterClient
+        client = OpenRouterClient()
+        if not client.key_states:
+            raise ModCompilerError("auto-fix-corrupted requires OPENROUTER_API_KEY to be set.")
 
     scan_root = output_dir / "_corrupt_scan"
     downloads_root = downloads_dir if downloads_dir else (scan_root / "downloads")
@@ -426,98 +430,127 @@ def _run_auto_fix_corrupted(
     report_entries: list[dict[str, Any]] = []
     role_models: dict[str, dict[str, Any]] = {}
     corrupted_map: dict[tuple[str, str], dict[str, Any]] = {}
+    src_dirs_by_version: dict[str, Path] = {}
 
-    for version in versions:
-        version_id = str(version.get("id") or version.get("version_number") or "unknown")
-        version_number = str(version.get("version_number") or "")
-        loaders = [str(l) for l in version.get("loaders", [])]
-        game_versions = [str(v) for v in version.get("game_versions", [])]
-        date_published = str(version.get("date_published") or version.get("date") or "")
-
-        file_info = select_primary_modrinth_file(version.get("files", []))
-        if not file_info:
-            report_entries.append({
-                "version_id": version_id,
-                "version_number": version_number,
-                "loaders": loaders,
-                "game_versions": game_versions,
-                "verdict": "fail",
-                "confidence": 0.0,
-                "reason": "No downloadable file found.",
-                "date_published": date_published,
-            })
-            continue
-
-        file_url = str(file_info.get("url", "")).strip()
-        filename = str(file_info.get("filename", "")).strip() or f"{project_ref}-{version_id}.jar"
-        if not file_url:
-            report_entries.append({
-                "version_id": version_id,
-                "version_number": version_number,
-                "loaders": loaders,
-                "game_versions": game_versions,
-                "verdict": "fail",
-                "confidence": 0.0,
-                "reason": "Missing download URL.",
-                "date_published": date_published,
-            })
-            continue
-
-        pre_src_dir = None
+    if verification_entries is not None:
+        report_entries = verification_entries
         if predecompiled_root:
-            candidate = predecompiled_root / version_id
-            if candidate.exists():
-                has_sources = any(candidate.rglob("*.java")) or any(candidate.rglob("*.kt"))
-                if has_sources:
-                    pre_src_dir = candidate
+            for entry in report_entries:
+                version_id = str(entry.get("version_id") or "")
+                if not version_id:
+                    continue
+                candidate = predecompiled_root / version_id
+                if candidate.exists() and (list(candidate.rglob("*.java")) or list(candidate.rglob("*.kt"))):
+                    src_dirs_by_version[version_id] = candidate
+    else:
+        for version in versions:
+            version_id = str(version.get("id") or version.get("version_number") or "unknown")
+            version_number = str(version.get("version_number") or "")
+            loaders = [str(l) for l in version.get("loaders", [])]
+            game_versions = [str(v) for v in version.get("game_versions", [])]
+            date_published = str(version.get("date_published") or version.get("date") or "")
 
-        if pre_src_dir:
-            src_dir = pre_src_dir
-            decompile_status = "success"
-        else:
-            jar_path = downloads_root / version_id / filename
-            if not jar_path.exists():
-                _download_modrinth_file(file_url, jar_path)
+            file_info = select_primary_modrinth_file(version.get("files", []))
+            if not file_info:
+                report_entries.append({
+                    "version_id": version_id,
+                    "version_number": version_number,
+                    "loaders": loaders,
+                    "game_versions": game_versions,
+                    "verdict": "fail",
+                    "confidence": 0.0,
+                    "reason": "No downloadable file found.",
+                    "date_published": date_published,
+                })
+                continue
 
-            decomp_output = decompiled_dir / version_id
-            decompile_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_output)
-            src_dir = decompile_result.extracted_src
-            decompile_status = decompile_result.status
+            file_url = str(file_info.get("url", "")).strip()
+            filename = str(file_info.get("filename", "")).strip() or f"{project_ref}-{version_id}.jar"
+            if not file_url:
+                report_entries.append({
+                    "version_id": version_id,
+                    "version_number": version_number,
+                    "loaders": loaders,
+                    "game_versions": game_versions,
+                    "verdict": "fail",
+                    "confidence": 0.0,
+                    "reason": "Missing download URL.",
+                    "date_published": date_published,
+                })
+                continue
 
-        verdict_payload = {
-            "verdict": "fail",
-            "confidence": 0.0,
-            "reason": "Decompiler produced no sources.",
-        }
-        if decompile_status == "success":
-            verdict_payload = _verify_mod_source_with_ai(
-                client=client,
-                project_name=project_name,
-                project_description=project_description,
-                version_label=version_number or version_id,
-                loader=loaders[0] if loaders else "unknown",
-                game_versions=game_versions,
-                src_dir=src_dir,
-            )
+            pre_src_dir = None
+            if predecompiled_root:
+                candidate = predecompiled_root / version_id
+                if candidate.exists():
+                    has_sources = any(candidate.rglob("*.java")) or any(candidate.rglob("*.kt"))
+                    if has_sources:
+                        pre_src_dir = candidate
 
-        verdict = verdict_payload.get("verdict", "").lower()
-        confidence = float(verdict_payload.get("confidence", 0.0) or 0.0)
+            if pre_src_dir:
+                src_dir = pre_src_dir
+                decompile_status = "success"
+            else:
+                jar_path = downloads_root / version_id / filename
+                if not jar_path.exists():
+                    _download_modrinth_file(file_url, jar_path)
+
+                decomp_output = decompiled_dir / version_id
+                decompile_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_output)
+                src_dir = decompile_result.extracted_src
+                decompile_status = decompile_result.status
+
+            src_dirs_by_version[version_id] = src_dir
+
+            verdict_payload = {
+                "verdict": "fail",
+                "confidence": 0.0,
+                "reason": "Decompiler produced no sources.",
+            }
+            if decompile_status == "success":
+                verdict_payload = _verify_mod_source_with_ai(
+                    client=client,
+                    project_name=project_name,
+                    project_description=project_description,
+                    version_label=version_number or version_id,
+                    loader=loaders[0] if loaders else "unknown",
+                    game_versions=game_versions,
+                    src_dir=src_dir,
+                )
+
+            verdict = verdict_payload.get("verdict", "").lower()
+            confidence = float(verdict_payload.get("confidence", 0.0) or 0.0)
+            passed = verdict == "pass" and confidence >= 0.6
+            if not passed:
+                verdict = "fail"
+
+            report_entries.append({
+                "version_id": version_id,
+                "version_number": version_number,
+                "loaders": loaders,
+                "game_versions": game_versions,
+                "verdict": verdict,
+                "confidence": confidence,
+                "reason": verdict_payload.get("reason", ""),
+                "date_published": date_published,
+            })
+
+    for entry in report_entries:
+        version_id = str(entry.get("version_id") or "")
+        version_number = str(entry.get("version_number") or "")
+        loaders = [str(l) for l in entry.get("loaders", [])]
+        game_versions = [str(v) for v in entry.get("game_versions", [])]
+        date_published = str(entry.get("date_published") or "")
+        verdict = str(entry.get("verdict", "")).lower()
+        confidence = float(entry.get("confidence", 0.0) or 0.0)
         passed = verdict == "pass" and confidence >= 0.6
         if not passed:
             verdict = "fail"
 
-        report_entries.append({
-            "version_id": version_id,
-            "version_number": version_number,
-            "loaders": loaders,
-            "game_versions": game_versions,
-            "verdict": verdict,
-            "confidence": confidence,
-            "reason": verdict_payload.get("reason", ""),
-            "date_published": date_published,
-        })
-
         if passed:
+            src_dir = src_dirs_by_version.get(version_id)
+            if src_dir is None:
+                continue
             published_at = _parse_modrinth_datetime(date_published)
             for loader in loaders:
                 current = role_models.get(loader)
@@ -1213,6 +1246,11 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             if hasattr(args, "auto_fix_corrupted_decompiled_dir")
             else ""
         ),
+        auto_fix_corrupted_report_dir=(
+            args.auto_fix_corrupted_report_dir
+            if hasattr(args, "auto_fix_corrupted_report_dir")
+            else ""
+        ),
         version_range=args.version_range if hasattr(args, "version_range") else "all",
         update_mode=args.update_mode if hasattr(args, "update_mode") else "all-versions",
         publish_mode=args.publish_mode if hasattr(args, "publish_mode") else "bundle-only",
@@ -1297,6 +1335,20 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         predecompiled_dir = None
         if config.auto_fix_corrupted_decompiled_dir:
             predecompiled_dir = Path(config.auto_fix_corrupted_decompiled_dir)
+        verification_entries = None
+        if config.auto_fix_corrupted_report_dir:
+            report_root = Path(config.auto_fix_corrupted_report_dir)
+            if report_root.exists():
+                entries = []
+                for path in sorted(report_root.glob("*.json")):
+                    try:
+                        payload = load_json(path)
+                    except Exception:
+                        continue
+                    if isinstance(payload, dict):
+                        entries.append(payload)
+                if entries:
+                    verification_entries = entries
         (
             corrupted_targets,
             fix_info_map,
@@ -1308,6 +1360,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             output_dir=config.output_dir,
             downloads_dir=downloads_dir,
             predecompiled_dir=predecompiled_dir,
+            verification_entries=verification_entries,
         )
         corruption_report_path = str(report_path)
 
