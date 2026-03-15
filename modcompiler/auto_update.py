@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import zipfile
 import urllib.parse
 from dataclasses import dataclass
@@ -117,6 +118,34 @@ def _get_all_supported_versions(manifest: dict[str, Any], current_loader: str) -
     return targets
 
 
+def _get_all_supported_versions_for_loaders(
+    manifest: dict[str, Any],
+    loaders: list[str],
+) -> list[VersionTarget]:
+    targets: list[VersionTarget] = []
+    for range_entry in manifest["ranges"]:
+        entry_loaders = range_entry.get("loaders", {})
+        for loader in loaders:
+            if loader not in entry_loaders:
+                continue
+            loader_config = entry_loaders[loader]
+            supported_versions = loader_config.get("supported_versions", [])
+            if not supported_versions:
+                min_ver = range_entry.get("min_version", "")
+                max_ver = range_entry.get("max_version", "")
+                if min_ver and max_ver:
+                    supported_versions = [max_ver]
+            if not supported_versions:
+                continue
+            for mc_version in supported_versions:
+                targets.append(VersionTarget(
+                    minecraft_version=mc_version,
+                    loader=loader,
+                    slug=f"{mc_version}-{loader}",
+                ))
+    return targets
+
+
 def _parse_explicit_version_pair(part: str, manifest: dict[str, Any]) -> list[VersionTarget]:
     match = re.match(r"^(\d+\.\d+(?:\.\d+)?)(fabric|forge|neoforge)?$", part)
     if not match:
@@ -197,6 +226,7 @@ def check_modrinth_versions(modrinth_project_url: str, loader: str) -> dict[str,
     )
 
     existing = {"versions": [], "loaders": set()}
+    versions_by_loader: dict[str, set[str]] = {}
     if isinstance(versions, list):
         for v in versions:
             game_versions = v.get("game_versions", [])
@@ -205,13 +235,16 @@ def check_modrinth_versions(modrinth_project_url: str, loader: str) -> dict[str,
                 existing["versions"].append(gv)
             for l in loaders:
                 existing["loaders"].add(l)
+                versions_by_loader.setdefault(l, set()).update(game_versions)
 
     existing["versions"] = list(set(existing["versions"]))
+    versions_by_loader_serialized = {k: sorted(list(v)) for k, v in versions_by_loader.items()}
     return {
         "project_id": project.get("id", ""),
         "project_slug": project.get("slug", ""),
         "existing_versions": existing["versions"],
         "existing_loaders": list(existing["loaders"]),
+        "existing_versions_by_loader": versions_by_loader_serialized,
     }
 
 
@@ -223,8 +256,16 @@ def filter_versions_to_build(
     if not modrinth_info or update_mode == "all-versions":
         return version_targets
 
-    existing = set(modrinth_info.get("existing_versions", []))
-    filtered = [vt for vt in version_targets if vt.minecraft_version not in existing]
+    existing_by_loader = modrinth_info.get("existing_versions_by_loader")
+    if isinstance(existing_by_loader, dict) and existing_by_loader:
+        filtered = [
+            vt
+            for vt in version_targets
+            if vt.minecraft_version not in set(existing_by_loader.get(vt.loader, []))
+        ]
+    else:
+        existing = set(modrinth_info.get("existing_versions", []))
+        filtered = [vt for vt in version_targets if vt.minecraft_version not in existing]
     return filtered
 
 
@@ -749,12 +790,26 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     current_loader = mod_info.get("loader", "fabric")
     current_version = mod_info.get("supported_minecraft", "1.20.1")
 
-    version_targets = parse_version_input(config.version_range, manifest, current_loader)
+    version_range_clean = config.version_range.strip().lower()
+    include_neoforge_missing = (
+        config.update_mode == "missing-only"
+        and version_range_clean in {"", "all"}
+        and config.modrinth_project_url
+    )
+
+    if include_neoforge_missing:
+        loaders_to_include = {current_loader}
+        if any("neoforge" in entry.get("loaders", {}) for entry in manifest.get("ranges", [])):
+            loaders_to_include.add("neoforge")
+        version_targets = _get_all_supported_versions_for_loaders(manifest, sorted(loaders_to_include))
+    else:
+        version_targets = parse_version_input(config.version_range, manifest, current_loader)
 
     modrinth_info = None
     if config.modrinth_project_url:
         try:
-            modrinth_info = check_modrinth_versions(config.modrinth_project_url, current_loader)
+            loader_filter = "" if include_neoforge_missing else current_loader
+            modrinth_info = check_modrinth_versions(config.modrinth_project_url, loader_filter)
         except Exception as e:
             print(f"Warning: Could not fetch Modrinth versions: {e}", file=sys.stderr)
 
@@ -1212,11 +1267,20 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
         files_written_count = 0
         last_tool = None
         tools_without_build = 0
+        api_call_count = 0
+        api_latency_total = 0.0
+        api_latency_samples: list[float] = []
+        total_tool_calls = 0
         
         for iteration in range(max_iterations):
             print(f"DEBUG: Iteration {iteration+1}: Calling API...", file=sys.stderr)
             try:
+                call_started = time.perf_counter()
                 response = client.chat_completion_with_fallback(messages, temperature=0.7, max_tokens=4000, tools=get_tools_definition())
+                call_elapsed = time.perf_counter() - call_started
+                api_call_count += 1
+                api_latency_total += call_elapsed
+                api_latency_samples.append(call_elapsed)
             except Exception as e:
                 print(f"DEBUG: API call failed: {e}", file=sys.stderr)
                 raise
@@ -1229,6 +1293,7 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
             assistant_payload = choice.get("message", {})
             assistant_message = assistant_payload.get("content") or ""
             tool_calls = assistant_payload.get("tool_calls", [])
+            total_tool_calls += len(tool_calls)
 
             assistant_entry: dict[str, Any] = {"role": "assistant", "content": assistant_message}
             if tool_calls:
@@ -1339,6 +1404,14 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
                 break
 
         print(f"DEBUG: AI loop completed. result_status={result['status']}, build_attempted={build_attempted}, build_success={build_success}", file=sys.stderr)
+        assistant_message_count = sum(1 for m in messages if m.get("role") == "assistant")
+        result["ai_metrics"] = {
+            "api_calls": api_call_count,
+            "api_latency_seconds_total": api_latency_total,
+            "api_latency_seconds_avg": (api_latency_total / api_call_count) if api_call_count else 0.0,
+            "assistant_messages": assistant_message_count,
+            "tool_calls": total_tool_calls,
+        }
         result["chat_history"] = messages[:50]
 
     except Exception as e:

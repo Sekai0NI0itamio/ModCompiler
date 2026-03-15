@@ -190,11 +190,57 @@ jobs:
             --output-dir ".workflow_artifacts/ai-${{ matrix.slug }}" \
             --artifact-dir ".workflow_artifacts/per-mod/${{ matrix.slug }}" 2>&1
 
+      - name: Mask Modrinth token (immediate)
+        if: ${{ inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - name: Publish to Modrinth immediately
+        if: ${{ inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
+        shell: bash
+        continue-on-error: true
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set +e
+          status=$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path(".workflow_artifacts/per-mod/${{ matrix.slug }}/result.json").read_text())
+          print(data.get("status", "failed"))
+          PY
+          )
+          if [ "$status" != "success" ]; then
+            echo "Skip Modrinth publish (status=$status)"
+            exit 0
+          fi
+          python3 build_mods.py bundle \
+            --artifacts-root ".workflow_artifacts/per-mod/${{ matrix.slug }}" \
+            --output-dir ".workflow_artifacts/publish-bundle/${{ matrix.slug }}"
+          python3 build_mods.py publish-modrinth \
+            --artifacts-root ".workflow_artifacts/publish-bundle/${{ matrix.slug }}" \
+            --project "${{ inputs.modrinth_project_url }}" \
+            --artifact-dir ".workflow_artifacts/modrinth-publish/${{ matrix.slug }}"
+          exit_code=$?
+          set -e
+          exit 0
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ai-mod-${{ matrix.slug }}
           path: .workflow_artifacts/per-mod/${{ matrix.slug }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && inputs.publish_mode == 'immediately' }}
+        with:
+          name: modrinth-publish-${{ matrix.slug }}
+          path: .workflow_artifacts/modrinth-publish/${{ matrix.slug }}
 
   bundle:
     needs:
@@ -307,3 +353,145 @@ jobs:
         with:
           name: modrinth-publish
           path: .workflow_artifacts/modrinth-publish
+
+  summary:
+    needs:
+      - decompose
+      - ai-rebuild
+      - bundle
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-mod-*
+          path: .workflow_downloads/ai-mods
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: modrinth-publish*
+          path: .workflow_downloads/modrinth
+
+      - id: build_summary
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          ai_root = Path(".workflow_downloads/ai-mods")
+          modrinth_root = Path(".workflow_downloads/modrinth")
+
+          ai_results = []
+          for path in ai_root.rglob("result.json"):
+            try:
+              data = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+              continue
+            if not all(key in data for key in ("slug", "loader", "minecraft_version")):
+              continue
+            ai_results.append(data)
+
+          total = len(ai_results)
+          success = sum(1 for r in ai_results if r.get("status") == "success")
+          failed = total - success
+
+          total_calls = 0
+          total_latency = 0.0
+          success_calls = []
+
+          for r in ai_results:
+            metrics = r.get("ai_metrics", {})
+            calls = int(metrics.get("api_calls", 0) or 0)
+            latency = float(metrics.get("api_latency_seconds_total", 0.0) or 0.0)
+            total_calls += calls
+            total_latency += latency
+            if r.get("status") == "success" and calls:
+              success_calls.append(calls)
+
+          avg_latency = (total_latency / total_calls) if total_calls else 0.0
+          avg_calls_success = (sum(success_calls) / len(success_calls)) if success_calls else 0.0
+
+          publish_map = {}
+          if modrinth_root.exists():
+            for path in modrinth_root.rglob("result.json"):
+              try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+              except Exception:
+                continue
+              for upload in data.get("uploads", []) or []:
+                key = (upload.get("slug"), upload.get("loader"), upload.get("minecraft_version"))
+                publish_map[key] = upload
+
+          lines = [
+            "# Auto Update Summary",
+            "",
+            "## Overview",
+            f"- Total targets: {total}",
+            f"- Successful: {success}",
+            f"- Failed: {failed}",
+            "",
+            "## AI Metrics",
+            f"- Total AI requests: {total_calls}",
+            f"- Average AI latency: {avg_latency * 1000:.0f} ms",
+            f"- Average AI calls to success: {avg_calls_success:.2f}",
+            "",
+            "## Per-Target Status",
+            "| Slug | Loader | Minecraft | Status | AI Calls | Publish Status | Note |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
+          ]
+
+          for r in sorted(ai_results, key=lambda x: (x.get("slug", ""), x.get("loader", ""), x.get("minecraft_version", ""))):
+            key = (r.get("slug"), r.get("loader"), r.get("minecraft_version"))
+            publish = publish_map.get(key, {})
+            publish_status = publish.get("publish_status", "-")
+            note = publish.get("note", "-") or "-"
+            calls = r.get("ai_metrics", {}).get("api_calls", 0)
+            lines.append(
+              "| {slug} | {loader} | {mc} | {status} | {calls} | {publish} | {note} |".format(
+                slug=r.get("slug", "-"),
+                loader=r.get("loader", "-"),
+                mc=r.get("minecraft_version", "-"),
+                status=r.get("status", "-"),
+                calls=calls,
+                publish=publish_status,
+                note=note.replace("\\n", " "),
+              )
+            )
+
+          summary_dir = Path(".workflow_artifacts/summary")
+          summary_dir.mkdir(parents=True, exist_ok=True)
+          summary_path = summary_dir / "SUMMARY.md"
+          summary_path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+
+          summary_json = {
+            "total": total,
+            "success": success,
+            "failed": failed,
+            "total_ai_requests": total_calls,
+            "average_ai_latency_seconds": avg_latency,
+            "average_ai_calls_to_success": avg_calls_success,
+          }
+          (summary_dir / "summary.json").write_text(json.dumps(summary_json, indent=2), encoding="utf-8")
+          print(f"Wrote summary to {summary_path}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auto-update-summary
+          path: .workflow_artifacts/summary
+
+      - if: always()
+        shell: bash
+        run: |
+          if [ -f .workflow_artifacts/summary/SUMMARY.md ]; then
+            cat .workflow_artifacts/summary/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
