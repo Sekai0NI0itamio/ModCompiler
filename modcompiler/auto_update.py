@@ -1116,6 +1116,7 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     role_model_dir = context.get("role_model_dir", "")
     role_model_version = context.get("role_model_version", "")
     role_model_unverified = bool(context.get("role_model_unverified"))
+    role_model_loader = context.get("role_model_loader", "")
     fix_corrupted = bool(context.get("fix_corrupted"))
     supported_versions_text = ", ".join(supported_versions) if supported_versions else "unknown"
     range_versions_text = ", ".join(supported_versions_for_range) if supported_versions_for_range else "unknown"
@@ -1123,9 +1124,11 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     role_model_block = ""
     if role_model_dir:
         label = "ROLE MODEL SOURCE (verified working)" if not role_model_unverified else "ROLE MODEL SOURCE (unverified fallback)"
+        role_loader = role_model_loader or target_l
         role_model_block = (
             f"\n{label}: {role_model_dir} "
-            f"(version {role_model_version or 'unknown'})\n"
+            f"(built for loader {role_loader}, version {role_model_version or 'unknown'})\n"
+            f"Target loader/version: {target_l} {target_v}\n"
             "Read this if you need a known-good reference for behavior.\n"
         )
     fix_block = ""
@@ -1477,6 +1480,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             context["role_model_dir"] = "reference/role-model"
             context["role_model_version"] = role_models[target.loader].get("version_number", "")
             context["role_model_unverified"] = bool(role_models[target.loader].get("unverified"))
+            context["role_model_loader"] = target.loader
 
         version_folder = create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
         role_model = role_models.get(target.loader)
@@ -1779,7 +1783,12 @@ ACTION: Read files, update them, write to src/java/, then call build."""
             label = "ROLE MODEL AVAILABLE"
             if context.get("role_model_unverified"):
                 label = "ROLE MODEL AVAILABLE (UNVERIFIED)"
-            role_model_note = f"\n{label}: {context.get('role_model_dir')} (version {context.get('role_model_version', 'unknown')})\n"
+            role_loader = context.get("role_model_loader") or target_loader
+            role_model_note = (
+                f"\n{label}: {context.get('role_model_dir')} "
+                f"(built for loader {role_loader}, version {context.get('role_model_version', 'unknown')})\n"
+                f"Target loader/version: {target_loader} {target_version}\n"
+            )
         fix_note = "\nNOTE: This target is marked as corrupted; ensure behavior matches the description.\n" if context.get("fix_corrupted") else ""
 
         user_msg_1 = f"""Update this mod for {target_loader} {target_version}.

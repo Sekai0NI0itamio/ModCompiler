@@ -492,7 +492,19 @@ jobs:
               print("No files to verify in this batch.")
               raise SystemExit(0)
           
-          project_info = load_json(Path(".workflow_state/corrupt-project.json"))
+          candidates = [
+              Path(".workflow_state/corrupt-project.json"),
+              Path("corrupt-project.json"),
+              Path(".workflow_state/.workflow_state/corrupt-project.json"),
+          ]
+          project_path = next((p for p in candidates if p.exists()), None)
+          if project_path is None:
+              matches = list(Path(".").rglob("corrupt-project.json"))
+              if matches:
+                  project_path = matches[0]
+          if project_path is None:
+              raise SystemExit("corrupt-project.json not found after artifact download.")
+          project_info = load_json(project_path)
           project_name = str(project_info.get("project_name") or project_info.get("project_ref") or "mod")
           project_description = str(project_info.get("project_description") or "")
           
