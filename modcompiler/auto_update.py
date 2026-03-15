@@ -1161,7 +1161,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "read_reference",
-                "description": "Read example mod file. Use path like 'src/main/java/com/example/ExampleMod.java'",
+                "description": "Read example mod file (path is relative to reference/, do NOT include 'reference/').",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1453,11 +1453,13 @@ Older versions may use SRG/obf names (e.g., Minecraft.func_71410_x()); modern ve
 **FOLDER STRUCTURE - IMPORTANT:**
 - Original source files: `src/` (read with read_file using paths like "java/com/examplemod/Mod.java")
 - Reference examples: `reference/` (read with read_reference - these show correct {target_v} patterns!)
-- Role model (if present): `reference/role-model/<candidate>/...` (check both `java/` and `resources/` folders)
+- Role model (if present): `role-model/<candidate>/...` (inside reference/, check both `java/` and `resources/` folders)
 - YOUR output: `src/java/` (write with write_mod_file - auto-adds prefix)
 - Resources output: `src/resources/` (write with write_resource)
 **Library sources note:** Some versions store Minecraft sources under `minecraft/` with `.java.patch` files.
 Use `library_search` to find the exact path, then `library_read` to open it.
+**Reference paths note:** When using `read_reference`, paths are relative to `reference/` (do NOT include the `reference/` prefix).
+**Forge resources note:** For Forge/NeoForge 1.13+, use `META-INF/mods.toml` (do NOT create `mcmod.info` unless the reference explicitly contains it).
 
 If original source has no Java/Kotlin files, treat it as missing and use the selected role model folder as your starting point.
 
@@ -2784,6 +2786,21 @@ def _tool_write_resource(version_dir: Path, args: dict[str, str]) -> str:
 
     if not path:
         return "Error: path is required"
+
+    if path.lower().endswith("mcmod.info"):
+        context_path = version_dir / "context.json"
+        try:
+            ctx = load_json(context_path)
+            target_version = str(ctx.get("target_version", "") or "")
+            target_loader = str(ctx.get("target_loader", "") or "")
+            if target_loader in {"forge", "neoforge"}:
+                try:
+                    if parse_version_tuple(target_version) >= parse_version_tuple("1.13"):
+                        return "Error: mcmod.info is legacy for Forge 1.13+. Use META-INF/mods.toml instead."
+                except Exception:
+                    pass
+        except Exception:
+            pass
     
     if not path.startswith("src/resources/"):
         if path.startswith("src/main/resources/"):
@@ -2804,7 +2821,11 @@ def _tool_read_reference(version_dir: Path, args: dict[str, str]) -> str:
     path = args.get("path", "")
     if not path:
         return "Error: path is required"
-    
+    normalized = path.replace("\\", "/").lstrip("./")
+    if normalized.startswith("reference/"):
+        normalized = normalized[len("reference/"):]
+    path = normalized
+
     ref_dir = version_dir / "reference"
     if not ref_dir.exists():
         return "Error: reference folder not found"
@@ -2824,6 +2845,11 @@ def _tool_read_reference(version_dir: Path, args: dict[str, str]) -> str:
 
 def _tool_list_reference(version_dir: Path, args: dict[str, str]) -> str:
     path = args.get("path", "")
+    if path:
+        normalized = path.replace("\\", "/").lstrip("./")
+        if normalized.startswith("reference/"):
+            normalized = normalized[len("reference/"):]
+        path = normalized
     
     ref_dir = version_dir / "reference"
     if not ref_dir.exists():
@@ -2890,17 +2916,48 @@ def _tool_copy_to_structure(version_dir: Path, args: dict[str, str]) -> str:
         return f"Copied directory {source_path} to {dest_path}"
 
 
+def _has_java_sources(path: Path) -> bool:
+    try:
+        for pattern in ("*.java", "*.java.patch"):
+            if next(path.rglob(pattern), None) is not None:
+                return True
+    except Exception:
+        return False
+    return False
+
+
 def _is_sources_root(path: Path) -> bool:
-    return path.is_dir() and (path / "net" / "minecraft").exists()
+    if not path.is_dir():
+        return False
+    if (path / "net" / "minecraft").exists() or (path / "minecraft").exists():
+        return _has_java_sources(path)
+    if (path / "src" / "main" / "java" / "net" / "minecraft").exists():
+        return _has_java_sources(path / "src" / "main" / "java")
+    return False
 
 
 def _find_sources_root(path: Path) -> Path | None:
     if _is_sources_root(path):
-        return path
+        if (path / "net" / "minecraft").exists():
+            return path
+        if (path / "minecraft").exists():
+            return path
+        if (path / "src" / "main" / "java" / "net" / "minecraft").exists():
+            candidate = path / "src" / "main" / "java"
+            return candidate if _has_java_sources(candidate) else None
     try:
         for match in path.rglob("net/minecraft"):
             if match.is_dir():
-                return match.parent
+                candidate = match.parent.parent
+                if _has_java_sources(candidate):
+                    return candidate
+        for match in path.rglob("minecraft"):
+            if match.is_dir():
+                # Ensure this is a Minecraft sources root, not an unrelated folder.
+                if (match / "server").exists() or (match / "client").exists():
+                    candidate = match.parent
+                    if _has_java_sources(candidate):
+                        return candidate
     except Exception:
         return None
     return None
@@ -2974,6 +3031,13 @@ def _prepare_gradle_sources(
     )
 
     version_dir = version_dir.resolve()
+    if _get_library_sources(version_dir, target_version, target_loader, allow_prepare=False):
+        print(
+            f"DEBUG[_prepare_gradle_sources]: Cached sources found for {target_version}-{target_loader}; skipping regeneration.",
+            file=sys.stderr,
+        )
+        return
+
     manifest_path = Path("version-manifest.json")
     if not manifest_path.exists():
         return
@@ -3169,9 +3233,12 @@ gradle.projectsEvaluated {
             return filtered or candidates
 
         attempted = set()
-        tasks_to_try = [task]
         available = list_tasks()
-        tasks_to_try.extend([t for t in pick_task(available) if t not in tasks_to_try])
+        if available and task not in available:
+            tasks_to_try = pick_task(available)
+        else:
+            tasks_to_try = [task]
+            tasks_to_try.extend([t for t in pick_task(available) if t not in tasks_to_try])
 
         for candidate in tasks_to_try:
             if candidate in attempted:
@@ -3218,22 +3285,29 @@ def _get_library_sources(
             return cached_path
 
     local_root = version_dir / ".workflow_state" / "minecraft-sources" / f"{target_version}-{target_loader}"
-    local_source = _find_sources_root(local_root) if local_root.exists() else None
-    if local_source:
-        _library_sources_cache[cache_key] = local_source
-        return local_source
+    global_root = Path(".") / ".workflow_state" / "minecraft-sources" / f"{target_version}-{target_loader}"
+
+    for root in (local_root, global_root):
+        root = root.resolve()
+        local_source = _find_sources_root(root) if root.exists() else None
+        if local_source:
+            _library_sources_cache[cache_key] = local_source
+            return local_source
 
     gradle_caches = Path.home() / ".gradle" / "caches"
-    source_dirs: list[Path] = []
+    source_roots: list[Path] = []
     try:
         for path in gradle_caches.rglob("sources"):
-            if path.is_dir() and _is_sources_root(path):
-                source_dirs.append(path)
+            if not path.is_dir():
+                continue
+            root = _find_sources_root(path)
+            if root and _has_java_sources(root):
+                source_roots.append(root)
     except Exception:
-        source_dirs = []
+        source_roots = []
 
-    selected = _select_best_source_candidate(source_dirs, target_version, target_loader)
-    if selected:
+    selected = _select_best_source_candidate(source_roots, target_version, target_loader)
+    if selected and _has_java_sources(selected):
         _library_sources_cache[cache_key] = selected
         return selected
 
@@ -3255,17 +3329,26 @@ def _get_library_sources(
 
     if allow_prepare:
         _prepare_gradle_sources(version_dir, target_version, target_loader)
+        for root in (local_root, global_root):
+            root = root.resolve()
+            local_source = _find_sources_root(root) if root.exists() else None
+            if local_source:
+                _library_sources_cache[cache_key] = local_source
+                return local_source
 
-    source_dirs = []
+    source_roots = []
     try:
         for path in gradle_caches.rglob("sources"):
-            if path.is_dir() and _is_sources_root(path):
-                source_dirs.append(path)
+            if not path.is_dir():
+                continue
+            root = _find_sources_root(path)
+            if root and _has_java_sources(root):
+                source_roots.append(root)
     except Exception:
-        source_dirs = []
+        source_roots = []
 
-    selected = _select_best_source_candidate(source_dirs, target_version, target_loader)
-    if selected:
+    selected = _select_best_source_candidate(source_roots, target_version, target_loader)
+    if selected and _has_java_sources(selected):
         _library_sources_cache[cache_key] = selected
         return selected
 
@@ -3506,6 +3589,30 @@ def _tool_file_write(version_dir: Path, args: dict[str, str]) -> str:
     file_path.write_text(content, encoding="utf-8")
 
     return f"File written: {path} ({len(content)} bytes)"
+
+
+def _extract_build_errors(log_content: str) -> str:
+    patterns = [
+        r"error:",
+        r"cannot find symbol",
+        r"symbol:\s+class",
+        r"incompatible types",
+        r"Compilation failed",
+        r"FAILED",
+        r"FAILURE: Build failed",
+    ]
+    regex = re.compile("|".join(patterns), re.IGNORECASE)
+    lines = log_content.splitlines()
+    hit_lines: dict[int, str] = {}
+    for idx, line in enumerate(lines):
+        if regex.search(line):
+            for j in range(max(0, idx - 1), min(len(lines), idx + 3)):
+                hit_lines[j] = lines[j]
+    if hit_lines:
+        ordered = [hit_lines[i] for i in sorted(hit_lines)]
+        return "\n".join(ordered[-120:])
+    # Fallback: return the last 120 lines if no matches.
+    return "\n".join(lines[-120:])
 
 
 def _tool_file_edit(version_dir: Path, args: dict[str, str]) -> str:
@@ -3751,10 +3858,10 @@ Manifest: version-manifest.json
 
         if build_failed_code is not None:
             log_content = log_path.read_text(encoding="utf-8", errors="replace")
-            tail = log_content[-3000:] if len(log_content) > 3000 else log_content
+            snippet = _extract_build_errors(log_content)
             return (
-                f"Build failed (exit {build_failed_code}). Check build.log for details.\n\n"
-                f"Last 3000 chars:\n\n{tail}"
+                f"Build failed (exit {build_failed_code}). Error summary:\n\n{snippet}\n\n"
+                "Use read_build_log if you need the full log."
             ), False
 
         jars = find_built_jars(workspace, jar_glob_pattern)
