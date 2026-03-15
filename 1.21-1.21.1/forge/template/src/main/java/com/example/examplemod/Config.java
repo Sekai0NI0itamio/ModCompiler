@@ -16,6 +16,10 @@ import java.util.stream.Collectors;
 
 // An example config class. This is not required, but it's a good idea to have one to keep your config organized.
 // Demonstrates how to use Forge's config APIs
+//
+// TEMPLATE NOTES (Forge 1.21-1.21.1):
+// - ResourceLocation(String, String) has a private constructor in 1.21.1; use fromNamespaceAndPath.
+// - Keep item name parsing strict to avoid nulls in registry lookups.
 @Mod.EventBusSubscriber(modid = ExampleMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Config
 {

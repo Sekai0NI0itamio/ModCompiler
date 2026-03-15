@@ -1844,45 +1844,48 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
 
     local_template = version_dir / "template"
     resolved_range_folder = ""
-    build_command_list = []
+    build_command_list: list[str] = []
     jar_glob_pattern = "build/libs/*.jar"
     template_dir = ""
-    
-    if local_template.exists():
+
+    manifest_path = Path("version-manifest.json")
+    if not manifest_path.exists():
+        return "Error: version-manifest.json not found", False
+
+    manifest = load_json(manifest_path)
+    loader_config: dict[str, Any] | None = None
+
+    for range_entry in manifest["ranges"]:
+        if version_inclusive_between(target_version, range_entry["min_version"], range_entry["max_version"]):
+            if target_loader in range_entry["loaders"]:
+                resolved_range_folder = range_entry["folder"]
+                loader_config = range_entry["loaders"][target_loader]
+                break
+
+    if not loader_config:
+        return f"Error: No version folder found for {target_version}", False
+
+    build_command_list = loader_config.get("build_command", ["./modcompiler-build.sh"])
+    if not build_command_list:
+        build_command_list = ["./modcompiler-build.sh"]
+    jar_glob_pattern = loader_config.get("jar_glob", "build/libs/*.jar")
+
+    preferred_template = context.get("template_dir", "")
+    if preferred_template and Path(preferred_template).exists():
+        template_dir = preferred_template
+        if local_template.exists():
+            print(
+                f"DEBUG[_tool_build]: Local template exists but using manifest template: {template_dir}",
+                file=sys.stderr,
+            )
+    elif local_template.exists():
         template_dir = str(local_template)
         print(f"DEBUG[_tool_build]: Using local template: {template_dir}", file=sys.stderr)
-        
-        manifest = load_json(Path("version-manifest.json"))
-        
-        for range_entry in manifest["ranges"]:
-            if version_inclusive_between(target_version, range_entry["min_version"], range_entry["max_version"]):
-                if target_loader in range_entry["loaders"]:
-                    resolved_range_folder = range_entry["folder"]
-                    loader_config = range_entry["loaders"][target_loader]
-                    build_command_list = loader_config.get("build_command", ["./gradlew", "build", "--stacktrace", "--no-daemon"])
-                    jar_glob_pattern = loader_config.get("jar_glob", "build/libs/*.jar")
-                    print(f"DEBUG[_tool_build]: Found range folder: {resolved_range_folder}", file=sys.stderr)
-                    break
     else:
-        manifest_path = Path("version-manifest.json")
-        if not manifest_path.exists():
-            return f"Error: version-manifest.json not found", False
-            
-        manifest = load_json(manifest_path)
+        template_dir = loader_config.get("template_dir", "")
 
-        for range_entry in manifest["ranges"]:
-            if version_inclusive_between(target_version, range_entry["min_version"], range_entry["max_version"]):
-                if target_loader in range_entry["loaders"]:
-                    resolved_range_folder = range_entry["folder"]
-                    loader_config = range_entry["loaders"][target_loader]
-                    template_dir = loader_config["template_dir"]
-                    build_command_list = loader_config.get("build_command", ["./gradlew", "build", "--stacktrace", "--no-daemon"])
-                    jar_glob_pattern = loader_config.get("jar_glob", "build/libs/*.jar")
-                    print(f"DEBUG[_tool_build]: Found range folder: {resolved_range_folder}, template: {template_dir}", file=sys.stderr)
-                    break
-        
-        if not resolved_range_folder:
-            return f"Error: No version folder found for {target_version}", False
+    if not template_dir:
+        return f"Error: Template directory not configured for {target_version}", False
 
     workspace = version_dir / "_build_workspace"
     safe_rmtree(workspace)
@@ -1936,14 +1939,16 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
             "version-manifest.json",
         ]
 
-        from modcompiler.common import java_home_for_version, sanitize_env_path, find_built_jars, copy_file
+        from modcompiler.common import (
+            copy_file,
+            find_built_jars,
+            java_home_for_version,
+            resolve_java_version,
+            sanitize_env_path,
+        )
 
         env = os.environ.copy()
-        java_version = 17
-        if target_version.startswith("1.12") or target_version.startswith("1.8"):
-            java_version = 8
-        elif target_version.startswith("1.16") or target_version.startswith("1.15"):
-            java_version = 16
+        java_version = resolve_java_version(loader_config, target_version)
 
         java_home = java_home_for_version(java_version, env)
         env["JAVA_HOME"] = java_home

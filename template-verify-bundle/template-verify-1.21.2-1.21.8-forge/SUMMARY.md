@@ -2,5 +2,4 @@
 
 | Range | Loader | Minecraft | Status | Jar | Log |
 | --- | --- | --- | --- | --- | --- |
-| 1.21.2-1.21.8 | forge | 1.21.8 | failed | - | 1.21.8.log |
-- Error: Build exited with 1
+| 1.21.2-1.21.8 | forge | 1.21.8 | success | template_test-0.0.0.jar | 1.21.8.log |
