@@ -5,6 +5,7 @@ These templates are verified by the template-verify workflow. Keep these rules:
 - Workflow runs set MODCOMPILER_GRADLE_TASKS=jar for speed; use build if you need reobf or remap outputs.
 - Re-run template-verify after any template or dependency changes.
 - Keep ForgeGradle plugin versions pinned in 1.21.x (no version ranges).
+- Fabric Loom versions are pinned to release numbers (no -SNAPSHOT) to avoid missing artifacts.
 - Keep version-specific API notes in the Java sources so future updates do not regress.
 
 Range-specific notes:

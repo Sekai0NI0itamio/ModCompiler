@@ -14,12 +14,12 @@ To honour the JVM settings for this build a single-use Daemon process will be fo
 Daemon will be stopped at the end of the build 
 Parallel Configuration Cache is an incubating feature.
 Configuration on demand is an incubating feature.
-Calculating task graph as no cached configuration is available for tasks: build
+Calculating task graph as no cached configuration is available for tasks: jar
 
 FAILURE: Build failed with an exception.
 
 * Where:
-Build file '/tmp/template-1.21.2-1.21.8-forge-1.21.8-9n5_dw2l/workspace/build.gradle' line: 9
+Build file '/tmp/template-1.21.2-1.21.8-forge-1.21.8-lufpynr8/workspace/build.gradle' line: 10
 
 * What went wrong:
 Plugin [id: 'net.minecraftforge.gradle', version: '7.0.6'] was not found in any of the following sources:
@@ -241,19 +241,19 @@ org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'net.minecraftforge.g
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 11s
+BUILD FAILED in 9s
 Configuration cache entry stored.
 Fast build failed (exit 1). Retrying full build.
 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
 Daemon will be stopped at the end of the build 
 Parallel Configuration Cache is an incubating feature.
 Configuration on demand is an incubating feature.
-Calculating task graph as no cached configuration is available for tasks: build
+Calculating task graph as no cached configuration is available for tasks: jar
 
 > Configure project :
 Minecraft Mavenizer 0.4.25 by Forge Development LLC
-  Output:             /tmp/template-1.21.2-1.21.8-forge-1.21.8-9n5_dw2l/workspace/.gradle/mavenizer/repo
-  Output JSON:        /tmp/template-1.21.2-1.21.8-forge-1.21.8-9n5_dw2l/workspace/.gradle/mavenizer/dependencies/default.json
+  Output:             /tmp/template-1.21.2-1.21.8-forge-1.21.8-lufpynr8/workspace/.gradle/mavenizer/repo
+  Output JSON:        /tmp/template-1.21.2-1.21.8-forge-1.21.8-lufpynr8/workspace/.gradle/mavenizer/dependencies/default.json
   Dependencies Only:  false
   Cache:              /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
   JDK Cache:          /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
@@ -317,14 +317,12 @@ Maven POM
 Metadata
   metadata[forge]
   metadata[forge][variants]
-Minecraft Maven has finished, took 3:27.509
+Minecraft Maven has finished, took 3:44.252
 
 > Task :processResources
 > Task :compileJava
 > Task :classes
 > Task :jar
-> Task :assemble
-> Task :build
 You have 1 new message from ForgeGradle.
 
 ---   Message 1/1   ---
@@ -374,7 +372,7 @@ deleted:
 /home/runner/.gradle/caches/minecraftforge/forgegradle/messages/7_0_WELCOME_1
 --- End of Message ---
 
-BUILD SUCCESSFUL in 3m 59s
+BUILD SUCCESSFUL in 4m 22s
 3 actionable tasks: 3 executed
 Configuration cache entry stored.
 $ ./modcompiler-build.sh
