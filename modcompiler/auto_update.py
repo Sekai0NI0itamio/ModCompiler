@@ -401,12 +401,42 @@ def _verify_mod_source_with_ai(
             "raw": text,
         }
 
-    response = client.chat_completion_with_fallback(
-        messages=messages,
-        temperature=0.2,
-        max_tokens=400,
-    )
-    content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+    def call_ai(msgs: list[dict[str, str]], max_tokens: int) -> tuple[str | None, str | None]:
+        try:
+            response = client.chat_completion_with_fallback(
+                messages=msgs,
+                temperature=0.2,
+                max_tokens=max_tokens,
+            )
+            content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if not content or not str(content).strip():
+                return None, "Empty AI response"
+            return content, None
+        except Exception as exc:
+            return None, f"{type(exc).__name__}: {exc}"
+
+    def call_ai_with_retry(msgs: list[dict[str, str]], max_tokens: int, retries: int = 10) -> tuple[str | None, str | None]:
+        last_error: str | None = None
+        for attempt in range(1, retries + 1):
+            content, error = call_ai(msgs, max_tokens)
+            if content is not None:
+                return content, None
+            last_error = error
+            if attempt < retries:
+                time.sleep(min(2.0, 0.5 * attempt))
+        return None, last_error
+
+    content, error = call_ai_with_retry(messages, 400)
+    if content is None:
+        return {
+            "tag": "corrupted",
+            "verdict": "fail",
+            "confidence": 0.0,
+            "rating": 0.0,
+            "reason": f"AI request failed: {error}",
+            "raw": "",
+        }
+
     parsed = parse_payload(content)
     if parsed["tag"] not in {"working", "corrupted"}:
         messages.append({
@@ -416,12 +446,16 @@ def _verify_mod_source_with_ai(
                 "tag (working/corrupted), rating (0-20), confidence (0-1), reason."
             ),
         })
-        response = client.chat_completion_with_fallback(
-            messages=messages,
-            temperature=0.2,
-            max_tokens=200,
-        )
-        content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+        content, error = call_ai_with_retry(messages, 200)
+        if content is None:
+            return {
+                "tag": "corrupted",
+                "verdict": "fail",
+                "confidence": 0.0,
+                "rating": 0.0,
+                "reason": f"AI request failed: {error}",
+                "raw": "",
+            }
         parsed = parse_payload(content)
 
     if parsed["tag"] not in {"working", "corrupted"}:
