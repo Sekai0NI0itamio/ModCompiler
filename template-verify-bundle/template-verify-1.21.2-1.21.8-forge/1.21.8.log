@@ -19,7 +19,7 @@ Calculating task graph as no cached configuration is available for tasks: build
 FAILURE: Build failed with an exception.
 
 * Where:
-Build file '/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/build.gradle' line: 9
+Build file '/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/build.gradle' line: 9
 
 * What went wrong:
 Plugin [id: 'net.minecraftforge.gradle', version: '7.0.6'] was not found in any of the following sources:
@@ -241,7 +241,7 @@ org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'net.minecraftforge.g
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 
 
-BUILD FAILED in 11s
+BUILD FAILED in 13s
 Configuration cache entry stored.
 Fast build failed (exit 1). Retrying full build.
 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
@@ -252,8 +252,8 @@ Calculating task graph as no cached configuration is available for tasks: build
 
 > Configure project :
 Minecraft Mavenizer 0.4.25 by Forge Development LLC
-  Output:             /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/.gradle/mavenizer/repo
-  Output JSON:        /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/.gradle/mavenizer/dependencies/default.json
+  Output:             /tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/.gradle/mavenizer/repo
+  Output JSON:        /tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/.gradle/mavenizer/dependencies/default.json
   Dependencies Only:  false
   Cache:              /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
   JDK Cache:          /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
@@ -317,133 +317,75 @@ Maven POM
 Metadata
   metadata[forge]
   metadata[forge][variants]
-Minecraft Maven has finished, took 6:19.844
-
-> Task :processResources
+Minecraft Maven has finished, took 6:55.085
 
 > Task :compileJava
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:19: error: package net.minecraftforge.eventbus.api does not exist
-import net.minecraftforge.eventbus.api.IEventBus;
-                                      ^
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:20: error: package net.minecraftforge.eventbus.api does not exist
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-                                      ^
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:6: error: package net.minecraftforge.eventbus.api does not exist
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-                                      ^
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:108: error: cannot find symbol
-    @SubscribeEvent
-     ^
-  symbol:   class SubscribeEvent
-  location: class ExampleMod
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:119: error: cannot find symbol
-        @SubscribeEvent
-         ^
-  symbol:   class SubscribeEvent
-  location: class ClientModEvents
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:52: error: cannot find symbol
-    @SubscribeEvent
-     ^
-  symbol:   class SubscribeEvent
-  location: class Config
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:65: error: cannot find symbol
-        IEventBus modEventBus = context.getModEventBus();
-        ^
-  symbol:   class IEventBus
-  location: class ExampleMod
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:65: error: cannot find symbol
-        IEventBus modEventBus = context.getModEventBus();
-                                       ^
-  symbol:   method getModEventBus()
-  location: variable context of type FMLJavaModLoadingContext
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:49: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
-        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:3: error: cannot find symbol
+import net.minecraft.resources.Identifier;
+                              ^
+  symbol:   class Identifier
+  location: package net.minecraft.resources
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/ExampleMod.java:89: error: cannot find symbol
+        BuildCreativeModeTabContentsEvent.BUS.addListener(ExampleMod::addCreative);
+                                         ^
+  symbol:   variable BUS
+  location: class BuildCreativeModeTabContentsEvent
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:46: error: cannot find symbol
+        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(Identifier.tryParse(itemName));
                                                                                          ^
-  required: String,String
-  found:    String
-  reason: actual and formal argument lists differ in length
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:61: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
-                .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
+  symbol:   variable Identifier
+  location: class Config
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:57: error: cannot find symbol
+                .map(itemName -> ForgeRegistries.ITEMS.getValue(Identifier.tryParse(itemName)))
                                                                 ^
-  required: String,String
-  found:    CAP#1
-  reason: actual and formal argument lists differ in length
-  where CAP#1 is a fresh type-variable:
-    CAP#1 extends String from capture of ? extends String
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:62: error: incompatible types: inference variable T has incompatible bounds
+  symbol:   variable Identifier
+  location: class Config
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:58: error: incompatible types: inference variable T has incompatible bounds
                 .collect(Collectors.toSet());
                         ^
     equality constraints: Item
     lower bounds: Object
   where T is a type-variable:
     T extends Object declared in method <T>toSet()
-11 errors
+5 errors
 
 > Task :compileJava FAILED
 
-[Incubating] Problems report is available at: file:///tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/build/reports/problems/problems-report.html
+[Incubating] Problems report is available at: file:///tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
 Execution failed for task ':compileJava'.
 > Compilation failed; see the compiler output below.
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:49: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
-          return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
-                                                                                           ^
-    required: String,String
-    found:    String
-    reason: actual and formal argument lists differ in length
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:61: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
-                  .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
-                                                                  ^
-    required: String,String
-    found:    CAP#1
-    reason: actual and formal argument lists differ in length
-    where CAP#1 is a fresh type-variable:
-      CAP#1 extends String from capture of ? extends String
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:62: error: incompatible types: inference variable T has incompatible bounds
+  /tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:58: error: incompatible types: inference variable T has incompatible bounds
                   .collect(Collectors.toSet());
                           ^
       equality constraints: Item
       lower bounds: Object
     where T is a type-variable:
       T extends Object declared in method <T>toSet()
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:108: error: cannot find symbol
-      @SubscribeEvent
-       ^
-    symbol:   class SubscribeEvent
-    location: class ExampleMod
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:119: error: cannot find symbol
-          @SubscribeEvent
-           ^
-    symbol:   class SubscribeEvent
-    location: class ClientModEvents
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:52: error: cannot find symbol
-      @SubscribeEvent
-       ^
-    symbol:   class SubscribeEvent
+  /tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:3: error: cannot find symbol
+  import net.minecraft.resources.Identifier;
+                                ^
+    symbol:   class Identifier
+    location: package net.minecraft.resources
+  /tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/ExampleMod.java:89: error: cannot find symbol
+          BuildCreativeModeTabContentsEvent.BUS.addListener(ExampleMod::addCreative);
+                                           ^
+    symbol:   variable BUS
+    location: class BuildCreativeModeTabContentsEvent
+  /tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:46: error: cannot find symbol
+          return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(Identifier.tryParse(itemName));
+                                                                                           ^
+    symbol:   variable Identifier
     location: class Config
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:65: error: cannot find symbol
-          IEventBus modEventBus = context.getModEventBus();
-          ^
-    symbol:   class IEventBus
-    location: class ExampleMod
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:65: error: cannot find symbol
-          IEventBus modEventBus = context.getModEventBus();
-                                         ^
-    symbol:   method getModEventBus()
-    location: variable context of type FMLJavaModLoadingContext
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:19: error: package net.minecraftforge.eventbus.api does not exist
-  import net.minecraftforge.eventbus.api.IEventBus;
-                                        ^
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:20: error: package net.minecraftforge.eventbus.api does not exist
-  import net.minecraftforge.eventbus.api.SubscribeEvent;
-                                        ^
-  /tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:6: error: package net.minecraftforge.eventbus.api does not exist
-  import net.minecraftforge.eventbus.api.SubscribeEvent;
-                                        ^
-  11 errors
+  /tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:57: error: cannot find symbol
+                  .map(itemName -> ForgeRegistries.ITEMS.getValue(Identifier.tryParse(itemName)))
+                                                                  ^
+    symbol:   variable Identifier
+    location: class Config
+  5 errors
 
 * Try:
 > Check your code and dependencies to fix the compilation error(s)
@@ -485,62 +427,34 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compile
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
 Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:19: error: package net.minecraftforge.eventbus.api does not exist
-import net.minecraftforge.eventbus.api.IEventBus;
-                                      ^
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:20: error: package net.minecraftforge.eventbus.api does not exist
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-                                      ^
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:6: error: package net.minecraftforge.eventbus.api does not exist
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-                                      ^
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:108: error: cannot find symbol
-    @SubscribeEvent
-     ^
-  symbol:   class SubscribeEvent
-  location: class ExampleMod
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:119: error: cannot find symbol
-        @SubscribeEvent
-         ^
-  symbol:   class SubscribeEvent
-  location: class ClientModEvents
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:52: error: cannot find symbol
-    @SubscribeEvent
-     ^
-  symbol:   class SubscribeEvent
-  location: class Config
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:65: error: cannot find symbol
-        IEventBus modEventBus = context.getModEventBus();
-        ^
-  symbol:   class IEventBus
-  location: class ExampleMod
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/ExampleMod.java:65: error: cannot find symbol
-        IEventBus modEventBus = context.getModEventBus();
-                                       ^
-  symbol:   method getModEventBus()
-  location: variable context of type FMLJavaModLoadingContext
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:49: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
-        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:3: error: cannot find symbol
+import net.minecraft.resources.Identifier;
+                              ^
+  symbol:   class Identifier
+  location: package net.minecraft.resources
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/ExampleMod.java:89: error: cannot find symbol
+        BuildCreativeModeTabContentsEvent.BUS.addListener(ExampleMod::addCreative);
+                                         ^
+  symbol:   variable BUS
+  location: class BuildCreativeModeTabContentsEvent
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:46: error: cannot find symbol
+        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(Identifier.tryParse(itemName));
                                                                                          ^
-  required: String,String
-  found:    String
-  reason: actual and formal argument lists differ in length
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:61: error: constructor ResourceLocation in class ResourceLocation cannot be applied to given types;
-                .map(itemName -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemName)))
+  symbol:   variable Identifier
+  location: class Config
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:57: error: cannot find symbol
+                .map(itemName -> ForgeRegistries.ITEMS.getValue(Identifier.tryParse(itemName)))
                                                                 ^
-  required: String,String
-  found:    CAP#1
-  reason: actual and formal argument lists differ in length
-  where CAP#1 is a fresh type-variable:
-    CAP#1 extends String from capture of ? extends String
-/tmp/template-1.21.2-1.21.8-forge-1.21.8-js71bjeq/workspace/src/main/java/com/example/examplemod/Config.java:62: error: incompatible types: inference variable T has incompatible bounds
+  symbol:   variable Identifier
+  location: class Config
+/tmp/template-1.21.2-1.21.8-forge-1.21.8-9oblk_7f/workspace/src/main/java/com/example/examplemod/Config.java:58: error: incompatible types: inference variable T has incompatible bounds
                 .collect(Collectors.toSet());
                         ^
     equality constraints: Item
     lower bounds: Object
   where T is a type-variable:
     T extends Object declared in method <T>toSet()
-11 errors
+5 errors
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
 	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
 	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
@@ -617,8 +531,13 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:28)
 	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
 	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:192)
-	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:76)
-	at org.gradle.internal.Either$Right.fold(Either.java:176)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeAndStoreInCache(BuildCacheStep.java:148)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$4(BuildCacheStep.java:104)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$5(BuildCacheStep.java:104)
+	at org.gradle.internal.Try$Success.map(Try.java:170)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithCache(BuildCacheStep.java:88)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$0(BuildCacheStep.java:75)
+	at org.gradle.internal.Either$Left.fold(Either.java:116)
 	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:74)
 	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:49)
@@ -668,8 +587,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 	... 30 more
 
 
-BUILD FAILED in 6m 59s
-2 actionable tasks: 2 executed
+BUILD FAILED in 7m 39s
+1 actionable task: 1 executed
 Configuration cache entry stored.
 $ ./modcompiler-build.sh
 
