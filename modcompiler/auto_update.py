@@ -354,7 +354,7 @@ def _verify_mod_source_with_ai(
 
     system_msg = (
         "You are verifying whether a Minecraft mod's source code matches its Modrinth listing. "
-        "Return ONLY valid JSON with keys: verdict (pass/fail), confidence (0-1), "
+        "Return ONLY valid JSON with keys: tag (working/corrupted), confidence (0-1), "
         "rating (0-20, higher means better match), reason."
     )
     excerpts_text = "\n\n".join(excerpts) if excerpts else "(no key files found)"
@@ -367,38 +367,69 @@ def _verify_mod_source_with_ai(
         f"Source summary:\n{summary}\n\n"
         f"Key files:\n{excerpts_text}\n\n"
         "Evaluate whether this source appears to implement the described mod. "
-        "If uncertain or unrelated, verdict should be fail."
+        "Use tag=working only if the source matches the description and intended purpose. "
+        "Use tag=corrupted if the source is missing, unrelated, or does not match the description. "
+        "If uncertain, tag must be corrupted."
     )
 
+    messages = [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg},
+    ]
+
+    def parse_payload(text: str) -> dict[str, Any]:
+        payload = _extract_json_payload(text) or {}
+        tag = str(payload.get("tag", "")).strip().lower()
+        confidence = payload.get("confidence")
+        try:
+            confidence = float(confidence)
+        except (TypeError, ValueError):
+            confidence = 0.0
+        rating = payload.get("rating")
+        try:
+            rating = float(rating)
+        except (TypeError, ValueError):
+            rating = 0.0
+        rating = max(0.0, min(20.0, rating))
+        confidence = max(0.0, min(1.0, confidence))
+        reason = str(payload.get("reason", "")).strip()
+        return {
+            "tag": tag,
+            "confidence": confidence,
+            "rating": rating,
+            "reason": reason,
+            "raw": text,
+        }
+
     response = client.chat_completion_with_fallback(
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user", "content": user_msg},
-        ],
+        messages=messages,
         temperature=0.2,
         max_tokens=400,
     )
     content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
-    payload = _extract_json_payload(content) or {}
-    verdict = str(payload.get("verdict", "")).strip().lower()
-    confidence = payload.get("confidence")
-    try:
-        confidence = float(confidence)
-    except (TypeError, ValueError):
-        confidence = 0.0
-    rating = payload.get("rating")
-    try:
-        rating = float(rating)
-    except (TypeError, ValueError):
-        rating = 0.0
-    reason = str(payload.get("reason", "")).strip()
-    return {
-        "verdict": verdict,
-        "confidence": confidence,
-        "rating": rating,
-        "reason": reason,
-        "raw": content,
-    }
+    parsed = parse_payload(content)
+    if parsed["tag"] not in {"working", "corrupted"}:
+        messages.append({
+            "role": "user",
+            "content": (
+                "Your previous response was invalid. Return ONLY JSON with keys: "
+                "tag (working/corrupted), rating (0-20), confidence (0-1), reason."
+            ),
+        })
+        response = client.chat_completion_with_fallback(
+            messages=messages,
+            temperature=0.2,
+            max_tokens=200,
+        )
+        content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+        parsed = parse_payload(content)
+
+    if parsed["tag"] not in {"working", "corrupted"}:
+        parsed["tag"] = "corrupted"
+        if not parsed.get("reason"):
+            parsed["reason"] = "Invalid AI response; missing tag."
+    parsed["verdict"] = "pass" if parsed["tag"] == "working" else "fail"
+    return parsed
 
 
 def _run_auto_fix_corrupted(
@@ -464,6 +495,7 @@ def _run_auto_fix_corrupted(
                     "version_number": version_number,
                     "loaders": loaders,
                     "game_versions": game_versions,
+                    "tag": "corrupted",
                     "verdict": "fail",
                     "confidence": 0.0,
                     "reason": "No downloadable file found.",
@@ -479,6 +511,7 @@ def _run_auto_fix_corrupted(
                     "version_number": version_number,
                     "loaders": loaders,
                     "game_versions": game_versions,
+                    "tag": "corrupted",
                     "verdict": "fail",
                     "confidence": 0.0,
                     "reason": "Missing download URL.",
@@ -510,6 +543,7 @@ def _run_auto_fix_corrupted(
             src_dirs_by_version[version_id] = src_dir
 
             verdict_payload = {
+                "tag": "corrupted",
                 "verdict": "fail",
                 "confidence": 0.0,
                 "reason": "Decompiler produced no sources.",
@@ -525,18 +559,21 @@ def _run_auto_fix_corrupted(
                     src_dir=src_dir,
                 )
 
-            verdict = verdict_payload.get("verdict", "").lower()
+            tag = str(verdict_payload.get("tag", "")).lower()
+            if tag not in {"working", "corrupted"}:
+                verdict = verdict_payload.get("verdict", "").lower()
+                tag = "working" if verdict == "pass" else "corrupted"
             confidence = float(verdict_payload.get("confidence", 0.0) or 0.0)
             rating = float(verdict_payload.get("rating", 0.0) or 0.0)
-            passed = verdict == "pass" and confidence >= 0.6
-            if not passed:
-                verdict = "fail"
+            passed = tag == "working"
+            verdict = "pass" if passed else "fail"
 
             report_entries.append({
                 "version_id": version_id,
                 "version_number": version_number,
                 "loaders": loaders,
                 "game_versions": game_versions,
+                "tag": tag,
                 "verdict": verdict,
                 "confidence": confidence,
                 "rating": rating,
@@ -551,12 +588,14 @@ def _run_auto_fix_corrupted(
         loaders = [str(l) for l in entry.get("loaders", [])]
         game_versions = [str(v) for v in entry.get("game_versions", [])]
         date_published = str(entry.get("date_published") or "")
-        verdict = str(entry.get("verdict", "")).lower()
+        tag = str(entry.get("tag") or "").lower()
+        if tag not in {"working", "corrupted"}:
+            verdict = str(entry.get("verdict", "")).lower()
+            tag = "working" if verdict == "pass" else "corrupted"
         confidence = float(entry.get("confidence", 0.0) or 0.0)
         rating = float(entry.get("rating", 0.0) or 0.0)
-        passed = verdict == "pass" and confidence >= 0.6
-        if not passed:
-            verdict = "fail"
+        passed = tag == "working"
+        verdict = "pass" if passed else "fail"
 
         src_dir = src_dirs_by_version.get(version_id)
         if src_dir is not None:
@@ -569,6 +608,7 @@ def _run_auto_fix_corrupted(
                 "published_at": published_at,
                 "rating": rating,
                 "confidence": confidence,
+                "tag": tag,
                 "verdict": verdict,
             }
             for loader in loaders:
@@ -593,7 +633,7 @@ def _run_auto_fix_corrupted(
 
     role_models: dict[str, dict[str, Any]] = {}
     for loader, candidates in candidates_by_loader.items():
-        passed_candidates = [c for c in candidates if c["verdict"] == "pass" and c["confidence"] >= 0.6]
+        passed_candidates = [c for c in candidates if c.get("tag") == "working"]
         pool = passed_candidates or candidates
         if not pool:
             continue
@@ -623,6 +663,7 @@ def _run_auto_fix_corrupted(
                 "published_at": cand.get("published_at", 0.0),
                 "rating": cand.get("rating", 0.0),
                 "confidence": cand.get("confidence", 0.0),
+                "tag": cand.get("tag", ""),
                 "verdict": cand.get("verdict", ""),
             }
             candidates_info.append(candidate_payload)
@@ -1171,6 +1212,8 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     role_model_loader = context.get("role_model_loader", "")
     role_model_selected_rating = context.get("role_model_selected_rating", "")
     role_model_candidates = context.get("role_model_candidates", [])
+    role_model_selected_path = context.get("role_model_selected_path", "")
+    role_model_selected_source_subdir = context.get("role_model_selected_source_subdir", "")
     fix_corrupted = bool(context.get("fix_corrupted"))
     supported_versions_text = ", ".join(supported_versions) if supported_versions else "unknown"
     range_versions_text = ", ".join(supported_versions_for_range) if supported_versions_for_range else "unknown"
@@ -1183,17 +1226,24 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
         if role_model_candidates:
             summary = []
             for cand in role_model_candidates:
+                tag = cand.get("tag", "")
                 summary.append(
                     f"{cand.get('version_number', cand.get('version_id', 'unknown'))} "
-                    f"(rating {cand.get('rating', 0)}/20, mc={','.join(cand.get('game_versions', [])) or 'unknown'})"
+                    f"(tag {tag or 'unknown'}, rating {cand.get('rating', 0)}/20, "
+                    f"mc={','.join(cand.get('game_versions', [])) or 'unknown'})"
                 )
             candidate_lines = "\nTop candidates:\n- " + "\n- ".join(summary)
+        selected_path_line = ""
+        if role_model_selected_path:
+            selected_path_line = f"Selected candidate folder: {role_model_selected_path}\n"
+        if role_model_selected_source_subdir:
+            selected_path_line += f"Selected source subfolder: {role_model_selected_source_subdir}\n"
         role_model_block = (
             f"\n{label}: {role_model_dir} "
             f"(built for loader {role_loader}, version {role_model_version or 'unknown'}, "
             f"rating {role_model_selected_rating or 'unknown'}/20)\n"
             f"Target loader/version: {target_l} {target_v}\n"
-            f"{candidate_lines}\n"
+            f"{selected_path_line}{candidate_lines}\n"
             "The role model directory may contain multiple candidates in subfolders; "
             "prioritize the selected one above.\n"
             "Read this if you need a known-good reference for behavior.\n"
@@ -1225,6 +1275,8 @@ MOD INFORMATION:
 - Reference examples: `reference/` (read with read_reference - these show correct {target_v} patterns!)
 - YOUR output: `src/java/` (write with write_mod_file - auto-adds prefix)
 - Resources output: `src/resources/` (write with write_resource)
+
+If original source has no Java/Kotlin files, treat it as missing and use the selected role model folder as your starting point.
 
 **PATHS: The original source is under src/java/ NOT src/main/java/**
 
@@ -1516,6 +1568,8 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
                 existing_slugs.add(target.slug)
 
     trimmed_src = trim_src_for_context(src_path)
+    src_has_sources = bool(list(trimmed_src.rglob("*.java")) or list(trimmed_src.rglob("*.kt")))
+    role_model_trimmed_cache: dict[str, Path] = {}
 
     used_fix_versions: set[str] = set()
     for target in filtered_targets:
@@ -1538,7 +1592,22 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             metadata=mod_info_for_target,
         )
 
-        context = generate_version_context(decomposed, target, info_txt, trimmed_src, manifest)
+        effective_src = trimmed_src
+        if not src_has_sources and target.loader in role_models:
+            model_info = role_models[target.loader]
+            candidates = model_info.get("candidates", []) or []
+            selected = _select_closest_role_model(target.minecraft_version, candidates)
+            if selected and selected.get("version_id") and selected.get("path"):
+                selected_id = str(selected.get("version_id"))
+                if selected_id in role_model_trimmed_cache:
+                    effective_src = role_model_trimmed_cache[selected_id]
+                else:
+                    selected_src = Path(selected.get("path"))
+                    if selected_src.exists():
+                        effective_src = trim_src_for_context(selected_src)
+                        role_model_trimmed_cache[selected_id] = effective_src
+                        mod_info_for_target["source_origin"] = "role_model_selected"
+        context = generate_version_context(decomposed, target, info_txt, effective_src, manifest)
         if fix_info:
             context["fix_corrupted"] = True
             context["fix_source_version"] = mod_info_for_target.get("fix_source_version", "")
@@ -1556,6 +1625,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
                     "version_number": c.get("version_number", ""),
                     "game_versions": c.get("game_versions", []),
                     "rating": c.get("rating", 0.0),
+                    "tag": c.get("tag", ""),
                 }
                 for c in candidates
             ]
@@ -1564,8 +1634,13 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
                 context["role_model_selected_version_id"] = selected.get("version_id", "")
                 context["role_model_selected_rating"] = selected.get("rating", 0.0)
                 context["role_model_selected_game_versions"] = selected.get("game_versions", [])
+                selected_id = selected.get("version_id", "")
+                if selected_id:
+                    context["role_model_selected_subdir"] = re.sub(r"[^A-Za-z0-9._-]+", "_", str(selected_id))
+                    context["role_model_selected_path"] = "reference/role-model/selected"
+                    context["role_model_selected_source_subdir"] = f"reference/role-model/{context['role_model_selected_subdir']}"
 
-        version_folder = create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
+        version_folder = create_version_folder(config.output_dir, decomposed, target, context, effective_src, manifest)
         role_model = role_models.get(target.loader)
         if role_model:
             ref_root = version_folder / "reference"
@@ -1580,6 +1655,13 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
                 safe_rmtree(subdir)
                 if source_path.exists():
                     copy_tree(source_path, subdir)
+            selected_subdir = context.get("role_model_selected_subdir")
+            if selected_subdir:
+                selected_path = role_dest / selected_subdir
+                if selected_path.exists():
+                    selected_alias = role_dest / "selected"
+                    safe_rmtree(selected_alias)
+                    copy_tree(selected_path, selected_alias)
 
     if config.modrinth_project_url and not modrinth_project_ref:
         modrinth_project_ref = normalize_modrinth_project_ref(config.modrinth_project_url)
@@ -1877,20 +1959,29 @@ ACTION: Read files, update them, write to src/java/, then call build."""
             candidates = context.get("role_model_candidates", [])
             selected_rating = context.get("role_model_selected_rating", "")
             selected_version = context.get("role_model_version", "unknown")
+            selected_path = context.get("role_model_selected_path", "")
+            selected_source_subdir = context.get("role_model_selected_source_subdir", "")
             candidate_lines = ""
             if candidates:
                 summary = []
                 for cand in candidates:
+                    tag = cand.get("tag", "")
                     summary.append(
                         f"{cand.get('version_number', cand.get('version_id', 'unknown'))} "
-                        f"(rating {cand.get('rating', 0)}/20, mc={','.join(cand.get('game_versions', [])) or 'unknown'})"
+                        f"(tag {tag or 'unknown'}, rating {cand.get('rating', 0)}/20, "
+                        f"mc={','.join(cand.get('game_versions', [])) or 'unknown'})"
                     )
                 candidate_lines = "\nTop candidates:\n- " + "\n- ".join(summary)
+            selected_path_line = ""
+            if selected_path:
+                selected_path_line = f"\nSelected candidate folder: {selected_path}\n"
+            if selected_source_subdir:
+                selected_path_line += f"Selected source subfolder: {selected_source_subdir}\n"
             role_model_note = (
                 f"\n{label}: {context.get('role_model_dir')} "
                 f"(built for loader {role_loader}, version {selected_version}, rating {selected_rating or 'unknown'}/20)\n"
                 f"Target loader/version: {target_loader} {target_version}\n"
-                f"{candidate_lines}\n"
+                f"{selected_path_line}{candidate_lines}\n"
                 "Role model subfolders may contain multiple candidates; prefer the selected one.\n"
             )
         fix_note = "\nNOTE: This target is marked as corrupted; ensure behavior matches the description.\n" if context.get("fix_corrupted") else ""
@@ -1907,6 +1998,8 @@ PATH INFO:
 - READ original source: "java/com/package/File.java"
 - WRITE updated source: "com/package/File.java" (goes to src/java/)
 - RESOURCES: "mcmod.info" (goes to src/resources/)
+
+NOTE: If src/java has no .java/.kt files, treat the original source as missing and start from the selected role model folder.
 
 ACTION: Update files for {target_version}, write to src/java/, then build."""
 
