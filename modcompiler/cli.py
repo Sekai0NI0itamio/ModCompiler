@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import traceback
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -27,8 +28,13 @@ from modcompiler.common import (
     write_json,
 )
 from modcompiler.decompile import command_decompile_jar
-from modcompiler.modrinth import command_publish_modrinth
+from modcompiler.modrinth import command_publish_modrinth, select_primary_jar
 from modcompiler.auto_update import command_auto_update_decompose, command_ai_rebuild
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - python<3.11 fallback
+    import tomli as tomllib
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -257,10 +263,98 @@ def command_bundle(args: argparse.Namespace) -> int:
     if not result_files:
         raise ModCompilerError(f"No per-mod result.json files were found under {artifacts_root}")
 
-    results = [load_json(path) for path in result_files]
-    for result_path, result in zip(result_files, results):
+    def extract_metadata_from_jar(jar_path: Path) -> dict[str, Any] | None:
+        if not jar_path or not jar_path.exists():
+            return None
+        try:
+            with zipfile.ZipFile(jar_path) as jar:
+                names = set(jar.namelist())
+                if "fabric.mod.json" in names:
+                    data = json.loads(jar.read("fabric.mod.json").decode("utf-8"))
+                    mod_id = data.get("id") or data.get("modid") or "unknown"
+                    name = data.get("name") or mod_id
+                    version = data.get("version") or "0.0.0"
+                    return {"mod_id": mod_id, "name": name, "mod_version": version}
+                for toml_name in ("META-INF/neoforge.mods.toml", "META-INF/mods.toml"):
+                    if toml_name in names:
+                        data = tomllib.loads(jar.read(toml_name).decode("utf-8"))
+                        mods = data.get("mods") or data.get("mod")
+                        entry = mods[0] if isinstance(mods, list) and mods else {}
+                        mod_id = entry.get("modId") or entry.get("modid") or "unknown"
+                        name = entry.get("displayName") or entry.get("display_name") or entry.get("name") or mod_id
+                        version = entry.get("version") or "0.0.0"
+                        return {"mod_id": mod_id, "name": name, "mod_version": version}
+                if "mcmod.info" in names:
+                    data = json.loads(jar.read("mcmod.info").decode("utf-8"))
+                    entry: dict[str, Any] = {}
+                    if isinstance(data, list) and data:
+                        entry = data[0]
+                    elif isinstance(data, dict):
+                        mod_list = data.get("modList") or data.get("modlist")
+                        if isinstance(mod_list, list) and mod_list:
+                            entry = mod_list[0]
+                    if entry:
+                        mod_id = entry.get("modid") or entry.get("modId") or "unknown"
+                        name = entry.get("name") or mod_id
+                        version = entry.get("version") or "0.0.0"
+                        return {"mod_id": mod_id, "name": name, "mod_version": version}
+        except Exception:
+            return None
+        return None
+
+    normalized: dict[str, dict[str, Any]] = {}
+    sources: dict[str, Path] = {}
+    scores: dict[str, int] = {}
+
+    for result_path in result_files:
+        result = load_json(result_path)
+        if not all(key in result for key in ("slug", "loader", "minecraft_version")):
+            continue
+
         slug = result["slug"]
         source_root = result_path.parent
+        jar_root = source_root / "jars"
+
+        metadata = result.get("metadata")
+        if not isinstance(metadata, dict) or not metadata:
+            jar_path = select_primary_jar(jar_root)
+            metadata = extract_metadata_from_jar(jar_path) if jar_path else None
+            if not metadata:
+                raise ModCompilerError(
+                    f"Missing metadata for {slug}. Ensure jars are present so metadata can be parsed."
+                )
+            result["metadata"] = metadata
+        else:
+            if "mod_id" not in metadata and "primary_mod_id" in metadata:
+                metadata["mod_id"] = metadata["primary_mod_id"]
+            result["metadata"] = metadata
+
+        if "range_folder" not in result:
+            result["range_folder"] = "-"
+        if "log_relpath" not in result:
+            result["log_relpath"] = "build.log" if (source_root / "build.log").exists() else "-"
+        if "jar_names" not in result:
+            if jar_root.exists():
+                result["jar_names"] = [p.name for p in sorted(jar_root.glob("*.jar")) if p.is_file()]
+            else:
+                result["jar_names"] = []
+
+        score = 0
+        if result.get("status") == "success":
+            score += 2
+        if result["jar_names"]:
+            score += 1
+
+        if slug not in normalized or score > scores.get(slug, -1):
+            normalized[slug] = result
+            sources[slug] = source_root
+            scores[slug] = score
+
+    if not normalized:
+        raise ModCompilerError(f"No usable mod results were found under {artifacts_root}")
+
+    results = list(normalized.values())
+    for slug, source_root in sources.items():
         target_root = output_dir / "mods" / slug
         copy_tree(source_root, target_root)
 
