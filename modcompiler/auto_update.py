@@ -560,6 +560,7 @@ def _run_auto_fix_corrupted(
                         "version_id": version_id,
                         "version_number": version_number,
                         "published_at": published_at,
+                        "unverified": False,
                     }
         else:
             published_at = _parse_modrinth_datetime(date_published)
@@ -578,6 +579,30 @@ def _run_auto_fix_corrupted(
                             "published_at": published_at,
                         }
 
+    fallback_candidates: dict[str, dict[str, Any]] = {}
+    for entry in report_entries:
+        version_id = str(entry.get("version_id") or "")
+        if not version_id:
+            continue
+        src_dir = src_dirs_by_version.get(version_id)
+        if src_dir is None:
+            continue
+        published_at = _parse_modrinth_datetime(str(entry.get("date_published") or ""))
+        for loader in [str(l) for l in entry.get("loaders", [])]:
+            current = fallback_candidates.get(loader)
+            if not current or published_at > current.get("published_at", 0.0):
+                fallback_candidates[loader] = {
+                    "src_dir": src_dir,
+                    "version_id": version_id,
+                    "version_number": str(entry.get("version_number") or ""),
+                    "published_at": published_at,
+                    "unverified": True,
+                }
+
+    for loader, candidate in fallback_candidates.items():
+        if loader not in role_models:
+            role_models[loader] = candidate
+
     role_model_paths: dict[str, dict[str, Any]] = {}
     for loader, info in role_models.items():
         dest = role_models_dir / loader
@@ -587,6 +612,7 @@ def _run_auto_fix_corrupted(
             "path": str(dest),
             "version_id": info.get("version_id", ""),
             "version_number": info.get("version_number", ""),
+            "unverified": bool(info.get("unverified")),
         }
 
     corrupted_targets: list[VersionTarget] = []
@@ -1089,14 +1115,16 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     latest_supported = context.get("latest_supported_version", "")
     role_model_dir = context.get("role_model_dir", "")
     role_model_version = context.get("role_model_version", "")
+    role_model_unverified = bool(context.get("role_model_unverified"))
     fix_corrupted = bool(context.get("fix_corrupted"))
     supported_versions_text = ", ".join(supported_versions) if supported_versions else "unknown"
     range_versions_text = ", ".join(supported_versions_for_range) if supported_versions_for_range else "unknown"
 
     role_model_block = ""
     if role_model_dir:
+        label = "ROLE MODEL SOURCE (verified working)" if not role_model_unverified else "ROLE MODEL SOURCE (unverified fallback)"
         role_model_block = (
-            f"\nROLE MODEL SOURCE (verified working): {role_model_dir} "
+            f"\n{label}: {role_model_dir} "
             f"(version {role_model_version or 'unknown'})\n"
             "Read this if you need a known-good reference for behavior.\n"
         )
@@ -1448,6 +1476,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         if target.loader in role_models:
             context["role_model_dir"] = "reference/role-model"
             context["role_model_version"] = role_models[target.loader].get("version_number", "")
+            context["role_model_unverified"] = bool(role_models[target.loader].get("unverified"))
 
         version_folder = create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
         role_model = role_models.get(target.loader)
@@ -1747,7 +1776,10 @@ ACTION: Read files, update them, write to src/java/, then call build."""
 
         role_model_note = ""
         if context.get("role_model_dir"):
-            role_model_note = f"\nROLE MODEL AVAILABLE: {context.get('role_model_dir')} (version {context.get('role_model_version', 'unknown')})\n"
+            label = "ROLE MODEL AVAILABLE"
+            if context.get("role_model_unverified"):
+                label = "ROLE MODEL AVAILABLE (UNVERIFIED)"
+            role_model_note = f"\n{label}: {context.get('role_model_dir')} (version {context.get('role_model_version', 'unknown')})\n"
         fix_note = "\nNOTE: This target is marked as corrupted; ensure behavior matches the description.\n" if context.get("fix_corrupted") else ""
 
         user_msg_1 = f"""Update this mod for {target_loader} {target_version}.

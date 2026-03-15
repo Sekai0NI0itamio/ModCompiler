@@ -379,7 +379,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-downloads-${{ matrix.batch_id }}
-          path: .workflow_state/corrupt-downloads
+          path: .
 
       - name: Decompile batch
         shell: bash
@@ -454,17 +454,17 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-project
-          path: .workflow_state
+          path: .
 
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-downloads-${{ matrix.batch_id }}
-          path: .workflow_state/corrupt-downloads
+          path: .
 
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-decompiled-${{ matrix.batch_id }}
-          path: .workflow_state/corrupt-decompiled
+          path: .
 
       - name: Verify batch with AI
         shell: bash
@@ -587,14 +587,14 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: setup-artifacts
-          path: .workflow_state/setup
+          path: .
 
       - uses: actions/download-artifact@v4
         if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
         continue-on-error: true
         with:
           pattern: corrupt-downloads-*
-          path: .workflow_state/corrupt-downloads
+          path: .
           merge-multiple: true
 
       - uses: actions/download-artifact@v4
@@ -602,7 +602,7 @@ jobs:
         continue-on-error: true
         with:
           pattern: corrupt-decompiled-*
-          path: .workflow_state/corrupt-decompiled
+          path: .
           merge-multiple: true
 
       - uses: actions/download-artifact@v4
@@ -610,7 +610,7 @@ jobs:
         continue-on-error: true
         with:
           pattern: corrupt-verdicts-*
-          path: .workflow_state/corrupt-verdicts
+          path: .
           merge-multiple: true
 
       - id: decompose
