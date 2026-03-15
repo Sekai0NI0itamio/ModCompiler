@@ -64,8 +64,8 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
-      mod_jar_path: ${{ steps.setup.outputs.mod_jar_path }}
-      mod_description_path: ${{ steps.setup.outputs.mod_description_path }}
+      mod_jar_name: ${{ steps.setup.outputs.mod_jar_name }}
+      mod_description_name: ${{ steps.setup.outputs.mod_description_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -86,6 +86,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import os
+          import re
           import shutil
           import urllib.parse
           from pathlib import Path
@@ -137,6 +138,22 @@ jobs:
               state["versions"] = versions
           
           resolved_jar = ""
+          resolved_jar_name = ""
+          resolved_desc_name = ""
+
+          def sanitize(value: str) -> str:
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip()) if value else ""
+
+          def build_prefix() -> str:
+              if state["versions"]:
+                  latest = _select_latest_modrinth_version(state["versions"] or [])
+                  if latest:
+                      version_number = str(latest.get("version_number") or "")
+                      loaders = [str(l) for l in latest.get("loaders", [])]
+                      loader = loaders[0] if loaders else "unknown"
+                      prefix = sanitize(f"{version_number}_{loader}")
+                      return prefix
+              return ""
           if jar_input:
               jar_path = Path(jar_input)
               if not jar_path.is_absolute():
@@ -146,9 +163,14 @@ jobs:
                       fail(f"Mod jar not found: {jar_path}")
                   jar_input = ""
               else:
-                  dest = setup_dir / jar_path.name
+                  if modrinth_url:
+                      ensure_project()
+                  prefix = build_prefix()
+                  name = f"{prefix}_{jar_path.name}" if prefix else jar_path.name
+                  dest = setup_dir / name
                   shutil.copy2(jar_path, dest)
                   resolved_jar = str(dest)
+                  resolved_jar_name = dest.name
           
           if not resolved_jar:
               if not auto_fetch:
@@ -166,9 +188,12 @@ jobs:
               filename = str(file_info.get("filename", "")).strip()
               if not filename:
                   filename = f"{state['project_ref'] or 'mod'}.jar"
-              dest = setup_dir / filename
+              prefix = build_prefix()
+              name = f"{prefix}_{filename}" if prefix else filename
+              dest = setup_dir / name
               _download_modrinth_file(file_url, dest)
               resolved_jar = str(dest)
+              resolved_jar_name = dest.name
           
           resolved_desc = ""
           if desc_input:
@@ -179,6 +204,7 @@ jobs:
               else:
                   dest.write_text(desc_input, encoding="utf-8")
               resolved_desc = str(dest)
+              resolved_desc_name = dest.name
           elif auto_fetch and modrinth_url:
               ensure_project()
               text = _extract_modrinth_description(state["project"] or {})
@@ -186,11 +212,12 @@ jobs:
                   dest = setup_dir / "description.txt"
                   dest.write_text(text, encoding="utf-8")
                   resolved_desc = str(dest)
+                  resolved_desc_name = dest.name
           
           output_path = Path(os.environ["GITHUB_OUTPUT"])
           with output_path.open("a", encoding="utf-8") as handle:
-              handle.write(f"mod_jar_path={resolved_jar}\n")
-              handle.write(f"mod_description_path={resolved_desc}\n")
+              handle.write(f"mod_jar_name={resolved_jar_name}\n")
+              handle.write(f"mod_description_name={resolved_desc_name}\n")
           
           print(f"Resolved jar: {resolved_jar}")
           print(f"Resolved description: {resolved_desc or '-'}")
@@ -632,8 +659,8 @@ jobs:
           VERSION_RANGE: ${{ inputs.version_range }}
           UPDATE_MODE: ${{ inputs.update_mode }}
           PUBLISH_MODE: ${{ inputs.publish_mode }}
-          MOD_DESCRIPTION: ${{ needs.setup.outputs.mod_description_path }}
-          MOD_JAR_PATH: ${{ needs.setup.outputs.mod_jar_path }}
+          MOD_DESCRIPTION_NAME: ${{ needs.setup.outputs.mod_description_name }}
+          MOD_JAR_NAME: ${{ needs.setup.outputs.mod_jar_name }}
           AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
           AUTO_FIX_CORRUPTED: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
           AUTO_FIX_ONLY: ${{ inputs.auto_fix_only }}
@@ -641,6 +668,14 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           mkdir -p .workflow_state/decomposed
+          MOD_JAR_PATH=""
+          MOD_DESCRIPTION=""
+          if [ -n "$MOD_JAR_NAME" ]; then
+            MOD_JAR_PATH=".workflow_state/setup/$MOD_JAR_NAME"
+          fi
+          if [ -n "$MOD_DESCRIPTION_NAME" ]; then
+            MOD_DESCRIPTION=".workflow_state/setup/$MOD_DESCRIPTION_NAME"
+          fi
           
           python build_mods.py auto-update-decompose \
             --mod-jar-path "$MOD_JAR_PATH" \
