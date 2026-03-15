@@ -127,6 +127,13 @@ def run_build(
         "error": "",
     }
 
+    tasks_env = os.environ.get("MODCOMPILER_GRADLE_TASKS", "")
+    tasks_list = [t.strip() for t in tasks_env.replace(",", " ").split() if t.strip()]
+    allow_dev_jars = (
+        os.environ.get("MODCOMPILER_ALLOW_DEV_JARS", "").strip() == "1"
+        or (loader == "fabric" and "jar" in tasks_list and "remapJar" not in tasks_list)
+    )
+
     source_dir = template_dir / "src"
     if not source_dir.exists():
         result["error"] = f"Template source folder missing: {source_dir}"
@@ -193,6 +200,16 @@ def run_build(
             return result
 
         jars = find_built_jars(workspace, jar_glob)
+        if not jars and allow_dev_jars:
+            # Fall back to dev jars when using the fast jar-only path (Fabric).
+            jars = [
+                path
+                for path in workspace.glob(jar_glob)
+                if path.is_file()
+                and path.suffix == ".jar"
+                and "-sources" not in path.name
+                and "-javadoc" not in path.name
+            ]
         if not jars:
             result["error"] = "Build succeeded but no jar matched jar_glob."
             return result
