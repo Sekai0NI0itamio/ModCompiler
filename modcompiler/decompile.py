@@ -51,7 +51,8 @@ def command_decompile_jar(args: Any) -> int:
             raise ModCompilerError(f"Decompiler jar does not exist: {decompiler_jar}")
 
         manifest = load_json(Path(args.manifest))
-        metadata = inspect_mod_jar(jar_path, manifest)
+        inspected = inspect_mod_jar(jar_path, manifest)
+        metadata.update(inspected)
         metadata["requested_jar_path"] = str(args.jar_path)
         metadata["resolved_jar_path"] = relativize_to_cwd(jar_path)
         slug = make_slug(metadata["primary_mod_id"], metadata["loader"], "decompiled")
