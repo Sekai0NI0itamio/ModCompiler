@@ -2982,30 +2982,94 @@ def _prepare_gradle_sources(
                 timeout=900,
             )
 
-        result = run_task(task)
-        if result.returncode != 0:
+        def list_tasks() -> set[str]:
+            try:
+                result = subprocess.run(
+                    ["./gradlew", "tasks", "--all", "--no-daemon"],
+                    cwd=workspace_root,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+                output = result.stdout or ""
+                tasks = set()
+                for line in output.splitlines():
+                    if " - " in line:
+                        name = line.split(" - ", 1)[0].strip()
+                        if name and " " not in name:
+                            tasks.add(name)
+                return tasks
+            except Exception:
+                return set()
+
+        def build_candidates() -> list[str]:
+            common = [
+                "genSources",
+                "downloadMinecraftSources",
+                "downloadSources",
+                "createMinecraftArtifacts",
+                "extractMappedMinecraftSources",
+                "extractMappedMinecraft",
+                "downloadMinecraft",
+                "downloadAssets",
+                "idea",
+                "eclipse",
+            ]
+            if adapter_family.startswith("forge_legacy"):
+                return ["setupDecompWorkspace"] + common
+            if "neoforge" in adapter_family:
+                return [
+                    "downloadMinecraftSources",
+                    "downloadSources",
+                    "createMinecraftArtifacts",
+                    "extractMappedMinecraftSources",
+                    "extractMappedMinecraft",
+                    "downloadMinecraft",
+                    "downloadAssets",
+                    "idea",
+                    "eclipse",
+                ]
+            if adapter_family.startswith("fabric"):
+                return [
+                    "genSources",
+                    "downloadMinecraftSources",
+                    "downloadAssets",
+                    "downloadMinecraft",
+                    "idea",
+                    "eclipse",
+                ]
+            return common
+
+        def pick_task(available: set[str]) -> list[str]:
+            candidates = build_candidates()
+            if not available:
+                return candidates
+            filtered = [cand for cand in candidates if cand in available]
+            return filtered or candidates
+
+        attempted = set()
+        tasks_to_try = [task]
+        available = list_tasks()
+        tasks_to_try.extend([t for t in pick_task(available) if t not in tasks_to_try])
+
+        for candidate in tasks_to_try:
+            if candidate in attempted:
+                continue
+            attempted.add(candidate)
+            result = run_task(candidate)
+            if result.returncode == 0:
+                task = candidate
+                break
             stdout_tail = result.stdout[-1000:] if result.stdout else ""
             stderr_tail = result.stderr[-1000:] if result.stderr else ""
             print(
-                f"DEBUG[_prepare_gradle_sources]: {task} failed (exit {result.returncode}). "
+                f"DEBUG[_prepare_gradle_sources]: {candidate} failed (exit {result.returncode}). "
                 f"STDOUT: {stdout_tail} STDERR: {stderr_tail}",
                 file=sys.stderr,
             )
-            alt_task = "genSources" if task == "setupDecompWorkspace" else "setupDecompWorkspace"
-            if "Task '" in stdout_tail or "Task '" in stderr_tail:
-                if f"Task '{task}' not found" in stdout_tail or f"Task '{task}' not found" in stderr_tail:
-                    print(
-                        f"DEBUG[_prepare_gradle_sources]: Falling back to {alt_task} for {target_version}-{target_loader}",
-                        file=sys.stderr,
-                    )
-                    alt_result = run_task(alt_task)
-                    if alt_result.returncode != 0:
-                        print(
-                            f"DEBUG[_prepare_gradle_sources]: {alt_task} failed (exit {alt_result.returncode}). "
-                            f"STDOUT: {alt_result.stdout[-1000:] if alt_result.stdout else ''} "
-                            f"STDERR: {alt_result.stderr[-1000:] if alt_result.stderr else ''}",
-                            file=sys.stderr,
-                        )
+            if f"Task '{candidate}' not found" in stdout_tail or f"Task '{candidate}' not found" in stderr_tail:
+                continue
     except Exception as exc:
         print(f"DEBUG[_prepare_gradle_sources]: Failed to run {task}: {exc}", file=sys.stderr)
 
