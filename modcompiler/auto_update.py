@@ -2929,6 +2929,25 @@ def _prepare_gradle_sources(
     if adapter_family.startswith("forge_legacy"):
         task = "setupDecompWorkspace"
 
+    build_gradle = workspace_root / "build.gradle"
+    fg_major = None
+    if build_gradle.exists():
+        try:
+            text = build_gradle.read_text(encoding="utf-8", errors="ignore")
+            match = re.search(r"ForgeGradle:([0-9]+)", text)
+            if not match:
+                match = re.search(r"net\\.forge[^'\\\"]*gradle[^'\\\"]*version\\s+['\\\"]([0-9]+)", text)
+            if match:
+                fg_major = int(match.group(1))
+        except Exception:
+            fg_major = None
+
+    if fg_major is not None:
+        if fg_major >= 3:
+            task = "genSources"
+        else:
+            task = "setupDecompWorkspace"
+
     gradlew = workspace_root / "gradlew"
     if not gradlew.exists():
         return
@@ -2953,21 +2972,40 @@ def _prepare_gradle_sources(
         file=sys.stderr,
     )
     try:
-        result = subprocess.run(
-            ["./gradlew", task, "--no-daemon"],
-            cwd=workspace_root,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=900,
-        )
+        def run_task(task_name: str):
+            return subprocess.run(
+                ["./gradlew", task_name, "--no-daemon"],
+                cwd=workspace_root,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=900,
+            )
+
+        result = run_task(task)
         if result.returncode != 0:
+            stdout_tail = result.stdout[-1000:] if result.stdout else ""
+            stderr_tail = result.stderr[-1000:] if result.stderr else ""
             print(
                 f"DEBUG[_prepare_gradle_sources]: {task} failed (exit {result.returncode}). "
-                f"STDOUT: {result.stdout[-1000:] if result.stdout else ''} "
-                f"STDERR: {result.stderr[-1000:] if result.stderr else ''}",
+                f"STDOUT: {stdout_tail} STDERR: {stderr_tail}",
                 file=sys.stderr,
             )
+            alt_task = "genSources" if task == "setupDecompWorkspace" else "setupDecompWorkspace"
+            if "Task '" in stdout_tail or "Task '" in stderr_tail:
+                if f"Task '{task}' not found" in stdout_tail or f"Task '{task}' not found" in stderr_tail:
+                    print(
+                        f"DEBUG[_prepare_gradle_sources]: Falling back to {alt_task} for {target_version}-{target_loader}",
+                        file=sys.stderr,
+                    )
+                    alt_result = run_task(alt_task)
+                    if alt_result.returncode != 0:
+                        print(
+                            f"DEBUG[_prepare_gradle_sources]: {alt_task} failed (exit {alt_result.returncode}). "
+                            f"STDOUT: {alt_result.stdout[-1000:] if alt_result.stdout else ''} "
+                            f"STDERR: {alt_result.stderr[-1000:] if alt_result.stderr else ''}",
+                            file=sys.stderr,
+                        )
     except Exception as exc:
         print(f"DEBUG[_prepare_gradle_sources]: Failed to run {task}: {exc}", file=sys.stderr)
 
