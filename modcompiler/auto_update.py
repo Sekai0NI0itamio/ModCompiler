@@ -1295,7 +1295,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "library_dir",
-                "description": "List directory structure of decompiled Minecraft sources ONLY (no Forge/Fabric/NeoForge APIs)",
+                "description": "List directory structure of decompiled Minecraft sources ONLY (no Forge/Fabric/NeoForge APIs). Some versions use a 'minecraft/' root with .java.patch files.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1315,7 +1315,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "library_read",
-                "description": "Read a decompiled Minecraft source file (Minecraft code only, not Forge/Fabric/NeoForge)",
+                "description": "Read a decompiled Minecraft source file (.java or .java.patch, Minecraft code only)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1332,7 +1332,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "library_search",
-                "description": "Search for a class or method in Minecraft sources ONLY (not Forge/Fabric/NeoForge)",
+                "description": "Search for a class or method in Minecraft sources ONLY (.java or .java.patch; not Forge/Fabric/NeoForge)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1456,6 +1456,8 @@ Older versions may use SRG/obf names (e.g., Minecraft.func_71410_x()); modern ve
 - Role model (if present): `reference/role-model/<candidate>/...` (check both `java/` and `resources/` folders)
 - YOUR output: `src/java/` (write with write_mod_file - auto-adds prefix)
 - Resources output: `src/resources/` (write with write_resource)
+**Library sources note:** Some versions store Minecraft sources under `minecraft/` with `.java.patch` files.
+Use `library_search` to find the exact path, then `library_read` to open it.
 
 If original source has no Java/Kotlin files, treat it as missing and use the selected role model folder as your starting point.
 
@@ -3198,6 +3200,7 @@ gradle.projectsEvaluated {
 
 
 _library_sources_cache: dict[str, Path] = {}
+_library_index_cache: dict[str, dict[str, Any]] = {}
 
 
 def _get_library_sources(
@@ -3289,14 +3292,40 @@ def _tool_library_dir(args: dict[str, str], library_sources: Path | None) -> str
     if not library_sources:
         return "Error: Minecraft library sources not available. Run build first to download/setup Minecraft sources."
     
-    path = args.get("path", "")
+    raw_path = args.get("path", "")
     depth = int(args.get("depth", 2))
     
     base_path = library_sources
-    if path:
-        base_path = library_sources / path
-        if not base_path.exists():
-            return f"Error: Directory not found: {path}"
+    if raw_path:
+        normalized = raw_path.replace("\\", "/").lstrip("./")
+        candidates = [normalized]
+        if normalized.startswith("net/minecraft/"):
+            candidates.append("minecraft/" + normalized[len("net/minecraft/"):])
+        elif normalized.startswith("minecraft/"):
+            candidates.append("net/minecraft/" + normalized[len("minecraft/"):])
+
+        if normalized.startswith("src/main/java/"):
+            candidates.append(normalized[len("src/main/java/"):])
+        elif normalized.startswith("src/"):
+            candidates.append(normalized[len("src/"):])
+        else:
+            candidates.append("src/main/java/" + normalized)
+            candidates.append("src/" + normalized)
+
+        found = None
+        for cand in candidates:
+            maybe = library_sources / cand
+            if maybe.exists() and maybe.is_dir():
+                found = maybe
+                base_path = maybe
+                break
+        if found is None:
+            top = []
+            try:
+                top = sorted(p.name + ("/" if p.is_dir() else "") for p in library_sources.iterdir())
+            except Exception:
+                top = []
+            return f"Error: Directory not found: {raw_path}\nTop-level: {', '.join(top[:20]) or '(empty)'}"
     
     def list_dir_tree(p: Path, current_depth: int, max_depth: int) -> str:
         if current_depth >= max_depth:
@@ -3323,13 +3352,42 @@ def _tool_library_read(args: dict[str, str], library_sources: Path | None) -> st
     path = args.get("path", "")
     if not path:
         return "Error: path is required"
-    
-    if not path.endswith(".java"):
-        path = path.replace(".", "/") + ".java"
-    
-    file_path = library_sources / path
-    if not file_path.exists():
-        return f"Error: File not found: {path}\n\nSearch for it using library_search first."
+
+    raw_path = path.replace("\\", "/")
+    if raw_path.startswith("./"):
+        raw_path = raw_path[2:]
+
+    candidate_paths = []
+    if raw_path.endswith(".java") or raw_path.endswith(".java.patch"):
+        candidate_paths.append(raw_path)
+    else:
+        normalized = raw_path.replace(".", "/")
+        candidate_paths.append(normalized + ".java")
+        candidate_paths.append(normalized + ".java.patch")
+
+    # Try net/minecraft vs minecraft/ patch roots and src/main/java prefixes.
+    expanded = []
+    for cand in candidate_paths:
+        expanded.append(cand)
+        if cand.startswith("net/minecraft/"):
+            expanded.append("minecraft/" + cand[len("net/minecraft/"):])
+        if cand.startswith("minecraft/"):
+            expanded.append("net/minecraft/" + cand[len("minecraft/"):])
+        if not cand.startswith("src/"):
+            expanded.append("src/main/java/" + cand)
+            expanded.append("src/" + cand)
+    candidate_paths = expanded
+
+    file_path = None
+    for cand in candidate_paths:
+        maybe = library_sources / cand
+        if maybe.exists():
+            file_path = maybe
+            path = cand
+            break
+
+    if file_path is None:
+        return f"Error: File not found: {raw_path}\n\nSearch for it using library_search first."
     
     try:
         content = file_path.read_text(encoding="utf-8")
@@ -3344,32 +3402,91 @@ def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> 
     if not library_sources:
         return "Error: Minecraft library sources not available."
     
-    query = args.get("query", "").lower()
+    query = args.get("query", "")
     if not query:
         return "Error: query is required"
-    
-    results = []
-    query_parts = query.replace(".", "/").split("/")
-    
-    search_pattern = f"*{query}*.java"
-    if len(query_parts) > 1:
-        search_pattern = f"*{query_parts[-1]}*.java"
-    
-    try:
-        for java_file in library_sources.rglob(search_pattern):
-            if java_file.is_file():
-                rel = java_file.relative_to(library_sources)
-                results.append(str(rel))
-    except Exception:
-        pass
-    
+    cleaned = query.strip()
+    cleaned = re.sub(r"^class\s+", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^(interface|record|enum)\s+", "", cleaned, flags=re.IGNORECASE)
+    token = cleaned.split()[-1] if cleaned.split() else cleaned
+    query_lower = token.lower()
+
+    results: list[str] = []
+    seen: set[str] = set()
+
+    def build_index() -> dict[str, Any]:
+        key = str(library_sources.resolve())
+        cached = _library_index_cache.get(key)
+        if cached:
+            return cached
+        entries = []
+        paths_set = set()
+        try:
+            for file_path in library_sources.rglob("*"):
+                if not file_path.is_file():
+                    continue
+                name_lower = file_path.name.lower()
+                if not (name_lower.endswith(".java") or name_lower.endswith(".java.patch")):
+                    continue
+                rel = str(file_path.relative_to(library_sources))
+                paths_set.add(rel)
+                stem = name_lower
+                if stem.endswith(".java.patch"):
+                    stem = stem[: -len(".java.patch")]
+                elif stem.endswith(".java"):
+                    stem = stem[: -len(".java")]
+                entries.append((rel, name_lower, stem))
+        except Exception:
+            entries = []
+            paths_set = set()
+        cached = {"entries": entries, "paths": paths_set}
+        _library_index_cache[key] = cached
+        return cached
+
+    index = build_index()
+    entries = index["entries"]
+    paths_set = index["paths"]
+
+    # If query looks like a path, try direct resolution first.
+    if "/" in cleaned or "." in cleaned:
+        candidate = cleaned.replace(".", "/")
+        for suffix in (".java", ".java.patch", ""):
+            direct = candidate if suffix == "" else candidate + suffix
+            for alt in (direct, f"minecraft/{direct}"):
+                if alt in paths_set:
+                    results.append(alt)
+                    seen.add(alt)
+        if results:
+            return "Found direct match(es):\n" + "\n".join(f"  - {r}" for r in results)
+
+    # Scan .java and .java.patch for name matches.
+    for rel, name_lower, stem in entries:
+        if query_lower in name_lower or query_lower in stem:
+            if rel not in seen:
+                results.append(rel)
+                seen.add(rel)
+        if len(results) >= 50:
+            break
+
+    # Fallback: content scan if filename search didn't help.
     if not results:
-        for java_file in library_sources.rglob("*.java"):
-            if query in java_file.stem.lower():
-                rel = java_file.relative_to(library_sources)
-                results.append(str(rel))
-                if len(results) >= 20:
+        scanned = 0
+        try:
+            for rel, _name_lower, _stem in entries:
+                file_path = library_sources / rel
+                try:
+                    content = file_path.read_text(encoding="utf-8", errors="ignore")
+                except Exception:
+                    continue
+                scanned += 1
+                if query_lower in content.lower():
+                    if rel not in seen:
+                        results.append(rel)
+                        seen.add(rel)
+                if len(results) >= 20 or scanned >= 2000:
                     break
+        except Exception:
+            pass
     
     if not results:
         return f"No results found for: {query}"
