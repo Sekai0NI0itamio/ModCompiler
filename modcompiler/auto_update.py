@@ -39,11 +39,17 @@ from modcompiler.modrinth import (
 MAX_SRC_SIZE_BYTES = 100 * 1024
 PRIORITY_JAVA_PATTERNS = [
     r".*Mod\.java$",
+    r".*Mod\.kt$",
     r".*Client\.java$",
+    r".*Client\.kt$",
     r".*Common\.java$",
+    r".*Common\.kt$",
     r".*Init\.java$",
+    r".*Init\.kt$",
     r".*Registry\.java$",
+    r".*Registry\.kt$",
     r"main/.*\.java$",
+    r"main/.*\.kt$",
 ]
 EXCLUDE_EXTENSIONS = {".json", ".lang", ".properties", ".png", ".ogg", ".txt", ".mcmeta", ".cfg"}
 
@@ -54,6 +60,7 @@ class AutoUpdateConfig:
     modrinth_project_url: str | None
     mod_description: str
     auto_fetch_modrinth: bool
+    auto_fix_corrupted: bool
     version_range: str
     update_mode: str
     publish_mode: str
@@ -256,6 +263,305 @@ def check_modrinth_versions(modrinth_project_url: str, loader: str) -> dict[str,
     }
 
 
+def _manifest_supports_version(manifest: dict[str, Any], loader: str, mc_version: str) -> bool:
+    for range_entry in manifest.get("ranges", []):
+        if not version_inclusive_between(
+            mc_version,
+            range_entry.get("min_version", ""),
+            range_entry.get("max_version", ""),
+        ):
+            continue
+        loaders = range_entry.get("loaders", {})
+        if loader not in loaders:
+            continue
+        loader_config = loaders[loader]
+        supported_versions = loader_config.get("supported_versions", [])
+        if supported_versions and mc_version not in supported_versions:
+            continue
+        return True
+    return False
+
+
+def _extract_json_payload(text: str) -> dict[str, Any] | None:
+    if not text:
+        return None
+    stripped = text.strip()
+    if stripped.startswith("{") and stripped.endswith("}"):
+        try:
+            return json.loads(stripped)
+        except json.JSONDecodeError:
+            return None
+    start = stripped.find("{")
+    end = stripped.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    try:
+        return json.loads(stripped[start:end + 1])
+    except json.JSONDecodeError:
+        return None
+
+
+def _bump_mod_version(base_version: str, used_versions: set[str]) -> str:
+    base_version = base_version.strip() or "0.0.0"
+    parts = base_version.split(".")
+    if all(p.isdigit() for p in parts):
+        numbers = [int(p) for p in parts]
+        while True:
+            numbers[-1] += 1
+            candidate = ".".join(str(n) for n in numbers)
+            if candidate not in used_versions:
+                used_versions.add(candidate)
+                return candidate
+    suffix_index = 1
+    while True:
+        candidate = f"{base_version}-fix{suffix_index}"
+        if candidate not in used_versions:
+            used_versions.add(candidate)
+            return candidate
+        suffix_index += 1
+
+
+def _verify_mod_source_with_ai(
+    *,
+    client: "OpenRouterClient",
+    project_name: str,
+    project_description: str,
+    version_label: str,
+    loader: str,
+    game_versions: list[str],
+    src_dir: Path,
+) -> dict[str, Any]:
+    files = _list_src_files(src_dir)
+    summary = _generate_src_summary(src_dir, files)
+    key_files = _identify_key_files(files)[:6]
+
+    excerpts: list[str] = []
+    for rel_path, _priority in key_files:
+        file_path = src_dir / rel_path
+        if not file_path.exists():
+            continue
+        try:
+            content = file_path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        if len(content) > 3000:
+            content = content[:3000] + "\n... (truncated)"
+        excerpts.append(f"File: {rel_path}\n```\n{content}\n```")
+
+    system_msg = (
+        "You are verifying whether a Minecraft mod's source code matches its Modrinth listing. "
+        "Return ONLY valid JSON with keys: verdict (pass/fail), confidence (0-1), reason."
+    )
+    excerpts_text = "\n\n".join(excerpts) if excerpts else "(no key files found)"
+    user_msg = (
+        f"Mod name: {project_name}\n"
+        f"Mod description:\n{project_description}\n\n"
+        f"Modrinth version: {version_label}\n"
+        f"Loader: {loader}\n"
+        f"Game versions: {', '.join(game_versions)}\n\n"
+        f"Source summary:\n{summary}\n\n"
+        f"Key files:\n{excerpts_text}\n\n"
+        "Evaluate whether this source appears to implement the described mod. "
+        "If uncertain or unrelated, verdict should be fail."
+    )
+
+    response = client.chat_completion_with_fallback(
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg},
+        ],
+        temperature=0.2,
+        max_tokens=400,
+    )
+    content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+    payload = _extract_json_payload(content) or {}
+    verdict = str(payload.get("verdict", "")).strip().lower()
+    confidence = payload.get("confidence")
+    try:
+        confidence = float(confidence)
+    except (TypeError, ValueError):
+        confidence = 0.0
+    reason = str(payload.get("reason", "")).strip()
+    return {
+        "verdict": verdict,
+        "confidence": confidence,
+        "reason": reason,
+        "raw": content,
+    }
+
+
+def _run_auto_fix_corrupted(
+    *,
+    manifest: dict[str, Any],
+    modrinth_project_url: str,
+    output_dir: Path,
+) -> tuple[list[VersionTarget], dict[str, dict[str, Any]], dict[str, dict[str, Any]], Path]:
+    token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
+    project_ref = normalize_modrinth_project_ref(modrinth_project_url)
+    project, versions = _fetch_modrinth_project_and_versions(project_ref, token)
+
+    project_name = str(project.get("title") or project.get("name") or project.get("slug") or project_ref)
+    project_description = _extract_modrinth_description(project) or str(project.get("description", "") or "")
+
+    from modcompiler.openrouter import OpenRouterClient
+    client = OpenRouterClient()
+    if not client.key_states:
+        raise ModCompilerError("auto-fix-corrupted requires OPENROUTER_API_KEY to be set.")
+
+    scan_root = output_dir / "_corrupt_scan"
+    downloads_dir = scan_root / "downloads"
+    decompiled_dir = scan_root / "decompiled"
+    role_models_dir = scan_root / "role-models"
+    downloads_dir.mkdir(parents=True, exist_ok=True)
+    decompiled_dir.mkdir(parents=True, exist_ok=True)
+    role_models_dir.mkdir(parents=True, exist_ok=True)
+
+    report_entries: list[dict[str, Any]] = []
+    role_models: dict[str, dict[str, Any]] = {}
+    corrupted_map: dict[tuple[str, str], dict[str, Any]] = {}
+
+    for version in versions:
+        version_id = str(version.get("id") or version.get("version_number") or "unknown")
+        version_number = str(version.get("version_number") or "")
+        loaders = [str(l) for l in version.get("loaders", [])]
+        game_versions = [str(v) for v in version.get("game_versions", [])]
+        date_published = str(version.get("date_published") or version.get("date") or "")
+
+        file_info = select_primary_modrinth_file(version.get("files", []))
+        if not file_info:
+            report_entries.append({
+                "version_id": version_id,
+                "version_number": version_number,
+                "loaders": loaders,
+                "game_versions": game_versions,
+                "verdict": "fail",
+                "confidence": 0.0,
+                "reason": "No downloadable file found.",
+                "date_published": date_published,
+            })
+            continue
+
+        file_url = str(file_info.get("url", "")).strip()
+        filename = str(file_info.get("filename", "")).strip() or f"{project_ref}-{version_id}.jar"
+        if not file_url:
+            report_entries.append({
+                "version_id": version_id,
+                "version_number": version_number,
+                "loaders": loaders,
+                "game_versions": game_versions,
+                "verdict": "fail",
+                "confidence": 0.0,
+                "reason": "Missing download URL.",
+                "date_published": date_published,
+            })
+            continue
+
+        jar_path = downloads_dir / version_id / filename
+        if not jar_path.exists():
+            _download_modrinth_file(file_url, jar_path)
+
+        decomp_output = decompiled_dir / version_id
+        decompile_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_output)
+        src_dir = decompile_result.extracted_src
+
+        verdict_payload = {
+            "verdict": "fail",
+            "confidence": 0.0,
+            "reason": "Decompiler produced no sources.",
+        }
+        if decompile_result.status == "success":
+            verdict_payload = _verify_mod_source_with_ai(
+                client=client,
+                project_name=project_name,
+                project_description=project_description,
+                version_label=version_number or version_id,
+                loader=loaders[0] if loaders else "unknown",
+                game_versions=game_versions,
+                src_dir=src_dir,
+            )
+
+        verdict = verdict_payload.get("verdict", "").lower()
+        confidence = float(verdict_payload.get("confidence", 0.0) or 0.0)
+        passed = verdict == "pass" and confidence >= 0.6
+        if not passed:
+            verdict = "fail"
+
+        report_entries.append({
+            "version_id": version_id,
+            "version_number": version_number,
+            "loaders": loaders,
+            "game_versions": game_versions,
+            "verdict": verdict,
+            "confidence": confidence,
+            "reason": verdict_payload.get("reason", ""),
+            "date_published": date_published,
+        })
+
+        if passed:
+            published_at = _parse_modrinth_datetime(date_published)
+            for loader in loaders:
+                current = role_models.get(loader)
+                if not current or published_at > current.get("published_at", 0.0):
+                    role_models[loader] = {
+                        "src_dir": src_dir,
+                        "version_id": version_id,
+                        "version_number": version_number,
+                        "published_at": published_at,
+                    }
+        else:
+            published_at = _parse_modrinth_datetime(date_published)
+            for loader in loaders:
+                for mc_version in game_versions:
+                    if not _manifest_supports_version(manifest, loader, mc_version):
+                        continue
+                    key = (loader, mc_version)
+                    current = corrupted_map.get(key)
+                    if not current or published_at > current.get("published_at", 0.0):
+                        corrupted_map[key] = {
+                            "loader": loader,
+                            "minecraft_version": mc_version,
+                            "version_id": version_id,
+                            "version_number": version_number,
+                            "published_at": published_at,
+                        }
+
+    role_model_paths: dict[str, dict[str, Any]] = {}
+    for loader, info in role_models.items():
+        dest = role_models_dir / loader
+        safe_rmtree(dest)
+        copy_tree(info["src_dir"], dest)
+        role_model_paths[loader] = {
+            "path": str(dest),
+            "version_id": info.get("version_id", ""),
+            "version_number": info.get("version_number", ""),
+        }
+
+    corrupted_targets: list[VersionTarget] = []
+    fix_info_map: dict[str, dict[str, Any]] = {}
+    for (_loader, _version), info in sorted(corrupted_map.items()):
+        slug = f"{info['minecraft_version']}-{info['loader']}"
+        corrupted_targets.append(VersionTarget(
+            minecraft_version=info["minecraft_version"],
+            loader=info["loader"],
+            slug=slug,
+        ))
+        fix_info_map[slug] = {
+            "fix_corrupted": True,
+            "fix_source_version": info.get("version_number", ""),
+            "fix_source_modrinth_id": info.get("version_id", ""),
+        }
+
+    report_path = scan_root / "corruption_report.json"
+    write_json(report_path, {
+        "project_ref": project_ref,
+        "project_name": project_name,
+        "entries": report_entries,
+        "role_models": role_model_paths,
+    })
+
+    return corrupted_targets, fix_info_map, role_model_paths, report_path
+
+
 def _parse_bool(value: str | bool | None, default: bool) -> bool:
     if isinstance(value, bool):
         return value
@@ -373,7 +679,7 @@ def trim_src_for_context(src_path: Path) -> Path:
 
     temp_dir.mkdir(parents=True)
 
-    java_files = [f for f in all_files if f.suffix == ".java" and f.is_file()]
+    java_files = [f for f in all_files if f.suffix in {".java", ".kt", ".kts"} and f.is_file()]
     resource_files = [f for f in all_files if f.suffix.lower() in EXCLUDE_EXTENSIONS and f.is_file()]
 
     priority_java = []
@@ -490,13 +796,13 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "read_file",
-                "description": "Read original mod source. Use path like 'java/com/package/ClassName.java'",
+                "description": "Read original mod source. Paths are relative to src/. Use 'java/com/package/ClassName.java', 'src/java/...', or 'src/main/java/...'.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Path from src/ root, e.g., 'java/com/itamio/fpsdisplay/FpsDisplay.java'"
+                            "description": "Path from src/ root (java/, kotlin/, resources/). e.g., 'java/com/itamio/fpsdisplay/FpsDisplay.java'"
                         }
                     },
                     "required": ["path"]
@@ -513,7 +819,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
                     "properties": {
                         "path": {
                             "type": "string",
-                            "description": "Directory: '.', 'src', 'java', 'java/com/package'"
+                            "description": "Directory under src/: '.', 'java', 'src/java', 'src/main/java', 'resources', 'kotlin', etc."
                         }
                     }
                 }
@@ -556,7 +862,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "write_mod_file",
-                "description": "Write updated Java file. CRITICAL: Write to 'src/java/' (not src/main/java/). Auto-adds src/java/ prefix. Use path like 'com/package/ClassName.java'",
+                "description": "Write updated Java/Kotlin file. Writes to 'src/java/' (auto-adds prefix). Use path like 'com/package/ClassName.java'.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -728,8 +1034,22 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     supported_versions = context.get("supported_versions_for_loader", [])
     supported_versions_for_range = context.get("supported_versions_for_range", [])
     latest_supported = context.get("latest_supported_version", "")
+    role_model_dir = context.get("role_model_dir", "")
+    role_model_version = context.get("role_model_version", "")
+    fix_corrupted = bool(context.get("fix_corrupted"))
     supported_versions_text = ", ".join(supported_versions) if supported_versions else "unknown"
     range_versions_text = ", ".join(supported_versions_for_range) if supported_versions_for_range else "unknown"
+
+    role_model_block = ""
+    if role_model_dir:
+        role_model_block = (
+            f"\nROLE MODEL SOURCE (verified working): {role_model_dir} "
+            f"(version {role_model_version or 'unknown'})\n"
+            "Read this if you need a known-good reference for behavior.\n"
+        )
+    fix_block = ""
+    if fix_corrupted:
+        fix_block = "\nTHIS TARGET IS MARKED AS CORRUPTED: ensure the mod matches the description and intended behavior.\n"
 
     return f"""You are an expert Minecraft mod developer. Your task is to update this mod from {current_l} {current_v} to {target_l} {target_v}.
 
@@ -745,13 +1065,14 @@ MOD INFORMATION:
 - Mod ID: {mod_info.get('mod_id', 'unknown')}
 - Current Version: {mod_info.get('mod_version', '1.0.0')}
 - Description: {desc}
+{fix_block}{role_model_block}
 
 {current_v} uses SRG names (e.g., Minecraft.func_71410_x()), {target_v} uses MCP names (e.g., Minecraft.getMinecraft()).
 
 **FOLDER STRUCTURE - IMPORTANT:**
 - Original source files: `src/` (read with read_file using paths like "java/com/examplemod/Mod.java")
 - Reference examples: `reference/` (read with read_reference - these show correct {target_v} patterns!)
-- YOUR output: `src/main/java/` (write with write_mod_file - auto-adds prefix)
+- YOUR output: `src/java/` (write with write_mod_file - auto-adds prefix)
 - Resources output: `src/resources/` (write with write_resource)
 
 **PATHS: The original source is under src/java/ NOT src/main/java/**
@@ -760,7 +1081,7 @@ MOD INFORMATION:
 1. Read 2-3 key files from reference/ first (these show correct imports/patterns)
 2. Read the main mod file from src/java/ (use path like "java/com/package/Mod.java")
 3. Read any other key files needed
-4. Write updated files to src/main/java/ using write_mod_file
+4. Write updated files to src/java/ using write_mod_file
 5. IMMEDIATELY call Build when ready - don't keep exploring!
 
 **CRITICAL RULES:**
@@ -774,7 +1095,7 @@ MOD INFORMATION:
 
 **TOOLS:**
 - read_file: Use path "java/com/package/File.java" (src/ prefix is auto-added)
-- write_mod_file: Use path "com/package/File.java" (src/main/java/ prefix auto-added)
+- write_mod_file: Use path "com/package/File.java" (src/java/ prefix auto-added)
 - write_resource: Just filename like "mcmod.info" (src/resources/ prefix auto-added)
 - build: Compile the mod - do this as soon as possible!
 - complete: Mark done after successful build"""
@@ -845,11 +1166,16 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         getattr(args, "auto_fetch_modrinth", None),
         default=True,
     )
+    auto_fix_corrupted = _parse_bool(
+        getattr(args, "auto_fix_corrupted", None),
+        default=False,
+    )
     config = AutoUpdateConfig(
         mod_jar_path=args.mod_jar_path if hasattr(args, "mod_jar_path") else "",
         modrinth_project_url=args.modrinth_project_url if hasattr(args, "modrinth_project_url") else None,
         mod_description=args.mod_description if hasattr(args, "mod_description") else "",
         auto_fetch_modrinth=auto_fetch_modrinth,
+        auto_fix_corrupted=auto_fix_corrupted,
         version_range=args.version_range if hasattr(args, "version_range") else "all",
         update_mode=args.update_mode if hasattr(args, "update_mode") else "all-versions",
         publish_mode=args.publish_mode if hasattr(args, "publish_mode") else "bundle-only",
@@ -859,6 +1185,8 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
 
     safe_rmtree(config.output_dir)
     config.output_dir.mkdir(parents=True)
+
+    manifest = load_json(Path(config.manifest_path))
 
     mod_description_input = config.mod_description.strip()
     info_txt = ""
@@ -916,7 +1244,25 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         _download_modrinth_file(file_url, jar_path)
         mod_jar_source = "modrinth"
 
-    manifest = load_json(Path(config.manifest_path))
+    corrupted_targets: list[VersionTarget] = []
+    fix_info_map: dict[str, dict[str, Any]] = {}
+    role_models: dict[str, dict[str, Any]] = {}
+    corruption_report_path = ""
+
+    if config.auto_fix_corrupted:
+        if not config.modrinth_project_url:
+            raise ModCompilerError("auto-fix-corrupted requires a Modrinth project URL.")
+        (
+            corrupted_targets,
+            fix_info_map,
+            role_models,
+            report_path,
+        ) = _run_auto_fix_corrupted(
+            manifest=manifest,
+            modrinth_project_url=config.modrinth_project_url,
+            output_dir=config.output_dir,
+        )
+        corruption_report_path = str(report_path)
 
     decomp_dir = config.output_dir / "_decompiled"
     decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
@@ -962,20 +1308,56 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             print(f"Warning: Could not fetch Modrinth versions: {e}", file=sys.stderr)
 
     filtered_targets = filter_versions_to_build(version_targets, modrinth_info, config.update_mode)
+    if corrupted_targets:
+        existing_slugs = {t.slug for t in filtered_targets}
+        for target in corrupted_targets:
+            if target.slug not in existing_slugs:
+                filtered_targets.append(target)
+                existing_slugs.add(target.slug)
 
     trimmed_src = trim_src_for_context(src_path)
 
-    decomposed = DecomposedMod(
-        src_path=src_path,
-        mod_info=mod_info,
-        current_version=current_version,
-        current_loader=current_loader,
-        metadata=mod_info,
-    )
-
+    used_fix_versions: set[str] = set()
     for target in filtered_targets:
+        mod_info_for_target = dict(mod_info)
+        fix_info = fix_info_map.get(target.slug)
+        if fix_info:
+            old_version = fix_info.get("fix_source_version") or mod_info_for_target.get("mod_version", "0.0.0")
+            new_version = _bump_mod_version(str(old_version), used_fix_versions)
+            mod_info_for_target["mod_version"] = new_version
+            mod_info_for_target["fix_corrupted"] = True
+            mod_info_for_target["fix_source_version"] = old_version
+            if fix_info.get("fix_source_modrinth_id"):
+                mod_info_for_target["fix_source_modrinth_id"] = fix_info["fix_source_modrinth_id"]
+
+        decomposed = DecomposedMod(
+            src_path=src_path,
+            mod_info=mod_info_for_target,
+            current_version=current_version,
+            current_loader=current_loader,
+            metadata=mod_info_for_target,
+        )
+
         context = generate_version_context(decomposed, target, info_txt, trimmed_src, manifest)
-        create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
+        if fix_info:
+            context["fix_corrupted"] = True
+            context["fix_source_version"] = mod_info_for_target.get("fix_source_version", "")
+            context["fix_source_modrinth_id"] = mod_info_for_target.get("fix_source_modrinth_id", "")
+    if target.loader in role_models:
+        context["role_model_dir"] = "reference/role-model"
+        context["role_model_version"] = role_models[target.loader].get("version_number", "")
+
+        version_folder = create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
+        role_model = role_models.get(target.loader)
+        if role_model:
+            ref_root = version_folder / "reference"
+            ref_root.mkdir(parents=True, exist_ok=True)
+            role_dest = ref_root / "role-model"
+            safe_rmtree(role_dest)
+            copy_tree(Path(role_model["path"]), role_dest)
+
+    if config.modrinth_project_url and not modrinth_project_ref:
+        modrinth_project_ref = normalize_modrinth_project_ref(config.modrinth_project_url)
 
     state = {
         "mod_jar_path": str(jar_path),
@@ -986,6 +1368,9 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         "description_source": description_source,
         "auto_fetch_modrinth_requested": config.auto_fetch_modrinth,
         "auto_fetch_modrinth_effective": auto_fetch_enabled,
+        "auto_fix_corrupted": config.auto_fix_corrupted,
+        "corruption_report": corruption_report_path,
+        "role_models": role_models,
         "current_version": current_version,
         "current_loader": current_loader,
         "version_targets": [
@@ -1114,6 +1499,7 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
         "chat_history": [],
         "warnings": [],
     }
+    result["metadata"] = context.get("mod_info", {})
 
     log_path = artifact_dir / "ai_rebuild.log"
     messages = []
@@ -1167,7 +1553,9 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
         def get_all_java_files(base_dir: Path) -> list[tuple[str, str]]:
             files = []
             if base_dir.exists():
-                for f in sorted(base_dir.rglob("*.java")):
+                for f in sorted(base_dir.rglob("*")):
+                    if f.suffix not in {".java", ".kt", ".kts"}:
+                        continue
                     try:
                         content = f.read_text(encoding="utf-8")
                         rel_path = str(f.relative_to(base_dir))
@@ -1180,7 +1568,7 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
             files = []
             if base_dir.exists():
                 for f in sorted(base_dir.rglob("*")):
-                    if f.is_file() and f.suffix in [".java", ".info", ".mcmeta", ".json"]:
+                    if f.is_file() and f.suffix in [".java", ".kt", ".kts", ".info", ".mcmeta", ".json"]:
                         try:
                             content = f.read_text(encoding="utf-8")
                             rel_path = str(f.relative_to(base_dir))
@@ -1254,12 +1642,18 @@ ACTION: Read files, update them, write to src/java/, then call build."""
         for rel_path, content in get_all_ref_files(ref_dir) if ref_dir.exists() else []:
             all_ref_contents.append((rel_path, content))
 
+        role_model_note = ""
+        if context.get("role_model_dir"):
+            role_model_note = f"\nROLE MODEL AVAILABLE: {context.get('role_model_dir')} (version {context.get('role_model_version', 'unknown')})\n"
+        fix_note = "\nNOTE: This target is marked as corrupted; ensure behavior matches the description.\n" if context.get("fix_corrupted") else ""
+
         user_msg_1 = f"""Update this mod for {target_loader} {target_version}.
 
 USER DESCRIPTION:
 {context.get('user_description', 'No description provided')}
 
 TARGET VERSION: {target_version} (valid in this system — do NOT change it)
+{fix_note}{role_model_note}
 
 PATH INFO:
 - READ original source: "java/com/package/File.java"
@@ -1616,22 +2010,26 @@ def _tool_read_file(version_dir: Path, args: dict[str, str]) -> str:
     if not path:
         return "Error: path is required"
 
-    if not path.startswith("java/"):
-        if path.startswith("src/java/"):
-            path = path.replace("src/java/", "java/")
-        elif not path.startswith("src/"):
-            path = "java/" + path
+    path = _normalize_src_path(path, for_file=True)
+    if not path:
+        return "Error: path is required"
 
     file_path = version_dir / "src" / path
     if not file_path.exists():
         available = []
         src_dir = version_dir / "src"
         if src_dir.exists():
-            for f in sorted(src_dir.rglob("*.java"))[:10]:
-                rel = f.relative_to(src_dir)
-                available.append(str(rel))
+            for f in sorted(src_dir.rglob("*")):
+                if f.is_file() and f.suffix in {".java", ".kt", ".kts"}:
+                    rel = f.relative_to(src_dir)
+                    available.append(str(rel))
+                if len(available) >= 10:
+                    break
         avail_str = "\n  - ".join(available) if available else "none"
-        return f"File not found: {path}\n\nAvailable Java files:\n  - {avail_str}\n\nTip: Use path like 'java/com/package/ClassName.java'"
+        return (
+            f"File not found: {path}\n\nAvailable source files:\n  - {avail_str}\n\n"
+            "Tip: Use path like 'java/com/package/ClassName.java'"
+        )
 
     try:
         content = file_path.read_text(encoding="utf-8")
@@ -1642,15 +2040,37 @@ def _tool_read_file(version_dir: Path, args: dict[str, str]) -> str:
         return f"Error reading file: {e}"
 
 
-def _tool_list_files(version_dir: Path, args: dict[str, str]) -> str:
-    path = args.get("path", ".")
-    
-    if not path.startswith("java/") and path != "." and path != "src" and not path.startswith("src/"):
-        path = "java/" + path if not path.startswith("src/") else path.replace("src/", "")
+def _normalize_src_path(raw: str, *, for_file: bool) -> str:
+    path = (raw or "").strip().lstrip("/")
+    if not path or path == ".":
+        return "" if for_file else "."
+    if path == "src":
+        return "" if for_file else "."
+    if path.startswith("src/"):
+        path = path[4:]
+    if path.startswith("main/"):
+        path = path[5:]
 
-    dir_path = version_dir / "src" / path
+    roots = ("java", "resources", "kotlin", "client")
+    if any(path == root or path.startswith(root + "/") for root in roots):
+        return path
+
+    return f"java/{path}" if for_file or path else path
+
+
+def _tool_list_files(version_dir: Path, args: dict[str, str]) -> str:
+    raw_path = args.get("path", ".")
+    path = _normalize_src_path(raw_path, for_file=False)
+
+    dir_path = version_dir / "src"
+    if path and path != ".":
+        dir_path = dir_path / path
     if not dir_path.exists():
-        return f"Directory not found: src/{path}\n\nOriginal source is in src/java/. Try 'java' or 'java/com/yourpackage'"
+        return (
+            f"Directory not found: src/{path}\n\n"
+            "Original source is in src/java (and src/resources/src/kotlin if present). "
+            "Try 'java', 'resources', or 'src/main/java'."
+        )
 
     items = []
     for item in sorted(dir_path.iterdir()):
@@ -1810,6 +2230,12 @@ def _tool_copy_to_structure(version_dir: Path, args: dict[str, str]) -> str:
     
     if source_path.startswith("src/java/"):
         dest_path = source_path.replace("src/java/", "src/main/java/")
+    elif source_path.startswith("src/kotlin/"):
+        dest_path = source_path.replace("src/kotlin/", "src/main/kotlin/")
+    elif source_path.startswith("src/client/java/"):
+        dest_path = source_path.replace("src/client/java/", "src/client/java/")
+    elif source_path.startswith("src/client/kotlin/"):
+        dest_path = source_path.replace("src/client/kotlin/", "src/client/kotlin/")
     elif source_path.startswith("src/resources/"):
         dest_path = source_path.replace("src/resources/", "src/main/resources/")
     else:
@@ -2015,6 +2441,10 @@ def _tool_file_edit(version_dir: Path, args: dict[str, str]) -> str:
     if not path:
         return "Error: path is required"
 
+    path = _normalize_src_path(path, for_file=True)
+    if not path:
+        return "Error: path is required"
+
     file_path = version_dir / "src" / path
     if not file_path.exists():
         return f"Error: file not found: {path}"
@@ -2135,14 +2565,6 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
             except OSError:
                 pass
 
-        mod_dir = workspace / "src" / "main"
-        src_dir = version_dir / "src"
-        if src_dir.exists():
-            if (src_dir / "java").exists():
-                copy_tree(src_dir / "java", mod_dir / "java")
-            if (src_dir / "resources").exists():
-                copy_tree(src_dir / "resources", mod_dir / "resources")
-
         metadata_json = workspace / "metadata.json"
         from modcompiler.common import write_json
         write_json(metadata_json, metadata)
@@ -2168,6 +2590,7 @@ def _tool_build(version_dir: Path, artifact_dir: Path, context: dict[str, Any], 
         from modcompiler.common import (
             copy_file,
             find_built_jars,
+            jar_contains_classes,
             java_home_for_version,
             resolve_java_version,
             sanitize_env_path,
@@ -2256,6 +2679,16 @@ Manifest: version-manifest.json
             log_content = log_path.read_text(encoding="utf-8")
             print(f"DEBUG[_tool_build]: No jars found, log content length: {len(log_content)}", file=sys.stderr)
             return f"Build completed but no jar found. Check build.log for errors.\n\nLast 3000 chars:\n\n{log_content[-3000:]}", False
+        
+        classful_jars = [jar for jar in jars if jar_contains_classes(jar)]
+        if not classful_jars:
+            log_content = log_path.read_text(encoding="utf-8")
+            return (
+                "Build completed but jars contain no .class files. "
+                "This usually means sources were not placed under src/main/java. "
+                "Check build.log for details.\n\nLast 3000 chars:\n\n"
+                f"{log_content[-3000:]}"
+            ), False
 
         jars_dir = artifact_dir / "jars"
         jars_dir.mkdir(parents=True, exist_ok=True)

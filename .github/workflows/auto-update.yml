@@ -13,6 +13,11 @@ on:
         required: false
         default: true
         type: boolean
+      auto_fix_corrupted:
+        description: Auto-fix corrupted versions before updating
+        required: false
+        default: false
+        type: boolean
       modrinth_project_url:
         description: Optional Modrinth project URL or slug
         required: false
@@ -72,6 +77,7 @@ jobs:
           MOD_DESCRIPTION_INPUT: ${{ inputs.mod_description }}
           AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           python3 - <<'PY'
           import os
@@ -195,7 +201,9 @@ jobs:
           MOD_DESCRIPTION: ${{ steps.setup.outputs.mod_description_path }}
           MOD_JAR_PATH: ${{ steps.setup.outputs.mod_jar_path }}
           AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
+          AUTO_FIX_CORRUPTED: ${{ inputs.auto_fix_corrupted }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           mkdir -p .workflow_state/decomposed
           
@@ -204,6 +212,7 @@ jobs:
             --modrinth-project-url "$MODRINTH_PROJECT_URL" \
             --mod-description "$MOD_DESCRIPTION" \
             --auto-fetch-modrinth "false" \
+            --auto-fix-corrupted "$AUTO_FIX_CORRUPTED" \
             --version-range "$VERSION_RANGE" \
             --update-mode "$UPDATE_MODE" \
             --publish-mode "$PUBLISH_MODE" \

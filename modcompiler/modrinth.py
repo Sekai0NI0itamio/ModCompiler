@@ -203,8 +203,18 @@ def build_modrinth_version_payload(*, project_id: str, mod: dict[str, Any], jar_
     version_number = metadata["mod_version"]
     minecraft_version = mod["minecraft_version"]
     loader = mod["loader"]
+    fix_corrupted = bool(metadata.get("fix_corrupted") or mod.get("fix_corrupted"))
     title = f"{metadata['name']} {version_number} ({loader} {minecraft_version})"
-    changelog = "\n".join(
+    if fix_corrupted:
+        title = f"{title} (Fixed Corrupted Version)"
+
+    changelog_lines = []
+    if fix_corrupted:
+        changelog_lines.append("Fixed Corrupted Version")
+        if metadata.get("fix_source_version"):
+            changelog_lines.append(f"Original version: {metadata['fix_source_version']}")
+        changelog_lines.append("")
+    changelog_lines.extend(
         [
             "Automated upload from ModCompiler GitHub Actions.",
             "",
@@ -215,6 +225,7 @@ def build_modrinth_version_payload(*, project_id: str, mod: dict[str, Any], jar_
             f"Built artifact: {jar_name}",
         ]
     )
+    changelog = "\n".join(changelog_lines)
     return {
         "name": title,
         "version_number": version_number,

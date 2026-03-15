@@ -111,6 +111,57 @@ def inject_gradle_block(text: str, block_name: str, lines: list[str]) -> str:
     return pattern.sub(lambda m: m.group(1) + m.group(2) + insertion + m.group(3), text, count=1)
 
 
+def _resolve_source_root(source_dir: Path) -> Path:
+    candidates = [source_dir, source_dir / "src"]
+    markers = (
+        "java",
+        "kotlin",
+        "resources",
+        "main/java",
+        "main/kotlin",
+        "main/resources",
+        "client/java",
+        "client/kotlin",
+    )
+    for candidate in candidates:
+        if any((candidate / marker).exists() for marker in markers):
+            return candidate
+    return source_dir
+
+
+def _copy_dir_if_exists(src: Path, dst: Path) -> None:
+    if src.exists():
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+
+
+def _copy_sources_to_workspace(source_dir: Path, workspace: Path) -> None:
+    source_root = _resolve_source_root(source_dir)
+
+    for relative in (
+        "src/main/java",
+        "src/main/kotlin",
+        "src/client/java",
+        "src/client/kotlin",
+        "src/main/resources",
+    ):
+        candidate = workspace / relative
+        if candidate.exists():
+            shutil.rmtree(candidate)
+
+    java_root = source_root / "main" / "java" if (source_root / "main" / "java").exists() else source_root / "java"
+    kotlin_root = source_root / "main" / "kotlin" if (source_root / "main" / "kotlin").exists() else source_root / "kotlin"
+    resources_root = (
+        source_root / "main" / "resources" if (source_root / "main" / "resources").exists() else source_root / "resources"
+    )
+
+    _copy_dir_if_exists(java_root, workspace / "src" / "main" / "java")
+    _copy_dir_if_exists(kotlin_root, workspace / "src" / "main" / "kotlin")
+    _copy_dir_if_exists(resources_root, workspace / "src" / "main" / "resources")
+
+    _copy_dir_if_exists(source_root / "client" / "java", workspace / "src" / "client" / "java")
+    _copy_dir_if_exists(source_root / "client" / "kotlin", workspace / "src" / "client" / "kotlin")
+
+
 def prepare_workspace(
     *,
     manifest: dict[str, Any],
@@ -129,16 +180,7 @@ def prepare_workspace(
     dependency_overrides = resolve_dependency_overrides(loader_config, minecraft_version)
 
     extra_gradle = load_extra_gradle(source_dir)
-    if adapter_family.startswith("fabric"):
-        if (workspace / "src").exists():
-            shutil.rmtree(workspace / "src")
-        copy_tree(source_dir, workspace / "src")
-    else:
-        for relative in ("src/main/java", "src/main/kotlin", "src/client/java", "src/client/kotlin"):
-            candidate = workspace / relative
-            if candidate.exists():
-                shutil.rmtree(candidate)
-        shutil.copytree(source_dir, workspace / "src", dirs_exist_ok=True)
+    _copy_sources_to_workspace(source_dir, workspace)
     update_settings_gradle(workspace / "settings.gradle", metadata.mod_id)
     if extra_gradle:
         apply_gradle_extras(workspace / "build.gradle", extra_gradle)
