@@ -59,9 +59,11 @@ jobs:
         env:
           BUNDLE_SUBDIR: ${{ inputs.bundle_subdir }}
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import os
+          import shutil
           import subprocess
+          import sys
           from pathlib import Path
 
           root = Path('.workflow_downloads')
@@ -69,6 +71,19 @@ jobs:
 
           def fail(msg: str) -> None:
               raise SystemExit(msg)
+
+          def debug_tree(label: str, path: Path) -> None:
+              print(f"--- {label} ({path}) ---")
+              for p in sorted(path.rglob('*')):
+                  if p.is_dir():
+                      continue
+                  rel = p.relative_to(path)
+                  print(rel)
+
+          if not root.exists():
+              fail(f"Download root not found: {root}")
+
+          debug_tree("Downloaded files", root)
 
           if bundle_subdir:
               candidate = (root / bundle_subdir).resolve()
@@ -85,6 +100,23 @@ jobs:
                           candidate = mods_dir
                           break
                   if candidate is None:
+                      zip_candidates = [p for p in root.rglob('*.zip') if p.is_file()]
+                      if zip_candidates:
+                          extract_root = Path('.workflow_artifacts/extracted')
+                          if extract_root.exists():
+                              shutil.rmtree(extract_root)
+                          extract_root.mkdir(parents=True, exist_ok=True)
+                          for zip_path in zip_candidates:
+                              shutil.unpack_archive(str(zip_path), extract_root / zip_path.stem)
+                          summaries = list(extract_root.rglob('run-summary.json'))
+                          if summaries:
+                              candidate = summaries[0].parent
+                          else:
+                              for mods_dir in extract_root.rglob('mods'):
+                                  if list(mods_dir.rglob('result.json')):
+                                      candidate = mods_dir
+                                      break
+                  if candidate is None:
                       fail("Could not locate a bundle root (run-summary.json or mods/ with result.json).")
 
           if (candidate / 'run-summary.json').exists():
@@ -92,7 +124,7 @@ jobs:
           else:
               out_dir = Path('.workflow_artifacts/normalized')
               cmd = [
-                  'python',
+                  sys.executable,
                   'build_mods.py',
                   'bundle',
                   '--artifacts-root',
