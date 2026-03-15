@@ -69,9 +69,10 @@ def main(argv: list[str] | None = None) -> int:
     publish_parser.add_argument("--artifact-dir", required=True)
 
     auto_update_decompose_parser = subparsers.add_parser("auto-update-decompose")
-    auto_update_decompose_parser.add_argument("--mod-jar-path", required=True)
+    auto_update_decompose_parser.add_argument("--mod-jar-path", required=False, default="")
     auto_update_decompose_parser.add_argument("--modrinth-project-url", required=False, default="")
     auto_update_decompose_parser.add_argument("--mod-description", required=False, default="")
+    auto_update_decompose_parser.add_argument("--auto-fetch-modrinth", required=False, default="true")
     auto_update_decompose_parser.add_argument("--version-range", required=False, default="all")
     auto_update_decompose_parser.add_argument("--update-mode", required=False, default="all-versions")
     auto_update_decompose_parser.add_argument("--publish-mode", required=False, default="bundle-only")

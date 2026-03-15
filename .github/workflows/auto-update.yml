@@ -5,8 +5,14 @@ on:
     inputs:
       mod_jar_path:
         description: Repo-relative path to mod jar (e.g., "To Be Decompiled/my-mod.jar")
-        required: true
+        required: false
+        default: ""
         type: string
+      auto_fetch_modrinth:
+        description: Auto-fetch jar/description from Modrinth when jar path is empty
+        required: false
+        default: true
+        type: boolean
       modrinth_project_url:
         description: Optional Modrinth project URL or slug
         required: false
@@ -66,6 +72,7 @@ jobs:
           PUBLISH_MODE: ${{ inputs.publish_mode }}
           MOD_DESCRIPTION: ${{ inputs.mod_description }}
           MOD_JAR_PATH: ${{ inputs.mod_jar_path }}
+          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: |
           mkdir -p .workflow_state/decomposed
@@ -74,6 +81,7 @@ jobs:
             --mod-jar-path "$MOD_JAR_PATH" \
             --modrinth-project-url "$MODRINTH_PROJECT_URL" \
             --mod-description "$MOD_DESCRIPTION" \
+            --auto-fetch-modrinth "$AUTO_FETCH_MODRINTH" \
             --version-range "$VERSION_RANGE" \
             --update-mode "$UPDATE_MODE" \
             --publish-mode "$PUBLISH_MODE" \
