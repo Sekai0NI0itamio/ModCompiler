@@ -48,9 +48,9 @@ public class Config
     private static ResourceLocation parseItemName(String name) {
         int sep = name.indexOf(':');
         if (sep > 0 && sep < name.length() - 1) {
-            return new ResourceLocation(name.substring(0, sep), name.substring(sep + 1));
+            return ResourceLocation.fromNamespaceAndPath(name.substring(0, sep), name.substring(sep + 1));
         }
-        return new ResourceLocation("minecraft", name);
+        return ResourceLocation.fromNamespaceAndPath("minecraft", name);
     }
 
     private static boolean validateItemName(final Object obj)
