@@ -272,8 +272,8 @@ def render_modrinth_summary_markdown(result: dict[str, Any]) -> str:
 
 
 class ModrinthClient:
-    def __init__(self, *, token: str, user_agent: str, api_base: str = MODRINTH_API_BASE) -> None:
-        self.token = token
+    def __init__(self, *, token: str | None, user_agent: str, api_base: str = MODRINTH_API_BASE) -> None:
+        self.token = token or ""
         self.user_agent = user_agent
         self.api_base = api_base.rstrip("/")
 
@@ -334,11 +334,9 @@ class ModrinthClient:
         if params:
             query = urllib.parse.urlencode(params)
             url = f"{url}?{query}"
-        headers = {
-            "Authorization": self.token,
-            "User-Agent": self.user_agent,
-            "Accept": "application/json",
-        }
+        headers = {"User-Agent": self.user_agent, "Accept": "application/json"}
+        if self.token:
+            headers["Authorization"] = self.token
         if extra_headers:
             headers.update(extra_headers)
         request = urllib.request.Request(url, data=body, method=method, headers=headers)
@@ -397,3 +395,26 @@ def encode_multipart_form_data(
 def guess_content_type(filename: str) -> str:
     guessed, _encoding = mimetypes.guess_type(filename)
     return guessed or "application/octet-stream"
+
+
+def select_primary_modrinth_file(files: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not files:
+        return None
+
+    primary = [file_info for file_info in files if file_info.get("primary")]
+    candidates = primary or files
+
+    jar_candidates = [
+        file_info
+        for file_info in candidates
+        if str(file_info.get("filename", "")).lower().endswith(".jar")
+    ]
+    if jar_candidates:
+        candidates = jar_candidates
+
+    preferred = [
+        file_info
+        for file_info in candidates
+        if not any(marker in str(file_info.get("filename", "")).lower() for marker in PRIMARY_JAR_EXCLUDE_MARKERS)
+    ]
+    return preferred[0] if preferred else candidates[0]

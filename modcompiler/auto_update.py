@@ -10,6 +10,8 @@ import sys
 import time
 import zipfile
 import urllib.parse
+import urllib.request
+import urllib.error
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -27,7 +29,12 @@ from modcompiler.common import (
     write_json,
 )
 from modcompiler.decompile import DecompileResult, decompile_jar_internal
-from modcompiler.modrinth import ModrinthClient, build_modrinth_user_agent, normalize_modrinth_project_ref
+from modcompiler.modrinth import (
+    ModrinthClient,
+    build_modrinth_user_agent,
+    normalize_modrinth_project_ref,
+    select_primary_modrinth_file,
+)
 
 MAX_SRC_SIZE_BYTES = 100 * 1024
 PRIORITY_JAVA_PATTERNS = [
@@ -46,6 +53,7 @@ class AutoUpdateConfig:
     mod_jar_path: str
     modrinth_project_url: str | None
     mod_description: str
+    auto_fetch_modrinth: bool
     version_range: str
     update_mode: str
     publish_mode: str
@@ -246,6 +254,89 @@ def check_modrinth_versions(modrinth_project_url: str, loader: str) -> dict[str,
         "existing_loaders": list(existing["loaders"]),
         "existing_versions_by_loader": versions_by_loader_serialized,
     }
+
+
+def _parse_bool(value: str | bool | None, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "on"}:
+        return True
+    if text in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
+def _parse_modrinth_datetime(value: str) -> float:
+    import datetime
+
+    try:
+        return datetime.datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return 0.0
+
+
+def _select_latest_modrinth_version(versions: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not versions:
+        return None
+
+    def sort_key(version: dict[str, Any]) -> float:
+        for key in (
+            "date_published",
+            "date",
+            "published",
+            "updated",
+            "date_created",
+            "date_modified",
+        ):
+            value = version.get(key)
+            if value:
+                return _parse_modrinth_datetime(str(value))
+        return 0.0
+
+    return max(versions, key=sort_key)
+
+
+def _fetch_modrinth_project_and_versions(
+    project_ref: str,
+    token: str | None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    user_agent = build_modrinth_user_agent()
+    client = ModrinthClient(token=token, user_agent=user_agent)
+    project = client.resolve_project(project_ref)
+    versions = client.request_json(
+        "GET",
+        f"/project/{urllib.parse.quote(project_ref, safe='')}/version",
+        params={"include_changelog": "false"},
+    )
+    if not isinstance(versions, list):
+        raise ModCompilerError("Unexpected Modrinth versions response.")
+    return project, versions
+
+
+def _extract_modrinth_description(project: dict[str, Any]) -> str:
+    body = str(project.get("body", "") or "").strip()
+    if body:
+        return body
+    return str(project.get("description", "") or "").strip()
+
+
+def _download_modrinth_file(url: str, dest: Path) -> None:
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": build_modrinth_user_agent()},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as response:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with dest.open("wb") as handle:
+                shutil.copyfileobj(response, handle)
+    except urllib.error.HTTPError as error:
+        raise ModCompilerError(f"Failed to download Modrinth file: HTTP {error.code}") from None
+    except urllib.error.URLError as error:
+        raise ModCompilerError(f"Failed to download Modrinth file: {error.reason}") from None
 
 
 def filter_versions_to_build(
@@ -750,10 +841,15 @@ def _format_mod_info_txt(mod_info: dict[str, Any]) -> str:
 
 
 def command_auto_update_decompose(args: argparse.Namespace) -> int:
+    auto_fetch_modrinth = _parse_bool(
+        getattr(args, "auto_fetch_modrinth", None),
+        default=True,
+    )
     config = AutoUpdateConfig(
-        mod_jar_path=args.mod_jar_path,
+        mod_jar_path=args.mod_jar_path if hasattr(args, "mod_jar_path") else "",
         modrinth_project_url=args.modrinth_project_url if hasattr(args, "modrinth_project_url") else None,
         mod_description=args.mod_description if hasattr(args, "mod_description") else "",
+        auto_fetch_modrinth=auto_fetch_modrinth,
         version_range=args.version_range if hasattr(args, "version_range") else "all",
         update_mode=args.update_mode if hasattr(args, "update_mode") else "all-versions",
         publish_mode=args.publish_mode if hasattr(args, "publish_mode") else "bundle-only",
@@ -764,12 +860,61 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     safe_rmtree(config.output_dir)
     config.output_dir.mkdir(parents=True)
 
-    jar_path = Path(config.mod_jar_path)
-    if not jar_path.is_absolute():
-        jar_path = Path.cwd() / jar_path
+    mod_description_input = config.mod_description.strip()
+    info_txt = ""
+    description_source = "none"
+    if mod_description_input:
+        potential_path = Path(mod_description_input)
+        if potential_path.exists() and potential_path.is_file():
+            info_txt = potential_path.read_text(encoding="utf-8")
+            description_source = "user"
+        else:
+            info_txt = mod_description_input
+            description_source = "user"
 
-    if not jar_path.exists():
-        raise ModCompilerError(f"Mod jar not found: {jar_path}")
+    mod_jar_input = config.mod_jar_path.strip()
+    auto_fetch_enabled = config.auto_fetch_modrinth
+    mod_jar_source = "custom"
+    modrinth_project_ref = ""
+    modrinth_project: dict[str, Any] | None = None
+    modrinth_versions: list[dict[str, Any]] | None = None
+
+    if mod_jar_input:
+        if auto_fetch_enabled:
+            print("Auto-fetch disabled because mod-jar-path was provided.")
+        auto_fetch_enabled = False
+        jar_path = Path(mod_jar_input)
+        if not jar_path.is_absolute():
+            jar_path = Path.cwd() / jar_path
+        if not jar_path.exists():
+            raise ModCompilerError(f"Mod jar not found: {jar_path}")
+    else:
+        if not auto_fetch_enabled:
+            raise ModCompilerError("Mod jar path is required when auto-fetch from Modrinth is disabled.")
+        if not config.modrinth_project_url:
+            raise ModCompilerError("Auto-fetch from Modrinth requires a Modrinth project URL or slug.")
+
+        modrinth_project_ref = normalize_modrinth_project_ref(config.modrinth_project_url)
+        token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
+        modrinth_project, modrinth_versions = _fetch_modrinth_project_and_versions(modrinth_project_ref, token)
+
+        latest_version = _select_latest_modrinth_version(modrinth_versions)
+        if latest_version is None:
+            raise ModCompilerError("No Modrinth versions were available to download.")
+        file_info = select_primary_modrinth_file(latest_version.get("files", []))
+        if not file_info:
+            raise ModCompilerError("No downloadable file was found for the latest Modrinth version.")
+        file_url = str(file_info.get("url", "")).strip()
+        if not file_url:
+            raise ModCompilerError("Modrinth file entry is missing a download URL.")
+        filename = str(file_info.get("filename", "")).strip()
+        if not filename:
+            parsed = urllib.parse.urlparse(file_url)
+            filename = Path(parsed.path).name or f"{modrinth_project_ref}.jar"
+        download_dir = config.output_dir / "_downloads"
+        jar_path = download_dir / filename
+        _download_modrinth_file(file_url, jar_path)
+        mod_jar_source = "modrinth"
 
     manifest = load_json(Path(config.manifest_path))
 
@@ -778,14 +923,15 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     src_path = decomp_result.extracted_src
     mod_info = _parse_mod_info(src_path)
 
-    info_txt = ""
-    mod_description_input = config.mod_description.strip()
-    if mod_description_input:
-        potential_path = Path(mod_description_input)
-        if potential_path.exists() and potential_path.is_file():
-            info_txt = potential_path.read_text(encoding="utf-8")
-        else:
-            info_txt = mod_description_input
+    if not info_txt and auto_fetch_enabled:
+        if modrinth_project is None and config.modrinth_project_url:
+            modrinth_project_ref = normalize_modrinth_project_ref(config.modrinth_project_url)
+            token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
+            modrinth_project, _ = _fetch_modrinth_project_and_versions(modrinth_project_ref, token)
+        if modrinth_project:
+            info_txt = _extract_modrinth_description(modrinth_project)
+            if info_txt:
+                description_source = "modrinth"
 
     current_loader = mod_info.get("loader", "fabric")
     current_version = mod_info.get("supported_minecraft", "1.20.1")
@@ -831,8 +977,13 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
 
     state = {
         "mod_jar_path": str(jar_path),
+        "mod_jar_source": mod_jar_source,
         "modrinth_project_url": config.modrinth_project_url,
+        "modrinth_project_ref": modrinth_project_ref,
         "info_txt": info_txt,
+        "description_source": description_source,
+        "auto_fetch_modrinth_requested": config.auto_fetch_modrinth,
+        "auto_fetch_modrinth_effective": auto_fetch_enabled,
         "current_version": current_version,
         "current_loader": current_loader,
         "version_targets": [
