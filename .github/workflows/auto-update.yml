@@ -581,6 +581,7 @@ jobs:
                       decompile_jar_internal(jar_path, manifest, output_dir=src_dir)
               
               verdict_payload = {
+                  "tag": "corrupted",
                   "verdict": "fail",
                   "confidence": 0.0,
                   "rating": 0.0,
@@ -597,11 +598,10 @@ jobs:
                       src_dir=src_dir,
                   )
               
-              verdict = str(verdict_payload.get("verdict", "")).lower()
+              tag = str(verdict_payload.get("tag", "")).lower() or "corrupted"
               confidence = float(verdict_payload.get("confidence", 0.0) or 0.0)
               rating = float(verdict_payload.get("rating", 0.0) or 0.0)
-              if verdict != "pass" or confidence < 0.6:
-                  verdict = "fail"
+              verdict = "pass" if tag == "working" else "fail"
               
               output = {
                   "version_id": version_id,
@@ -609,6 +609,7 @@ jobs:
                   "loaders": [str(l) for l in loaders],
                   "game_versions": [str(v) for v in game_versions],
                   "date_published": date_published,
+                  "tag": tag,
                   "verdict": verdict,
                   "confidence": confidence,
                   "rating": rating,
@@ -715,6 +716,11 @@ jobs:
               fi
             fi
           fi
+          AUTO_FETCH_FOR_DECOMPOSE="false"
+          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
+            AUTO_FETCH_FOR_DECOMPOSE="true"
+            MOD_JAR_PATH=""
+          fi
           if [ -z "$MOD_DESCRIPTION" ] || [ ! -f "$MOD_DESCRIPTION" ]; then
             if [ -f ".workflow_state/setup/selected-description.txt" ]; then
               sel_desc=$(cat ".workflow_state/setup/selected-description.txt" 2>/dev/null || true)
@@ -728,7 +734,7 @@ jobs:
             --mod-jar-path "$MOD_JAR_PATH" \
             --modrinth-project-url "$MODRINTH_PROJECT_URL" \
             --mod-description "$MOD_DESCRIPTION" \
-            --auto-fetch-modrinth "false" \
+            --auto-fetch-modrinth "$AUTO_FETCH_FOR_DECOMPOSE" \
             --auto-fix-corrupted "$AUTO_FIX_CORRUPTED" \
             --auto-fix-only "$AUTO_FIX_ONLY" \
             --auto-fix-corrupted-downloads-dir ".workflow_state/corrupt-downloads" \
