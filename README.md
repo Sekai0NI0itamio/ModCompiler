@@ -87,6 +87,8 @@ The workflow runs in three main stages, plus one optional publish stage:
 
 If one exact target from a range fails, its artifact still contains the error and the workflow keeps going with the remaining exact versions from that same range.
 
+If you want to publish later (for example, after reviewing an auto-update bundle), run the `Publish Modrinth Bundle` workflow with the prior run ID and artifact name (typically `final-results` for auto-update or `all-mod-builds` for normal builds). It will normalize the bundle and upload any missing versions.
+
 Each per-mod artifact contains:
 
 - `build.log`

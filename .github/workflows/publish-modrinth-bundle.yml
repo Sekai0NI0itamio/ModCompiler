@@ -1,0 +1,143 @@
+name: Publish Modrinth Bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Workflow run ID that produced the bundle artifact
+        required: true
+        type: string
+      artifact_name:
+        description: Artifact name to download (e.g. final-results or all-mod-builds)
+        required: true
+        default: "final-results"
+        type: string
+      modrinth_project_url:
+        description: Modrinth project URL or slug to publish into
+        required: true
+        type: string
+      bundle_subdir:
+        description: Optional path inside the artifact to the bundle root (leave blank to auto-detect)
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: .workflow_downloads
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.run_id }}
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - id: locate_bundle
+        shell: bash
+        env:
+          BUNDLE_SUBDIR: ${{ inputs.bundle_subdir }}
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          root = Path('.workflow_downloads')
+          bundle_subdir = os.environ.get('BUNDLE_SUBDIR', '').strip()
+
+          def fail(msg: str) -> None:
+              raise SystemExit(msg)
+
+          if bundle_subdir:
+              candidate = (root / bundle_subdir).resolve()
+              if not candidate.exists():
+                  fail(f"Bundle subdir not found: {candidate}")
+          else:
+              summaries = list(root.rglob('run-summary.json'))
+              if summaries:
+                  candidate = summaries[0].parent
+              else:
+                  candidate = None
+                  for mods_dir in root.rglob('mods'):
+                      if list(mods_dir.rglob('result.json')):
+                          candidate = mods_dir
+                          break
+                  if candidate is None:
+                      fail("Could not locate a bundle root (run-summary.json or mods/ with result.json).")
+
+          if (candidate / 'run-summary.json').exists():
+              bundle_root = candidate
+          else:
+              out_dir = Path('.workflow_artifacts/normalized')
+              cmd = [
+                  'python',
+                  'build_mods.py',
+                  'bundle',
+                  '--artifacts-root',
+                  str(candidate),
+                  '--output-dir',
+                  str(out_dir),
+              ]
+              print('Normalizing bundle:', ' '.join(cmd))
+              subprocess.check_call(cmd)
+              bundle_root = out_dir
+
+          output_path = Path(os.environ['GITHUB_OUTPUT'])
+          output_path.write_text(f"bundle_root={bundle_root}\n", encoding='utf-8')
+          print(f"Bundle root: {bundle_root}")
+          PY
+
+      - id: publish
+        shell: bash
+        continue-on-error: true
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set +e
+          python build_mods.py publish-modrinth \
+            --artifacts-root "${{ steps.locate_bundle.outputs.bundle_root }}" \
+            --project "${{ inputs.modrinth_project_url }}" \
+            --artifact-dir .workflow_artifacts/modrinth-publish
+          exit_code=$?
+          set -e
+          printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: modrinth-publish
+          path: .workflow_artifacts/modrinth-publish
+
+      - if: always()
+        shell: bash
+        run: |
+          if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then
+            cat .workflow_artifacts/modrinth-publish/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - if: always()
+        shell: bash
+        run: exit "${{ steps.publish.outputs.exit_code }}"
