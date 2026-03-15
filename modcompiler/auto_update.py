@@ -63,6 +63,7 @@ class AutoUpdateConfig:
     auto_fix_corrupted: bool
     auto_fix_only: bool
     auto_fix_corrupted_downloads_dir: str | None
+    auto_fix_corrupted_decompiled_dir: str | None
     version_range: str
     update_mode: str
     publish_mode: str
@@ -398,6 +399,7 @@ def _run_auto_fix_corrupted(
     modrinth_project_url: str,
     output_dir: Path,
     downloads_dir: Path | None = None,
+    predecompiled_dir: Path | None = None,
 ) -> tuple[list[VersionTarget], dict[str, dict[str, Any]], dict[str, dict[str, Any]], Path]:
     token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
     project_ref = normalize_modrinth_project_ref(modrinth_project_url)
@@ -415,6 +417,7 @@ def _run_auto_fix_corrupted(
     downloads_root = downloads_dir if downloads_dir else (scan_root / "downloads")
     downloads_root = Path(downloads_root)
     decompiled_dir = scan_root / "decompiled"
+    predecompiled_root = Path(predecompiled_dir) if predecompiled_dir else None
     role_models_dir = scan_root / "role-models"
     downloads_root.mkdir(parents=True, exist_ok=True)
     decompiled_dir.mkdir(parents=True, exist_ok=True)
@@ -460,20 +463,33 @@ def _run_auto_fix_corrupted(
             })
             continue
 
-        jar_path = downloads_root / version_id / filename
-        if not jar_path.exists():
-            _download_modrinth_file(file_url, jar_path)
+        pre_src_dir = None
+        if predecompiled_root:
+            candidate = predecompiled_root / version_id
+            if candidate.exists():
+                has_sources = any(candidate.rglob("*.java")) or any(candidate.rglob("*.kt"))
+                if has_sources:
+                    pre_src_dir = candidate
 
-        decomp_output = decompiled_dir / version_id
-        decompile_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_output)
-        src_dir = decompile_result.extracted_src
+        if pre_src_dir:
+            src_dir = pre_src_dir
+            decompile_status = "success"
+        else:
+            jar_path = downloads_root / version_id / filename
+            if not jar_path.exists():
+                _download_modrinth_file(file_url, jar_path)
+
+            decomp_output = decompiled_dir / version_id
+            decompile_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_output)
+            src_dir = decompile_result.extracted_src
+            decompile_status = decompile_result.status
 
         verdict_payload = {
             "verdict": "fail",
             "confidence": 0.0,
             "reason": "Decompiler produced no sources.",
         }
-        if decompile_result.status == "success":
+        if decompile_status == "success":
             verdict_payload = _verify_mod_source_with_ai(
                 client=client,
                 project_name=project_name,
@@ -1192,6 +1208,11 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             if hasattr(args, "auto_fix_corrupted_downloads_dir")
             else ""
         ),
+        auto_fix_corrupted_decompiled_dir=(
+            args.auto_fix_corrupted_decompiled_dir
+            if hasattr(args, "auto_fix_corrupted_decompiled_dir")
+            else ""
+        ),
         version_range=args.version_range if hasattr(args, "version_range") else "all",
         update_mode=args.update_mode if hasattr(args, "update_mode") else "all-versions",
         publish_mode=args.publish_mode if hasattr(args, "publish_mode") else "bundle-only",
@@ -1273,6 +1294,9 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         downloads_dir = None
         if config.auto_fix_corrupted_downloads_dir:
             downloads_dir = Path(config.auto_fix_corrupted_downloads_dir)
+        predecompiled_dir = None
+        if config.auto_fix_corrupted_decompiled_dir:
+            predecompiled_dir = Path(config.auto_fix_corrupted_decompiled_dir)
         (
             corrupted_targets,
             fix_info_map,
@@ -1283,6 +1307,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             modrinth_project_url=config.modrinth_project_url,
             output_dir=config.output_dir,
             downloads_dir=downloads_dir,
+            predecompiled_dir=predecompiled_dir,
         )
         corruption_report_path = str(report_path)
 

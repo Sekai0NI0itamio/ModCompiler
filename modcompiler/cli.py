@@ -77,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     auto_update_decompose_parser.add_argument("--auto-fix-corrupted", required=False, default="false")
     auto_update_decompose_parser.add_argument("--auto-fix-only", required=False, default="false")
     auto_update_decompose_parser.add_argument("--auto-fix-corrupted-downloads-dir", required=False, default="")
+    auto_update_decompose_parser.add_argument("--auto-fix-corrupted-decompiled-dir", required=False, default="")
     auto_update_decompose_parser.add_argument("--version-range", required=False, default="all")
     auto_update_decompose_parser.add_argument("--update-mode", required=False, default="all-versions")
     auto_update_decompose_parser.add_argument("--publish-mode", required=False, default="bundle-only")
