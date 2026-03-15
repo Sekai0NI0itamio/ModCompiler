@@ -423,7 +423,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-downloads-${{ matrix.batch_id }}
-          path: .
+          path: .workflow_state/corrupt-downloads
 
       - name: Decompile batch
         shell: bash
@@ -498,17 +498,17 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-project
-          path: .
+          path: .workflow_state
 
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-downloads-${{ matrix.batch_id }}
-          path: .
+          path: .workflow_state/corrupt-downloads
 
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-decompiled-${{ matrix.batch_id }}
-          path: .
+          path: .workflow_state/corrupt-decompiled
 
       - name: Verify batch with AI
         shell: bash
@@ -646,14 +646,14 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: setup-artifacts
-          path: .
+          path: .workflow_state/setup
 
       - uses: actions/download-artifact@v4
         if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
         continue-on-error: true
         with:
           pattern: corrupt-downloads-*
-          path: .
+          path: .workflow_state/corrupt-downloads
           merge-multiple: true
 
       - uses: actions/download-artifact@v4
@@ -661,7 +661,7 @@ jobs:
         continue-on-error: true
         with:
           pattern: corrupt-decompiled-*
-          path: .
+          path: .workflow_state/corrupt-decompiled
           merge-multiple: true
 
       - uses: actions/download-artifact@v4
@@ -669,7 +669,7 @@ jobs:
         continue-on-error: true
         with:
           pattern: corrupt-verdicts-*
-          path: .
+          path: .workflow_state/corrupt-verdicts
           merge-multiple: true
 
       - id: decompose
@@ -708,6 +708,11 @@ jobs:
             candidate=$(ls -t .workflow_state/setup/*.jar 2>/dev/null | head -n1 || true)
             if [ -n "$candidate" ]; then
               MOD_JAR_PATH="$candidate"
+            else
+              candidate=$(ls -t *.jar 2>/dev/null | head -n1 || true)
+              if [ -n "$candidate" ]; then
+                MOD_JAR_PATH="$candidate"
+              fi
             fi
           fi
           if [ -z "$MOD_DESCRIPTION" ] || [ ! -f "$MOD_DESCRIPTION" ]; then
