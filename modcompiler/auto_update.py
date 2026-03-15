@@ -2893,7 +2893,14 @@ def _prepare_gradle_sources(
     target_loader: str,
 ) -> None:
     import subprocess
-    from modcompiler.common import copy_tree, safe_rmtree, load_json
+    from modcompiler.common import (
+        copy_tree,
+        safe_rmtree,
+        load_json,
+        resolve_java_version,
+        java_home_for_version,
+        sanitize_env_path,
+    )
 
     manifest_path = Path("version-manifest.json")
     if not manifest_path.exists():
@@ -2930,15 +2937,37 @@ def _prepare_gradle_sources(
     except OSError:
         pass
 
-    print(f"DEBUG[_prepare_gradle_sources]: Running {task} for {target_version}-{target_loader}", file=sys.stderr)
+    java_version = resolve_java_version(loader_config, target_version)
+    env = os.environ.copy()
     try:
-        subprocess.run(
+        java_home = java_home_for_version(java_version, env)
+        env["JAVA_HOME"] = java_home
+        env["PATH"] = sanitize_env_path(java_home, env.get("PATH"))
+    except Exception as exc:
+        print(f"DEBUG[_prepare_gradle_sources]: Failed to resolve JAVA_HOME: {exc}", file=sys.stderr)
+        env = os.environ.copy()
+
+    print(
+        f"DEBUG[_prepare_gradle_sources]: Running {task} for {target_version}-{target_loader} "
+        f"(java {java_version})",
+        file=sys.stderr,
+    )
+    try:
+        result = subprocess.run(
             ["./gradlew", task, "--no-daemon"],
             cwd=workspace_root,
+            env=env,
             capture_output=True,
             text=True,
             timeout=900,
         )
+        if result.returncode != 0:
+            print(
+                f"DEBUG[_prepare_gradle_sources]: {task} failed (exit {result.returncode}). "
+                f"STDOUT: {result.stdout[-1000:] if result.stdout else ''} "
+                f"STDERR: {result.stderr[-1000:] if result.stderr else ''}",
+                file=sys.stderr,
+            )
     except Exception as exc:
         print(f"DEBUG[_prepare_gradle_sources]: Failed to run {task}: {exc}", file=sys.stderr)
 
