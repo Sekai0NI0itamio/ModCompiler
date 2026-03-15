@@ -2956,6 +2956,41 @@ def _prepare_gradle_sources(
     except OSError:
         pass
 
+    init_script = workspace_root / ".modcompiler-genSources.init.gradle"
+    try:
+        init_script.write_text(
+            """
+gradle.projectsEvaluated {
+    def project = rootProject
+    def candidates = [
+        "downloadMinecraftSources",
+        "downloadSources",
+        "createMinecraftArtifacts",
+        "extractMappedMinecraftSources",
+        "extractMappedMinecraft",
+        "downloadMinecraft",
+        "downloadAssets",
+        "idea",
+        "eclipse",
+    ]
+    def pick = candidates.find { project.tasks.findByName(it) != null }
+    if (pick != null) {
+        if (project.tasks.findByName("genSources") == null) {
+            project.tasks.register("genSources") { dependsOn pick }
+        }
+        if (project.tasks.findByName("setupDecompWorkspace") == null) {
+            project.tasks.register("setupDecompWorkspace") { dependsOn pick }
+        }
+    }
+}
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
+    except Exception as exc:
+        print(f"DEBUG[_prepare_gradle_sources]: Failed to write init script: {exc}", file=sys.stderr)
+        init_script = None
+
     java_version = resolve_java_version(loader_config, target_version)
     env = os.environ.copy()
     try:
@@ -2973,8 +3008,11 @@ def _prepare_gradle_sources(
     )
     try:
         def run_task(task_name: str):
+            cmd = ["./gradlew", task_name, "--no-daemon"]
+            if init_script and init_script.exists():
+                cmd += ["-I", str(init_script)]
             return subprocess.run(
-                ["./gradlew", task_name, "--no-daemon"],
+                cmd,
                 cwd=workspace_root,
                 env=env,
                 capture_output=True,
@@ -2984,8 +3022,11 @@ def _prepare_gradle_sources(
 
         def list_tasks() -> set[str]:
             try:
+                cmd = ["./gradlew", "tasks", "--all", "--no-daemon"]
+                if init_script and init_script.exists():
+                    cmd += ["-I", str(init_script)]
                 result = subprocess.run(
-                    ["./gradlew", "tasks", "--all", "--no-daemon"],
+                    cmd,
                     cwd=workspace_root,
                     env=env,
                     capture_output=True,

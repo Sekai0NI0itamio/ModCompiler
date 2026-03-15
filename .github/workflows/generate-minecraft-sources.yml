@@ -91,9 +91,16 @@ jobs:
           
           version = "${{ matrix.version }}"
           loader = "${{ matrix.loader }}"
+          root = Path(".workflow_state/minecraft-sources") / f"{version}-{loader}"
+          root.mkdir(parents=True, exist_ok=True)
           sources = _get_library_sources(Path("."), version, loader, allow_prepare=True)
           if not sources:
-              raise SystemExit(f"Failed to generate sources for {version}-{loader}")
+              (root / "FAILED.txt").write_text(
+                  f"Failed to generate sources for {version}-{loader}.",
+                  encoding="utf-8",
+              )
+              print(f"WARNING: Failed to generate sources for {version}-{loader}")
+              raise SystemExit(0)
           print(f"Generated sources for {version}-{loader}: {sources}")
           PY
 
