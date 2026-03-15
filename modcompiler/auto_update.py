@@ -66,6 +66,9 @@ class AutoUpdateConfig:
     auto_fix_corrupted_downloads_dir: str | None
     auto_fix_corrupted_decompiled_dir: str | None
     auto_fix_corrupted_report_dir: str | None
+    only_target: str | None
+    plan_only: bool
+    reuse_decompiled_dir: str | None
     version_range: str
     update_mode: str
     publish_mode: str
@@ -1512,6 +1515,17 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             if hasattr(args, "auto_fix_corrupted_report_dir")
             else ""
         ),
+        only_target=(
+            args.only_target.strip()
+            if hasattr(args, "only_target") and args.only_target.strip()
+            else None
+        ),
+        plan_only=_parse_bool(getattr(args, "plan_only", "false"), False),
+        reuse_decompiled_dir=(
+            args.reuse_decompiled_dir.strip()
+            if hasattr(args, "reuse_decompiled_dir") and args.reuse_decompiled_dir.strip()
+            else None
+        ),
         version_range=args.version_range if hasattr(args, "version_range") else "all",
         update_mode=args.update_mode if hasattr(args, "update_mode") else "all-versions",
         publish_mode=args.publish_mode if hasattr(args, "publish_mode") else "bundle-only",
@@ -1626,8 +1640,18 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         corruption_report_path = str(report_path)
 
     decomp_dir = config.output_dir / "_decompiled"
-    decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
-    src_path = decomp_result.extracted_src
+    if config.reuse_decompiled_dir:
+        reuse_path = Path(config.reuse_decompiled_dir)
+        if reuse_path.exists():
+            safe_rmtree(decomp_dir)
+            copy_tree(reuse_path, decomp_dir)
+            src_path = decomp_dir
+        else:
+            decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
+            src_path = decomp_result.extracted_src
+    else:
+        decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
+        src_path = decomp_result.extracted_src
     mod_info = _parse_mod_info(src_path)
 
     if not info_txt and auto_fetch_enabled:
@@ -1678,101 +1702,121 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
                 filtered_targets.append(target)
                 existing_slugs.add(target.slug)
 
-    trimmed_src = trim_src_for_context(src_path)
-    src_has_sources = bool(list(trimmed_src.rglob("*.java")) or list(trimmed_src.rglob("*.kt")))
-    role_model_trimmed_cache: dict[str, Path] = {}
+    if config.only_target:
+        target_key = config.only_target.strip()
+        target_version = ""
+        target_loader = ""
+        if ":" in target_key:
+            target_version, target_loader = [part.strip() for part in target_key.split(":", 1)]
+        elif "-" in target_key:
+            maybe_version, maybe_loader = target_key.rsplit("-", 1)
+            if maybe_loader in {"forge", "fabric", "neoforge"}:
+                target_version = maybe_version.strip()
+                target_loader = maybe_loader.strip()
+        filtered_targets = [
+            t for t in filtered_targets
+            if t.slug == target_key
+            or (target_version and target_loader and t.minecraft_version == target_version and t.loader == target_loader)
+        ]
+        if not filtered_targets:
+            raise ModCompilerError(f"No target matched --only-target {config.only_target}")
 
-    used_fix_versions: set[str] = set()
-    for target in filtered_targets:
-        mod_info_for_target = dict(mod_info)
-        fix_info = fix_info_map.get(target.slug)
-        if fix_info:
-            old_version = fix_info.get("fix_source_version") or mod_info_for_target.get("mod_version", "0.0.0")
-            new_version = _bump_mod_version(str(old_version), used_fix_versions)
-            mod_info_for_target["mod_version"] = new_version
-            mod_info_for_target["fix_corrupted"] = True
-            mod_info_for_target["fix_source_version"] = old_version
-            if fix_info.get("fix_source_modrinth_id"):
-                mod_info_for_target["fix_source_modrinth_id"] = fix_info["fix_source_modrinth_id"]
+    if not config.plan_only:
+        trimmed_src = trim_src_for_context(src_path)
+        src_has_sources = bool(list(trimmed_src.rglob("*.java")) or list(trimmed_src.rglob("*.kt")))
+        role_model_trimmed_cache: dict[str, Path] = {}
 
-        decomposed = DecomposedMod(
-            src_path=src_path,
-            mod_info=mod_info_for_target,
-            current_version=current_version,
-            current_loader=current_loader,
-            metadata=mod_info_for_target,
-        )
+        used_fix_versions: set[str] = set()
+        for target in filtered_targets:
+            mod_info_for_target = dict(mod_info)
+            fix_info = fix_info_map.get(target.slug)
+            if fix_info:
+                old_version = fix_info.get("fix_source_version") or mod_info_for_target.get("mod_version", "0.0.0")
+                new_version = _bump_mod_version(str(old_version), used_fix_versions)
+                mod_info_for_target["mod_version"] = new_version
+                mod_info_for_target["fix_corrupted"] = True
+                mod_info_for_target["fix_source_version"] = old_version
+                if fix_info.get("fix_source_modrinth_id"):
+                    mod_info_for_target["fix_source_modrinth_id"] = fix_info["fix_source_modrinth_id"]
 
-        effective_src = trimmed_src
-        if not src_has_sources and target.loader in role_models:
-            model_info = role_models[target.loader]
-            candidates = model_info.get("candidates", []) or []
-            selected = _select_closest_role_model(target.minecraft_version, candidates)
-            if selected and selected.get("version_id") and selected.get("path"):
-                selected_id = str(selected.get("version_id"))
-                if selected_id in role_model_trimmed_cache:
-                    effective_src = role_model_trimmed_cache[selected_id]
-                else:
-                    selected_src = Path(selected.get("path"))
-                    if selected_src.exists():
-                        effective_src = trim_src_for_context(selected_src)
-                        role_model_trimmed_cache[selected_id] = effective_src
-                        mod_info_for_target["source_origin"] = "role_model_selected"
-        context = generate_version_context(decomposed, target, info_txt, effective_src, manifest)
-        if fix_info:
-            context["fix_corrupted"] = True
-            context["fix_source_version"] = mod_info_for_target.get("fix_source_version", "")
-            context["fix_source_modrinth_id"] = mod_info_for_target.get("fix_source_modrinth_id", "")
-        if target.loader in role_models:
-            model_info = role_models[target.loader]
-            candidates = model_info.get("candidates", []) or []
-            selected = _select_closest_role_model(target.minecraft_version, candidates)
-            context["role_model_dir"] = "reference/role-model"
-            context["role_model_unverified"] = bool(model_info.get("unverified"))
-            context["role_model_loader"] = target.loader
-            context["role_model_candidates"] = [
-                {
-                    "version_id": c.get("version_id", ""),
-                    "version_number": c.get("version_number", ""),
-                    "game_versions": c.get("game_versions", []),
-                    "rating": c.get("rating", 0.0),
-                    "tag": c.get("tag", ""),
-                }
-                for c in candidates
-            ]
-            if selected:
-                context["role_model_version"] = selected.get("version_number", "")
-                context["role_model_selected_version_id"] = selected.get("version_id", "")
-                context["role_model_selected_rating"] = selected.get("rating", 0.0)
-                context["role_model_selected_game_versions"] = selected.get("game_versions", [])
-                selected_id = selected.get("version_id", "")
-                if selected_id:
-                    context["role_model_selected_subdir"] = re.sub(r"[^A-Za-z0-9._-]+", "_", str(selected_id))
-                    context["role_model_selected_path"] = "reference/role-model/selected"
-                    context["role_model_selected_source_subdir"] = f"reference/role-model/{context['role_model_selected_subdir']}"
+            decomposed = DecomposedMod(
+                src_path=src_path,
+                mod_info=mod_info_for_target,
+                current_version=current_version,
+                current_loader=current_loader,
+                metadata=mod_info_for_target,
+            )
 
-        version_folder = create_version_folder(config.output_dir, decomposed, target, context, effective_src, manifest)
-        role_model = role_models.get(target.loader)
-        if role_model:
-            ref_root = version_folder / "reference"
-            ref_root.mkdir(parents=True, exist_ok=True)
-            role_dest = ref_root / "role-model"
-            safe_rmtree(role_dest)
-            role_dest.mkdir(parents=True, exist_ok=True)
-            for cand in role_model.get("candidates", []) or []:
-                source_path = Path(cand.get("path", ""))
-                version_id = cand.get("version_id") or "candidate"
-                subdir = role_dest / re.sub(r"[^A-Za-z0-9._-]+", "_", str(version_id))
-                safe_rmtree(subdir)
-                if source_path.exists():
-                    copy_tree(source_path, subdir)
-            selected_subdir = context.get("role_model_selected_subdir")
-            if selected_subdir:
-                selected_path = role_dest / selected_subdir
-                if selected_path.exists():
-                    selected_alias = role_dest / "selected"
-                    safe_rmtree(selected_alias)
-                    copy_tree(selected_path, selected_alias)
+            effective_src = trimmed_src
+            if not src_has_sources and target.loader in role_models:
+                model_info = role_models[target.loader]
+                candidates = model_info.get("candidates", []) or []
+                selected = _select_closest_role_model(target.minecraft_version, candidates)
+                if selected and selected.get("version_id") and selected.get("path"):
+                    selected_id = str(selected.get("version_id"))
+                    if selected_id in role_model_trimmed_cache:
+                        effective_src = role_model_trimmed_cache[selected_id]
+                    else:
+                        selected_src = Path(selected.get("path"))
+                        if selected_src.exists():
+                            effective_src = trim_src_for_context(selected_src)
+                            role_model_trimmed_cache[selected_id] = effective_src
+                            mod_info_for_target["source_origin"] = "role_model_selected"
+            context = generate_version_context(decomposed, target, info_txt, effective_src, manifest)
+            if fix_info:
+                context["fix_corrupted"] = True
+                context["fix_source_version"] = mod_info_for_target.get("fix_source_version", "")
+                context["fix_source_modrinth_id"] = mod_info_for_target.get("fix_source_modrinth_id", "")
+            if target.loader in role_models:
+                model_info = role_models[target.loader]
+                candidates = model_info.get("candidates", []) or []
+                selected = _select_closest_role_model(target.minecraft_version, candidates)
+                context["role_model_dir"] = "reference/role-model"
+                context["role_model_unverified"] = bool(model_info.get("unverified"))
+                context["role_model_loader"] = target.loader
+                context["role_model_candidates"] = [
+                    {
+                        "version_id": c.get("version_id", ""),
+                        "version_number": c.get("version_number", ""),
+                        "game_versions": c.get("game_versions", []),
+                        "rating": c.get("rating", 0.0),
+                        "tag": c.get("tag", ""),
+                    }
+                    for c in candidates
+                ]
+                if selected:
+                    context["role_model_version"] = selected.get("version_number", "")
+                    context["role_model_selected_version_id"] = selected.get("version_id", "")
+                    context["role_model_selected_rating"] = selected.get("rating", 0.0)
+                    context["role_model_selected_game_versions"] = selected.get("game_versions", [])
+                    selected_id = selected.get("version_id", "")
+                    if selected_id:
+                        context["role_model_selected_subdir"] = re.sub(r"[^A-Za-z0-9._-]+", "_", str(selected_id))
+                        context["role_model_selected_path"] = "reference/role-model/selected"
+                        context["role_model_selected_source_subdir"] = f"reference/role-model/{context['role_model_selected_subdir']}"
+
+            version_folder = create_version_folder(config.output_dir, decomposed, target, context, effective_src, manifest)
+            role_model = role_models.get(target.loader)
+            if role_model:
+                ref_root = version_folder / "reference"
+                ref_root.mkdir(parents=True, exist_ok=True)
+                role_dest = ref_root / "role-model"
+                safe_rmtree(role_dest)
+                role_dest.mkdir(parents=True, exist_ok=True)
+                for cand in role_model.get("candidates", []) or []:
+                    source_path = Path(cand.get("path", ""))
+                    version_id = cand.get("version_id") or "candidate"
+                    subdir = role_dest / re.sub(r"[^A-Za-z0-9._-]+", "_", str(version_id))
+                    safe_rmtree(subdir)
+                    if source_path.exists():
+                        copy_tree(source_path, subdir)
+                selected_subdir = context.get("role_model_selected_subdir")
+                if selected_subdir:
+                    selected_path = role_dest / selected_subdir
+                    if selected_path.exists():
+                        selected_alias = role_dest / "selected"
+                        safe_rmtree(selected_alias)
+                        copy_tree(selected_path, selected_alias)
 
     if config.modrinth_project_url and not modrinth_project_ref:
         modrinth_project_ref = normalize_modrinth_project_ref(config.modrinth_project_url)
@@ -2200,15 +2244,15 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
                     "type": "function",
                     "function": {"name": "library_search", "arguments": json.dumps({"query": query})},
                 })
-                result = _tool_library_search({"query": query}, lib_sources)
+                search_result = _tool_library_search({"query": query}, lib_sources)
                 search_results.append({
                     "role": "tool",
                     "tool_call_id": call_id,
-                    "content": result,
+                    "content": search_result,
                 })
 
-                if reads_used < 2 and result.startswith("Found"):
-                    match_path = extract_first_match(result)
+                if reads_used < 2 and search_result.startswith("Found"):
+                    match_path = extract_first_match(search_result)
                     if match_path:
                         read_id = f"call_lib_read_{len(read_calls) + 1}"
                         read_calls.append({

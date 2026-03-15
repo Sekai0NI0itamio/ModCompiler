@@ -505,7 +505,7 @@ jobs:
           name: corrupt-verdicts-${{ matrix.batch_id }}
           path: .workflow_state/corrupt-verdicts
 
-  decompose:
+  prepare-targets:
     needs:
       - setup
       - prepare-corrupt-downloads
@@ -513,8 +513,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.decompose.outputs.matrix }}
-      state_json: ${{ steps.decompose.outputs.state_json }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      state_json: ${{ steps.plan.outputs.state_json }}
     steps:
       - uses: actions/checkout@v4
 
@@ -551,7 +551,7 @@ jobs:
           path: .workflow_state/corrupt-verdicts
           merge-multiple: true
 
-      - id: decompose
+      - id: plan
         shell: bash
         env:
           MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
@@ -566,7 +566,7 @@ jobs:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          mkdir -p .workflow_state/decomposed
+          mkdir -p .workflow_state/plan
           MOD_JAR_PATH=""
           MOD_DESCRIPTION=""
           if [ -n "$MOD_JAR_NAME" ]; then
@@ -622,37 +622,43 @@ jobs:
             --update-mode "$UPDATE_MODE" \
             --publish-mode "$PUBLISH_MODE" \
             --manifest version-manifest.json \
-            --output-dir .workflow_state/decomposed
+            --plan-only "true" \
+            --output-dir .workflow_state/plan
           
           python - <<'PY'
           import json
           from pathlib import Path
           
-          matrix = json.loads(Path(".workflow_state/decomposed/matrix.json").read_text(encoding="utf-8"))
-          state = json.loads(Path(".workflow_state/decomposed/state.json").read_text(encoding="utf-8"))
+          matrix = json.loads(Path(".workflow_state/plan/matrix.json").read_text(encoding="utf-8"))
+          state = json.loads(Path(".workflow_state/plan/state.json").read_text(encoding="utf-8"))
           
           count = len(matrix.get("include", []))
           print(f"Generated {count} version targets")
           
           import base64
           state_b64 = base64.b64encode(json.dumps(state).encode()).decode()
-          Path(".workflow_state/decompose_state.txt").write_text(state_b64, encoding="utf-8")
+          Path(".workflow_state/plan_state.txt").write_text(state_b64, encoding="utf-8")
           PY
           
-          printf 'matrix=%s\n' "$(tr -d '\n' < .workflow_state/decomposed/matrix.json)" >> "$GITHUB_OUTPUT"
-          printf 'state_json=%s\n' "$(tr -d '\n' < .workflow_state/decompose_state.txt)" >> "$GITHUB_OUTPUT"
+          printf 'matrix=%s\n' "$(tr -d '\n' < .workflow_state/plan/matrix.json)" >> "$GITHUB_OUTPUT"
+          printf 'state_json=%s\n' "$(tr -d '\n' < .workflow_state/plan_state.txt)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: decomposed-state
-          path: .workflow_state/decomposed
+          name: plan-state
+          path: .workflow_state/plan
 
-  ai-rebuild:
-    needs: decompose
+      - uses: actions/upload-artifact@v4
+        with:
+          name: base-decompiled
+          path: .workflow_state/plan/_decompiled
+
+  process-target:
+    needs: prepare-targets
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.decompose.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.prepare-targets.outputs.matrix) }}
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
@@ -680,18 +686,6 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: decomposed-state
-          path: .workflow_state/decomposed
-
-      - name: Decode state
-        shell: bash
-        env:
-          STATE_JSON: ${{ needs.decompose.outputs.state_json }}
-        run: |
-          echo "$STATE_JSON" | base64 -d > .workflow_state/state.json
-
       - name: Verify API keys loaded
         shell: bash
         run: |
@@ -702,16 +696,130 @@ jobs:
             echo "OPENROUTER_API_KEY not set"
           fi
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: setup-artifacts
+          path: .workflow_state/setup
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: plan-state
+          path: .workflow_state/plan
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: base-decompiled
+          path: .workflow_state/base-decompiled
+
+      - uses: actions/download-artifact@v4
+        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
+        continue-on-error: true
+        with:
+          pattern: corrupt-verdicts-*
+          path: .workflow_state/corrupt-verdicts
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
+        continue-on-error: true
+        with:
+          pattern: corrupt-decompiled-*
+          path: .workflow_state/corrupt-decompiled
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
+        continue-on-error: true
+        with:
+          pattern: corrupt-downloads-*
+          path: .workflow_state/corrupt-downloads
+          merge-multiple: true
+
+      - name: Decompose target
+        shell: bash
+        env:
+          MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
+          VERSION_RANGE: ${{ inputs.version_range }}
+          UPDATE_MODE: ${{ inputs.update_mode }}
+          PUBLISH_MODE: ${{ inputs.publish_mode }}
+          MOD_DESCRIPTION_NAME: ${{ needs.setup.outputs.mod_description_name }}
+          MOD_JAR_NAME: ${{ needs.setup.outputs.mod_jar_name }}
+          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
+          AUTO_FIX_CORRUPTED: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
+          AUTO_FIX_ONLY: ${{ inputs.auto_fix_only }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          mkdir -p .workflow_state/decomposed-single
+          MOD_JAR_PATH=""
+          MOD_DESCRIPTION=""
+          if [ -n "$MOD_JAR_NAME" ]; then
+            MOD_JAR_PATH=".workflow_state/setup/$MOD_JAR_NAME"
+          fi
+          if [ -n "$MOD_DESCRIPTION_NAME" ]; then
+            MOD_DESCRIPTION=".workflow_state/setup/$MOD_DESCRIPTION_NAME"
+          fi
+          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
+            if [ -f ".workflow_state/setup/selected-jar.txt" ]; then
+              sel_name=$(cat ".workflow_state/setup/selected-jar.txt" 2>/dev/null || true)
+              if [ -n "$sel_name" ]; then
+                MOD_JAR_PATH=".workflow_state/setup/$sel_name"
+              fi
+            fi
+          fi
+          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
+            candidate=$(ls -t .workflow_state/setup/*.jar 2>/dev/null | head -n1 || true)
+            if [ -n "$candidate" ]; then
+              MOD_JAR_PATH="$candidate"
+            else
+              candidate=$(ls -t *.jar 2>/dev/null | head -n1 || true)
+              if [ -n "$candidate" ]; then
+                MOD_JAR_PATH="$candidate"
+              fi
+            fi
+          fi
+          AUTO_FETCH_FOR_DECOMPOSE="false"
+          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
+            AUTO_FETCH_FOR_DECOMPOSE="true"
+            MOD_JAR_PATH=""
+          fi
+          if [ -z "$MOD_DESCRIPTION" ] || [ ! -f "$MOD_DESCRIPTION" ]; then
+            if [ -f ".workflow_state/setup/selected-description.txt" ]; then
+              sel_desc=$(cat ".workflow_state/setup/selected-description.txt" 2>/dev/null || true)
+              if [ -n "$sel_desc" ]; then
+                MOD_DESCRIPTION=".workflow_state/setup/$sel_desc"
+              fi
+            fi
+          fi
+
+          python build_mods.py auto-update-decompose \
+            --mod-jar-path "$MOD_JAR_PATH" \
+            --modrinth-project-url "$MODRINTH_PROJECT_URL" \
+            --mod-description "$MOD_DESCRIPTION" \
+            --auto-fetch-modrinth "$AUTO_FETCH_FOR_DECOMPOSE" \
+            --auto-fix-corrupted "$AUTO_FIX_CORRUPTED" \
+            --auto-fix-only "$AUTO_FIX_ONLY" \
+            --auto-fix-corrupted-downloads-dir ".workflow_state/corrupt-downloads" \
+            --auto-fix-corrupted-decompiled-dir ".workflow_state/corrupt-decompiled" \
+            --auto-fix-corrupted-report-dir ".workflow_state/corrupt-verdicts" \
+            --reuse-decompiled-dir ".workflow_state/base-decompiled" \
+            --only-target "${{ matrix.version }}-${{ matrix.loader }}" \
+            --version-range "$VERSION_RANGE" \
+            --update-mode "$UPDATE_MODE" \
+            --publish-mode "$PUBLISH_MODE" \
+            --manifest version-manifest.json \
+            --output-dir .workflow_state/decomposed-single
+
       - name: Setup workspace
         shell: bash
         run: |
           mkdir -p .workflow_artifacts/ai-${{ matrix.slug }}
-          VERSION_DIR=".workflow_state/decomposed/${{ matrix.version }}-${{ matrix.loader }}"
+          VERSION_DIR=".workflow_state/decomposed-single/${{ matrix.version }}-${{ matrix.loader }}"
           if [ -d "$VERSION_DIR" ]; then
             cp -r "$VERSION_DIR"/* .workflow_artifacts/ai-${{ matrix.slug }}/
           else
             echo "Version folder not found: $VERSION_DIR"
-            ls -la .workflow_state/decomposed/
+            ls -la .workflow_state/decomposed-single/
           fi
 
       - name: Prepare Minecraft sources (per target)
@@ -813,8 +921,8 @@ jobs:
 
   bundle:
     needs:
-      - decompose
-      - ai-rebuild
+      - prepare-targets
+      - process-target
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -875,8 +983,8 @@ jobs:
 
   publish-modrinth:
     needs:
-      - decompose
-      - ai-rebuild
+      - prepare-targets
+      - process-target
       - bundle
     if: ${{ always() && inputs.modrinth_project_url != '' && inputs.publish_mode == 'bundle-only' }}
     runs-on: ubuntu-latest
@@ -925,8 +1033,8 @@ jobs:
 
   summary:
     needs:
-      - decompose
-      - ai-rebuild
+      - prepare-targets
+      - process-target
       - bundle
     if: always()
     runs-on: ubuntu-latest
