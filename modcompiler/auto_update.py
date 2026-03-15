@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import random
 import shutil
 import subprocess
 import sys
@@ -537,6 +538,9 @@ def _run_auto_fix_corrupted(
     token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
     project_ref = normalize_modrinth_project_ref(modrinth_project_url)
     project, versions = _fetch_modrinth_project_and_versions(project_ref, token)
+    filtered_versions = _select_latest_modrinth_versions_by_loader_game(versions)
+    if filtered_versions:
+        versions = filtered_versions
 
     project_name = str(project.get("title") or project.get("name") or project.get("slug") or project_ref)
     project_description = _extract_modrinth_description(project) or str(project.get("description", "") or "")
@@ -852,22 +856,60 @@ def _select_closest_role_model(target_version: str, candidates: list[dict[str, A
 def _select_latest_modrinth_version(versions: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not versions:
         return None
+    return max(versions, key=_modrinth_version_timestamp)
 
-    def sort_key(version: dict[str, Any]) -> float:
-        for key in (
-            "date_published",
-            "date",
-            "published",
-            "updated",
-            "date_created",
-            "date_modified",
-        ):
-            value = version.get(key)
-            if value:
-                return _parse_modrinth_datetime(str(value))
-        return 0.0
 
-    return max(versions, key=sort_key)
+def _modrinth_version_timestamp(version: dict[str, Any]) -> float:
+    for key in (
+        "date_published",
+        "date",
+        "published",
+        "updated",
+        "date_created",
+        "date_modified",
+    ):
+        value = version.get(key)
+        if value:
+            return _parse_modrinth_datetime(str(value))
+    return 0.0
+
+
+def _select_latest_modrinth_versions_by_loader_game(
+    versions: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not versions:
+        return []
+
+    best_by_pair: dict[tuple[str, str], dict[str, Any]] = {}
+    for version in versions:
+        loaders = [str(l) for l in version.get("loaders", []) if str(l).strip()]
+        game_versions = [str(v) for v in version.get("game_versions", []) if str(v).strip()]
+        if not loaders or not game_versions:
+            continue
+        published_at = _modrinth_version_timestamp(version)
+        for loader in loaders:
+            for gv in game_versions:
+                key = (loader, gv)
+                current = best_by_pair.get(key)
+                if current is None or published_at > float(current.get("published_at", 0.0)):
+                    best_by_pair[key] = {"version": version, "published_at": published_at}
+
+    unique: dict[str, dict[str, Any]] = {}
+    for entry in best_by_pair.values():
+        version = entry["version"]
+        version_id = str(
+            version.get("id")
+            or version.get("version_number")
+            or version.get("name")
+            or ""
+        ).strip()
+        if not version_id:
+            version_id = f"anon-{id(version)}"
+        unique[version_id] = version
+
+    selected = list(unique.values())
+    selected.sort(key=_modrinth_version_timestamp, reverse=True)
+    return selected
 
 
 def _fetch_modrinth_project_and_versions(
@@ -899,15 +941,40 @@ def _download_modrinth_file(url: str, dest: Path) -> None:
         url,
         headers={"User-Agent": build_modrinth_user_agent()},
     )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as response:
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            with dest.open("wb") as handle:
-                shutil.copyfileobj(response, handle)
-    except urllib.error.HTTPError as error:
-        raise ModCompilerError(f"Failed to download Modrinth file: HTTP {error.code}") from None
-    except urllib.error.URLError as error:
-        raise ModCompilerError(f"Failed to download Modrinth file: {error.reason}") from None
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as response:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with dest.open("wb") as handle:
+                    shutil.copyfileobj(response, handle)
+            return
+        except urllib.error.HTTPError as error:
+            if error.code in {429, 500, 502, 503, 504} and attempt < max_attempts:
+                retry_after = error.headers.get("Retry-After") if error.headers else None
+                delay = _compute_retry_delay(attempt, retry_after)
+                time.sleep(delay)
+                continue
+            raise ModCompilerError(f"Failed to download Modrinth file: HTTP {error.code}") from None
+        except urllib.error.URLError as error:
+            if attempt < max_attempts:
+                delay = _compute_retry_delay(attempt, None)
+                time.sleep(delay)
+                continue
+            raise ModCompilerError(f"Failed to download Modrinth file: {error.reason}") from None
+
+
+def _compute_retry_delay(attempt: int, retry_after: str | None) -> float:
+    if retry_after:
+        try:
+            delay = float(retry_after)
+            if delay >= 0:
+                return min(delay, 60.0)
+        except ValueError:
+            pass
+    base = min(2 ** (attempt - 1), 30)
+    jitter = random.uniform(0, 0.5 * base)
+    return base + jitter
 
 
 def filter_versions_to_build(
@@ -1148,7 +1215,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "write_resource",
-                "description": "Write resource file (mcmod.info, pack.mcmeta). Auto-adds 'src/main/resources/' prefix.",
+                "description": "Write resource file (mcmod.info, pack.mcmeta). Auto-adds 'src/resources/' prefix.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1228,7 +1295,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "library_dir",
-                "description": "List directory structure of decompiled Minecraft sources for the target version",
+                "description": "List directory structure of decompiled Minecraft sources ONLY (no Forge/Fabric/NeoForge APIs)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1248,7 +1315,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "library_read",
-                "description": "Read a decompiled Minecraft source file to understand API patterns",
+                "description": "Read a decompiled Minecraft source file (Minecraft code only, not Forge/Fabric/NeoForge)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1265,7 +1332,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "library_search",
-                "description": "Search for a class or method in Minecraft sources",
+                "description": "Search for a class or method in Minecraft sources ONLY (not Forge/Fabric/NeoForge)",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1381,11 +1448,12 @@ MOD INFORMATION:
 - Description: {desc}
 {fix_block}{role_model_block}
 
-{current_v} uses SRG names (e.g., Minecraft.func_71410_x()), {target_v} uses MCP names (e.g., Minecraft.getMinecraft()).
+Older versions may use SRG/obf names (e.g., Minecraft.func_71410_x()); modern versions use official names (e.g., Minecraft.getInstance()). Follow reference templates for exact names.
 
 **FOLDER STRUCTURE - IMPORTANT:**
 - Original source files: `src/` (read with read_file using paths like "java/com/examplemod/Mod.java")
 - Reference examples: `reference/` (read with read_reference - these show correct {target_v} patterns!)
+- Role model (if present): `reference/role-model/<candidate>/...` (check both `java/` and `resources/` folders)
 - YOUR output: `src/java/` (write with write_mod_file - auto-adds prefix)
 - Resources output: `src/resources/` (write with write_resource)
 
@@ -1407,7 +1475,8 @@ If original source has no Java/Kotlin files, treat it as missing and use the sel
 - Don't re-read files you've already read - use the info you have
 - Never change the target Minecraft version or loader
 - Do NOT create or edit gradle/build config files (gradle.properties, build.gradle, settings.gradle)
-- Avoid using library_* tools unless you have a specific missing class; some library context is preloaded
+- library_* tools only contain Minecraft sources (no Forge/Fabric/NeoForge APIs). Use reference/role-model for loader APIs.
+- Avoid using library_* tools unless you have a specific missing Minecraft class; some library context is preloaded
 
 **TOOLS:**
 - read_file: Use path "java/com/package/File.java" (src/ prefix is auto-added)
@@ -2902,6 +2971,7 @@ def _prepare_gradle_sources(
         sanitize_env_path,
     )
 
+    version_dir = version_dir.resolve()
     manifest_path = Path("version-manifest.json")
     if not manifest_path.exists():
         return
@@ -2914,9 +2984,16 @@ def _prepare_gradle_sources(
     if not template_dir:
         return
 
-    workspace_root = version_dir / ".workflow_state" / "minecraft-sources" / f"{target_version}-{target_loader}" / "workspace"
+    workspace_root = (
+        version_dir
+        / ".workflow_state"
+        / "minecraft-sources"
+        / f"{target_version}-{target_loader}"
+        / "workspace"
+    )
     safe_rmtree(workspace_root)
     workspace_root.mkdir(parents=True, exist_ok=True)
+    workspace_root = workspace_root.resolve()
 
     source_path = Path(template_dir)
     if (source_path / "template").exists():
@@ -2948,7 +3025,7 @@ def _prepare_gradle_sources(
         else:
             task = "setupDecompWorkspace"
 
-    gradlew = workspace_root / "gradlew"
+    gradlew = (workspace_root / "gradlew").resolve()
     if not gradlew.exists():
         return
     try:
@@ -2956,7 +3033,7 @@ def _prepare_gradle_sources(
     except OSError:
         pass
 
-    init_script = workspace_root / ".modcompiler-genSources.init.gradle"
+    init_script = (workspace_root / ".modcompiler-genSources.init.gradle").resolve()
     try:
         init_script.write_text(
             """
@@ -3013,7 +3090,7 @@ gradle.projectsEvaluated {
                 cmd += ["-I", str(init_script)]
             return subprocess.run(
                 cmd,
-                cwd=workspace_root,
+                cwd=str(workspace_root),
                 env=env,
                 capture_output=True,
                 text=True,
@@ -3027,7 +3104,7 @@ gradle.projectsEvaluated {
                     cmd += ["-I", str(init_script)]
                 result = subprocess.run(
                     cmd,
-                    cwd=workspace_root,
+                    cwd=str(workspace_root),
                     env=env,
                     capture_output=True,
                     text=True,

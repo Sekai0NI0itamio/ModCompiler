@@ -4,6 +4,8 @@ import argparse
 import json
 import mimetypes
 import os
+import random
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -287,6 +289,7 @@ class ModrinthClient:
         self.token = token or ""
         self.user_agent = user_agent
         self.api_base = api_base.rstrip("/")
+        self.request_timeout = 60
 
     def resolve_project(self, project_ref: str) -> dict[str, Any]:
         return self.request_json("GET", f"/project/{urllib.parse.quote(project_ref, safe='')}")
@@ -351,21 +354,39 @@ class ModrinthClient:
         if extra_headers:
             headers.update(extra_headers)
         request = urllib.request.Request(url, data=body, method=method, headers=headers)
-        try:
-            with urllib.request.urlopen(request) as response:
-                payload = response.read()
-        except urllib.error.HTTPError as error:
-            payload = error.read().decode("utf-8", errors="replace").strip()
-            if error.code in {401, 403}:
-                raise ModCompilerError("Modrinth authentication failed. Check the MODRINTH_TOKEN secret.") from None
-            if error.code == 404 and path.startswith("/project/"):
-                raise ModCompilerError("The Modrinth project could not be found.") from None
-            detail = f"Modrinth API request failed with HTTP {error.code}."
-            if payload:
-                detail = f"{detail} Response: {payload[:400]}"
-            raise ModCompilerError(detail) from None
-        except urllib.error.URLError as error:
-            raise ModCompilerError(f"Could not reach Modrinth: {error.reason}") from None
+        method_upper = method.upper()
+        max_attempts = 5 if method_upper == "GET" else 1
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=self.request_timeout) as response:
+                    payload = response.read()
+                break
+            except urllib.error.HTTPError as error:
+                payload_text = error.read().decode("utf-8", errors="replace").strip()
+                if error.code in {401, 403}:
+                    raise ModCompilerError(
+                        "Modrinth authentication failed. Check the MODRINTH_TOKEN secret."
+                    ) from None
+                if error.code == 404 and path.startswith("/project/"):
+                    raise ModCompilerError("The Modrinth project could not be found.") from None
+                if error.code in {429, 500, 502, 503, 504} and attempt < max_attempts:
+                    retry_after = error.headers.get("Retry-After") if error.headers else None
+                    delay = _compute_retry_delay(attempt, retry_after)
+                    time.sleep(delay)
+                    continue
+                detail = f"Modrinth API request failed with HTTP {error.code}."
+                if payload_text:
+                    detail = f"{detail} Response: {payload_text[:400]}"
+                raise ModCompilerError(detail) from None
+            except urllib.error.URLError as error:
+                if attempt < max_attempts:
+                    delay = _compute_retry_delay(attempt, None)
+                    time.sleep(delay)
+                    continue
+                raise ModCompilerError(f"Could not reach Modrinth: {error.reason}") from None
+        else:
+            raise ModCompilerError("Modrinth API request failed after retries.") from None
 
         text = payload.decode("utf-8", errors="replace")
         if not text:
@@ -374,6 +395,19 @@ class ModrinthClient:
             return json.loads(text)
         except json.JSONDecodeError as error:
             raise ModCompilerError(f"Modrinth returned invalid JSON: {error}") from None
+
+
+def _compute_retry_delay(attempt: int, retry_after: str | None) -> float:
+    if retry_after:
+        try:
+            delay = float(retry_after)
+            if delay >= 0:
+                return min(delay, 60.0)
+        except ValueError:
+            pass
+    base = min(2 ** (attempt - 1), 30)
+    jitter = random.uniform(0, 0.5 * base)
+    return base + jitter
 
 
 def encode_multipart_form_data(

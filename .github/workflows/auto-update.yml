@@ -270,7 +270,10 @@ jobs:
           import os
           from pathlib import Path
           
-          from modcompiler.auto_update import _fetch_modrinth_project_and_versions
+          from modcompiler.auto_update import (
+              _fetch_modrinth_project_and_versions,
+              _select_latest_modrinth_versions_by_loader_game,
+          )
           from modcompiler.modrinth import normalize_modrinth_project_ref, select_primary_modrinth_file
           
           project_url = os.environ.get("MODRINTH_PROJECT_URL", "").strip()
@@ -280,6 +283,9 @@ jobs:
           project_ref = normalize_modrinth_project_ref(project_url)
           token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
           project, versions = _fetch_modrinth_project_and_versions(project_ref, token)
+          filtered_versions = _select_latest_modrinth_versions_by_loader_game(versions)
+          if filtered_versions:
+              versions = filtered_versions
           
           project_info = {
               "project_ref": project_ref,
