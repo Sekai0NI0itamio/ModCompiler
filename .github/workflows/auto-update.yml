@@ -836,6 +836,31 @@ jobs:
             ls -la .workflow_state/decomposed/
           fi
 
+      - name: Prepare Minecraft sources (per target)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from modcompiler.auto_update import _get_library_sources
+          
+          version_dir = Path(".workflow_artifacts/ai-${{ matrix.slug }}")
+          context_path = version_dir / "context.json"
+          if not context_path.exists():
+              print("context.json not found; skipping library source prep.")
+              raise SystemExit(0)
+          
+          context = json.loads(context_path.read_text(encoding="utf-8"))
+          target_version = context.get("target_version", "")
+          target_loader = context.get("target_loader", "")
+          if not target_version or not target_loader:
+              print("Missing target version/loader; skipping library source prep.")
+              raise SystemExit(0)
+          
+          sources = _get_library_sources(version_dir, target_version, target_loader, allow_prepare=True)
+          print(f"Library sources for {target_version}-{target_loader}: {sources or 'not found'}")
+          PY
+
       - name: Debug version dir
         run: |
           echo "=== Version dir contents ==="

@@ -1027,7 +1027,7 @@ def generate_version_context(
         if supported_versions_for_range:
             supported_versions_for_range = sorted(set(supported_versions_for_range), key=parse_version_tuple)
     
-    lib_sources = _get_library_sources(Path("."), target.minecraft_version, target.loader)
+    lib_sources = _get_library_sources(Path("."), target.minecraft_version, target.loader, allow_prepare=False)
     library_sources_path = str(lib_sources) if lib_sources else ""
 
     import datetime
@@ -2879,7 +2879,13 @@ def _prepare_gradle_sources(
 _library_sources_cache: dict[str, Path] = {}
 
 
-def _get_library_sources(version_dir: Path, target_version: str, target_loader: str) -> Path | None:
+def _get_library_sources(
+    version_dir: Path,
+    target_version: str,
+    target_loader: str,
+    *,
+    allow_prepare: bool = True,
+) -> Path | None:
     cache_key = f"{target_version}-{target_loader}"
 
     if cache_key in _library_sources_cache:
@@ -2923,7 +2929,8 @@ def _get_library_sources(version_dir: Path, target_version: str, target_loader: 
             _library_sources_cache[cache_key] = extracted
             return extracted
 
-    _prepare_gradle_sources(version_dir, target_version, target_loader)
+    if allow_prepare:
+        _prepare_gradle_sources(version_dir, target_version, target_loader)
 
     source_dirs = []
     try:
