@@ -5,6 +5,7 @@ import os
 import random
 import threading
 import time
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -52,6 +53,7 @@ class OpenRouterClient:
         self.primary_model = primary_model
         self.fallback_model = fallback_model
         self._lock = threading.Lock()
+        self._last_key_state: KeyState | None = None
 
     def _load_keys_from_env(self) -> list[str]:
         raw_keys = os.environ.get("OPENROUTER_API_KEY", "")
@@ -75,6 +77,10 @@ class OpenRouterClient:
             least_used = [ks for ks, count in counts if count == min_count]
             return random.choice(least_used)
 
+    def _disable_key(self, key: str) -> None:
+        with self._lock:
+            self.key_states = [ks for ks in self.key_states if ks.key != key]
+
     def chat_completion(
         self,
         messages: list[dict[str, str]],
@@ -89,6 +95,7 @@ class OpenRouterClient:
 
         key_state.add_request()
         api_key = key_state.key
+        self._last_key_state = key_state
         selected_model = model or self.primary_model
 
         headers = {
@@ -125,6 +132,8 @@ class OpenRouterClient:
             if error.code == 429:
                 raise ModCompilerError(f"Rate limited on all keys. Try again later. Details: {error_body[:500]}")
             if error.code == 401:
+                if self._last_key_state is not None:
+                    self._disable_key(self._last_key_state.key)
                 raise ModCompilerError(f"Invalid API key. Details: {error_body[:500]}")
             raise ModCompilerError(f"OpenRouter API error {error.code}: {error_body[:500]}")
         except urllib.error.URLError as error:
@@ -142,15 +151,27 @@ class OpenRouterClient:
         max_tokens: int | None = None,
         tools: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        try:
-            return self.chat_completion(messages, model=None, temperature=temperature, max_tokens=max_tokens, tools=tools)
-        except ModCompilerError as e:
-            if "rate limited" in str(e).lower() or "429" in str(e):
-                time.sleep(5)
-                try:
-                    return self.chat_completion(messages, model=None, temperature=temperature, max_tokens=max_tokens, tools=tools)
-                except Exception:
-                    pass
+        last_error: Exception | None = None
+        max_attempts = 5
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return self.chat_completion(
+                    messages,
+                    model=None,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                )
+            except ModCompilerError as e:
+                last_error = e
+                print(
+                    f"OpenRouter primary attempt {attempt}/{max_attempts} failed: {e}",
+                    file=sys.stderr,
+                )
+                time.sleep(_retry_delay(attempt))
+
+        for attempt in range(1, max_attempts + 1):
             try:
                 return self.chat_completion(
                     messages,
@@ -159,8 +180,23 @@ class OpenRouterClient:
                     max_tokens=max_tokens,
                     tools=tools,
                 )
-            except Exception:
-                raise e
+            except ModCompilerError as e:
+                last_error = e
+                print(
+                    f"OpenRouter fallback attempt {attempt}/{max_attempts} failed: {e}",
+                    file=sys.stderr,
+                )
+                time.sleep(_retry_delay(attempt))
+
+        if last_error is not None:
+            raise last_error
+        raise ModCompilerError("OpenRouter request failed after retries.")
+
+
+def _retry_delay(attempt: int) -> float:
+    base = min(2 ** (attempt - 1), 30)
+    jitter = random.uniform(0, 0.5 * base)
+    return base + jitter
 
 
 class ModCompilerError(Exception):
