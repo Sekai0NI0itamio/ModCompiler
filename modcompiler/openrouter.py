@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import threading
 import time
 import urllib.error
@@ -65,10 +66,14 @@ class OpenRouterClient:
 
     def select_key(self) -> KeyState | None:
         with self._lock:
+            if not self.key_states:
+                return None
             available = [ks for ks in self.key_states if ks.is_available()]
-            if available:
-                return min(available, key=lambda ks: ks.get_request_count())
-            return min(self.key_states, key=lambda ks: ks.get_request_count())
+            pool = available or self.key_states
+            counts = [(ks, ks.get_request_count()) for ks in pool]
+            min_count = min(count for _ks, count in counts)
+            least_used = [ks for ks, count in counts if count == min_count]
+            return random.choice(least_used)
 
     def chat_completion(
         self,
