@@ -61,6 +61,8 @@ class AutoUpdateConfig:
     mod_description: str
     auto_fetch_modrinth: bool
     auto_fix_corrupted: bool
+    auto_fix_only: bool
+    auto_fix_corrupted_downloads_dir: str | None
     version_range: str
     update_mode: str
     publish_mode: str
@@ -395,6 +397,7 @@ def _run_auto_fix_corrupted(
     manifest: dict[str, Any],
     modrinth_project_url: str,
     output_dir: Path,
+    downloads_dir: Path | None = None,
 ) -> tuple[list[VersionTarget], dict[str, dict[str, Any]], dict[str, dict[str, Any]], Path]:
     token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
     project_ref = normalize_modrinth_project_ref(modrinth_project_url)
@@ -409,10 +412,11 @@ def _run_auto_fix_corrupted(
         raise ModCompilerError("auto-fix-corrupted requires OPENROUTER_API_KEY to be set.")
 
     scan_root = output_dir / "_corrupt_scan"
-    downloads_dir = scan_root / "downloads"
+    downloads_root = downloads_dir if downloads_dir else (scan_root / "downloads")
+    downloads_root = Path(downloads_root)
     decompiled_dir = scan_root / "decompiled"
     role_models_dir = scan_root / "role-models"
-    downloads_dir.mkdir(parents=True, exist_ok=True)
+    downloads_root.mkdir(parents=True, exist_ok=True)
     decompiled_dir.mkdir(parents=True, exist_ok=True)
     role_models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -456,7 +460,7 @@ def _run_auto_fix_corrupted(
             })
             continue
 
-        jar_path = downloads_dir / version_id / filename
+        jar_path = downloads_root / version_id / filename
         if not jar_path.exists():
             _download_modrinth_file(file_url, jar_path)
 
@@ -1170,12 +1174,24 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         getattr(args, "auto_fix_corrupted", None),
         default=False,
     )
+    auto_fix_only = _parse_bool(
+        getattr(args, "auto_fix_only", None),
+        default=False,
+    )
+    if auto_fix_only:
+        auto_fix_corrupted = True
     config = AutoUpdateConfig(
         mod_jar_path=args.mod_jar_path if hasattr(args, "mod_jar_path") else "",
         modrinth_project_url=args.modrinth_project_url if hasattr(args, "modrinth_project_url") else None,
         mod_description=args.mod_description if hasattr(args, "mod_description") else "",
         auto_fetch_modrinth=auto_fetch_modrinth,
         auto_fix_corrupted=auto_fix_corrupted,
+        auto_fix_only=auto_fix_only,
+        auto_fix_corrupted_downloads_dir=(
+            args.auto_fix_corrupted_downloads_dir
+            if hasattr(args, "auto_fix_corrupted_downloads_dir")
+            else ""
+        ),
         version_range=args.version_range if hasattr(args, "version_range") else "all",
         update_mode=args.update_mode if hasattr(args, "update_mode") else "all-versions",
         publish_mode=args.publish_mode if hasattr(args, "publish_mode") else "bundle-only",
@@ -1252,6 +1268,11 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     if config.auto_fix_corrupted:
         if not config.modrinth_project_url:
             raise ModCompilerError("auto-fix-corrupted requires a Modrinth project URL.")
+        if config.auto_fix_only and not config.modrinth_project_url:
+            raise ModCompilerError("auto-fix-only requires a Modrinth project URL.")
+        downloads_dir = None
+        if config.auto_fix_corrupted_downloads_dir:
+            downloads_dir = Path(config.auto_fix_corrupted_downloads_dir)
         (
             corrupted_targets,
             fix_info_map,
@@ -1261,6 +1282,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             manifest=manifest,
             modrinth_project_url=config.modrinth_project_url,
             output_dir=config.output_dir,
+            downloads_dir=downloads_dir,
         )
         corruption_report_path = str(report_path)
 
@@ -1308,7 +1330,9 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             print(f"Warning: Could not fetch Modrinth versions: {e}", file=sys.stderr)
 
     filtered_targets = filter_versions_to_build(version_targets, modrinth_info, config.update_mode)
-    if corrupted_targets:
+    if config.auto_fix_only:
+        filtered_targets = list(corrupted_targets)
+    elif corrupted_targets:
         existing_slugs = {t.slug for t in filtered_targets}
         for target in corrupted_targets:
             if target.slug not in existing_slugs:
@@ -1343,9 +1367,9 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             context["fix_corrupted"] = True
             context["fix_source_version"] = mod_info_for_target.get("fix_source_version", "")
             context["fix_source_modrinth_id"] = mod_info_for_target.get("fix_source_modrinth_id", "")
-    if target.loader in role_models:
-        context["role_model_dir"] = "reference/role-model"
-        context["role_model_version"] = role_models[target.loader].get("version_number", "")
+        if target.loader in role_models:
+            context["role_model_dir"] = "reference/role-model"
+            context["role_model_version"] = role_models[target.loader].get("version_number", "")
 
         version_folder = create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
         role_model = role_models.get(target.loader)
@@ -1369,6 +1393,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         "auto_fetch_modrinth_requested": config.auto_fetch_modrinth,
         "auto_fetch_modrinth_effective": auto_fetch_enabled,
         "auto_fix_corrupted": config.auto_fix_corrupted,
+        "auto_fix_only": config.auto_fix_only,
         "corruption_report": corruption_report_path,
         "role_models": role_models,
         "current_version": current_version,
