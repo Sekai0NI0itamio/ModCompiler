@@ -103,17 +103,15 @@ jobs:
           setup_dir = Path(".workflow_state/setup")
           setup_dir.mkdir(parents=True, exist_ok=True)
           
-          project = None
-          versions = None
-          project_ref = ""
+          state = {"project": None, "versions": None, "project_ref": ""}
           
           def ensure_project() -> None:
-              nonlocal project, versions, project_ref
-              if project is not None:
+              if state["project"] is not None:
                   return
               if not modrinth_url:
                   fail("Modrinth URL is required to auto-fetch the jar/description.")
               project_ref = normalize_modrinth_project_ref(modrinth_url)
+              state["project_ref"] = project_ref
               token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
               client = ModrinthClient(token=token, user_agent=build_modrinth_user_agent())
               project = client.resolve_project(project_ref)
@@ -124,6 +122,8 @@ jobs:
               )
               if not isinstance(versions, list):
                   fail("Unexpected Modrinth versions response.")
+              state["project"] = project
+              state["versions"] = versions
           
           resolved_jar = ""
           if jar_input:
@@ -143,7 +143,7 @@ jobs:
               if not auto_fetch:
                   fail("Mod jar path is required when auto-fetch is disabled.")
               ensure_project()
-              latest = _select_latest_modrinth_version(versions or [])
+              latest = _select_latest_modrinth_version(state["versions"] or [])
               if latest is None:
                   fail("No Modrinth versions were available to download.")
               file_info = select_primary_modrinth_file(latest.get("files", []))
@@ -154,7 +154,7 @@ jobs:
                   fail("Modrinth file entry is missing a download URL.")
               filename = str(file_info.get("filename", "")).strip()
               if not filename:
-                  filename = f"{project_ref or 'mod'}.jar"
+                  filename = f"{state['project_ref'] or 'mod'}.jar"
               dest = setup_dir / filename
               _download_modrinth_file(file_url, dest)
               resolved_jar = str(dest)
@@ -170,7 +170,7 @@ jobs:
               resolved_desc = str(dest)
           elif auto_fetch and modrinth_url:
               ensure_project()
-              text = _extract_modrinth_description(project or {})
+              text = _extract_modrinth_description(state["project"] or {})
               if text:
                   dest = setup_dir / "description.txt"
                   dest.write_text(text, encoding="utf-8")
