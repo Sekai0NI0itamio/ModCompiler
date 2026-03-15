@@ -80,46 +80,54 @@ jobs:
                   rel = p.relative_to(path)
                   print(rel)
 
+          def find_candidate(search_root: Path) -> tuple[Path | None, bool]:
+              if (search_root / 'run-summary.json').exists():
+                  return search_root, True
+              if list(search_root.rglob('result.json')):
+                  return search_root, False
+              return None, False
+
           if not root.exists():
               fail(f"Download root not found: {root}")
 
           debug_tree("Downloaded files", root)
 
-          if bundle_subdir:
-              candidate = (root / bundle_subdir).resolve()
-              if not candidate.exists():
-                  fail(f"Bundle subdir not found: {candidate}")
-          else:
-              summaries = list(root.rglob('run-summary.json'))
-              if summaries:
-                  candidate = summaries[0].parent
-              else:
-                  candidate = None
-                  for mods_dir in root.rglob('mods'):
-                      if list(mods_dir.rglob('result.json')):
-                          candidate = mods_dir
-                          break
-                  if candidate is None:
-                      zip_candidates = [p for p in root.rglob('*.zip') if p.is_file()]
-                      if zip_candidates:
-                          extract_root = Path('.workflow_artifacts/extracted')
-                          if extract_root.exists():
-                              shutil.rmtree(extract_root)
-                          extract_root.mkdir(parents=True, exist_ok=True)
-                          for zip_path in zip_candidates:
-                              shutil.unpack_archive(str(zip_path), extract_root / zip_path.stem)
-                          summaries = list(extract_root.rglob('run-summary.json'))
-                          if summaries:
-                              candidate = summaries[0].parent
-                          else:
-                              for mods_dir in extract_root.rglob('mods'):
-                                  if list(mods_dir.rglob('result.json')):
-                                      candidate = mods_dir
-                                      break
-                  if candidate is None:
-                      fail("Could not locate a bundle root (run-summary.json or mods/ with result.json).")
+          candidate = None
+          candidate_is_bundle = False
 
-          if (candidate / 'run-summary.json').exists():
+          search_roots = []
+          if bundle_subdir:
+              manual = (root / bundle_subdir).resolve()
+              if not manual.exists():
+                  fail(f"Bundle subdir not found: {manual}")
+              search_roots.append(manual)
+          else:
+              search_roots.append(root)
+              combined = root / '.workflow_artifacts' / 'combined'
+              if combined.exists():
+                  search_roots.append(combined)
+
+          for search_root in search_roots:
+              candidate, candidate_is_bundle = find_candidate(search_root)
+              if candidate:
+                  break
+
+          if not candidate:
+              zip_candidates = [p for p in root.rglob('*.zip') if p.is_file()]
+              if zip_candidates:
+                  extract_root = Path('.workflow_artifacts/extracted')
+                  if extract_root.exists():
+                      shutil.rmtree(extract_root)
+                  extract_root.mkdir(parents=True, exist_ok=True)
+                  for zip_path in zip_candidates:
+                      shutil.unpack_archive(str(zip_path), extract_root / zip_path.stem)
+                  debug_tree("Extracted files", extract_root)
+                  candidate, candidate_is_bundle = find_candidate(extract_root)
+
+          if not candidate:
+              fail("Could not locate a bundle root (run-summary.json or any result.json).")
+
+          if candidate_is_bundle:
               bundle_root = candidate
           else:
               out_dir = Path('.workflow_artifacts/normalized')
@@ -172,4 +180,9 @@ jobs:
 
       - if: always()
         shell: bash
-        run: exit "${{ steps.publish.outputs.exit_code }}"
+        run: |
+          code="${{ steps.publish.outputs.exit_code }}"
+          if [ -z "$code" ]; then
+            code=1
+          fi
+          exit "$code"
