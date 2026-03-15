@@ -144,14 +144,26 @@ jobs:
           def sanitize(value: str) -> str:
               return re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip()) if value else ""
 
+          def parse_mc_version(value: str):
+              parts = []
+              for token in value.split("."):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  else:
+                      parts.append(token)
+              return parts
+
           def build_prefix() -> str:
               if state["versions"]:
                   latest = _select_latest_modrinth_version(state["versions"] or [])
                   if latest:
-                      version_number = str(latest.get("version_number") or "")
+                      game_versions = [str(v) for v in latest.get("game_versions", []) if str(v).strip()]
+                      mc_version = ""
+                      if game_versions:
+                          mc_version = sorted(game_versions, key=parse_mc_version)[-1]
                       loaders = [str(l) for l in latest.get("loaders", [])]
                       loader = loaders[0] if loaders else "unknown"
-                      prefix = sanitize(f"{version_number}_{loader}")
+                      prefix = sanitize(f"{mc_version or 'unknown'}_{loader}")
                       return prefix
               return ""
           if jar_input:
