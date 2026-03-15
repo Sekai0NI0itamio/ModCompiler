@@ -2319,7 +2319,30 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
             print(f"DEBUG: Iteration {iteration+1}: Calling API...", file=sys.stderr)
             try:
                 call_started = time.perf_counter()
-                response = client.chat_completion_with_fallback(messages, temperature=0.7, max_tokens=4000, tools=get_tools_definition())
+                response = None
+                timeout_retries = 20
+                last_timeout: Exception | None = None
+                for attempt in range(1, timeout_retries + 1):
+                    try:
+                        response = client.chat_completion_with_fallback(
+                            messages,
+                            temperature=0.7,
+                            max_tokens=4000,
+                            tools=get_tools_definition(),
+                        )
+                        last_timeout = None
+                        break
+                    except Exception as e:
+                        msg = str(e).lower()
+                        is_timeout = isinstance(e, TimeoutError) or "timed out" in msg or "timeout" in msg
+                        if not is_timeout:
+                            raise
+                        last_timeout = e
+                        print(f"DEBUG: API timeout on attempt {attempt}/{timeout_retries}: {e}", file=sys.stderr)
+                        if attempt < timeout_retries:
+                            time.sleep(min(5.0, 0.5 * attempt))
+                if response is None:
+                    raise last_timeout or ModCompilerError("OpenRouter timed out without a response.")
                 call_elapsed = time.perf_counter() - call_started
                 api_call_count += 1
                 api_latency_total += call_elapsed

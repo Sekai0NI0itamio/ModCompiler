@@ -1,0 +1,103 @@
+name: Generate Source Files & Cache Them
+
+on:
+  workflow_dispatch:
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from modcompiler.common import expand_minecraft_version_spec, parse_version_tuple
+          
+          manifest = json.loads(Path("version-manifest.json").read_text(encoding="utf-8"))
+          items = set()
+          for entry in manifest.get("ranges", []):
+              loaders = entry.get("loaders", {})
+              for loader, cfg in loaders.items():
+                  versions = cfg.get("supported_versions")
+                  if not versions:
+                      min_v = entry.get("min_version", "")
+                      max_v = entry.get("max_version", "")
+                      versions = expand_minecraft_version_spec(f"{min_v}-{max_v}")
+                  for v in versions:
+                      items.add((str(v), str(loader)))
+          
+          include = []
+          for version, loader in sorted(items, key=lambda item: (parse_version_tuple(item[0]), item[1])):
+              include.append({
+                  "version": version,
+                  "loader": loader,
+                  "slug": f"{version}-{loader}",
+              })
+          
+          matrix = {"include": include}
+          Path(os.environ["GITHUB_OUTPUT"]).write_text(f"matrix={json.dumps(matrix)}\n", encoding="utf-8")
+          print(f"Prepared {len(include)} version+loader entries.")
+          PY
+
+  generate-sources:
+    needs: prepare-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            16
+            17
+            21
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .workflow_state/minecraft-sources
+          key: mc-sources-${{ runner.os }}-${{ matrix.slug }}-${{ hashFiles('version-manifest.json') }}
+          restore-keys: |
+            mc-sources-${{ runner.os }}-${{ matrix.slug }}-
+
+      - name: Generate Minecraft sources
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from modcompiler.auto_update import _get_library_sources
+          
+          version = "${{ matrix.version }}"
+          loader = "${{ matrix.loader }}"
+          sources = _get_library_sources(Path("."), version, loader, allow_prepare=True)
+          if not sources:
+              raise SystemExit(f"Failed to generate sources for {version}-{loader}")
+          print(f"Generated sources for {version}-{loader}: {sources}")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-sources-${{ matrix.slug }}
+          path: .workflow_state/minecraft-sources/${{ matrix.version }}-${{ matrix.loader }}
