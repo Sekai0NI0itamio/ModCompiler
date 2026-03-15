@@ -225,6 +225,11 @@ jobs:
                   dest.write_text(text, encoding="utf-8")
                   resolved_desc = str(dest)
                   resolved_desc_name = dest.name
+
+          if resolved_jar_name:
+              (setup_dir / "selected-jar.txt").write_text(resolved_jar_name, encoding="utf-8")
+          if resolved_desc_name:
+              (setup_dir / "selected-description.txt").write_text(resolved_desc_name, encoding="utf-8")
           
           output_path = Path(os.environ["GITHUB_OUTPUT"])
           with output_path.open("a", encoding="utf-8") as handle:
@@ -578,6 +583,7 @@ jobs:
               verdict_payload = {
                   "verdict": "fail",
                   "confidence": 0.0,
+                  "rating": 0.0,
                   "reason": "Decompiler produced no sources.",
               }
               if src_dir.exists() and (list(src_dir.rglob("*.java")) or list(src_dir.rglob("*.kt"))):
@@ -593,6 +599,7 @@ jobs:
               
               verdict = str(verdict_payload.get("verdict", "")).lower()
               confidence = float(verdict_payload.get("confidence", 0.0) or 0.0)
+              rating = float(verdict_payload.get("rating", 0.0) or 0.0)
               if verdict != "pass" or confidence < 0.6:
                   verdict = "fail"
               
@@ -604,6 +611,7 @@ jobs:
                   "date_published": date_published,
                   "verdict": verdict,
                   "confidence": confidence,
+                  "rating": rating,
                   "reason": verdict_payload.get("reason", ""),
               }
               (verdict_root / f"{version_id}.json").write_text(json.dumps(output, indent=2), encoding="utf-8")
@@ -687,6 +695,28 @@ jobs:
           fi
           if [ -n "$MOD_DESCRIPTION_NAME" ]; then
             MOD_DESCRIPTION=".workflow_state/setup/$MOD_DESCRIPTION_NAME"
+          fi
+          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
+            if [ -f ".workflow_state/setup/selected-jar.txt" ]; then
+              sel_name=$(cat ".workflow_state/setup/selected-jar.txt" 2>/dev/null || true)
+              if [ -n "$sel_name" ]; then
+                MOD_JAR_PATH=".workflow_state/setup/$sel_name"
+              fi
+            fi
+          fi
+          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
+            candidate=$(ls -t .workflow_state/setup/*.jar 2>/dev/null | head -n1 || true)
+            if [ -n "$candidate" ]; then
+              MOD_JAR_PATH="$candidate"
+            fi
+          fi
+          if [ -z "$MOD_DESCRIPTION" ] || [ ! -f "$MOD_DESCRIPTION" ]; then
+            if [ -f ".workflow_state/setup/selected-description.txt" ]; then
+              sel_desc=$(cat ".workflow_state/setup/selected-description.txt" 2>/dev/null || true)
+              if [ -n "$sel_desc" ]; then
+                MOD_DESCRIPTION=".workflow_state/setup/$sel_desc"
+              fi
+            fi
           fi
           
           python build_mods.py auto-update-decompose \

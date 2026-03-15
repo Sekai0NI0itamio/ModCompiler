@@ -354,7 +354,8 @@ def _verify_mod_source_with_ai(
 
     system_msg = (
         "You are verifying whether a Minecraft mod's source code matches its Modrinth listing. "
-        "Return ONLY valid JSON with keys: verdict (pass/fail), confidence (0-1), reason."
+        "Return ONLY valid JSON with keys: verdict (pass/fail), confidence (0-1), "
+        "rating (0-20, higher means better match), reason."
     )
     excerpts_text = "\n\n".join(excerpts) if excerpts else "(no key files found)"
     user_msg = (
@@ -385,10 +386,16 @@ def _verify_mod_source_with_ai(
         confidence = float(confidence)
     except (TypeError, ValueError):
         confidence = 0.0
+    rating = payload.get("rating")
+    try:
+        rating = float(rating)
+    except (TypeError, ValueError):
+        rating = 0.0
     reason = str(payload.get("reason", "")).strip()
     return {
         "verdict": verdict,
         "confidence": confidence,
+        "rating": rating,
         "reason": reason,
         "raw": content,
     }
@@ -520,6 +527,7 @@ def _run_auto_fix_corrupted(
 
             verdict = verdict_payload.get("verdict", "").lower()
             confidence = float(verdict_payload.get("confidence", 0.0) or 0.0)
+            rating = float(verdict_payload.get("rating", 0.0) or 0.0)
             passed = verdict == "pass" and confidence >= 0.6
             if not passed:
                 verdict = "fail"
@@ -531,10 +539,12 @@ def _run_auto_fix_corrupted(
                 "game_versions": game_versions,
                 "verdict": verdict,
                 "confidence": confidence,
+                "rating": rating,
                 "reason": verdict_payload.get("reason", ""),
                 "date_published": date_published,
             })
 
+    candidates_by_loader: dict[str, list[dict[str, Any]]] = {}
     for entry in report_entries:
         version_id = str(entry.get("version_id") or "")
         version_number = str(entry.get("version_number") or "")
@@ -543,26 +553,28 @@ def _run_auto_fix_corrupted(
         date_published = str(entry.get("date_published") or "")
         verdict = str(entry.get("verdict", "")).lower()
         confidence = float(entry.get("confidence", 0.0) or 0.0)
+        rating = float(entry.get("rating", 0.0) or 0.0)
         passed = verdict == "pass" and confidence >= 0.6
         if not passed:
             verdict = "fail"
 
-        if passed:
-            src_dir = src_dirs_by_version.get(version_id)
-            if src_dir is None:
-                continue
+        src_dir = src_dirs_by_version.get(version_id)
+        if src_dir is not None:
             published_at = _parse_modrinth_datetime(date_published)
+            candidate = {
+                "src_dir": src_dir,
+                "version_id": version_id,
+                "version_number": version_number,
+                "game_versions": game_versions,
+                "published_at": published_at,
+                "rating": rating,
+                "confidence": confidence,
+                "verdict": verdict,
+            }
             for loader in loaders:
-                current = role_models.get(loader)
-                if not current or published_at > current.get("published_at", 0.0):
-                    role_models[loader] = {
-                        "src_dir": src_dir,
-                        "version_id": version_id,
-                        "version_number": version_number,
-                        "published_at": published_at,
-                        "unverified": False,
-                    }
-        else:
+                candidates_by_loader.setdefault(loader, []).append(candidate)
+
+        if not passed:
             published_at = _parse_modrinth_datetime(date_published)
             for loader in loaders:
                 for mc_version in game_versions:
@@ -579,39 +591,43 @@ def _run_auto_fix_corrupted(
                             "published_at": published_at,
                         }
 
-    fallback_candidates: dict[str, dict[str, Any]] = {}
-    for entry in report_entries:
-        version_id = str(entry.get("version_id") or "")
-        if not version_id:
+    role_models: dict[str, dict[str, Any]] = {}
+    for loader, candidates in candidates_by_loader.items():
+        passed_candidates = [c for c in candidates if c["verdict"] == "pass" and c["confidence"] >= 0.6]
+        pool = passed_candidates or candidates
+        if not pool:
             continue
-        src_dir = src_dirs_by_version.get(version_id)
-        if src_dir is None:
-            continue
-        published_at = _parse_modrinth_datetime(str(entry.get("date_published") or ""))
-        for loader in [str(l) for l in entry.get("loaders", [])]:
-            current = fallback_candidates.get(loader)
-            if not current or published_at > current.get("published_at", 0.0):
-                fallback_candidates[loader] = {
-                    "src_dir": src_dir,
-                    "version_id": version_id,
-                    "version_number": str(entry.get("version_number") or ""),
-                    "published_at": published_at,
-                    "unverified": True,
-                }
-
-    for loader, candidate in fallback_candidates.items():
-        if loader not in role_models:
-            role_models[loader] = candidate
+        max_rating = max(c["rating"] for c in pool)
+        top_candidates = [c for c in pool if c["rating"] == max_rating]
+        role_models[loader] = {
+            "candidates": top_candidates,
+            "unverified": not passed_candidates,
+        }
 
     role_model_paths: dict[str, dict[str, Any]] = {}
     for loader, info in role_models.items():
         dest = role_models_dir / loader
         safe_rmtree(dest)
-        copy_tree(info["src_dir"], dest)
+        dest.mkdir(parents=True, exist_ok=True)
+        candidates_info: list[dict[str, Any]] = []
+        for cand in info.get("candidates", []):
+            version_id = cand.get("version_id") or "unknown"
+            subdir = dest / re.sub(r"[^A-Za-z0-9._-]+", "_", str(version_id))
+            safe_rmtree(subdir)
+            copy_tree(cand["src_dir"], subdir)
+            candidate_payload = {
+                "path": str(subdir),
+                "version_id": cand.get("version_id", ""),
+                "version_number": cand.get("version_number", ""),
+                "game_versions": cand.get("game_versions", []),
+                "published_at": cand.get("published_at", 0.0),
+                "rating": cand.get("rating", 0.0),
+                "confidence": cand.get("confidence", 0.0),
+                "verdict": cand.get("verdict", ""),
+            }
+            candidates_info.append(candidate_payload)
         role_model_paths[loader] = {
-            "path": str(dest),
-            "version_id": info.get("version_id", ""),
-            "version_number": info.get("version_number", ""),
+            "candidates": candidates_info,
             "unverified": bool(info.get("unverified")),
         }
 
@@ -661,6 +677,42 @@ def _parse_modrinth_datetime(value: str) -> float:
         return datetime.datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
     except Exception:
         return 0.0
+
+
+def _version_distance(a: str, b: str) -> float:
+    try:
+        a_tuple = parse_version_tuple(a)
+        b_tuple = parse_version_tuple(b)
+    except Exception:
+        return float("inf")
+    return sum(abs(ax - bx) for ax, bx in zip(a_tuple, b_tuple))
+
+
+def _select_closest_role_model(target_version: str, candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not candidates:
+        return None
+    best = None
+    best_distance = float("inf")
+    best_rating = -1.0
+    best_published = -1.0
+    for cand in candidates:
+        game_versions = [str(v) for v in cand.get("game_versions", []) if str(v).strip()]
+        if game_versions:
+            distance = min(_version_distance(target_version, gv) for gv in game_versions)
+        else:
+            distance = float("inf")
+        rating = float(cand.get("rating", 0.0) or 0.0)
+        published = float(cand.get("published_at", 0.0) or 0.0)
+        if (
+            distance < best_distance
+            or (distance == best_distance and rating > best_rating)
+            or (distance == best_distance and rating == best_rating and published > best_published)
+        ):
+            best = cand
+            best_distance = distance
+            best_rating = rating
+            best_published = published
+    return best
 
 
 def _select_latest_modrinth_version(versions: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -1117,6 +1169,8 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     role_model_version = context.get("role_model_version", "")
     role_model_unverified = bool(context.get("role_model_unverified"))
     role_model_loader = context.get("role_model_loader", "")
+    role_model_selected_rating = context.get("role_model_selected_rating", "")
+    role_model_candidates = context.get("role_model_candidates", [])
     fix_corrupted = bool(context.get("fix_corrupted"))
     supported_versions_text = ", ".join(supported_versions) if supported_versions else "unknown"
     range_versions_text = ", ".join(supported_versions_for_range) if supported_versions_for_range else "unknown"
@@ -1125,10 +1179,23 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     if role_model_dir:
         label = "ROLE MODEL SOURCE (verified working)" if not role_model_unverified else "ROLE MODEL SOURCE (unverified fallback)"
         role_loader = role_model_loader or target_l
+        candidate_lines = ""
+        if role_model_candidates:
+            summary = []
+            for cand in role_model_candidates:
+                summary.append(
+                    f"{cand.get('version_number', cand.get('version_id', 'unknown'))} "
+                    f"(rating {cand.get('rating', 0)}/20, mc={','.join(cand.get('game_versions', [])) or 'unknown'})"
+                )
+            candidate_lines = "\nTop candidates:\n- " + "\n- ".join(summary)
         role_model_block = (
             f"\n{label}: {role_model_dir} "
-            f"(built for loader {role_loader}, version {role_model_version or 'unknown'})\n"
+            f"(built for loader {role_loader}, version {role_model_version or 'unknown'}, "
+            f"rating {role_model_selected_rating or 'unknown'}/20)\n"
             f"Target loader/version: {target_l} {target_v}\n"
+            f"{candidate_lines}\n"
+            "The role model directory may contain multiple candidates in subfolders; "
+            "prioritize the selected one above.\n"
             "Read this if you need a known-good reference for behavior.\n"
         )
     fix_block = ""
@@ -1477,10 +1544,26 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             context["fix_source_version"] = mod_info_for_target.get("fix_source_version", "")
             context["fix_source_modrinth_id"] = mod_info_for_target.get("fix_source_modrinth_id", "")
         if target.loader in role_models:
+            model_info = role_models[target.loader]
+            candidates = model_info.get("candidates", []) or []
+            selected = _select_closest_role_model(target.minecraft_version, candidates)
             context["role_model_dir"] = "reference/role-model"
-            context["role_model_version"] = role_models[target.loader].get("version_number", "")
-            context["role_model_unverified"] = bool(role_models[target.loader].get("unverified"))
+            context["role_model_unverified"] = bool(model_info.get("unverified"))
             context["role_model_loader"] = target.loader
+            context["role_model_candidates"] = [
+                {
+                    "version_id": c.get("version_id", ""),
+                    "version_number": c.get("version_number", ""),
+                    "game_versions": c.get("game_versions", []),
+                    "rating": c.get("rating", 0.0),
+                }
+                for c in candidates
+            ]
+            if selected:
+                context["role_model_version"] = selected.get("version_number", "")
+                context["role_model_selected_version_id"] = selected.get("version_id", "")
+                context["role_model_selected_rating"] = selected.get("rating", 0.0)
+                context["role_model_selected_game_versions"] = selected.get("game_versions", [])
 
         version_folder = create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
         role_model = role_models.get(target.loader)
@@ -1489,7 +1572,14 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             ref_root.mkdir(parents=True, exist_ok=True)
             role_dest = ref_root / "role-model"
             safe_rmtree(role_dest)
-            copy_tree(Path(role_model["path"]), role_dest)
+            role_dest.mkdir(parents=True, exist_ok=True)
+            for cand in role_model.get("candidates", []) or []:
+                source_path = Path(cand.get("path", ""))
+                version_id = cand.get("version_id") or "candidate"
+                subdir = role_dest / re.sub(r"[^A-Za-z0-9._-]+", "_", str(version_id))
+                safe_rmtree(subdir)
+                if source_path.exists():
+                    copy_tree(source_path, subdir)
 
     if config.modrinth_project_url and not modrinth_project_ref:
         modrinth_project_ref = normalize_modrinth_project_ref(config.modrinth_project_url)
@@ -1784,10 +1874,24 @@ ACTION: Read files, update them, write to src/java/, then call build."""
             if context.get("role_model_unverified"):
                 label = "ROLE MODEL AVAILABLE (UNVERIFIED)"
             role_loader = context.get("role_model_loader") or target_loader
+            candidates = context.get("role_model_candidates", [])
+            selected_rating = context.get("role_model_selected_rating", "")
+            selected_version = context.get("role_model_version", "unknown")
+            candidate_lines = ""
+            if candidates:
+                summary = []
+                for cand in candidates:
+                    summary.append(
+                        f"{cand.get('version_number', cand.get('version_id', 'unknown'))} "
+                        f"(rating {cand.get('rating', 0)}/20, mc={','.join(cand.get('game_versions', [])) or 'unknown'})"
+                    )
+                candidate_lines = "\nTop candidates:\n- " + "\n- ".join(summary)
             role_model_note = (
                 f"\n{label}: {context.get('role_model_dir')} "
-                f"(built for loader {role_loader}, version {context.get('role_model_version', 'unknown')})\n"
+                f"(built for loader {role_loader}, version {selected_version}, rating {selected_rating or 'unknown'}/20)\n"
                 f"Target loader/version: {target_loader} {target_version}\n"
+                f"{candidate_lines}\n"
+                "Role model subfolders may contain multiple candidates; prefer the selected one.\n"
             )
         fix_note = "\nNOTE: This target is marked as corrupted; ensure behavior matches the description.\n" if context.get("fix_corrupted") else ""
 
