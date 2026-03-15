@@ -2,5 +2,4 @@
 
 | Range | Loader | Minecraft | Status | Jar | Log |
 | --- | --- | --- | --- | --- | --- |
-| 1.16.5 | fabric | 1.16.5 | failed | - | 1.16.5.log |
-- Error: Build exited with 1
+| 1.16.5 | fabric | 1.16.5 | success | template_test-0.0.0-dev.jar | 1.16.5.log |
