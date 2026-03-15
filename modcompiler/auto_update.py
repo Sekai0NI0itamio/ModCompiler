@@ -937,16 +937,18 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     current_version = mod_info.get("supported_minecraft", "1.20.1")
 
     version_range_clean = config.version_range.strip().lower()
-    include_neoforge_missing = (
+    include_all_loaders_missing = (
         config.update_mode == "missing-only"
         and version_range_clean in {"", "all"}
         and config.modrinth_project_url
     )
 
-    if include_neoforge_missing:
-        loaders_to_include = {current_loader}
-        if any("neoforge" in entry.get("loaders", {}) for entry in manifest.get("ranges", [])):
-            loaders_to_include.add("neoforge")
+    if include_all_loaders_missing:
+        loaders_to_include = set()
+        for entry in manifest.get("ranges", []):
+            loaders_to_include.update(entry.get("loaders", {}).keys())
+        if not loaders_to_include:
+            loaders_to_include = {current_loader}
         version_targets = _get_all_supported_versions_for_loaders(manifest, sorted(loaders_to_include))
     else:
         version_targets = parse_version_input(config.version_range, manifest, current_loader)
@@ -954,7 +956,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     modrinth_info = None
     if config.modrinth_project_url:
         try:
-            loader_filter = "" if include_neoforge_missing else current_loader
+            loader_filter = "" if include_all_loaders_missing else current_loader
             modrinth_info = check_modrinth_versions(config.modrinth_project_url, loader_filter)
         except Exception as e:
             print(f"Warning: Could not fetch Modrinth versions: {e}", file=sys.stderr)
