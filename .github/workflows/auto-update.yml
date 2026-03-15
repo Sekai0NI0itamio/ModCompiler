@@ -340,147 +340,9 @@ jobs:
           name: corrupt-project
           path: .workflow_state/corrupt-project.json
 
-  download-corrupt-jars:
-    needs: prepare-corrupt-downloads
-    runs-on: ubuntu-latest
-    if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.prepare-corrupt-downloads.outputs.matrix) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Download batch
-        shell: bash
-        env:
-          FILES_B64: ${{ matrix.files_b64 }}
-        run: |
-          python3 - <<'PY'
-          import base64
-          import json
-          import os
-          from pathlib import Path
-          
-          from modcompiler.auto_update import _download_modrinth_file
-          
-          files_b64 = os.environ.get("FILES_B64", "").strip()
-          if not files_b64:
-              print("No files to download in this batch.")
-              raise SystemExit(0)
-          
-          files = json.loads(base64.b64decode(files_b64).decode("utf-8"))
-          if not files:
-              print("No files to download in this batch.")
-              raise SystemExit(0)
-          
-          root = Path(".workflow_state/corrupt-downloads")
-          downloaded = 0
-          for entry in files:
-              url = str(entry.get("url", "")).strip()
-              version_id = str(entry.get("version_id", "")).strip() or "unknown"
-              filename = str(entry.get("filename", "")).strip() or f"{version_id}.jar"
-              if not url:
-                  continue
-              dest = root / version_id / filename
-              if dest.exists():
-                  continue
-              _download_modrinth_file(url, dest)
-              downloaded += 1
-          
-          print(f"Downloaded {downloaded} file(s) in this batch.")
-          PY
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: corrupt-downloads-${{ matrix.batch_id }}
-          path: .workflow_state/corrupt-downloads
-
-  decompile-corrupt-jars:
+  process-corrupt-jars:
     needs:
       - prepare-corrupt-downloads
-      - download-corrupt-jars
-    runs-on: ubuntu-latest
-    if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.prepare-corrupt-downloads.outputs.matrix) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: corrupt-downloads-${{ matrix.batch_id }}
-          path: .workflow_state/corrupt-downloads
-
-      - name: Decompile batch
-        shell: bash
-        env:
-          FILES_B64: ${{ matrix.files_b64 }}
-        run: |
-          python3 - <<'PY'
-          import base64
-          import json
-          import os
-          from pathlib import Path
-          
-          from modcompiler.auto_update import _download_modrinth_file
-          from modcompiler.decompile import decompile_jar_internal
-          from modcompiler.common import load_json
-          
-          files_b64 = os.environ.get("FILES_B64", "").strip()
-          if not files_b64:
-              print("No files to decompile in this batch.")
-              raise SystemExit(0)
-          
-          files = json.loads(base64.b64decode(files_b64).decode("utf-8"))
-          if not files:
-              print("No files to decompile in this batch.")
-              raise SystemExit(0)
-          
-          manifest = load_json(Path("version-manifest.json"))
-          download_root = Path(".workflow_state/corrupt-downloads")
-          output_root = Path(".workflow_state/corrupt-decompiled")
-          
-          for entry in files:
-              url = str(entry.get("url", "")).strip()
-              version_id = str(entry.get("version_id", "")).strip() or "unknown"
-              filename = str(entry.get("filename", "")).strip() or f"{version_id}.jar"
-              if not url:
-                  continue
-              jar_path = download_root / version_id / filename
-              if not jar_path.exists():
-                  _download_modrinth_file(url, jar_path)
-              out_dir = output_root / version_id
-              if out_dir.exists() and (list(out_dir.rglob("*.java")) or list(out_dir.rglob("*.kt"))):
-                  continue
-              decompile_jar_internal(jar_path, manifest, output_dir=out_dir)
-          
-          print("Decompile batch complete.")
-          PY
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: corrupt-decompiled-${{ matrix.batch_id }}
-          path: .workflow_state/corrupt-decompiled
-
-  verify-corrupt-jars:
-    needs:
-      - prepare-corrupt-downloads
-      - download-corrupt-jars
-      - decompile-corrupt-jars
     runs-on: ubuntu-latest
     if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
     strategy:
@@ -495,22 +357,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - uses: actions/download-artifact@v4
         with:
           name: corrupt-project
           path: .workflow_state
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: corrupt-downloads-${{ matrix.batch_id }}
-          path: .workflow_state/corrupt-downloads
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: corrupt-decompiled-${{ matrix.batch_id }}
-          path: .workflow_state/corrupt-decompiled
-
-      - name: Verify batch with AI
+      - name: Download → Decompile → Verify (batch)
         shell: bash
         env:
           FILES_B64: ${{ matrix.files_b64 }}
@@ -521,19 +378,19 @@ jobs:
           import os
           from pathlib import Path
           
-          from modcompiler.auto_update import _verify_mod_source_with_ai
+          from modcompiler.auto_update import _verify_mod_source_with_ai, _download_modrinth_file, _get_library_sources
           from modcompiler.decompile import decompile_jar_internal
           from modcompiler.common import load_json
           from modcompiler.openrouter import OpenRouterClient
           
           files_b64 = os.environ.get("FILES_B64", "").strip()
           if not files_b64:
-              print("No files to verify in this batch.")
+              print("No files to process in this batch.")
               raise SystemExit(0)
           
           files = json.loads(base64.b64decode(files_b64).decode("utf-8"))
           if not files:
-              print("No files to verify in this batch.")
+              print("No files to process in this batch.")
               raise SystemExit(0)
           
           candidates = [
@@ -561,6 +418,7 @@ jobs:
           decompiled_root = Path(".workflow_state/corrupt-decompiled")
           verdict_root = Path(".workflow_state/corrupt-verdicts")
           verdict_root.mkdir(parents=True, exist_ok=True)
+          prepared_sources = set()
           
           for entry in files:
               version_id = str(entry.get("version_id") or "unknown")
@@ -571,14 +429,13 @@ jobs:
               url = str(entry.get("url", "")).strip()
               filename = str(entry.get("filename", "")).strip() or f"{version_id}.jar"
               
+              jar_path = downloads_root / version_id / filename
+              if url and not jar_path.exists():
+                  _download_modrinth_file(url, jar_path)
+              
               src_dir = decompiled_root / version_id
-              if not src_dir.exists():
-                  if url:
-                      jar_path = downloads_root / version_id / filename
-                      if not jar_path.exists():
-                          from modcompiler.auto_update import _download_modrinth_file
-                          _download_modrinth_file(url, jar_path)
-                      decompile_jar_internal(jar_path, manifest, output_dir=src_dir)
+              if jar_path.exists() and not (src_dir.exists() and (list(src_dir.rglob("*.java")) or list(src_dir.rglob("*.kt")))):
+                  decompile_jar_internal(jar_path, manifest, output_dir=src_dir)
               
               verdict_payload = {
                   "tag": "corrupted",
@@ -616,9 +473,32 @@ jobs:
                   "reason": verdict_payload.get("reason", ""),
               }
               (verdict_root / f"{version_id}.json").write_text(json.dumps(output, indent=2), encoding="utf-8")
+
+              if tag == "corrupted":
+                  for loader in [str(l) for l in loaders]:
+                      if not loader:
+                          continue
+                      for gv in [str(v) for v in game_versions]:
+                          if not gv:
+                              continue
+                          key = f"{gv}-{loader}"
+                          if key in prepared_sources:
+                              continue
+                          _get_library_sources(Path("."), gv, loader, allow_prepare=True)
+                          prepared_sources.add(key)
           
-          print("Verification batch complete.")
+          print("Batch process complete.")
           PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corrupt-downloads-${{ matrix.batch_id }}
+          path: .workflow_state/corrupt-downloads
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corrupt-decompiled-${{ matrix.batch_id }}
+          path: .workflow_state/corrupt-decompiled
 
       - uses: actions/upload-artifact@v4
         with:
@@ -629,9 +509,7 @@ jobs:
     needs:
       - setup
       - prepare-corrupt-downloads
-      - download-corrupt-jars
-      - decompile-corrupt-jars
-      - verify-corrupt-jars
+      - process-corrupt-jars
     if: always()
     runs-on: ubuntu-latest
     outputs:
