@@ -3060,7 +3060,12 @@ def _prepare_gradle_sources(
             result = run_task(candidate)
             if result.returncode == 0:
                 task = candidate
-                break
+                if _get_library_sources(version_dir, target_version, target_loader, allow_prepare=False):
+                    print(
+                        f"DEBUG[_prepare_gradle_sources]: Sources available after {candidate}",
+                        file=sys.stderr,
+                    )
+                    break
             stdout_tail = result.stdout[-1000:] if result.stdout else ""
             stderr_tail = result.stderr[-1000:] if result.stderr else ""
             print(
