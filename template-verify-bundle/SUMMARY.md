@@ -9,7 +9,7 @@
 | 1.8.9 | forge | 1.8.9 | success | template_test-0.0.0.jar | 1.8.9.log |
 | 1.19-1.19.4 | forge | 1.19.4 | success | template_test-0.0.0.jar | 1.19.4.log |
 | 1.19-1.19.4 | fabric | 1.19.4 | failed | - | 1.19.4.log |
-| 1.17-1.17.1 | fabric | 1.17.1 | failed | - | 1.17.1.log |
+| 1.17-1.17.1 | fabric | 1.17.1 | success | template_test-0.0.0-dev.jar | 1.17.1.log |
 | 1.21.2-1.21.8 | forge | 1.21.8 | success | template_test-0.0.0.jar | 1.21.8.log |
 | 1.18-1.18.2 | fabric | 1.18.2 | failed | - | 1.18.2.log |
 | 1.20-1.20.6 | neoforge | 1.20.6 | success | template_test-0.0.0.jar | 1.20.6.log |
@@ -17,7 +17,7 @@
 | 1.21.2-1.21.8 | fabric | 1.21.8 | failed | - | 1.21.8.log |
 | 1.16.5 | forge | 1.16.5 | success | template_test-0.0.0.jar | 1.16.5.log |
 | 1.21-1.21.1 | forge | 1.21.1 | success | template_test-0.0.0.jar | 1.21.1.log |
-| 1.16.5 | fabric | 1.16.5 | failed | - | 1.16.5.log |
+| 1.16.5 | fabric | 1.16.5 | success | template_test-0.0.0-dev.jar | 1.16.5.log |
 | 1.21.9-1.21.11 | fabric | 1.21.11 | failed | - | 1.21.11.log |
 | 1.21.2-1.21.8 | neoforge | 1.21.8 | success | template_test-0.0.0.jar | 1.21.8.log |
 | 1.21-1.21.1 | fabric | 1.21.1 | failed | - | 1.21.1.log |

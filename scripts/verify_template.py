@@ -202,9 +202,15 @@ def run_build(
         jars = find_built_jars(workspace, jar_glob)
         if not jars and allow_dev_jars:
             # Fall back to dev jars when using the fast jar-only path (Fabric).
+            jar_globs = [jar_glob]
+            if "build/libs" in jar_glob:
+                jar_globs.append("build/devlibs/*.jar")
+            candidates = []
+            for glob_pattern in jar_globs:
+                candidates.extend(workspace.glob(glob_pattern))
             jars = [
                 path
-                for path in workspace.glob(jar_glob)
+                for path in candidates
                 if path.is_file()
                 and path.suffix == ".jar"
                 and "-sources" not in path.name
