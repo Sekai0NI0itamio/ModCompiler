@@ -50,8 +50,9 @@ class OpenRouterClient:
         if keys is None:
             keys = self._load_keys_from_env()
         self.key_states = [KeyState(key=key) for key in keys if key.strip()]
-        self.primary_model = primary_model
-        self.fallback_model = fallback_model
+        self.primary_model = os.environ.get("OPENROUTER_PRIMARY_MODEL", "").strip() or primary_model
+        fallback_models = self._load_fallback_models()
+        self.fallback_models = fallback_models or [fallback_model]
         self._lock = threading.Lock()
         self._last_key_state: KeyState | None = None
 
@@ -65,6 +66,17 @@ class OpenRouterClient:
             if key:
                 keys.append(key)
         return keys
+
+    def _load_fallback_models(self) -> list[str]:
+        raw = os.environ.get("OPENROUTER_FALLBACK_MODELS", "").strip()
+        if not raw:
+            return []
+        parts: list[str] = []
+        for line in raw.replace(",", "\n").splitlines():
+            model = line.strip()
+            if model:
+                parts.append(model)
+        return parts
 
     def select_key(self) -> KeyState | None:
         with self._lock:
@@ -153,6 +165,7 @@ class OpenRouterClient:
     ) -> dict[str, Any]:
         last_error: Exception | None = None
         max_attempts = 5
+        provider_error_short_circuit = False
 
         for attempt in range(1, max_attempts + 1):
             try:
@@ -165,32 +178,51 @@ class OpenRouterClient:
                 )
             except ModCompilerError as e:
                 last_error = e
+                if _is_provider_error(str(e)):
+                    provider_error_short_circuit = True
                 print(
                     f"OpenRouter primary attempt {attempt}/{max_attempts} failed: {e}",
                     file=sys.stderr,
                 )
+                if provider_error_short_circuit:
+                    break
                 time.sleep(_retry_delay(attempt))
 
-        for attempt in range(1, max_attempts + 1):
-            try:
-                return self.chat_completion(
-                    messages,
-                    model=self.fallback_model,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    tools=tools,
-                )
-            except ModCompilerError as e:
-                last_error = e
-                print(
-                    f"OpenRouter fallback attempt {attempt}/{max_attempts} failed: {e}",
-                    file=sys.stderr,
-                )
-                time.sleep(_retry_delay(attempt))
+        for model in self.fallback_models:
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return self.chat_completion(
+                        messages,
+                        model=model,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        tools=tools,
+                    )
+                except ModCompilerError as e:
+                    last_error = e
+                    print(
+                        f"OpenRouter fallback attempt {attempt}/{max_attempts} failed: {e}",
+                        file=sys.stderr,
+                    )
+                    if _is_rate_limited(str(e)):
+                        break
+                    if _is_provider_error(str(e)):
+                        break
+                    time.sleep(_retry_delay(attempt))
 
         if last_error is not None:
             raise last_error
         raise ModCompilerError("OpenRouter request failed after retries.")
+
+
+def _is_provider_error(message: str) -> bool:
+    lower = message.lower()
+    return "provider returned error" in lower or "provider_name" in lower or "provider error" in lower
+
+
+def _is_rate_limited(message: str) -> bool:
+    lower = message.lower()
+    return "rate limit" in lower or "rate limited" in lower or "429" in lower
 
 
 def _retry_delay(attempt: int) -> float:

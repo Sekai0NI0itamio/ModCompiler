@@ -692,6 +692,14 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
+      - uses: actions/cache@v4
+        with:
+          path: .workflow_state/minecraft-sources
+          key: mc-sources-${{ runner.os }}-${{ matrix.slug }}-${{ hashFiles('version-manifest.json') }}
+          restore-keys: |
+            mc-sources-${{ runner.os }}-${{ matrix.slug }}-
+            mc-sources-${{ runner.os }}-
+
       - name: Verify API keys loaded
         shell: bash
         run: |
