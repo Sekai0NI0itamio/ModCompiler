@@ -16,16 +16,17 @@ Daemon will be stopped at the end of the build
 FAILURE: Build failed with an exception.
 
 * Where:
-Build file '/tmp/template-1.21.9-1.21.11-fabric-1.21.11-pg6sv51y/workspace/build.gradle' line: 2
+Build file '/tmp/template-1.21.9-1.21.11-fabric-1.21.11-jtt5jvp4/workspace/build.gradle' line: 2
 
 * What went wrong:
-Plugin [id: 'net.fabricmc.fabric-loom-remap', version: '1.15.3', artifact: 'net.fabricmc:fabric-loom:1.15.3'] was not found in any of the following sources:
+Plugin [id: 'net.fabricmc.fabric-loom-remap', version: '1.15.3'] was not found in any of the following sources:
 
 - Gradle Core Plugins (plugin is not in 'org.gradle' namespace)
 - Included Builds (No included builds contain this plugin)
-- Plugin Repositories (could not resolve plugin artifact 'net.fabricmc:fabric-loom:1.15.3')
+- Plugin Repositories (could not resolve plugin artifact 'net.fabricmc.fabric-loom-remap:net.fabricmc.fabric-loom-remap.gradle.plugin:1.15.3')
   Searched in the following repositories:
     Fabric(https://maven.fabricmc.net/)
+    ModMuss50(https://maven.modmuss50.me/)
     MavenRepo
     Gradle Central Plugin Repository
 
@@ -35,13 +36,14 @@ Plugin [id: 'net.fabricmc.fabric-loom-remap', version: '1.15.3', artifact: 'net.
 > Get more help at https://help.gradle.org.
 
 * Exception is:
-org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'net.fabricmc.fabric-loom-remap', version: '1.15.3', artifact: 'net.fabricmc:fabric-loom:1.15.3'] was not found in any of the following sources:
+org.gradle.api.plugins.UnknownPluginException: Plugin [id: 'net.fabricmc.fabric-loom-remap', version: '1.15.3'] was not found in any of the following sources:
 
 - Gradle Core Plugins (plugin is not in 'org.gradle' namespace)
 - Included Builds (No included builds contain this plugin)
-- Plugin Repositories (could not resolve plugin artifact 'net.fabricmc:fabric-loom:1.15.3')
+- Plugin Repositories (could not resolve plugin artifact 'net.fabricmc.fabric-loom-remap:net.fabricmc.fabric-loom-remap.gradle.plugin:1.15.3')
   Searched in the following repositories:
     Fabric(https://maven.fabricmc.net/)
+    ModMuss50(https://maven.modmuss50.me/)
     MavenRepo
     Gradle Central Plugin Repository
 	at org.gradle.plugin.use.resolve.internal.PluginResolutionResult.getFound(PluginResolutionResult.java:112)
@@ -237,7 +239,7 @@ Please make sure to read and understand the following license:
 > Task :processClientResources
 > Task :jar
 
-BUILD SUCCESSFUL in 1m 4s
+BUILD SUCCESSFUL in 1m 17s
 5 actionable tasks: 5 executed
 $ ./modcompiler-build.sh
 
