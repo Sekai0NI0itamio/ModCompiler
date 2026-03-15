@@ -16,7 +16,7 @@
 | 1.21.9-1.21.11 | neoforge | 1.21.11 | success | template_test-0.0.0.jar | 1.21.11.log |
 | 1.21.2-1.21.8 | fabric | 1.21.8 | success | template_test-0.0.0.jar | 1.21.8.log |
 | 1.16.5 | forge | 1.16.5 | success | template_test-0.0.0.jar | 1.16.5.log |
-| 1.21-1.21.1 | forge | 1.21.1 | failed | - | 1.21.1.log |
+| 1.21-1.21.1 | forge | 1.21.1 | success | template_test-0.0.0.jar | 1.21.1.log |
 | 1.16.5 | fabric | 1.16.5 | success | template_test-0.0.0.jar | 1.16.5.log |
 | 1.21.9-1.21.11 | fabric | 1.21.11 | success | template_test-0.0.0.jar | 1.21.11.log |
 | 1.21.2-1.21.8 | neoforge | 1.21.8 | success | template_test-0.0.0.jar | 1.21.8.log |
