@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import zipfile
 import urllib.parse
@@ -415,18 +416,73 @@ def _verify_mod_source_with_ai(
         except Exception as exc:
             return None, f"{type(exc).__name__}: {exc}"
 
-    def call_ai_with_retry(msgs: list[dict[str, str]], max_tokens: int, retries: int = 10) -> tuple[str | None, str | None]:
+    def call_ai_with_retry(
+        msgs: list[dict[str, str]],
+        max_tokens: int,
+        retries: int = 10,
+        max_seconds: float | None = None,
+    ) -> tuple[str | None, str | None]:
         last_error: str | None = None
+        start = time.time()
         for attempt in range(1, retries + 1):
+            if max_seconds is not None and time.time() - start > max_seconds:
+                break
             content, error = call_ai(msgs, max_tokens)
             if content is not None:
                 return content, None
             last_error = error
             if attempt < retries:
-                time.sleep(min(2.0, 0.5 * attempt))
+                delay = min(2.0, 0.5 * attempt)
+                if max_seconds is not None and time.time() - start + delay > max_seconds:
+                    break
+                time.sleep(delay)
         return None, last_error
 
-    content, error = call_ai_with_retry(messages, 400)
+    def call_ai_with_race(
+        msgs: list[dict[str, str]],
+        max_tokens: int,
+        first_timeout: float = 60.0,
+        second_timeout: float = 240.0,
+    ) -> tuple[str | None, str | None]:
+        result1: dict[str, Any] = {"done": False}
+        result2: dict[str, Any] = {"done": False}
+
+        def worker(result: dict[str, Any], max_seconds: float | None) -> None:
+            content, error = call_ai_with_retry(msgs, max_tokens, max_seconds=max_seconds)
+            result["content"] = content
+            result["error"] = error
+            result["done"] = True
+
+        thread1 = threading.Thread(target=worker, args=(result1, 300.0), daemon=True)
+        thread1.start()
+        thread1.join(timeout=first_timeout)
+
+        if result1.get("done") and result1.get("content"):
+            return result1["content"], None
+
+        thread2 = threading.Thread(target=worker, args=(result2, second_timeout), daemon=True)
+        thread2.start()
+
+        deadline = time.time() + second_timeout
+        while time.time() < deadline:
+            if result1.get("done") and result1.get("content"):
+                return result1["content"], None
+            if result2.get("done") and result2.get("content"):
+                return result2["content"], None
+            if result1.get("done") and result2.get("done"):
+                break
+            time.sleep(0.25)
+
+        for result in (result1, result2):
+            if result.get("done") and result.get("content"):
+                return result["content"], None
+
+        errors = [err for err in [result1.get("error"), result2.get("error")] if err]
+        if errors:
+            return None, "; ".join(errors)
+        return None, "AI verify timed out (no response after 1+4 minutes)."
+
+    content, error = call_ai_with_race(messages, 400)
     if content is None:
         return {
             "tag": "corrupted",
@@ -446,7 +502,7 @@ def _verify_mod_source_with_ai(
                 "tag (working/corrupted), rating (0-20), confidence (0-1), reason."
             ),
         })
-        content, error = call_ai_with_retry(messages, 200)
+        content, error = call_ai_with_race(messages, 200)
         if content is None:
             return {
                 "tag": "corrupted",
@@ -1137,6 +1193,26 @@ def get_tools_definition() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "read_build_log",
+                "description": "Read the build.log from the last build. Optionally filter with regex or show only the last N lines.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "Regex pattern to match lines in build.log (optional)."
+                        },
+                        "tail_lines": {
+                            "type": "integer",
+                            "description": "Number of lines from the end of build.log to show (optional)."
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "complete",
                 "description": "Mark task complete after successful build",
                 "parameters": {
@@ -1324,7 +1400,7 @@ If original source has no Java/Kotlin files, treat it as missing and use the sel
 **CRITICAL RULES:**
 - Call Build as soon as you have written the essential files - don't wait!
 - The build system handles gradle automatically
-- If build fails, fix the errors and rebuild
+- If build fails, use read_build_log (with a regex pattern if needed) to find the error, fix it, and rebuild
 - Don't re-read files you've already read - use the info you have
 - Never change the target Minecraft version or loader
 - Do NOT create or edit gradle/build config files (gradle.properties, build.gradle, settings.gradle)
@@ -1335,6 +1411,7 @@ If original source has no Java/Kotlin files, treat it as missing and use the sel
 - write_mod_file: Use path "com/package/File.java" (src/java/ prefix auto-added)
 - write_resource: Just filename like "mcmod.info" (src/resources/ prefix auto-added)
 - build: Compile the mod - do this as soon as possible!
+- read_build_log: Read build.log if a build fails (optional regex via pattern)
 - complete: Mark done after successful build"""
 
 
@@ -2281,6 +2358,9 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
                         result_msg, build_success = _tool_build(version_dir, artifact_dir, context, arguments)
                         build_attempted = True
                         tools_without_build = 0
+                    elif name == "read_build_log":
+                        print(f"DEBUG: Calling _tool_read_build_log...", file=sys.stderr)
+                        result_msg = _tool_read_build_log(artifact_dir, version_dir, arguments)
                     elif name == "library_dir":
                         print(f"DEBUG: Calling _tool_library_dir...", file=sys.stderr)
                         lib_sources = _get_library_sources(version_dir, context.get("target_version", ""), context.get("target_loader", ""))
@@ -2413,6 +2493,47 @@ def _tool_read_file(version_dir: Path, args: dict[str, str]) -> str:
         return f"File: {path}\n```\n{content}\n```"
     except Exception as e:
         return f"Error reading file: {e}"
+
+
+def _tool_read_build_log(artifact_dir: Path, version_dir: Path, args: dict[str, str]) -> str:
+    pattern = args.get("pattern")
+    tail_lines = args.get("tail_lines")
+    try:
+        tail_lines = int(tail_lines) if tail_lines is not None else 200
+    except (TypeError, ValueError):
+        tail_lines = 200
+
+    log_path = artifact_dir / "build.log"
+    if not log_path.exists():
+        fallback = version_dir / "build.log"
+        if fallback.exists():
+            log_path = fallback
+        else:
+            return "Error: build.log not found."
+
+    try:
+        content = log_path.read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        return f"Error reading build.log: {e}"
+
+    lines = content.splitlines()
+    if pattern:
+        try:
+            regex = re.compile(pattern)
+        except re.error as e:
+            return f"Error: invalid regex pattern: {e}"
+        matches = []
+        for idx, line in enumerate(lines, start=1):
+            if regex.search(line):
+                matches.append(f"{idx}: {line}")
+        if not matches:
+            return f"No matches for pattern: {pattern}"
+        return "Matches:\n" + "\n".join(matches[:200])
+
+    if tail_lines <= 0:
+        tail_lines = 200
+    tail = "\n".join(lines[-tail_lines:])
+    return f"Last {min(tail_lines, len(lines))} lines:\n{tail}"
 
 
 def _normalize_src_path(raw: str, *, for_file: bool) -> str:
@@ -2631,46 +2752,128 @@ def _tool_copy_to_structure(version_dir: Path, args: dict[str, str]) -> str:
         return f"Copied directory {source_path} to {dest_path}"
 
 
-def _ensure_library_sources(target_version: str, target_loader: str, workspace: Path) -> Path | None:
-    import subprocess
-    
-    gradle_cache = Path.home() / ".gradle" / "caches"
-    
-    library_paths = [
-        gradle_cache / "forge-loom" / f"{target_version}-{target_loader}" / "minecraft-project-@-common-merged-intermediary-named" / "sources",
-        gradle_cache / "forge-loom" / target_version / "minecraft-project-@-common-merged-intermediary-named" / "sources",
-        gradle_cache / "fabric-loom" / target_version / "mine" / "sources",
-        gradle_cache / "minecraft" / "client" / target_version / "sources",
-    ]
-    
-    for lib_path in library_paths:
-        if lib_path.exists():
-            return lib_path
-    
-    gradle_bootstrap = workspace / "build.gradle"
-    if not gradle_bootstrap.exists():
-        return None
-    
-    print(f"DEBUG[_ensure_library_sources]: Setting up Minecraft sources for {target_version}...", file=sys.stderr)
-    
+def _is_sources_root(path: Path) -> bool:
+    return path.is_dir() and (path / "net" / "minecraft").exists()
+
+
+def _find_sources_root(path: Path) -> Path | None:
+    if _is_sources_root(path):
+        return path
     try:
-        result = subprocess.run(
-            ["./gradlew", "setupDecompWorkspace", "--no-daemon"],
-            cwd=workspace,
+        for match in path.rglob("net/minecraft"):
+            if match.is_dir():
+                return match.parent
+    except Exception:
+        return None
+    return None
+
+
+def _select_best_source_candidate(
+    candidates: list[Path],
+    target_version: str,
+    target_loader: str,
+) -> Path | None:
+    if not candidates:
+        return None
+    scored: list[tuple[int, Path]] = []
+    for path in candidates:
+        score = 0
+        path_str = str(path)
+        if target_version and target_version in path_str:
+            score += 10
+        if target_loader and target_loader in path_str:
+            score += 3
+        if target_loader in {"forge", "neoforge"} and "forge-loom" in path_str:
+            score += 5
+        if target_loader == "fabric" and "fabric-loom" in path_str:
+            score += 5
+        scored.append((score, path))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return scored[0][1]
+
+
+def _extract_sources_jar(jar_path: Path, dest_root: Path) -> Path | None:
+    from modcompiler.common import safe_extract_zip, safe_rmtree
+
+    if not jar_path.exists():
+        return None
+    safe_rmtree(dest_root)
+    dest_root.mkdir(parents=True, exist_ok=True)
+    try:
+        safe_extract_zip(jar_path, dest_root)
+    except Exception as exc:
+        print(f"DEBUG[_extract_sources_jar]: Failed to extract {jar_path}: {exc}", file=sys.stderr)
+        return None
+    return _find_sources_root(dest_root)
+
+
+def _resolve_template_dir_for_version(
+    target_version: str,
+    target_loader: str,
+    manifest: dict[str, Any],
+) -> tuple[str, dict[str, Any]] | None:
+    for range_entry in manifest.get("ranges", []):
+        if version_inclusive_between(target_version, range_entry.get("min_version", ""), range_entry.get("max_version", "")):
+            loaders = range_entry.get("loaders", {})
+            if target_loader in loaders:
+                return range_entry["folder"], loaders[target_loader]
+    return None
+
+
+def _prepare_gradle_sources(
+    version_dir: Path,
+    target_version: str,
+    target_loader: str,
+) -> None:
+    import subprocess
+    from modcompiler.common import copy_tree, safe_rmtree, load_json
+
+    manifest_path = Path("version-manifest.json")
+    if not manifest_path.exists():
+        return
+    manifest = load_json(manifest_path)
+    resolved = _resolve_template_dir_for_version(target_version, target_loader, manifest)
+    if not resolved:
+        return
+    range_folder, loader_config = resolved
+    template_dir = loader_config.get("template_dir", "")
+    if not template_dir:
+        return
+
+    workspace_root = version_dir / ".workflow_state" / "minecraft-sources" / f"{target_version}-{target_loader}" / "workspace"
+    safe_rmtree(workspace_root)
+    workspace_root.mkdir(parents=True, exist_ok=True)
+
+    source_path = Path(template_dir)
+    if (source_path / "template").exists():
+        copy_tree(source_path / "template", workspace_root)
+    else:
+        copy_tree(source_path, workspace_root)
+
+    adapter_family = loader_config.get("adapter_family", "")
+    task = "genSources"
+    if adapter_family.startswith("forge_legacy"):
+        task = "setupDecompWorkspace"
+
+    gradlew = workspace_root / "gradlew"
+    if not gradlew.exists():
+        return
+    try:
+        gradlew.chmod(gradlew.stat().st_mode | 0o111)
+    except OSError:
+        pass
+
+    print(f"DEBUG[_prepare_gradle_sources]: Running {task} for {target_version}-{target_loader}", file=sys.stderr)
+    try:
+        subprocess.run(
+            ["./gradlew", task, "--no-daemon"],
+            cwd=workspace_root,
             capture_output=True,
             text=True,
-            timeout=600,
+            timeout=900,
         )
-        
-        if result.returncode == 0:
-            for lib_path in library_paths:
-                if lib_path.exists():
-                    print(f"DEBUG[_ensure_library_sources]: Found sources at {lib_path}", file=sys.stderr)
-                    return lib_path
-    except Exception as e:
-        print(f"DEBUG[_ensure_library_sources]: Failed to setup: {e}", file=sys.stderr)
-    
-    return None
+    except Exception as exc:
+        print(f"DEBUG[_prepare_gradle_sources]: Failed to run {task}: {exc}", file=sys.stderr)
 
 
 _library_sources_cache: dict[str, Path] = {}
@@ -2678,27 +2881,79 @@ _library_sources_cache: dict[str, Path] = {}
 
 def _get_library_sources(version_dir: Path, target_version: str, target_loader: str) -> Path | None:
     cache_key = f"{target_version}-{target_loader}"
-    
+
     if cache_key in _library_sources_cache:
         cached_path = _library_sources_cache[cache_key]
         if cached_path.exists():
             return cached_path
-    
+
+    local_root = version_dir / ".workflow_state" / "minecraft-sources" / f"{target_version}-{target_loader}"
+    local_source = _find_sources_root(local_root) if local_root.exists() else None
+    if local_source:
+        _library_sources_cache[cache_key] = local_source
+        return local_source
+
     gradle_caches = Path.home() / ".gradle" / "caches"
-    
-    patterns = [
-        f"forge-loom/{target_version}*/minecraft-project-@-common-merged-intermediary-named/sources",
-        f"forge-loom/{target_version}-{target_loader}/minecraft-project-@-common-merged-intermediary-named/sources",
-        f"fabric-loom/{target_version}/mine/sources",
-        f"minecraft/client/{target_version}/sources",
-    ]
-    
-    for pattern in patterns:
+    source_dirs: list[Path] = []
+    try:
         for path in gradle_caches.rglob("sources"):
-            if path.is_dir() and len(list(path.glob("net/minecraft/*"))) > 0:
-                _library_sources_cache[cache_key] = path
-                return path
-    
+            if path.is_dir() and _is_sources_root(path):
+                source_dirs.append(path)
+    except Exception:
+        source_dirs = []
+
+    selected = _select_best_source_candidate(source_dirs, target_version, target_loader)
+    if selected:
+        _library_sources_cache[cache_key] = selected
+        return selected
+
+    sources_jars: list[Path] = []
+    try:
+        for jar_path in gradle_caches.rglob("*sources.jar"):
+            if target_version and target_version not in str(jar_path):
+                continue
+            sources_jars.append(jar_path)
+    except Exception:
+        sources_jars = []
+
+    jar_selected = _select_best_source_candidate(sources_jars, target_version, target_loader)
+    if jar_selected:
+        extracted = _extract_sources_jar(jar_selected, local_root / "extracted")
+        if extracted:
+            _library_sources_cache[cache_key] = extracted
+            return extracted
+
+    _prepare_gradle_sources(version_dir, target_version, target_loader)
+
+    source_dirs = []
+    try:
+        for path in gradle_caches.rglob("sources"):
+            if path.is_dir() and _is_sources_root(path):
+                source_dirs.append(path)
+    except Exception:
+        source_dirs = []
+
+    selected = _select_best_source_candidate(source_dirs, target_version, target_loader)
+    if selected:
+        _library_sources_cache[cache_key] = selected
+        return selected
+
+    sources_jars = []
+    try:
+        for jar_path in gradle_caches.rglob("*sources.jar"):
+            if target_version and target_version not in str(jar_path):
+                continue
+            sources_jars.append(jar_path)
+    except Exception:
+        sources_jars = []
+
+    jar_selected = _select_best_source_candidate(sources_jars, target_version, target_loader)
+    if jar_selected:
+        extracted = _extract_sources_jar(jar_selected, local_root / "extracted")
+        if extracted:
+            _library_sources_cache[cache_key] = extracted
+            return extracted
+
     return None
 
 
@@ -3003,6 +3258,7 @@ Manifest: version-manifest.json
         adapter_cwd = repo_root
         print(f"DEBUG[_tool_build]: adapter_cwd (repo root): {adapter_cwd}", file=sys.stderr)
         print(f"DEBUG[_tool_build]: adapter_script exists: {adapter_script.exists()}", file=sys.stderr)
+        build_failed_code: int | None = None
         with log_path.open("w", encoding="utf-8") as log_file:
             log_file.write(version_info + "\n\n")
             log_file.write(f"Working directory: {adapter_cwd}\n")
@@ -3046,6 +3302,15 @@ Manifest: version-manifest.json
                 log_file.write(f"STDOUT: {build_run.stdout}\n")
                 log_file.write(f"STDERR: {build_run.stderr}\n")
                 log_file.flush()
+                build_failed_code = build_run.returncode
+
+        if build_failed_code is not None:
+            log_content = log_path.read_text(encoding="utf-8", errors="replace")
+            tail = log_content[-3000:] if len(log_content) > 3000 else log_content
+            return (
+                f"Build failed (exit {build_failed_code}). Check build.log for details.\n\n"
+                f"Last 3000 chars:\n\n{tail}"
+            ), False
 
         jars = find_built_jars(workspace, jar_glob_pattern)
         print(f"DEBUG[_tool_build]: Found jars: {jars}", file=sys.stderr)
