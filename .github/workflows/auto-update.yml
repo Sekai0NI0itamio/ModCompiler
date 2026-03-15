@@ -63,6 +63,128 @@ jobs:
         with:
           python-version: "3.12"
 
+      - id: setup
+        name: Setup (resolve jar/description)
+        shell: bash
+        env:
+          MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
+          MOD_JAR_PATH_INPUT: ${{ inputs.mod_jar_path }}
+          MOD_DESCRIPTION_INPUT: ${{ inputs.mod_description }}
+          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import shutil
+          import urllib.parse
+          from pathlib import Path
+          
+          from modcompiler.auto_update import (
+              _download_modrinth_file,
+              _extract_modrinth_description,
+              _parse_bool,
+              _select_latest_modrinth_version,
+          )
+          from modcompiler.modrinth import (
+              ModrinthClient,
+              build_modrinth_user_agent,
+              normalize_modrinth_project_ref,
+              select_primary_modrinth_file,
+          )
+          
+          def fail(msg: str) -> None:
+              raise SystemExit(msg)
+          
+          modrinth_url = os.environ.get("MODRINTH_PROJECT_URL", "").strip()
+          jar_input = os.environ.get("MOD_JAR_PATH_INPUT", "").strip()
+          desc_input = os.environ.get("MOD_DESCRIPTION_INPUT", "").strip()
+          auto_fetch = _parse_bool(os.environ.get("AUTO_FETCH_MODRINTH"), True)
+          
+          setup_dir = Path(".workflow_state/setup")
+          setup_dir.mkdir(parents=True, exist_ok=True)
+          
+          project = None
+          versions = None
+          project_ref = ""
+          
+          def ensure_project() -> None:
+              nonlocal project, versions, project_ref
+              if project is not None:
+                  return
+              if not modrinth_url:
+                  fail("Modrinth URL is required to auto-fetch the jar/description.")
+              project_ref = normalize_modrinth_project_ref(modrinth_url)
+              token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
+              client = ModrinthClient(token=token, user_agent=build_modrinth_user_agent())
+              project = client.resolve_project(project_ref)
+              versions = client.request_json(
+                  "GET",
+                  f"/project/{urllib.parse.quote(project_ref, safe='')}/version",
+                  params={"include_changelog": "false"},
+              )
+              if not isinstance(versions, list):
+                  fail("Unexpected Modrinth versions response.")
+          
+          resolved_jar = ""
+          if jar_input:
+              jar_path = Path(jar_input)
+              if not jar_path.is_absolute():
+                  jar_path = Path.cwd() / jar_path
+              if not jar_path.exists():
+                  if not auto_fetch:
+                      fail(f"Mod jar not found: {jar_path}")
+                  jar_input = ""
+              else:
+                  dest = setup_dir / jar_path.name
+                  shutil.copy2(jar_path, dest)
+                  resolved_jar = str(dest)
+          
+          if not resolved_jar:
+              if not auto_fetch:
+                  fail("Mod jar path is required when auto-fetch is disabled.")
+              ensure_project()
+              latest = _select_latest_modrinth_version(versions or [])
+              if latest is None:
+                  fail("No Modrinth versions were available to download.")
+              file_info = select_primary_modrinth_file(latest.get("files", []))
+              if not file_info:
+                  fail("No downloadable file was found for the latest Modrinth version.")
+              file_url = str(file_info.get("url", "")).strip()
+              if not file_url:
+                  fail("Modrinth file entry is missing a download URL.")
+              filename = str(file_info.get("filename", "")).strip()
+              if not filename:
+                  filename = f"{project_ref or 'mod'}.jar"
+              dest = setup_dir / filename
+              _download_modrinth_file(file_url, dest)
+              resolved_jar = str(dest)
+          
+          resolved_desc = ""
+          if desc_input:
+              desc_path = Path(desc_input)
+              dest = setup_dir / "description.txt"
+              if desc_path.exists() and desc_path.is_file():
+                  dest.write_text(desc_path.read_text(encoding="utf-8"), encoding="utf-8")
+              else:
+                  dest.write_text(desc_input, encoding="utf-8")
+              resolved_desc = str(dest)
+          elif auto_fetch and modrinth_url:
+              ensure_project()
+              text = _extract_modrinth_description(project or {})
+              if text:
+                  dest = setup_dir / "description.txt"
+                  dest.write_text(text, encoding="utf-8")
+                  resolved_desc = str(dest)
+          
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as handle:
+              handle.write(f"mod_jar_path={resolved_jar}\n")
+              handle.write(f"mod_description_path={resolved_desc}\n")
+          
+          print(f"Resolved jar: {resolved_jar}")
+          print(f"Resolved description: {resolved_desc or '-'}")
+          PY
+
       - id: decompose
         shell: bash
         env:
@@ -70,8 +192,8 @@ jobs:
           VERSION_RANGE: ${{ inputs.version_range }}
           UPDATE_MODE: ${{ inputs.update_mode }}
           PUBLISH_MODE: ${{ inputs.publish_mode }}
-          MOD_DESCRIPTION: ${{ inputs.mod_description }}
-          MOD_JAR_PATH: ${{ inputs.mod_jar_path }}
+          MOD_DESCRIPTION: ${{ steps.setup.outputs.mod_description_path }}
+          MOD_JAR_PATH: ${{ steps.setup.outputs.mod_jar_path }}
           AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: |
@@ -81,7 +203,7 @@ jobs:
             --mod-jar-path "$MOD_JAR_PATH" \
             --modrinth-project-url "$MODRINTH_PROJECT_URL" \
             --mod-description "$MOD_DESCRIPTION" \
-            --auto-fetch-modrinth "$AUTO_FETCH_MODRINTH" \
+            --auto-fetch-modrinth "false" \
             --version-range "$VERSION_RANGE" \
             --update-mode "$UPDATE_MODE" \
             --publish-mode "$PUBLISH_MODE" \
