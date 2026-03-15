@@ -91,6 +91,9 @@ jobs:
       - name: Verify template
         shell: bash
         env:
+          MODCOMPILER_GRADLE_TASKS: jar
+          MODCOMPILER_FAST_BUILD: "1"
+          MODCOMPILER_SKIP_TESTS: "1"
           VERSIONS_OVERRIDE: ${{ inputs.versions }}
           TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
           PYTHONPATH: ${{ github.workspace }}

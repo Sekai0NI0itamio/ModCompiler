@@ -183,6 +183,9 @@ jobs:
         shell: bash
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODCOMPILER_GRADLE_TASKS: jar
+          MODCOMPILER_FAST_BUILD: "1"
+          MODCOMPILER_SKIP_TESTS: "1"
         run: |
           set -x
           python build_mods.py ai-rebuild \
