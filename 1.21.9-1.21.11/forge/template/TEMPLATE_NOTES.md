@@ -1,0 +1,11 @@
+# Template Notes
+
+These templates are verified by the template-verify workflow. Keep these rules:
+- Build with ./modcompiler-build.sh (fast build first, then full build if needed).
+- Re-run template-verify after any template or dependency changes.
+- Keep ForgeGradle plugin versions pinned in 1.21.x (no version ranges).
+- Keep version-specific API notes in the Java sources so future updates do not regress.
+
+Range-specific notes:
+- Forge 1.21.9-1.21.11: SubscribeEvent lives in net.minecraftforge.eventbus.api.listener.
+- Forge 1.21.9-1.21.11: BuildCreativeModeTabContentsEvent.BUS exists and is used in ExampleMod.

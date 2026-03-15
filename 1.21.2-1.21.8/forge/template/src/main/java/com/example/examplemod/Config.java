@@ -16,6 +16,10 @@ import java.util.stream.Collectors;
 
 // An example config class. This is not required, but it's a good idea to have one to keep your config organized.
 // Demonstrates how to use Forge's config APIs
+//
+// TEMPLATE NOTES (Forge 1.21.2-1.21.8):
+// - SubscribeEvent lives in net.minecraftforge.eventbus.api.listener.
+// - ResourceLocation(String, String) is private; use fromNamespaceAndPath.
 @Mod.EventBusSubscriber(modid = ExampleMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Config
 {

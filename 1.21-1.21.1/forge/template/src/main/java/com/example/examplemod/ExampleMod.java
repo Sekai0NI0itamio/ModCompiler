@@ -28,6 +28,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
 
+// TEMPLATE NOTES (Forge 1.21-1.21.1):
+// - Use FMLJavaModLoadingContext.getModEventBus(); getModBusGroup() is not available here.
+// - Register creative tab contents via modEventBus.addListener(...); BuildCreativeModeTabContentsEvent.BUS does not exist.
+// - Keep SubscribeEvent imports in net.minecraftforge.eventbus.api (not *.listener).
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(ExampleMod.MODID)
 public class ExampleMod

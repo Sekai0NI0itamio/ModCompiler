@@ -25,6 +25,9 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
 
+// TEMPLATE NOTES (Forge 1.21.9-1.21.11):
+// - This range uses getModBusGroup() and eventbus.api.listener.SubscribeEvent.
+// - BuildCreativeModeTabContentsEvent.BUS is available here (used below).
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(ExampleMod.MODID)
 public final class ExampleMod {
