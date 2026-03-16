@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-DEFAULT_PRIMARY_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+DEFAULT_PRIMARY_MODEL = "openrouter/hunter-alpha"
 DEFAULT_FALLBACK_MODEL = "stepfun/step-3.5-flash:free"
 UNAVAILABLE_THRESHOLD = 20
 WINDOW_SECONDS = 60
