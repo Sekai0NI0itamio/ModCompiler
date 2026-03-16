@@ -857,6 +857,11 @@ jobs:
             AUTO_FIX_REPORT_DIR=".workflow_state/corrupt-verdicts"
           fi
 
+          REUSE_DECOMPILED_DIR=".workflow_state/base-decompiled"
+          if [ -n "$MOD_JAR_PATH_MATRIX" ]; then
+            REUSE_DECOMPILED_DIR=""
+          fi
+
           python build_mods.py auto-update-decompose \
             --mod-jar-path "$MOD_JAR_PATH" \
             --modrinth-project-url "$MODRINTH_PROJECT_URL" \
@@ -867,7 +872,7 @@ jobs:
             --auto-fix-corrupted-downloads-dir "$AUTO_FIX_DOWNLOADS_DIR" \
             --auto-fix-corrupted-decompiled-dir "$AUTO_FIX_DECOMPILED_DIR" \
             --auto-fix-corrupted-report-dir "$AUTO_FIX_REPORT_DIR" \
-            --reuse-decompiled-dir ".workflow_state/base-decompiled" \
+            --reuse-decompiled-dir "$REUSE_DECOMPILED_DIR" \
             --only-target "${{ matrix.version }}-${{ matrix.loader }}" \
             --version-range "$VERSION_RANGE" \
             --update-mode "$UPDATE_MODE" \
@@ -914,11 +919,10 @@ jobs:
               handle.write(f"corrupt_reason={reason}\n")
 
           if is_corrupt == "true":
-              print(f"Detected corrupt jar; skipping AI steps. Reason: {reason}")
+              print(f"Detected corrupt jar; skipping AI verify and proceeding to rebuild. Reason: {reason}")
           PY
 
       - name: Prepare Minecraft sources (per target)
-        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -944,7 +948,6 @@ jobs:
           PY
 
       - name: Select OpenRouter model
-        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -958,7 +961,6 @@ jobs:
           PY
 
       - name: Acquire OpenRouter key lease
-        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
         shell: bash
         env:
           KEY_INDEX: ${{ matrix.key_index }}
@@ -1039,8 +1041,80 @@ jobs:
           print(f"Leased key slot {slot} for job idx={idx}.")
           PY
 
-      - name: Run AI rebuild
+      - name: AI verify mod source
         if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
+        id: ai_verify
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from modcompiler.auto_update import _verify_mod_source_with_ai
+          from modcompiler.openrouter import OpenRouterClient
+
+          context_path = Path(".workflow_artifacts/ai-${{ matrix.slug }}/context.json")
+          if not context_path.exists():
+              raise SystemExit("context.json not found for AI verify.")
+          context = json.loads(context_path.read_text(encoding="utf-8"))
+
+          src_dir = Path(".workflow_artifacts/ai-${{ matrix.slug }}/src")
+          if not src_dir.exists():
+              src_dir = Path(".workflow_artifacts/ai-${{ matrix.slug }}")
+
+          mod_info = context.get("mod_info", {}) or {}
+          project_name = mod_info.get("name") or mod_info.get("primary_mod_id") or "unknown"
+          project_description = context.get("user_description", "") or ""
+          version_label = mod_info.get("mod_version") or ""
+          loader = context.get("target_loader") or context.get("current_loader") or "unknown"
+          target_version = context.get("target_version") or ""
+          game_versions = [target_version] if target_version else []
+
+          client = OpenRouterClient()
+          result = _verify_mod_source_with_ai(
+              client=client,
+              project_name=str(project_name),
+              project_description=str(project_description),
+              version_label=str(version_label),
+              loader=str(loader),
+              game_versions=[str(v) for v in game_versions],
+              src_dir=src_dir,
+          )
+
+          tag = str(result.get("tag", "corrupted")).lower()
+          needs_rebuild = "false" if tag == "working" else "true"
+          reason = str(result.get("reason", "")).strip()
+
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as handle:
+              handle.write(f"needs_rebuild={needs_rebuild}\n")
+              handle.write(f"tag={tag}\n")
+              handle.write(f"reason={reason}\n")
+
+          verify_path = Path(".workflow_artifacts/ai-${{ matrix.slug }}/ai_verify.json")
+          verify_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+          print(f"AI verify tag={tag} needs_rebuild={needs_rebuild}")
+          PY
+
+      - name: Mark no-fix-needed
+        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' && steps.ai_verify.outputs.needs_rebuild == 'false' }}
+        shell: bash
+        run: |
+          mkdir -p ".workflow_artifacts/per-mod/${{ matrix.slug }}"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result = {
+              "status": "skipped",
+              "reason": "AI verification passed; no rebuild needed.",
+          }
+          out_path = Path(".workflow_artifacts/per-mod/${{ matrix.slug }}/result.json")
+          out_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+          print("Wrote result.json with status=skipped")
+          PY
+
+      - name: Run AI rebuild
+        if: ${{ steps.detect_corrupt.outputs.is_corrupt == 'true' || steps.ai_verify.outputs.needs_rebuild == 'true' }}
         shell: bash
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
@@ -1053,7 +1127,7 @@ jobs:
             --artifact-dir ".workflow_artifacts/per-mod/${{ matrix.slug }}" 2>&1
 
       - name: Mask Modrinth token (immediate)
-        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' && inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
+        if: ${{ inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
         shell: bash
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
@@ -1063,7 +1137,7 @@ jobs:
           fi
 
       - name: Publish to Modrinth immediately
-        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' && inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
+        if: ${{ inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
         shell: bash
         continue-on-error: true
         env:
