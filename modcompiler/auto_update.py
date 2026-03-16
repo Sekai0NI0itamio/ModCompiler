@@ -1609,6 +1609,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     safe_rmtree(config.output_dir)
     config.output_dir.mkdir(parents=True)
 
+    print("DEBUG: Starting decompose...", file=sys.stderr)
     manifest = load_json(Path(config.manifest_path))
 
     mod_description_input = config.mod_description.strip()
@@ -1645,6 +1646,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         if not config.modrinth_project_url:
             raise ModCompilerError("Auto-fetch from Modrinth requires a Modrinth project URL or slug.")
 
+        print("DEBUG: Fetching Modrinth versions...", file=sys.stderr)
         modrinth_project_ref = normalize_modrinth_project_ref(config.modrinth_project_url)
         token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
         modrinth_project, modrinth_versions = _fetch_modrinth_project_and_versions(modrinth_project_ref, token)
@@ -1712,6 +1714,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         )
         corruption_report_path = str(report_path)
 
+    print("DEBUG: Starting decompile...", file=sys.stderr)
     decomp_dir = config.output_dir / "_decompiled"
     if config.reuse_decompiled_dir:
         reuse_path = Path(config.reuse_decompiled_dir)
@@ -1725,6 +1728,8 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     else:
         decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
         src_path = decomp_result.extracted_src
+    print("DEBUG: Decompile complete", file=sys.stderr)
+    print("DEBUG: Parsing mod info...", file=sys.stderr)
     mod_info = _parse_mod_info(src_path)
 
     if not info_txt and auto_fetch_enabled:
@@ -1794,6 +1799,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         if not filtered_targets:
             raise ModCompilerError(f"No target matched --only-target {config.only_target}")
 
+    print("DEBUG: Building targets...", file=sys.stderr)
     if not config.plan_only:
         trimmed_src = trim_src_for_context(src_path)
         src_has_sources = bool(list(trimmed_src.rglob("*.java")) or list(trimmed_src.rglob("*.kt")))
@@ -1894,6 +1900,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
     if config.modrinth_project_url and not modrinth_project_ref:
         modrinth_project_ref = normalize_modrinth_project_ref(config.modrinth_project_url)
 
+    print("DEBUG: Plan-only complete" if config.plan_only else "DEBUG: Decompose complete", file=sys.stderr)
     state = {
         "mod_jar_path": str(jar_path),
         "mod_jar_source": mod_jar_source,
