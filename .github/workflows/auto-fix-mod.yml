@@ -1,51 +1,17 @@
-name: Auto Update Mod (Advanced)
+name: Auto Fix Mod
 
 on:
   workflow_dispatch:
     inputs:
-      mod_jar_path:
-        description: Repo-relative path to mod jar (e.g., "To Be Decompiled/my-mod.jar")
-        required: false
-        default: ""
-        type: string
-      auto_fetch_modrinth:
-        description: Auto-fetch jar/description from Modrinth when jar path is empty
-        required: false
-        default: true
-        type: boolean
-      auto_fix_corrupted:
-        description: Auto-fix corrupted versions before updating
-        required: false
-        default: false
-        type: boolean
-      auto_fix_only:
-        description: Auto-fix corrupted versions only (skip normal updates)
-        required: false
-        default: false
-        type: boolean
       modrinth_project_url:
-        description: Optional Modrinth project URL or slug
-        required: false
-        default: ""
+        description: Modrinth project URL or slug
+        required: true
         type: string
       mod_description:
         description: "Mod description: either a file path (e.g., info.txt) or direct text"
         required: false
         default: ""
         type: string
-      version_range:
-        description: "Version range to update (e.g., 1.20-1.21.8, 1.20.1fabric,1.21neoforge, or all)"
-        required: false
-        default: "all"
-        type: string
-      update_mode:
-        description: Update mode
-        required: true
-        default: "all-versions"
-        type: choice
-        options:
-          - "all-versions"
-          - "missing-only"
       publish_mode:
         description: Publish mode (if modrinth project provided)
         required: true
@@ -54,11 +20,6 @@ on:
         options:
           - "immediately"
           - "bundle-only"
-      resume_from:
-        description: Resume from previous run (provide previous run ID or leave blank for fresh start)
-        required: false
-        default: ""
-        type: string
 
 permissions:
   contents: read
@@ -91,9 +52,9 @@ jobs:
         shell: bash
         env:
           MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
-          MOD_JAR_PATH_INPUT: ${{ inputs.mod_jar_path }}
+          MOD_JAR_PATH_INPUT: ""
           MOD_DESCRIPTION_INPUT: ${{ inputs.mod_description }}
-          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
+          AUTO_FETCH_MODRINTH: true
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
@@ -253,115 +214,7 @@ jobs:
           print(f"Resolved description: {resolved_desc or '-'}")
           PY
 
-      - name: Prepare targets
-        if: ${{ !(inputs.auto_fix_corrupted || inputs.auto_fix_only) }}
-        shell: bash
-        env:
-          MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
-          VERSION_RANGE: ${{ inputs.version_range }}
-          UPDATE_MODE: ${{ inputs.update_mode }}
-          PUBLISH_MODE: ${{ inputs.publish_mode }}
-          MOD_DESCRIPTION_NAME: ${{ steps.setup.outputs.mod_description_name }}
-          MOD_JAR_NAME: ${{ steps.setup.outputs.mod_jar_name }}
-          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
-          AUTO_FIX_CORRUPTED: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-          AUTO_FIX_ONLY: ${{ inputs.auto_fix_only }}
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          mkdir -p .workflow_state/decomposed-single
-          MOD_JAR_PATH=""
-          MOD_DESCRIPTION=""
-          if [ -n "$MOD_JAR_NAME" ]; then
-            MOD_JAR_PATH=".workflow_state/setup/$MOD_JAR_NAME"
-          fi
-          if [ -n "$MOD_DESCRIPTION_NAME" ]; then
-            MOD_DESCRIPTION=".workflow_state/setup/$MOD_DESCRIPTION_NAME"
-          fi
-          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
-            if [ -f ".workflow_state/setup/selected-jar.txt" ]; then
-              sel_name=$(cat ".workflow_state/setup/selected-jar.txt" 2>/dev/null || true)
-              if [ -n "$sel_name" ]; then
-                MOD_JAR_PATH=".workflow_state/setup/$sel_name"
-              fi
-            fi
-          fi
-          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
-            candidate=$(ls -t .workflow_state/setup/*.jar 2>/dev/null | head -n1 || true)
-            if [ -n "$candidate" ]; then
-              MOD_JAR_PATH="$candidate"
-            else
-              candidate=$(ls -t *.jar 2>/dev/null | head -n1 || true)
-              if [ -n "$candidate" ]; then
-                MOD_JAR_PATH="$candidate"
-              fi
-            fi
-          fi
-          AUTO_FETCH_FOR_DECOMPOSE="false"
-          if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
-            AUTO_FETCH_FOR_DECOMPOSE="true"
-            MOD_JAR_PATH=""
-          fi
-          if [ -n "$MOD_JAR_PATH_MATRIX" ]; then
-            AUTO_FIX_CORRUPTED="false"
-            AUTO_FIX_ONLY="false"
-          fi
-          if [ -z "$MOD_DESCRIPTION" ] || [ ! -f "$MOD_DESCRIPTION" ]; then
-            if [ -f ".workflow_state/setup/selected-description.txt" ]; then
-              sel_desc=$(cat ".workflow_state/setup/selected-description.txt" 2>/dev/null || true)
-              if [ -n "$sel_desc" ]; then
-                MOD_DESCRIPTION=".workflow_state/setup/$sel_desc"
-              fi
-            fi
-          fi
-
-          AUTO_FIX_DOWNLOADS_DIR=""
-          AUTO_FIX_DECOMPILED_DIR=""
-          AUTO_FIX_REPORT_DIR=""
-          if [ -d ".workflow_state/corrupt-downloads" ]; then
-            AUTO_FIX_DOWNLOADS_DIR=".workflow_state/corrupt-downloads"
-          fi
-          if [ -d ".workflow_state/corrupt-decompiled" ]; then
-            AUTO_FIX_DECOMPILED_DIR=".workflow_state/corrupt-decompiled"
-          fi
-          if [ -d ".workflow_state/corrupt-verdicts" ]; then
-            AUTO_FIX_REPORT_DIR=".workflow_state/corrupt-verdicts"
-          fi
-
-          python build_mods.py auto-update-decompose \
-            --mod-jar-path "$MOD_JAR_PATH" \
-            --modrinth-project-url "$MODRINTH_PROJECT_URL" \
-            --mod-description "$MOD_DESCRIPTION" \
-            --auto-fetch-modrinth "$AUTO_FETCH_FOR_DECOMPOSE" \
-            --auto-fix-corrupted "$AUTO_FIX_CORRUPTED" \
-            --auto-fix-only "$AUTO_FIX_ONLY" \
-            --auto-fix-corrupted-downloads-dir "$AUTO_FIX_DOWNLOADS_DIR" \
-            --auto-fix-corrupted-decompiled-dir "$AUTO_FIX_DECOMPILED_DIR" \
-            --auto-fix-corrupted-report-dir "$AUTO_FIX_REPORT_DIR" \
-            --version-range "$VERSION_RANGE" \
-            --update-mode "$UPDATE_MODE" \
-            --publish-mode "$PUBLISH_MODE" \
-            --manifest version-manifest.json \
-            --plan-only "true" \
-            --output-dir .workflow_state/plan
-
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          matrix = json.loads(Path(".workflow_state/plan/matrix.json").read_text(encoding="utf-8"))
-          state = json.loads(Path(".workflow_state/plan/state.json").read_text(encoding="utf-8"))
-
-          count = len(matrix.get("include", []))
-          print(f"Generated {count} version targets")
-
-          import base64
-          state_b64 = base64.b64encode(json.dumps(state).encode()).decode()
-          Path(".workflow_state/plan_state.txt").write_text(state_b64, encoding="utf-8")
-          PY
-
       - name: Prepare auto-fix jar matrix
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
         shell: bash
         env:
           MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
@@ -777,15 +630,15 @@ jobs:
         shell: bash
         env:
           MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
-          VERSION_RANGE: ${{ inputs.version_range }}
-          UPDATE_MODE: ${{ inputs.update_mode }}
+          VERSION_RANGE: "all"
+          UPDATE_MODE: "all-versions"
           PUBLISH_MODE: ${{ inputs.publish_mode }}
           MOD_DESCRIPTION_NAME: ${{ needs.setup.outputs.mod_description_name }}
           MOD_JAR_NAME: ${{ needs.setup.outputs.mod_jar_name }}
           MOD_JAR_PATH_MATRIX: ${{ matrix.mod_jar_path }}
-          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
-          AUTO_FIX_CORRUPTED: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-          AUTO_FIX_ONLY: ${{ inputs.auto_fix_only }}
+          AUTO_FETCH_MODRINTH: true
+          AUTO_FIX_CORRUPTED: true
+          AUTO_FIX_ONLY: true
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PYTHONUNBUFFERED: "1"
