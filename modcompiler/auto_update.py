@@ -1606,6 +1606,57 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
         output_dir=Path(args.output_dir),
     )
 
+    if config.mod_jar_path.strip() and (config.auto_fix_corrupted or config.auto_fix_only):
+        print(
+            "DEBUG: Auto-fix disabled because mod-jar-path was provided.",
+            file=sys.stderr,
+        )
+        config.auto_fix_corrupted = False
+        config.auto_fix_only = False
+
+    def _parse_only_target(target_key: str) -> tuple[str, str]:
+        target_version = ""
+        target_loader = ""
+        if ":" in target_key:
+            target_version, target_loader = [part.strip() for part in target_key.split(":", 1)]
+        elif "-" in target_key:
+            maybe_version, maybe_loader = target_key.rsplit("-", 1)
+            if maybe_loader in {"forge", "fabric", "neoforge"}:
+                target_version = maybe_version.strip()
+                target_loader = maybe_loader.strip()
+        return target_version, target_loader
+
+    def _write_corrupt_output(
+        *,
+        target_version: str,
+        target_loader: str,
+        reason: str,
+        mod_info: dict[str, Any],
+        current_version: str,
+        current_loader: str,
+        src_path: Path,
+    ) -> int:
+        trimmed_src = trim_src_for_context(src_path)
+        target = VersionTarget(
+            minecraft_version=target_version,
+            loader=target_loader,
+            slug=f"{target_version}-{target_loader}",
+        )
+        decomposed = DecomposedMod(
+            src_path=src_path,
+            mod_info=mod_info,
+            current_version=current_version or target_version,
+            current_loader=current_loader or target_loader,
+            metadata=mod_info,
+        )
+        context = generate_version_context(decomposed, target, info_txt, trimmed_src, manifest)
+        context["corrupt"] = True
+        context["corrupt_reason"] = reason
+        version_folder = create_version_folder(config.output_dir, decomposed, target, context, trimmed_src, manifest)
+        write_json(version_folder / "corrupt.json", {"status": "corrupt", "reason": reason})
+        print("DEBUG: Wrote corrupt placeholder output.", file=sys.stderr)
+        return 0
+
     safe_rmtree(config.output_dir)
     config.output_dir.mkdir(parents=True)
 
@@ -1716,6 +1767,8 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
 
     print("DEBUG: Starting decompile...", file=sys.stderr)
     decomp_dir = config.output_dir / "_decompiled"
+    decompile_error: str | None = None
+    src_path: Path | None = None
     if config.reuse_decompiled_dir:
         reuse_path = Path(config.reuse_decompiled_dir)
         if reuse_path.exists():
@@ -1723,11 +1776,53 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             copy_tree(reuse_path, decomp_dir)
             src_path = decomp_dir
         else:
+            try:
+                decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
+                src_path = decomp_result.extracted_src
+            except Exception as exc:
+                decompile_error = f"{type(exc).__name__}: {exc}"
+    else:
+        try:
             decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
             src_path = decomp_result.extracted_src
-    else:
-        decomp_result = decompile_jar_internal(jar_path, manifest, output_dir=decomp_dir)
-        src_path = decomp_result.extracted_src
+        except Exception as exc:
+            decompile_error = f"{type(exc).__name__}: {exc}"
+
+    if src_path is None:
+        src_path = config.output_dir / "_empty_src"
+        src_path.mkdir(parents=True, exist_ok=True)
+
+    src_has_sources = bool(list(src_path.rglob("*.java")) or list(src_path.rglob("*.kt")))
+    if not src_has_sources and config.only_target:
+        reason = "Decompiler produced no Java/Kotlin sources."
+        if decompile_error:
+            reason = f"Decompile failed: {decompile_error}"
+        print(f"DEBUG: {reason} Marking target as corrupt.", file=sys.stderr)
+
+        mod_info = _parse_mod_info(src_path)
+        if jar_path:
+            mod_info.setdefault("jar_name", Path(jar_path).name)
+            mod_info.setdefault("name", Path(jar_path).stem)
+            mod_info.setdefault("primary_mod_id", Path(jar_path).stem.lower())
+
+        current_loader = mod_info.get("loader", "unknown")
+        current_version = mod_info.get("supported_minecraft", "")
+        target_version, target_loader = _parse_only_target(config.only_target)
+        if not target_version:
+            target_version = current_version or "unknown"
+        if not target_loader:
+            target_loader = current_loader or "unknown"
+
+        return _write_corrupt_output(
+            target_version=target_version,
+            target_loader=target_loader,
+            reason=reason,
+            mod_info=mod_info,
+            current_version=current_version,
+            current_loader=current_loader,
+            src_path=src_path,
+        )
+
     print("DEBUG: Decompile complete", file=sys.stderr)
     print("DEBUG: Parsing mod info...", file=sys.stderr)
     mod_info = _parse_mod_info(src_path)
@@ -1797,7 +1892,23 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             or (target_version and target_loader and t.minecraft_version == target_version and t.loader == target_loader)
         ]
         if not filtered_targets:
-            raise ModCompilerError(f"No target matched --only-target {config.only_target}")
+            reason = f"No target matched --only-target {config.only_target}"
+            print(f"DEBUG: {reason}. Marking target as corrupt.", file=sys.stderr)
+            if not target_version or not target_loader:
+                target_version, target_loader = _parse_only_target(config.only_target)
+            if not target_version:
+                target_version = current_version or "unknown"
+            if not target_loader:
+                target_loader = current_loader or "unknown"
+            return _write_corrupt_output(
+                target_version=target_version,
+                target_loader=target_loader,
+                reason=reason,
+                mod_info=mod_info,
+                current_version=current_version,
+                current_loader=current_loader,
+                src_path=src_path,
+            )
 
     print("DEBUG: Building targets...", file=sys.stderr)
     if not config.plan_only:
