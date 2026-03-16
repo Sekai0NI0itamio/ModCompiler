@@ -1048,83 +1048,30 @@ jobs:
           name: modrinth-publish-${{ matrix.slug }}
           path: .workflow_artifacts/modrinth-publish/${{ matrix.slug }}
 
-      - name: Wait for all Main jobs to complete
-        if: ${{ always() && matrix.job_index == 0 }}
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JOB_DISPLAY_NAME: Main (idx=${{ matrix.job_index }} slot=${{ matrix.key_index }} slug=${{ matrix.slug }})
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import re
-          import time
-          import urllib.request
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs: main
+    if: ${{ always() }}
+    steps:
+      - uses: actions/checkout@v4
 
-          token = os.environ.get("GITHUB_TOKEN", "").strip()
-          repo = os.environ.get("GITHUB_REPOSITORY", "")
-          run_id = os.environ.get("GITHUB_RUN_ID", "")
-          current_name = os.environ.get("JOB_DISPLAY_NAME", "")
-
-          headers = {
-              "Authorization": f"Bearer {token}",
-              "Accept": "application/vnd.github+json",
-          }
-
-          def fetch_jobs(page: int = 1):
-              url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100&page={page}"
-              req = urllib.request.Request(url, headers=headers)
-              with urllib.request.urlopen(req, timeout=30) as resp:
-                  data = json.loads(resp.read().decode("utf-8"))
-              return data
-
-          def list_main_jobs():
-              jobs = []
-              page = 1
-              while True:
-                  data = fetch_jobs(page)
-                  jobs.extend(data.get("jobs", []))
-                  if len(data.get("jobs", [])) < 100:
-                      break
-                  page += 1
-              return jobs
-
-          pattern = re.compile(r"Main \(idx=(\d+) slot=(\d+) ")
-          delay = 15
-          while True:
-              pending = []
-              for job in list_main_jobs():
-                  name = job.get("name", "")
-                  if not pattern.search(name):
-                      continue
-                  if current_name and name == current_name:
-                      continue
-                  status = job.get("status", "")
-                  if status != "completed":
-                      pending.append(name)
-              if not pending:
-                  break
-              print(f"Waiting for all Main jobs to complete. Pending: {pending}")
-              time.sleep(delay)
-              delay = min(delay + 5, 60)
-          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - uses: actions/download-artifact@v4
-        if: ${{ always() && matrix.job_index == 0 }}
         with:
           pattern: ai-mod-*
           path: .workflow_downloads/ai-mods
 
       - uses: actions/download-artifact@v4
-        if: ${{ always() && matrix.job_index == 0 }}
         continue-on-error: true
         with:
           pattern: modrinth-publish*
           path: .workflow_downloads/modrinth
 
       - name: Bundle results
-        if: ${{ always() && matrix.job_index == 0 }}
         shell: bash
         continue-on-error: true
         run: |
@@ -1132,9 +1079,7 @@ jobs:
           mkdir -p .workflow_artifacts/combined
           mkdir -p .workflow_artifacts/combined/progress
           
-          python3 build_mods.py bundle \
-            --artifacts-root .workflow_downloads/ai-mods \
-            --output-dir .workflow_artifacts/combined
+          python3 build_mods.py bundle             --artifacts-root .workflow_downloads/ai-mods             --output-dir .workflow_artifacts/combined
           
           for dir in .workflow_downloads/ai-mods/*/; do
             slug=$(basename "$dir" | sed 's/ai-mod-//')
@@ -1148,23 +1093,19 @@ jobs:
           exit 0
 
       - name: Publish bundle to Modrinth
-        if: ${{ always() && matrix.job_index == 0 && inputs.modrinth_project_url != '' && inputs.publish_mode == 'bundle-only' }}
+        if: ${{ inputs.modrinth_project_url != '' && inputs.publish_mode == 'bundle-only' }}
         shell: bash
         continue-on-error: true
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: |
           set +e
-          python3 build_mods.py publish-modrinth \
-            --artifacts-root .workflow_artifacts/combined \
-            --project "${{ inputs.modrinth_project_url }}" \
-            --artifact-dir .workflow_artifacts/modrinth-publish
+          python3 build_mods.py publish-modrinth             --artifacts-root .workflow_artifacts/combined             --project "${{ inputs.modrinth_project_url }}"             --artifact-dir .workflow_artifacts/modrinth-publish
           exit_code=$?
           set -e
           exit 0
 
       - name: Build summary
-        if: ${{ always() && matrix.job_index == 0 }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -1234,7 +1175,7 @@ jobs:
           ]
 
           for r in sorted(ai_results, key=lambda x: (x.get("slug", ""), x.get("loader", ""), x.get("minecraft_version", ""))):
-            key = (r.get("slug"), r.get("loader"), r.get("minecraft_version"))
+            key = (r.get("slug", ""), r.get("loader", ""), r.get("minecraft_version", ""))
             publish = publish_map.get(key, {})
             publish_status = publish.get("publish_status", "-")
             note = publish.get("note", "-") or "-"
@@ -1247,14 +1188,17 @@ jobs:
                 status=r.get("status", "-"),
                 calls=calls,
                 publish=publish_status,
-                note=note.replace("\n", " "),
+                note=note.replace("
+", " "),
               )
             )
 
           summary_dir = Path(".workflow_artifacts/summary")
           summary_dir.mkdir(parents=True, exist_ok=True)
           summary_path = summary_dir / "SUMMARY.md"
-          summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          summary_path.write_text("
+".join(lines) + "
+", encoding="utf-8")
 
           summary_json = {
             "total": total,
@@ -1269,7 +1213,6 @@ jobs:
           PY
 
       - uses: actions/upload-artifact@v4
-        if: ${{ always() && matrix.job_index == 0 }}
         with:
           name: final-results
           path: |
@@ -1278,19 +1221,17 @@ jobs:
             progress.zip
 
       - uses: actions/upload-artifact@v4
-        if: ${{ always() && matrix.job_index == 0 && inputs.publish_mode == 'bundle-only' && inputs.modrinth_project_url != '' }}
+        if: ${{ inputs.publish_mode == 'bundle-only' && inputs.modrinth_project_url != '' }}
         with:
           name: modrinth-publish
           path: .workflow_artifacts/modrinth-publish
 
       - uses: actions/upload-artifact@v4
-        if: ${{ always() && matrix.job_index == 0 }}
         with:
           name: auto-update-summary
           path: .workflow_artifacts/summary
 
-      - if: ${{ always() && matrix.job_index == 0 }}
-        shell: bash
+      - shell: bash
         run: |
           if [ -f .workflow_artifacts/summary/SUMMARY.md ]; then
             cat .workflow_artifacts/summary/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
