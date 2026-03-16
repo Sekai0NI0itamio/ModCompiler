@@ -75,6 +75,10 @@ jobs:
       key_count: ${{ steps.matrix.outputs.key_count }}
       total_targets: ${{ steps.matrix.outputs.total_targets }}
       has_base_decompiled: ${{ steps.base_decompiled.outputs.has_base_decompiled }}
+      has_corrupt_project: ${{ steps.corrupt_artifacts.outputs.has_corrupt_project }}
+      has_corrupt_downloads: ${{ steps.corrupt_artifacts.outputs.has_corrupt_downloads }}
+      has_corrupt_decompiled: ${{ steps.corrupt_artifacts.outputs.has_corrupt_decompiled }}
+      has_corrupt_verdicts: ${{ steps.corrupt_artifacts.outputs.has_corrupt_verdicts }}
     steps:
       - uses: actions/checkout@v4
 
@@ -507,6 +511,31 @@ jobs:
             echo "has_base_decompiled=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - id: corrupt_artifacts
+        name: Detect corrupt artifacts
+        shell: bash
+        run: |
+          if [ -f ".workflow_state/corrupt-project.json" ]; then
+            echo "has_corrupt_project=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_corrupt_project=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -d ".workflow_state/corrupt-downloads" ] && [ "$(find .workflow_state/corrupt-downloads -type f 2>/dev/null | head -n 1)" != "" ]; then
+            echo "has_corrupt_downloads=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_corrupt_downloads=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -d ".workflow_state/corrupt-decompiled" ] && [ "$(find .workflow_state/corrupt-decompiled -type f 2>/dev/null | head -n 1)" != "" ]; then
+            echo "has_corrupt_decompiled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_corrupt_decompiled=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -d ".workflow_state/corrupt-verdicts" ] && [ "$(find .workflow_state/corrupt-verdicts -type f 2>/dev/null | head -n 1)" != "" ]; then
+            echo "has_corrupt_verdicts=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_corrupt_verdicts=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: setup-artifacts
@@ -525,28 +554,32 @@ jobs:
           if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
+        if: ${{ steps.corrupt_artifacts.outputs.has_corrupt_project == 'true' }}
         with:
           name: corrupt-project
           path: .workflow_state/corrupt-project.json
+          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
+        if: ${{ steps.corrupt_artifacts.outputs.has_corrupt_downloads == 'true' }}
         with:
           name: corrupt-downloads
           path: .workflow_state/corrupt-downloads
+          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
+        if: ${{ steps.corrupt_artifacts.outputs.has_corrupt_decompiled == 'true' }}
         with:
           name: corrupt-decompiled
           path: .workflow_state/corrupt-decompiled
+          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
+        if: ${{ steps.corrupt_artifacts.outputs.has_corrupt_verdicts == 'true' }}
         with:
           name: corrupt-verdicts
           path: .workflow_state/corrupt-verdicts
+          if-no-files-found: ignore
 
   main:
     name: Main (idx=${{ matrix.job_index }} slot=${{ matrix.key_index }} slug=${{ matrix.slug }})
@@ -613,29 +646,25 @@ jobs:
           path: .workflow_state/base-decompiled
 
       - uses: actions/download-artifact@v4
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-        continue-on-error: true
+        if: ${{ needs.setup.outputs.has_corrupt_project == 'true' }}
         with:
           name: corrupt-project
           path: .workflow_state
 
       - uses: actions/download-artifact@v4
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-        continue-on-error: true
+        if: ${{ needs.setup.outputs.has_corrupt_downloads == 'true' }}
         with:
           name: corrupt-downloads
           path: .workflow_state/corrupt-downloads
 
       - uses: actions/download-artifact@v4
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-        continue-on-error: true
+        if: ${{ needs.setup.outputs.has_corrupt_decompiled == 'true' }}
         with:
           name: corrupt-decompiled
           path: .workflow_state/corrupt-decompiled
 
       - uses: actions/download-artifact@v4
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-        continue-on-error: true
+        if: ${{ needs.setup.outputs.has_corrupt_verdicts == 'true' }}
         with:
           name: corrupt-verdicts
           path: .workflow_state/corrupt-verdicts
@@ -677,6 +706,10 @@ jobs:
             curl -s --max-time 30 --socks5-hostname 127.0.0.1:${TOR_SOCKS_PORT} https://api.ipify.org || true
           }
 
+          check_openrouter() {
+            curl -s --max-time 20 --socks5-hostname 127.0.0.1:${TOR_SOCKS_PORT} https://openrouter.ai/api/v1/models >/dev/null 2>&1
+          }
+
           DIRECT_IP="$(get_ip)"
           echo "Direct IP: ${DIRECT_IP}"
 
@@ -716,10 +749,14 @@ jobs:
             TOR_IP="$(get_tor_ip)"
             echo "Tor IP: ${TOR_IP}"
             if [ -n "$DIRECT_IP" ] && [ -n "$TOR_IP" ] && [ "$DIRECT_IP" != "$TOR_IP" ]; then
-              echo "Tor exit IP differs from direct IP."
-              break
+              if check_openrouter; then
+                echo "Tor can reach OpenRouter."
+                break
+              fi
+              echo "Tor exit cannot reach OpenRouter; restarting (attempt $attempt)."
+            else
+              echo "Tor IP same or empty; restarting (attempt $attempt)."
             fi
-            echo "Tor IP same or empty; restarting (attempt $attempt)."
             kill "$TOR_LAUNCH_PID" 2>/dev/null || true
             if [ -f "$TOR_PID" ]; then
               kill "$(cat "$TOR_PID")" 2>/dev/null || true
@@ -727,6 +764,9 @@ jobs:
             sleep 2
           done
 
+          if ! check_openrouter; then
+            echo "Tor proxy bootstrapped but OpenRouter unreachable via Tor."
+          fi
           echo "TOR_SOCKS_PROXY=${TOR_SOCKS_PROXY}" >> "$GITHUB_ENV"
           echo "TOR_EXIT_IP=${TOR_IP}" >> "$GITHUB_ENV"
           echo "OPENROUTER_SOCKS_PROXY=${TOR_SOCKS_PROXY}" >> "$GITHUB_ENV"
