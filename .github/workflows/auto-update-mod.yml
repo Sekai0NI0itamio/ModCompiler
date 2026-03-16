@@ -1,4 +1,4 @@
-name: Auto Update Mod (Advanced)
+name: Auto Update Mod
 
 on:
   workflow_dispatch:
@@ -8,21 +8,6 @@ on:
         required: false
         default: ""
         type: string
-      auto_fetch_modrinth:
-        description: Auto-fetch jar/description from Modrinth when jar path is empty
-        required: false
-        default: true
-        type: boolean
-      auto_fix_corrupted:
-        description: Auto-fix corrupted versions before updating
-        required: false
-        default: false
-        type: boolean
-      auto_fix_only:
-        description: Auto-fix corrupted versions only (skip normal updates)
-        required: false
-        default: false
-        type: boolean
       modrinth_project_url:
         description: Optional Modrinth project URL or slug
         required: false
@@ -38,14 +23,6 @@ on:
         required: false
         default: "all"
         type: string
-      update_mode:
-        description: Update mode
-        required: true
-        default: "all-versions"
-        type: choice
-        options:
-          - "all-versions"
-          - "missing-only"
       publish_mode:
         description: Publish mode (if modrinth project provided)
         required: true
@@ -54,11 +31,6 @@ on:
         options:
           - "immediately"
           - "bundle-only"
-      resume_from:
-        description: Resume from previous run (provide previous run ID or leave blank for fresh start)
-        required: false
-        default: ""
-        type: string
 
 permissions:
   contents: read
@@ -93,7 +65,7 @@ jobs:
           MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
           MOD_JAR_PATH_INPUT: ${{ inputs.mod_jar_path }}
           MOD_DESCRIPTION_INPUT: ${{ inputs.mod_description }}
-          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
+          AUTO_FETCH_MODRINTH: true
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
@@ -254,18 +226,17 @@ jobs:
           PY
 
       - name: Prepare targets
-        if: ${{ !(inputs.auto_fix_corrupted || inputs.auto_fix_only) }}
         shell: bash
         env:
           MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
           VERSION_RANGE: ${{ inputs.version_range }}
-          UPDATE_MODE: ${{ inputs.update_mode }}
+          UPDATE_MODE: "all-versions"
           PUBLISH_MODE: ${{ inputs.publish_mode }}
           MOD_DESCRIPTION_NAME: ${{ steps.setup.outputs.mod_description_name }}
           MOD_JAR_NAME: ${{ steps.setup.outputs.mod_jar_name }}
-          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
-          AUTO_FIX_CORRUPTED: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-          AUTO_FIX_ONLY: ${{ inputs.auto_fix_only }}
+          AUTO_FETCH_MODRINTH: true
+          AUTO_FIX_CORRUPTED: false
+          AUTO_FIX_ONLY: false
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
@@ -360,107 +331,6 @@ jobs:
           Path(".workflow_state/plan_state.txt").write_text(state_b64, encoding="utf-8")
           PY
 
-      - name: Prepare auto-fix jar matrix
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-        shell: bash
-        env:
-          MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        run: |
-          python3 - <<'PY'
-          import base64
-          import json
-          import os
-          import re
-          from pathlib import Path
-
-          from modcompiler.auto_update import (
-              _download_modrinth_file,
-              _fetch_modrinth_project_and_versions,
-              _select_latest_modrinth_versions_by_loader_game,
-          )
-          from modcompiler.modrinth import normalize_modrinth_project_ref, select_primary_modrinth_file
-
-          def sanitize(value: str) -> str:
-              return re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip()) if value else ""
-
-          def parse_mc_version(value: str):
-              parts = []
-              for token in value.split("."):
-                  if token.isdigit():
-                      parts.append(int(token))
-                  else:
-                      parts.append(token)
-              return parts
-
-          project_url = os.environ.get("MODRINTH_PROJECT_URL", "").strip()
-          if not project_url:
-              raise SystemExit("Modrinth project URL is required for auto-fix jar preparation.")
-
-          project_ref = normalize_modrinth_project_ref(project_url)
-          token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
-          project, versions = _fetch_modrinth_project_and_versions(project_ref, token)
-          selected = _select_latest_modrinth_versions_by_loader_game(versions)
-          if not selected:
-              raise SystemExit("No Modrinth versions were available to prepare.")
-
-          setup_root = Path(".workflow_state/setup")
-          jar_root = setup_root / "latest-jars"
-          jar_root.mkdir(parents=True, exist_ok=True)
-
-          include: list[dict[str, str]] = []
-          for version in selected:
-              version_id = str(version.get("id") or version.get("version_number") or version.get("name") or "unknown")
-              version_number = str(version.get("version_number") or "")
-              loaders = [str(l) for l in version.get("loaders", []) if str(l).strip()]
-              game_versions = [str(v) for v in version.get("game_versions", []) if str(v).strip()]
-              if not loaders or not game_versions:
-                  continue
-              primary_loader = loaders[0]
-              primary_game = sorted(game_versions, key=parse_mc_version)[-1]
-
-              file_info = select_primary_modrinth_file(version.get("files", []))
-              if not file_info:
-                  continue
-              file_url = str(file_info.get("url", "")).strip()
-              if not file_url:
-                  continue
-              filename = str(file_info.get("filename", "")).strip()
-              if not filename:
-                  filename = f"{sanitize(project_ref)}-{sanitize(version_id)}.jar"
-
-              dest = jar_root / sanitize(version_id) / filename
-              if not dest.exists():
-                  _download_modrinth_file(file_url, dest)
-
-              include.append({
-                  "version": primary_game,
-                  "loader": primary_loader,
-                  "slug": f"{primary_game}-{primary_loader}",
-                  "mod_jar_path": str(dest.relative_to(setup_root)),
-                  "modrinth_version_id": version_id,
-                  "modrinth_version_number": version_number,
-              })
-
-          include.sort(key=lambda x: (x["version"], x["loader"], x.get("modrinth_version_id", "")))
-          matrix = {"include": include}
-
-          plan_dir = Path(".workflow_state/plan")
-          plan_dir.mkdir(parents=True, exist_ok=True)
-          (plan_dir / "matrix.json").write_text(json.dumps(matrix, indent=2), encoding="utf-8")
-
-          state = {
-              "auto_fix": True,
-              "project_ref": project_ref,
-              "total_targets": len(include),
-          }
-          (plan_dir / "state.json").write_text(json.dumps(state, indent=2), encoding="utf-8")
-
-          state_b64 = base64.b64encode(json.dumps(state).encode()).decode()
-          Path(".workflow_state/plan_state.txt").write_text(state_b64, encoding="utf-8")
-
-          print(f"Prepared {len(include)} latest Modrinth jars for auto-fix.")
-          PY
 
       - id: matrix
         name: Build matrix with key slots
@@ -778,14 +648,14 @@ jobs:
         env:
           MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
           VERSION_RANGE: ${{ inputs.version_range }}
-          UPDATE_MODE: ${{ inputs.update_mode }}
+          UPDATE_MODE: "all-versions"
           PUBLISH_MODE: ${{ inputs.publish_mode }}
           MOD_DESCRIPTION_NAME: ${{ needs.setup.outputs.mod_description_name }}
           MOD_JAR_NAME: ${{ needs.setup.outputs.mod_jar_name }}
           MOD_JAR_PATH_MATRIX: ${{ matrix.mod_jar_path }}
-          AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
-          AUTO_FIX_CORRUPTED: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-          AUTO_FIX_ONLY: ${{ inputs.auto_fix_only }}
+          AUTO_FETCH_MODRINTH: true
+          AUTO_FIX_CORRUPTED: false
+          AUTO_FIX_ONLY: false
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PYTHONUNBUFFERED: "1"
