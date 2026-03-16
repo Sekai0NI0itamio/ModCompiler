@@ -831,6 +831,10 @@ jobs:
             AUTO_FETCH_FOR_DECOMPOSE="true"
             MOD_JAR_PATH=""
           fi
+          if [ -n "$MOD_JAR_PATH_MATRIX" ]; then
+            AUTO_FIX_CORRUPTED="false"
+            AUTO_FIX_ONLY="false"
+          fi
           if [ -z "$MOD_DESCRIPTION" ] || [ ! -f "$MOD_DESCRIPTION" ]; then
             if [ -f ".workflow_state/setup/selected-description.txt" ]; then
               sel_desc=$(cat ".workflow_state/setup/selected-description.txt" 2>/dev/null || true)
@@ -883,7 +887,38 @@ jobs:
             ls -la .workflow_state/decomposed-single/
           fi
 
+      - name: Detect corrupt decompile
+        id: detect_corrupt
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          context_path = Path(".workflow_artifacts/ai-${{ matrix.slug }}/context.json")
+          is_corrupt = "false"
+          reason = ""
+          if context_path.exists():
+              try:
+                  context = json.loads(context_path.read_text(encoding="utf-8"))
+              except Exception:
+                  context = {}
+              if context.get("corrupt"):
+                  is_corrupt = "true"
+                  reason = str(context.get("corrupt_reason", "")).strip()
+
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as handle:
+              handle.write(f"is_corrupt={is_corrupt}\n")
+              handle.write(f"corrupt_reason={reason}\n")
+
+          if is_corrupt == "true":
+              print(f"Detected corrupt jar; skipping AI steps. Reason: {reason}")
+          PY
+
       - name: Prepare Minecraft sources (per target)
+        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -909,6 +944,7 @@ jobs:
           PY
 
       - name: Select OpenRouter model
+        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -922,6 +958,7 @@ jobs:
           PY
 
       - name: Acquire OpenRouter key lease
+        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
         shell: bash
         env:
           KEY_INDEX: ${{ matrix.key_index }}
@@ -1003,6 +1040,7 @@ jobs:
           PY
 
       - name: Run AI rebuild
+        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
         shell: bash
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
@@ -1015,7 +1053,7 @@ jobs:
             --artifact-dir ".workflow_artifacts/per-mod/${{ matrix.slug }}" 2>&1
 
       - name: Mask Modrinth token (immediate)
-        if: ${{ inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
+        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' && inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
         shell: bash
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
@@ -1025,7 +1063,7 @@ jobs:
           fi
 
       - name: Publish to Modrinth immediately
-        if: ${{ inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
+        if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' && inputs.modrinth_project_url != '' && inputs.publish_mode == 'immediately' }}
         shell: bash
         continue-on-error: true
         env:
