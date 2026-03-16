@@ -564,6 +564,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install PySocks
+        shell: bash
+        run: |
+          python3 -m pip install pysocks
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -871,11 +876,6 @@ jobs:
               handle.write(f"OPENROUTER_PRIMARY_MODEL={model}\n")
           print(f"Selected OpenRouter model: {model}")
           PY
-
-      - name: Install PySocks
-        shell: bash
-        run: |
-          python3 -m pip install pysocks
 
       - name: Acquire OpenRouter key lease
         shell: bash
