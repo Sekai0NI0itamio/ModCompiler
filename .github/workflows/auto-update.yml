@@ -788,6 +788,8 @@ jobs:
           AUTO_FIX_ONLY: ${{ inputs.auto_fix_only }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+          MODCOMPILER_DECOMPILE_STREAM: "1"
         run: |
           mkdir -p .workflow_state/decomposed-single
           MOD_JAR_PATH=""

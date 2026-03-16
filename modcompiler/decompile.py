@@ -679,7 +679,31 @@ def decompile_jar_internal(jar_path: Path, manifest: dict[str, Any], output_dir:
             urllib.request.urlretrieve(url, decompiler_jar_path)
 
         command = ["java", "-jar", str(decompiler_jar_path), str(expanded_jar), str(java_output)]
-        subprocess.run(command, capture_output=True)
+        stream = os.environ.get("MODCOMPILER_DECOMPILE_STREAM", "").strip().lower() in {"1", "true", "yes"}
+        if stream:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+            assert process.stdout is not None
+            for line in process.stdout:
+                print(f"[vineflower] {line.rstrip()}", file=sys.stderr)
+            return_code = process.wait()
+            if return_code != 0:
+                raise ModCompilerError(f"Vineflower failed with exit code {return_code}")
+        else:
+            result = subprocess.run(command, capture_output=True, text=True)
+            if result.stdout:
+                for line in result.stdout.splitlines():
+                    print(f"[vineflower] {line}", file=sys.stderr)
+            if result.stderr:
+                for line in result.stderr.splitlines():
+                    print(f"[vineflower] {line}", file=sys.stderr)
+            if result.returncode != 0:
+                raise ModCompilerError(f"Vineflower failed with exit code {result.returncode}")
 
         for source_file in sorted(java_output.rglob("*")):
             if not source_file.is_file():
