@@ -4,14 +4,12 @@ import hashlib
 import json
 import os
 import random
-import socket
 import threading
 import time
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -199,9 +197,8 @@ class OpenRouterClient:
         try:
             proxy = _load_socks_proxy()
             if proxy:
-                with _socks_proxy_context(proxy):
-                    with urllib.request.urlopen(request, timeout=120) as response:
-                        result = json.loads(response.read().decode("utf-8"))
+                with _open_with_proxy(request, timeout=120, proxy=proxy) as response:
+                    result = json.loads(response.read().decode("utf-8"))
             else:
                 with urllib.request.urlopen(request, timeout=120) as response:
                     result = json.loads(response.read().decode("utf-8"))
@@ -355,10 +352,15 @@ def _load_socks_proxy() -> tuple[str, str, int] | None:
     return scheme, host, port
 
 
-@contextmanager
-def _socks_proxy_context(proxy: tuple[str, str, int]):
+def _open_with_proxy(
+    request: urllib.request.Request,
+    *,
+    timeout: int,
+    proxy: tuple[str, str, int],
+):
     try:
         import socks  # type: ignore
+        from sockshandler import SocksiPyHandler  # type: ignore
     except Exception as exc:  # pragma: no cover - environment-specific
         raise ModCompilerError(
             "PySocks is required to use OPENROUTER_SOCKS_PROXY. Install with: pip install pysocks"
@@ -372,51 +374,9 @@ def _socks_proxy_context(proxy: tuple[str, str, int]):
         proxy_type = socks.SOCKS4
         rdns = scheme == "socks4a"
 
-    socks.setdefaultproxy(proxy_type, host, port, rdns=rdns)
-    original_socket = socket.socket
-    original_create = socket.create_connection
-    original_getaddrinfo = socket.getaddrinfo
-    original_gethostbyname = socket.gethostbyname
-    original_gethostbyname_ex = socket.gethostbyname_ex
-
-    def _no_dns_getaddrinfo(
-        target_host: str | None,
-        target_port: int | str | None,
-        family: int = 0,
-        socktype: int = 0,
-        proto: int = 0,
-        flags: int = 0,
-    ):
-        if not target_host:
-            return original_getaddrinfo(target_host, target_port, family, socktype, proto, flags)
-        try:
-            socket.inet_pton(socket.AF_INET, target_host)
-            return original_getaddrinfo(target_host, target_port, family, socktype, proto, flags)
-        except OSError:
-            pass
-        try:
-            socket.inet_pton(socket.AF_INET6, target_host)
-            return original_getaddrinfo(target_host, target_port, family, socktype, proto, flags)
-        except OSError:
-            pass
-        resolved_proto = proto or socket.IPPROTO_TCP
-        resolved_type = socktype or socket.SOCK_STREAM
-        return [(socket.AF_INET, resolved_type, resolved_proto, "", (target_host, int(target_port or 0)))]
-    socket.socket = socks.socksocket  # type: ignore[assignment]
-    socket.create_connection = socks.create_connection  # type: ignore[assignment]
-    socket.getaddrinfo = _no_dns_getaddrinfo  # type: ignore[assignment]
-    if hasattr(socks, "gethostbyname"):
-        socket.gethostbyname = socks.gethostbyname  # type: ignore[assignment]
-    if hasattr(socks, "gethostbyname_ex"):
-        socket.gethostbyname_ex = socks.gethostbyname_ex  # type: ignore[assignment]
-    try:
-        yield
-    finally:
-        socket.socket = original_socket  # type: ignore[assignment]
-        socket.create_connection = original_create  # type: ignore[assignment]
-        socket.getaddrinfo = original_getaddrinfo  # type: ignore[assignment]
-        socket.gethostbyname = original_gethostbyname  # type: ignore[assignment]
-        socket.gethostbyname_ex = original_gethostbyname_ex  # type: ignore[assignment]
+    handler = SocksiPyHandler(proxy_type, host, port, rdns=rdns)
+    opener = urllib.request.build_opener(handler)
+    return opener.open(request, timeout=timeout)
 
 
 class ModCompilerError(Exception):

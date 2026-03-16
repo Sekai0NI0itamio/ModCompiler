@@ -695,6 +695,7 @@ jobs:
           TORRC="${TOR_DATA_DIR}/torrc"
           TOR_SOCKS_PORT="9050"
           TOR_SOCKS_PROXY="socks5h://127.0.0.1:${TOR_SOCKS_PORT}"
+          MAX_ATTEMPTS=10
 
           mkdir -p "$TOR_DATA_DIR"
 
@@ -716,6 +717,10 @@ jobs:
           attempt=0
           while true; do
             attempt=$((attempt + 1))
+            if [ "$attempt" -gt "$MAX_ATTEMPTS" ]; then
+              echo "Tor could not reach OpenRouter after ${MAX_ATTEMPTS} attempts."
+              exit 1
+            fi
             if [ -f "$TOR_PID" ]; then
               kill "$(cat "$TOR_PID")" 2>/dev/null || true
               rm -f "$TOR_PID"
@@ -764,9 +769,6 @@ jobs:
             sleep 2
           done
 
-          if ! check_openrouter; then
-            echo "Tor proxy bootstrapped but OpenRouter unreachable via Tor."
-          fi
           echo "TOR_SOCKS_PROXY=${TOR_SOCKS_PROXY}" >> "$GITHUB_ENV"
           echo "TOR_EXIT_IP=${TOR_IP}" >> "$GITHUB_ENV"
           echo "OPENROUTER_SOCKS_PROXY=${TOR_SOCKS_PROXY}" >> "$GITHUB_ENV"
