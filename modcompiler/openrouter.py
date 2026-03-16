@@ -4,17 +4,19 @@ import hashlib
 import json
 import os
 import random
+import socket
 import threading
 import time
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-DEFAULT_PRIMARY_MODEL = "openrouter/hunter-alpha"
+DEFAULT_PRIMARY_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 DEFAULT_FALLBACK_MODEL = "stepfun/step-3.5-flash:free"
 UNAVAILABLE_THRESHOLD = 20
 WINDOW_SECONDS = 60
@@ -195,8 +197,14 @@ class OpenRouterClient:
         )
 
         try:
-            with urllib.request.urlopen(request, timeout=120) as response:
-                result = json.loads(response.read().decode("utf-8"))
+            proxy = _load_socks_proxy()
+            if proxy:
+                with _socks_proxy_context(proxy):
+                    with urllib.request.urlopen(request, timeout=120) as response:
+                        result = json.loads(response.read().decode("utf-8"))
+            else:
+                with urllib.request.urlopen(request, timeout=120) as response:
+                    result = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as error:
             error_body = error.read().decode("utf-8", errors="replace")
             if error.code == 429:
@@ -322,6 +330,54 @@ def _default_job_seed() -> str:
         if value:
             parts.append(value)
     return "|".join(parts)
+
+
+def _load_socks_proxy() -> tuple[str, str, int] | None:
+    raw = os.environ.get("OPENROUTER_SOCKS_PROXY", "").strip()
+    if not raw:
+        return None
+    if "://" not in raw:
+        raw = f"socks5h://{raw}"
+    parsed = urllib.parse.urlparse(raw)
+    scheme = (parsed.scheme or "socks5h").lower()
+    if scheme not in {"socks5", "socks5h", "socks4", "socks4a"}:
+        raise ModCompilerError(
+            f"Unsupported SOCKS proxy scheme '{scheme}'. Use socks5h://host:port."
+        )
+    host = parsed.hostname
+    if not host:
+        raise ModCompilerError("OPENROUTER_SOCKS_PROXY must include a hostname.")
+    port = parsed.port or 9050
+    return scheme, host, port
+
+
+@contextmanager
+def _socks_proxy_context(proxy: tuple[str, str, int]):
+    try:
+        import socks  # type: ignore
+    except Exception as exc:  # pragma: no cover - environment-specific
+        raise ModCompilerError(
+            "PySocks is required to use OPENROUTER_SOCKS_PROXY. Install with: pip install pysocks"
+        ) from exc
+
+    scheme, host, port = proxy
+    if scheme in {"socks5", "socks5h"}:
+        proxy_type = socks.SOCKS5
+        rdns = scheme == "socks5h"
+    else:
+        proxy_type = socks.SOCKS4
+        rdns = scheme == "socks4a"
+
+    socks.setdefaultproxy(proxy_type, host, port, rdns=rdns)
+    original_socket = socket.socket
+    original_create = socket.create_connection
+    socket.socket = socks.socksocket  # type: ignore[assignment]
+    socket.create_connection = socks.create_connection  # type: ignore[assignment]
+    try:
+        yield
+    finally:
+        socket.socket = original_socket  # type: ignore[assignment]
+        socket.create_connection = original_create  # type: ignore[assignment]
 
 
 class ModCompilerError(Exception):
