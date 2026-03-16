@@ -376,16 +376,24 @@ def _socks_proxy_context(proxy: tuple[str, str, int]):
     original_socket = socket.socket
     original_create = socket.create_connection
     original_getaddrinfo = socket.getaddrinfo
+    original_gethostbyname = socket.gethostbyname
+    original_gethostbyname_ex = socket.gethostbyname_ex
     socket.socket = socks.socksocket  # type: ignore[assignment]
     socket.create_connection = socks.create_connection  # type: ignore[assignment]
     if hasattr(socks, "getaddrinfo"):
         socket.getaddrinfo = socks.getaddrinfo  # type: ignore[assignment]
+    if hasattr(socks, "gethostbyname"):
+        socket.gethostbyname = socks.gethostbyname  # type: ignore[assignment]
+    if hasattr(socks, "gethostbyname_ex"):
+        socket.gethostbyname_ex = socks.gethostbyname_ex  # type: ignore[assignment]
     try:
         yield
     finally:
         socket.socket = original_socket  # type: ignore[assignment]
         socket.create_connection = original_create  # type: ignore[assignment]
         socket.getaddrinfo = original_getaddrinfo  # type: ignore[assignment]
+        socket.gethostbyname = original_gethostbyname  # type: ignore[assignment]
+        socket.gethostbyname_ex = original_gethostbyname_ex  # type: ignore[assignment]
 
 
 class ModCompilerError(Exception):
