@@ -375,13 +375,17 @@ def _socks_proxy_context(proxy: tuple[str, str, int]):
     socks.setdefaultproxy(proxy_type, host, port, rdns=rdns)
     original_socket = socket.socket
     original_create = socket.create_connection
+    original_getaddrinfo = socket.getaddrinfo
     socket.socket = socks.socksocket  # type: ignore[assignment]
     socket.create_connection = socks.create_connection  # type: ignore[assignment]
+    if hasattr(socks, "getaddrinfo"):
+        socket.getaddrinfo = socks.getaddrinfo  # type: ignore[assignment]
     try:
         yield
     finally:
         socket.socket = original_socket  # type: ignore[assignment]
         socket.create_connection = original_create  # type: ignore[assignment]
+        socket.getaddrinfo = original_getaddrinfo  # type: ignore[assignment]
 
 
 class ModCompilerError(Exception):
