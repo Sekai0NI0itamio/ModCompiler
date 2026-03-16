@@ -4,6 +4,8 @@ import json
 import re
 import subprocess
 import tempfile
+import os
+import sys
 import traceback
 import tomllib
 import zipfile
