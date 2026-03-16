@@ -248,124 +248,6 @@ jobs:
           print(f"Resolved description: {resolved_desc or '-'}")
           PY
 
-      - name: Corrupt scan (auto-fix precompute)
-        if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
-        shell: bash
-        env:
-          MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          
-          from modcompiler.auto_update import (
-              _fetch_modrinth_project_and_versions,
-              _select_latest_modrinth_versions_by_loader_game,
-              _verify_mod_source_with_ai,
-          )
-          from modcompiler.common import load_json
-          from modcompiler.decompile import decompile_jar_internal
-          from modcompiler.modrinth import normalize_modrinth_project_ref, select_primary_modrinth_file
-          from modcompiler.openrouter import OpenRouterClient
-          
-          project_url = os.environ.get("MODRINTH_PROJECT_URL", "").strip()
-          if not project_url:
-              raise SystemExit("Modrinth project URL is required for auto-fix download preparation.")
-          project_ref = normalize_modrinth_project_ref(project_url)
-          token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
-          project, versions = _fetch_modrinth_project_and_versions(project_ref, token)
-          filtered_versions = _select_latest_modrinth_versions_by_loader_game(versions)
-          if filtered_versions:
-              versions = filtered_versions
-          
-          project_info = {
-              "project_ref": project_ref,
-              "project_name": str(project.get("title") or project.get("name") or project.get("slug") or project_ref),
-              "project_description": str(project.get("body") or project.get("description") or ""),
-          }
-          info_path = Path(".workflow_state/corrupt-project.json")
-          info_path.parent.mkdir(parents=True, exist_ok=True)
-          info_path.write_text(json.dumps(project_info, indent=2), encoding="utf-8")
-          
-          client = OpenRouterClient()
-          if not client.key_states:
-              raise SystemExit("OPENROUTER_API_KEY is required for auto-fix verification.")
-          
-          manifest = load_json(Path("version-manifest.json"))
-          downloads_root = Path(".workflow_state/corrupt-downloads")
-          decompiled_root = Path(".workflow_state/corrupt-decompiled")
-          verdict_root = Path(".workflow_state/corrupt-verdicts")
-          verdict_root.mkdir(parents=True, exist_ok=True)
-          
-          for version in versions:
-              version_id = str(version.get("id") or version.get("version_number") or "unknown")
-              version_number = str(version.get("version_number") or "")
-              loaders = [str(l) for l in version.get("loaders", [])]
-              game_versions = [str(v) for v in version.get("game_versions", [])]
-              date_published = str(version.get("date_published") or version.get("date") or "")
-              
-              file_info = select_primary_modrinth_file(version.get("files", []))
-              if not file_info:
-                  continue
-              url = str(file_info.get("url", "")).strip()
-              if not url:
-                  continue
-              filename = str(file_info.get("filename", "")).strip()
-              if not filename:
-                  filename = f"{project_ref}-{version_id}.jar"
-              
-              jar_path = downloads_root / version_id / filename
-              if not jar_path.exists():
-                  from modcompiler.auto_update import _download_modrinth_file
-                  _download_modrinth_file(url, jar_path)
-              
-              src_dir = decompiled_root / version_id
-              if jar_path.exists() and not (src_dir.exists() and (list(src_dir.rglob("*.java")) or list(src_dir.rglob("*.kt")))):
-                  decompile_jar_internal(jar_path, manifest, output_dir=src_dir)
-              
-              verdict_payload = {
-                  "tag": "corrupted",
-                  "verdict": "fail",
-                  "confidence": 0.0,
-                  "rating": 0.0,
-                  "reason": "Decompiler produced no sources.",
-              }
-              if src_dir.exists() and (list(src_dir.rglob("*.java")) or list(src_dir.rglob("*.kt"))):
-                  verdict_payload = _verify_mod_source_with_ai(
-                      client=client,
-                      project_name=project_info["project_name"],
-                      project_description=project_info["project_description"],
-                      version_label=version_number or version_id,
-                      loader=str(loaders[0]) if loaders else "unknown",
-                      game_versions=[str(v) for v in game_versions],
-                      src_dir=src_dir,
-                  )
-              
-              tag = str(verdict_payload.get("tag", "")).lower() or "corrupted"
-              confidence = float(verdict_payload.get("confidence", 0.0) or 0.0)
-              rating = float(verdict_payload.get("rating", 0.0) or 0.0)
-              verdict = "pass" if tag == "working" else "fail"
-              
-              output = {
-                  "version_id": version_id,
-                  "version_number": version_number,
-                  "loaders": loaders,
-                  "game_versions": game_versions,
-                  "date_published": date_published,
-                  "tag": tag,
-                  "verdict": verdict,
-                  "confidence": confidence,
-                  "rating": rating,
-                  "reason": verdict_payload.get("reason", ""),
-              }
-              (verdict_root / f"{version_id}.json").write_text(json.dumps(output, indent=2), encoding="utf-8")
-          
-          print("Corrupt scan complete.")
-          PY
-
       - name: Prepare targets
         if: ${{ !(inputs.auto_fix_corrupted || inputs.auto_fix_only) }}
         shell: bash
@@ -414,6 +296,10 @@ jobs:
           if [ -z "$MOD_JAR_PATH" ] || [ ! -f "$MOD_JAR_PATH" ]; then
             AUTO_FETCH_FOR_DECOMPOSE="true"
             MOD_JAR_PATH=""
+          fi
+          if [ -n "$MOD_JAR_PATH_MATRIX" ]; then
+            AUTO_FIX_CORRUPTED="false"
+            AUTO_FIX_ONLY="false"
           fi
           if [ -z "$MOD_DESCRIPTION" ] || [ ! -f "$MOD_DESCRIPTION" ]; then
             if [ -f ".workflow_state/setup/selected-description.txt" ]; then
@@ -960,30 +846,10 @@ jobs:
 
       - name: Select OpenRouter model
         shell: bash
-        env:
-          JOB_INDEX: ${{ matrix.job_index }}
         run: |
           python3 - <<'PY'
-          import hashlib
           import os
-          import random
-          
-          choices = [
-              "openrouter/hunter-alpha",
-              "nvidia/nemotron-3-super-120b-a12b:free",
-          ]
-          
-          seed = "-".join([
-              os.environ.get("GITHUB_RUN_ID", ""),
-              os.environ.get("GITHUB_RUN_ATTEMPT", ""),
-              os.environ.get("GITHUB_JOB", ""),
-              os.environ.get("JOB_INDEX", ""),
-          ])
-          if seed.strip("-"):
-              idx = int(hashlib.sha256(seed.encode("utf-8")).hexdigest(), 16) % len(choices)
-              model = choices[idx]
-          else:
-              model = random.choice(choices)
+          model = "openrouter/hunter-alpha"
           
           env_path = os.environ.get("GITHUB_ENV")
           with open(env_path, "a", encoding="utf-8") as handle:
