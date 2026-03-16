@@ -1318,17 +1318,14 @@ jobs:
                 status=r.get("status", "-"),
                 calls=calls,
                 publish=publish_status,
-                note=note.replace("
-", " "),
+                note=note.replace("\n", " "),
               )
             )
 
           summary_dir = Path(".workflow_artifacts/summary")
           summary_dir.mkdir(parents=True, exist_ok=True)
           summary_path = summary_dir / "SUMMARY.md"
-          summary_path.write_text("
-".join(lines) + "
-", encoding="utf-8")
+          summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
           summary_json = {
             "total": total,
