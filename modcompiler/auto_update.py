@@ -3168,17 +3168,20 @@ gradle.projectsEvaluated {
 
         def list_tasks() -> set[str]:
             try:
-                cmd = ["./gradlew", "tasks", "--all", "--no-daemon"]
-                if init_script and init_script.exists():
-                    cmd += ["-I", str(init_script)]
-                result = subprocess.run(
-                    cmd,
-                    cwd=str(workspace_root),
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                    timeout=300,
-                )
+                def run_list() -> subprocess.CompletedProcess[str]:
+                    cmd = ["./gradlew", "tasks", "--all", "--no-daemon"]
+                    if init_script and init_script.exists():
+                        cmd += ["-I", str(init_script)]
+                    return subprocess.run(
+                        cmd,
+                        cwd=str(workspace_root),
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=300,
+                    )
+
+                result = run_list()
                 output = result.stdout or ""
                 tasks = set()
                 for line in output.splitlines():
@@ -3186,6 +3189,22 @@ gradle.projectsEvaluated {
                         name = line.split(" - ", 1)[0].strip()
                         if name and " " not in name:
                             tasks.add(name)
+
+                if not tasks:
+                    pom_errors = extract_corrupt_poms(result.stderr or "")
+                    if pom_errors and purge_gradle_poms(pom_errors):
+                        print(
+                            f"DEBUG[_prepare_gradle_sources]: Cleaned corrupted POMs while listing tasks: {pom_errors}",
+                            file=sys.stderr,
+                        )
+                        result = run_list()
+                        output = result.stdout or ""
+                        for line in output.splitlines():
+                            if " - " in line:
+                                name = line.split(" - ", 1)[0].strip()
+                                if name and " " not in name:
+                                    tasks.add(name)
+
                 return tasks
             except Exception:
                 return set()
@@ -3257,6 +3276,13 @@ gradle.projectsEvaluated {
                                 removed = True
                             except Exception:
                                 continue
+                            for suffix in (".sha1", ".md5", ".sha256", ".sha512"):
+                                sidecar = path.with_name(path.name + suffix)
+                                if sidecar.exists():
+                                    try:
+                                        sidecar.unlink()
+                                    except Exception:
+                                        pass
                 except Exception:
                     continue
             return removed
@@ -3298,6 +3324,18 @@ gradle.projectsEvaluated {
                     )
                     break
             if result.returncode != 0:
+                pom_errors = extract_corrupt_poms(result.stderr or "")
+                if pom_errors:
+                    print(
+                        f"DEBUG[_prepare_gradle_sources]: {candidate} failed with POM parse errors; "
+                        f"attempting cache cleanup for {pom_errors}",
+                        file=sys.stderr,
+                    )
+                    if purge_gradle_poms(pom_errors):
+                        retry = run_task(candidate)
+                        stdout_tail = retry.stdout[-1000:] if retry.stdout else ""
+                        stderr_tail = retry.stderr[-1000:] if retry.stderr else ""
+                        result = retry
                 print(
                     f"DEBUG[_prepare_gradle_sources]: {candidate} failed (exit {result.returncode}). "
                     f"STDOUT: {stdout_tail} STDERR: {stderr_tail}",
