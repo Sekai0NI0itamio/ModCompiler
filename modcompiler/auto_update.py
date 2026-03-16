@@ -3235,6 +3235,32 @@ gradle.projectsEvaluated {
             filtered = [cand for cand in candidates if cand in available]
             return filtered or candidates
 
+        def extract_corrupt_poms(stderr_text: str) -> list[str]:
+            if not stderr_text:
+                return []
+            matches = re.findall(r"\\b([A-Za-z0-9_.-]+\\.pom)\\b", stderr_text)
+            return sorted({m for m in matches})
+
+        def purge_gradle_poms(pom_names: list[str]) -> bool:
+            if not pom_names:
+                return False
+            caches_root = Path.home() / ".gradle" / "caches"
+            if not caches_root.exists():
+                return False
+            removed = False
+            for pom_name in pom_names:
+                try:
+                    for path in caches_root.rglob(pom_name):
+                        if path.is_file():
+                            try:
+                                path.unlink()
+                                removed = True
+                            except Exception:
+                                continue
+                except Exception:
+                    continue
+            return removed
+
         attempted = set()
         available = list_tasks()
         if available and task not in available:
@@ -3248,7 +3274,22 @@ gradle.projectsEvaluated {
                 continue
             attempted.add(candidate)
             result = run_task(candidate)
+            stdout_tail = result.stdout[-1000:] if result.stdout else ""
+            stderr_tail = result.stderr[-1000:] if result.stderr else ""
+
             if result.returncode == 0:
+                pom_errors = extract_corrupt_poms(result.stderr or "")
+                if pom_errors:
+                    print(
+                        f"DEBUG[_prepare_gradle_sources]: {candidate} emitted POM parse errors; "
+                        f"attempting cache cleanup for {pom_errors}",
+                        file=sys.stderr,
+                    )
+                    if purge_gradle_poms(pom_errors):
+                        retry = run_task(candidate)
+                        stdout_tail = retry.stdout[-1000:] if retry.stdout else ""
+                        stderr_tail = retry.stderr[-1000:] if retry.stderr else ""
+                        result = retry
                 task = candidate
                 if _get_library_sources(version_dir, target_version, target_loader, allow_prepare=False):
                     print(
@@ -3256,15 +3297,20 @@ gradle.projectsEvaluated {
                         file=sys.stderr,
                     )
                     break
-            stdout_tail = result.stdout[-1000:] if result.stdout else ""
-            stderr_tail = result.stderr[-1000:] if result.stderr else ""
-            print(
-                f"DEBUG[_prepare_gradle_sources]: {candidate} failed (exit {result.returncode}). "
-                f"STDOUT: {stdout_tail} STDERR: {stderr_tail}",
-                file=sys.stderr,
-            )
-            if f"Task '{candidate}' not found" in stdout_tail or f"Task '{candidate}' not found" in stderr_tail:
-                continue
+            if result.returncode != 0:
+                print(
+                    f"DEBUG[_prepare_gradle_sources]: {candidate} failed (exit {result.returncode}). "
+                    f"STDOUT: {stdout_tail} STDERR: {stderr_tail}",
+                    file=sys.stderr,
+                )
+                if f"Task '{candidate}' not found" in stdout_tail or f"Task '{candidate}' not found" in stderr_tail:
+                    continue
+            elif stderr_tail:
+                print(
+                    f"DEBUG[_prepare_gradle_sources]: {candidate} completed with warnings. "
+                    f"STDERR: {stderr_tail}",
+                    file=sys.stderr,
+                )
     except Exception as exc:
         print(f"DEBUG[_prepare_gradle_sources]: Failed to run {task}: {exc}", file=sys.stderr)
 
