@@ -74,6 +74,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       key_count: ${{ steps.matrix.outputs.key_count }}
       total_targets: ${{ steps.matrix.outputs.total_targets }}
+      has_base_decompiled: ${{ steps.base_decompiled.outputs.has_base_decompiled }}
     steps:
       - uses: actions/checkout@v4
 
@@ -496,6 +497,16 @@ jobs:
           )
           PY
 
+      - id: base_decompiled
+        name: Detect base decompiled cache
+        shell: bash
+        run: |
+          if [ -d ".workflow_state/plan/_decompiled" ] && [ "$(find .workflow_state/plan/_decompiled -type f 2>/dev/null | head -n 1)" != "" ]; then
+            echo "has_base_decompiled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_base_decompiled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: setup-artifacts
@@ -507,9 +518,11 @@ jobs:
           path: .workflow_state/plan
 
       - uses: actions/upload-artifact@v4
+        if: ${{ steps.base_decompiled.outputs.has_base_decompiled == 'true' }}
         with:
           name: base-decompiled
           path: .workflow_state/plan/_decompiled
+          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.auto_fix_corrupted || inputs.auto_fix_only }}
@@ -588,6 +601,8 @@ jobs:
           path: .workflow_state/plan
 
       - uses: actions/download-artifact@v4
+        if: ${{ needs.setup.outputs.has_base_decompiled == 'true' }}
+        continue-on-error: true
         with:
           name: base-decompiled
           path: .workflow_state/base-decompiled
