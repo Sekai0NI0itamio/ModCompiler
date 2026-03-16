@@ -251,6 +251,8 @@ class OpenRouterClient:
                 )
             except ModCompilerError as e:
                 last_error = e
+                if "PySocks is required to use OPENROUTER_SOCKS_PROXY" in str(e):
+                    raise
                 print(
                     f"OpenRouter primary attempt {attempt}/{max_attempts} failed: {e}",
                     file=sys.stderr,
@@ -269,6 +271,8 @@ class OpenRouterClient:
                     )
                 except ModCompilerError as e:
                     last_error = e
+                    if "PySocks is required to use OPENROUTER_SOCKS_PROXY" in str(e):
+                        raise
                     print(
                         f"OpenRouter fallback attempt {attempt}/{max_attempts} failed: {e}",
                         file=sys.stderr,
