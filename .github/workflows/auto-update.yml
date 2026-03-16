@@ -356,6 +356,7 @@ jobs:
       matrix: ${{ fromJson(needs.prepare-corrupt-downloads.outputs.matrix) }}
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_KEY_SEED: ${{ matrix.batch_id }}
     steps:
       - uses: actions/checkout@v4
 
@@ -667,6 +668,7 @@ jobs:
       matrix: ${{ fromJson(needs.prepare-targets.outputs.matrix) }}
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      OPENROUTER_KEY_SEED: ${{ matrix.slug }}
     steps:
       - uses: actions/checkout@v4
 

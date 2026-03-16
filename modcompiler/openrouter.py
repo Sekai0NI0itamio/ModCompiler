@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import random
@@ -23,6 +24,7 @@ WINDOW_SECONDS = 60
 class KeyState:
     key: str
     request_timestamps: list[float] = field(default_factory=list)
+    cooldown_until: float = 0.0
     _lock: threading.Lock = field(default_factory=threading.Lock)
 
     def add_request(self) -> None:
@@ -37,7 +39,16 @@ class KeyState:
             return sum(1 for ts in self.request_timestamps if now - ts < WINDOW_SECONDS)
 
     def is_available(self) -> bool:
-        return self.get_request_count() < UNAVAILABLE_THRESHOLD
+        return self.get_request_count() < UNAVAILABLE_THRESHOLD and not self.is_in_cooldown()
+
+    def is_in_cooldown(self) -> bool:
+        return time.time() < self.cooldown_until
+
+    def mark_cooldown(self, seconds: float) -> None:
+        with self._lock:
+            until = time.time() + max(0.0, seconds)
+            if until > self.cooldown_until:
+                self.cooldown_until = until
 
 
 class OpenRouterClient:
@@ -55,6 +66,8 @@ class OpenRouterClient:
         self.fallback_models = fallback_models or [fallback_model]
         self._lock = threading.Lock()
         self._last_key_state: KeyState | None = None
+        self._assigned_key_state: KeyState | None = None
+        self._assign_key_from_env()
 
     def _load_keys_from_env(self) -> list[str]:
         raw_keys = os.environ.get("OPENROUTER_API_KEY", "")
@@ -82,16 +95,61 @@ class OpenRouterClient:
         with self._lock:
             if not self.key_states:
                 return None
+            if self._assigned_key_state and self._assigned_key_state in self.key_states:
+                if self._assigned_key_state.is_available():
+                    return self._assigned_key_state
             available = [ks for ks in self.key_states if ks.is_available()]
-            pool = available or self.key_states
+            pool = available
+            if not pool:
+                pool = [ks for ks in self.key_states if not ks.is_in_cooldown()]
+            if not pool:
+                pool = self.key_states
             counts = [(ks, ks.get_request_count()) for ks in pool]
             min_count = min(count for _ks, count in counts)
             least_used = [ks for ks, count in counts if count == min_count]
-            return random.choice(least_used)
+            chosen = random.choice(least_used)
+            if self._assigned_key_state is None or not self._assigned_key_state.is_available():
+                self._assigned_key_state = chosen
+            return chosen
 
     def _disable_key(self, key: str) -> None:
         with self._lock:
             self.key_states = [ks for ks in self.key_states if ks.key != key]
+            if self._assigned_key_state and self._assigned_key_state.key == key:
+                self._assigned_key_state = None
+
+    def _assign_key_from_env(self) -> None:
+        if not self.key_states:
+            return
+        index_raw = os.environ.get("OPENROUTER_KEY_INDEX", "").strip()
+        if index_raw:
+            try:
+                index = int(index_raw)
+            except ValueError:
+                index = None
+            if index is not None:
+                self._assigned_key_state = self.key_states[index % len(self.key_states)]
+                return
+        seed = os.environ.get("OPENROUTER_KEY_SEED", "").strip()
+        if not seed:
+            seed = _default_job_seed()
+        if seed:
+            index = _stable_index(seed, len(self.key_states))
+            self._assigned_key_state = self.key_states[index]
+
+    def set_job_seed(self, seed: str) -> None:
+        if not seed or not self.key_states:
+            return
+        with self._lock:
+            index = _stable_index(seed, len(self.key_states))
+            self._assigned_key_state = self.key_states[index]
+
+    def _mark_last_key_cooldown(self, seconds: float) -> None:
+        if self._last_key_state is None:
+            return
+        self._last_key_state.mark_cooldown(seconds)
+        if self._assigned_key_state and self._assigned_key_state.key == self._last_key_state.key:
+            self._assigned_key_state = None
 
     def chat_completion(
         self,
@@ -142,16 +200,24 @@ class OpenRouterClient:
         except urllib.error.HTTPError as error:
             error_body = error.read().decode("utf-8", errors="replace")
             if error.code == 429:
-                raise ModCompilerError(f"Rate limited on all keys. Try again later. Details: {error_body[:500]}")
+                self._mark_last_key_cooldown(WINDOW_SECONDS)
+                raise ModCompilerError(f"Rate limited on current key. Retrying with another key. Details: {error_body[:500]}")
             if error.code == 401:
                 if self._last_key_state is not None:
                     self._disable_key(self._last_key_state.key)
                 raise ModCompilerError(f"Invalid API key. Details: {error_body[:500]}")
+            if _is_provider_error(error_body):
+                self._mark_last_key_cooldown(30.0)
             raise ModCompilerError(f"OpenRouter API error {error.code}: {error_body[:500]}")
         except urllib.error.URLError as error:
+            self._mark_last_key_cooldown(5.0)
             raise ModCompilerError(f"Failed to connect to OpenRouter: {error.reason}")
 
         if "choices" not in result:
+            if isinstance(result, dict):
+                err = json.dumps(result)
+                if _is_provider_error(err):
+                    self._mark_last_key_cooldown(30.0)
             raise ModCompilerError(f"Invalid OpenRouter response: {json.dumps(result)[:500]}")
 
         return result
@@ -164,8 +230,7 @@ class OpenRouterClient:
         tools: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         last_error: Exception | None = None
-        max_attempts = 5
-        provider_error_short_circuit = False
+        max_attempts = _max_attempts()
 
         for attempt in range(1, max_attempts + 1):
             try:
@@ -178,14 +243,10 @@ class OpenRouterClient:
                 )
             except ModCompilerError as e:
                 last_error = e
-                if _is_provider_error(str(e)):
-                    provider_error_short_circuit = True
                 print(
                     f"OpenRouter primary attempt {attempt}/{max_attempts} failed: {e}",
                     file=sys.stderr,
                 )
-                if provider_error_short_circuit:
-                    break
                 time.sleep(_retry_delay(attempt))
 
         for model in self.fallback_models:
@@ -204,10 +265,6 @@ class OpenRouterClient:
                         f"OpenRouter fallback attempt {attempt}/{max_attempts} failed: {e}",
                         file=sys.stderr,
                     )
-                    if _is_rate_limited(str(e)):
-                        break
-                    if _is_provider_error(str(e)):
-                        break
                     time.sleep(_retry_delay(attempt))
 
         if last_error is not None:
@@ -229,6 +286,42 @@ def _retry_delay(attempt: int) -> float:
     base = min(2 ** (attempt - 1), 30)
     jitter = random.uniform(0, 0.5 * base)
     return base + jitter
+
+
+def _max_attempts() -> int:
+    raw = os.environ.get("OPENROUTER_MAX_ATTEMPTS", "").strip()
+    if not raw:
+        return 5
+    try:
+        return max(1, min(50, int(raw)))
+    except ValueError:
+        return 5
+
+
+def _stable_index(seed: str, count: int) -> int:
+    if count <= 0:
+        return 0
+    digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
+    return int(digest, 16) % count
+
+
+def _default_job_seed() -> str:
+    parts = []
+    for key in (
+        "OPENROUTER_JOB_SEED",
+        "MODCOMPILER_TARGET",
+        "MODCOMPILER_VERSION",
+        "MODCOMPILER_LOADER",
+        "GITHUB_JOB",
+        "GITHUB_RUN_ID",
+        "GITHUB_RUN_ATTEMPT",
+        "GITHUB_WORKFLOW",
+        "GITHUB_SHA",
+    ):
+        value = os.environ.get(key, "").strip()
+        if value:
+            parts.append(value)
+    return "|".join(parts)
 
 
 class ModCompilerError(Exception):

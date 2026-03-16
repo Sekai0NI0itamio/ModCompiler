@@ -2052,6 +2052,9 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         
+        if not os.environ.get("OPENROUTER_KEY_SEED"):
+            os.environ["OPENROUTER_KEY_SEED"] = slug
+
         from modcompiler.openrouter import OpenRouterClient
 
         client = OpenRouterClient()
