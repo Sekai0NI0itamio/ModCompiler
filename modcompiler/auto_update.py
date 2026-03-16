@@ -1332,7 +1332,7 @@ def get_tools_definition() -> list[dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "library_search",
-                "description": "Search for a class or method in Minecraft sources ONLY (.java or .java.patch; not Forge/Fabric/NeoForge)",
+                "description": "Search for a class or method in Minecraft sources ONLY (.java or .java.patch; not Forge/Fabric/NeoForge). Returns top 3 matches with 2KB previews.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -2207,6 +2207,44 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
                 items.append(f"{prefix}{rel}{'/' if item.is_dir() else ''}")
             return "\n".join(items)
 
+        def build_library_tree(root: Path, max_chars: int = 6000) -> str:
+            if not root or not root.exists():
+                return ""
+            lines: list[str] = []
+            total = 0
+            truncated = False
+            root = root.resolve()
+            for dirpath, dirnames, filenames in os.walk(root):
+                dirnames.sort()
+                filenames.sort()
+                rel_dir = Path(dirpath).relative_to(root)
+                depth = 0 if rel_dir == Path(".") else len(rel_dir.parts)
+                if rel_dir != Path("."):
+                    line = f"{'  ' * depth}{rel_dir.name}/"
+                    if total + len(line) + 1 > max_chars:
+                        truncated = True
+                        break
+                    lines.append(line)
+                    total += len(line) + 1
+                for name in filenames:
+                    line = f"{'  ' * (depth + 1)}{name}"
+                    if total + len(line) + 1 > max_chars:
+                        truncated = True
+                        break
+                    lines.append(line)
+                    total += len(line) + 1
+                if truncated:
+                    break
+            if truncated:
+                marker = "... (truncated)"
+                if total + len(marker) + 1 <= max_chars:
+                    lines.append(marker)
+                elif lines:
+                    lines[-1] = marker
+                else:
+                    lines = [marker]
+            return "\n".join(lines)
+
         def get_all_java_files(base_dir: Path) -> list[tuple[str, str]]:
             files = []
             if base_dir.exists():
@@ -2266,6 +2304,18 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
 
         src_tree = get_dir_tree(src_dir)
         ref_tree = get_dir_tree(ref_dir) if ref_dir.exists() else ""
+
+        lib_sources = _get_library_sources(version_dir, target_version, target_loader)
+        library_tree_block = "\nMINECRAFT LIBRARY TREE: not available\n"
+        if lib_sources:
+            lib_tree = build_library_tree(lib_sources, max_chars=6000)
+            if lib_tree:
+                library_tree_block = (
+                    "\nMINECRAFT LIBRARY TREE (top-down, truncated to 6 KB):\n"
+                    f"{lib_tree}\n"
+                )
+            else:
+                library_tree_block = "\nMINECRAFT LIBRARY TREE: (empty)\n"
         
         initial_msg = f"""Update this mod for {target_loader} {target_version}.
 
@@ -2342,6 +2392,7 @@ USER DESCRIPTION:
 
 TARGET VERSION: {target_version} (valid in this system — do NOT change it)
 {fix_note}{role_model_note}
+{library_tree_block}
 
 PATH INFO:
 - READ original source: "java/com/package/File.java"
@@ -2422,7 +2473,6 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
         })
         messages.extend(all_file_read_results)
 
-        lib_sources = _get_library_sources(version_dir, target_version, target_loader)
         if lib_sources:
             library_queries = guess_library_queries(all_src_contents)
             search_calls: list[dict[str, Any]] = []
@@ -3745,7 +3795,22 @@ def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> 
                     results.append(alt)
                     seen.add(alt)
         if results:
-            return "Found direct match(es):\n" + "\n".join(f"  - {r}" for r in results)
+            total_direct = len(results)
+            top_direct = results[:3]
+            lines = [
+                f"Found {total_direct} direct match(es) for '{query}'. Showing top 3 with 2KB previews:"
+            ]
+            for idx, rel in enumerate(top_direct, 1):
+                lines.append(f"{idx}) {rel}")
+                lines.append("--- preview ---")
+                try:
+                    content = (library_sources / rel).read_text(encoding="utf-8", errors="ignore")
+                    if len(content) > 2000:
+                        content = content[:2000] + "\n... (truncated)"
+                    lines.append(content)
+                except Exception as e:
+                    lines.append(f"[Error reading file: {e}]")
+            return "\n".join(lines)
 
     # Scan .java and .java.patch for name matches.
     for rel, name_lower, stem in entries:
@@ -3778,8 +3843,22 @@ def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> 
     
     if not results:
         return f"No results found for: {query}"
-    
-    return f"Found {len(results)} matches for '{query}':\n" + "\n".join(f"  - {r}" for r in results[:30])
+
+    top_results = results[:3]
+    lines = [
+        f"Found {len(results)} matches for '{query}'. Showing top 3 with 2KB previews:"
+    ]
+    for idx, rel in enumerate(top_results, 1):
+        lines.append(f"{idx}) {rel}")
+        lines.append("--- preview ---")
+        try:
+            content = (library_sources / rel).read_text(encoding="utf-8", errors="ignore")
+            if len(content) > 2000:
+                content = content[:2000] + "\n... (truncated)"
+            lines.append(content)
+        except Exception as e:
+            lines.append(f"[Error reading file: {e}]")
+    return "\n".join(lines)
 
 
 def _tool_file_write(version_dir: Path, args: dict[str, str]) -> str:
