@@ -20,6 +20,11 @@ on:
         options:
           - "immediately"
           - "bundle-only"
+      working_modrinth_version_id:
+        description: "Optional: Modrinth version ID of a known-good jar to use as a role model"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -35,6 +40,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       key_count: ${{ steps.matrix.outputs.key_count }}
       total_targets: ${{ steps.matrix.outputs.total_targets }}
+      has_working_role_model: ${{ steps.working_role_model.outputs.has_working_role_model }}
       has_base_decompiled: ${{ steps.base_decompiled.outputs.has_base_decompiled }}
       has_corrupt_project: ${{ steps.corrupt_artifacts.outputs.has_corrupt_project }}
       has_corrupt_downloads: ${{ steps.corrupt_artifacts.outputs.has_corrupt_downloads }}
@@ -212,6 +218,72 @@ jobs:
           
           print(f"Resolved jar: {resolved_jar}")
           print(f"Resolved description: {resolved_desc or '-'}")
+          PY
+
+      - id: working_role_model
+        name: Download working role model (optional)
+        shell: bash
+        env:
+          WORKING_VERSION_ID: ${{ inputs.working_modrinth_version_id }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          from pathlib import Path
+
+          from modcompiler.auto_update import _download_modrinth_file
+          from modcompiler.common import load_json
+          from modcompiler.decompile import decompile_jar_internal
+          from modcompiler.modrinth import (
+              ModrinthClient,
+              build_modrinth_user_agent,
+              select_primary_modrinth_file,
+          )
+
+          version_id = os.environ.get("WORKING_VERSION_ID", "").strip()
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          if not version_id:
+              output_path.write_text("has_working_role_model=false\n", encoding="utf-8")
+              print("No working Modrinth version id provided; skipping.")
+              raise SystemExit(0)
+
+          token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
+          client = ModrinthClient(token=token, user_agent=build_modrinth_user_agent())
+          version = client.request_json("GET", f"/version/{urllib.parse.quote(version_id, safe='')}")
+          if not isinstance(version, dict):
+              raise SystemExit("Unexpected Modrinth version response.")
+
+          file_info = select_primary_modrinth_file(version.get("files", []))
+          if not file_info:
+              raise SystemExit("No downloadable file found for the provided Modrinth version.")
+          file_url = str(file_info.get("url", "")).strip()
+          filename = str(file_info.get("filename", "")).strip() or f"{version_id}.jar"
+          if not file_url:
+              raise SystemExit("Missing download URL for the provided Modrinth version.")
+
+          jar_dir = Path(".workflow_state/working-role-model-download")
+          jar_dir.mkdir(parents=True, exist_ok=True)
+          jar_path = jar_dir / filename
+          _download_modrinth_file(file_url, jar_path)
+
+          work_dir = Path(".workflow_state/working-role-model")
+          manifest = load_json(Path("version-manifest.json"))
+          result = decompile_jar_internal(jar_path, manifest, output_dir=work_dir)
+
+          meta = {
+              "version_id": version_id,
+              "version_number": version.get("version_number", ""),
+              "game_versions": version.get("game_versions", []) or [],
+              "loaders": version.get("loaders", []) or [],
+              "date_published": version.get("date_published") or version.get("date") or "",
+              "mod_info": result.metadata,
+          }
+          (work_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+          output_path.write_text("has_working_role_model=true\n", encoding="utf-8")
+          print(f"Prepared working role model from Modrinth version {version_id}.")
           PY
 
       - name: Prepare auto-fix jar matrix
@@ -400,6 +472,12 @@ jobs:
           path: .workflow_state/plan
 
       - uses: actions/upload-artifact@v4
+        if: ${{ steps.working_role_model.outputs.has_working_role_model == 'true' }}
+        with:
+          name: working-role-model
+          path: .workflow_state/working-role-model
+
+      - uses: actions/upload-artifact@v4
         if: ${{ steps.base_decompiled.outputs.has_base_decompiled == 'true' }}
         with:
           name: base-decompiled
@@ -490,6 +568,12 @@ jobs:
         with:
           name: plan-state
           path: .workflow_state/plan
+
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.setup.outputs.has_working_role_model == 'true' }}
+        with:
+          name: working-role-model
+          path: .workflow_state/working-role-model
 
       - uses: actions/download-artifact@v4
         if: ${{ needs.setup.outputs.has_base_decompiled == 'true' }}
@@ -641,6 +725,7 @@ jobs:
           AUTO_FIX_ONLY: true
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MODCOMPILER_WORKING_ROLE_MODEL_DIR: ${{ needs.setup.outputs.has_working_role_model == 'true' && '.workflow_state/working-role-model' || '' }}
           PYTHONUNBUFFERED: "1"
           MODCOMPILER_DECOMPILE_STREAM: "1"
         run: |

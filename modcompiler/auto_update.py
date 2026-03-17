@@ -853,6 +853,87 @@ def _select_closest_role_model(target_version: str, candidates: list[dict[str, A
     return best
 
 
+def _select_role_model_candidate(target_version: str, model_info: dict[str, Any]) -> dict[str, Any] | None:
+    candidates = model_info.get("candidates", []) or []
+    preferred_id = str(model_info.get("preferred_version_id") or "").strip()
+    if preferred_id:
+        for cand in candidates:
+            if str(cand.get("version_id", "")).strip() == preferred_id:
+                return cand
+    return _select_closest_role_model(target_version, candidates)
+
+
+def _load_working_role_model_from_env() -> dict[str, dict[str, Any]]:
+    root_raw = os.environ.get("MODCOMPILER_WORKING_ROLE_MODEL_DIR", "").strip()
+    if not root_raw:
+        return {}
+    root = Path(root_raw)
+    if not root.exists():
+        print(f"DEBUG: Working role model dir not found: {root}", file=sys.stderr)
+        return {}
+
+    meta: dict[str, Any] = {}
+    meta_path = root / "meta.json"
+    if meta_path.exists():
+        try:
+            payload = load_json(meta_path)
+            if isinstance(payload, dict):
+                meta = payload
+        except Exception as exc:
+            print(f"DEBUG: Failed to read role model meta.json: {exc}", file=sys.stderr)
+
+    loaders = [str(l).strip() for l in meta.get("loaders", []) if str(l).strip()]
+    game_versions = [str(v).strip() for v in meta.get("game_versions", []) if str(v).strip()]
+    version_id = str(meta.get("version_id") or "user-provided")
+    version_number = str(meta.get("version_number") or "")
+
+    published_at = 0.0
+    published_raw = meta.get("date_published") or meta.get("published_at") or ""
+    if isinstance(published_raw, (int, float)):
+        published_at = float(published_raw)
+    elif isinstance(published_raw, str) and published_raw.strip():
+        published_at = _parse_modrinth_datetime(published_raw.strip())
+
+    if not loaders or not game_versions or not version_number:
+        mod_info = _parse_mod_info(root)
+        if not loaders:
+            loader = str(mod_info.get("loader", "")).strip()
+            if loader:
+                loaders = [loader]
+        if not game_versions:
+            supported = str(mod_info.get("supported_minecraft", "")).strip()
+            if supported:
+                game_versions = [supported]
+        if not version_number:
+            version_number = str(mod_info.get("mod_version", "")).strip()
+
+    if not loaders:
+        print("DEBUG: Working role model missing loader metadata; skipping.", file=sys.stderr)
+        return {}
+
+    candidate = {
+        "path": str(root),
+        "version_id": version_id,
+        "version_number": version_number,
+        "game_versions": game_versions,
+        "published_at": published_at,
+        "rating": 1000.0,
+        "confidence": 1.0,
+        "tag": "working",
+        "verdict": "pass",
+    }
+
+    role_models: dict[str, dict[str, Any]] = {}
+    for loader in loaders:
+        role_models[loader] = {
+            "candidates": [candidate],
+            "unverified": False,
+            "preferred_version_id": version_id,
+            "source": "user",
+        }
+    return role_models
+
+
 def _select_latest_modrinth_version(versions: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not versions:
         return None
@@ -1387,6 +1468,7 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     supported_versions_for_range = context.get("supported_versions_for_range", [])
     latest_supported = context.get("latest_supported_version", "")
     role_model_dir = context.get("role_model_dir", "")
+    role_model_source = context.get("role_model_source", "")
     role_model_version = context.get("role_model_version", "")
     role_model_unverified = bool(context.get("role_model_unverified"))
     role_model_loader = context.get("role_model_loader", "")
@@ -1400,7 +1482,10 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
 
     role_model_block = ""
     if role_model_dir:
-        label = "ROLE MODEL SOURCE (verified working)" if not role_model_unverified else "ROLE MODEL SOURCE (unverified fallback)"
+        if role_model_source == "user":
+            label = "ROLE MODEL SOURCE (user-provided)"
+        else:
+            label = "ROLE MODEL SOURCE (verified working)" if not role_model_unverified else "ROLE MODEL SOURCE (unverified fallback)"
         role_loader = role_model_loader or target_l
         candidate_lines = ""
         if role_model_candidates:
@@ -1763,6 +1848,23 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             predecompiled_dir=predecompiled_dir,
             verification_entries=verification_entries,
         )
+
+    working_role_models = _load_working_role_model_from_env()
+    if working_role_models:
+        for loader, info in working_role_models.items():
+            existing = role_models.get(loader)
+            if existing:
+                existing_candidates = existing.get("candidates", []) or []
+                info_candidates = info.get("candidates", []) or []
+                existing["candidates"] = info_candidates + existing_candidates
+                if info.get("preferred_version_id"):
+                    existing["preferred_version_id"] = info["preferred_version_id"]
+                if info.get("source") and not existing.get("source"):
+                    existing["source"] = info.get("source")
+                if not info.get("unverified", False):
+                    existing["unverified"] = False
+            else:
+                role_models[loader] = info
         corruption_report_path = str(report_path)
 
     print("DEBUG: Starting decompile...", file=sys.stderr)
@@ -1940,8 +2042,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             effective_src = trimmed_src
             if not src_has_sources and target.loader in role_models:
                 model_info = role_models[target.loader]
-                candidates = model_info.get("candidates", []) or []
-                selected = _select_closest_role_model(target.minecraft_version, candidates)
+                selected = _select_role_model_candidate(target.minecraft_version, model_info)
                 if selected and selected.get("version_id") and selected.get("path"):
                     selected_id = str(selected.get("version_id"))
                     if selected_id in role_model_trimmed_cache:
@@ -1960,9 +2061,11 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             if target.loader in role_models:
                 model_info = role_models[target.loader]
                 candidates = model_info.get("candidates", []) or []
-                selected = _select_closest_role_model(target.minecraft_version, candidates)
+                selected = _select_role_model_candidate(target.minecraft_version, model_info)
                 context["role_model_dir"] = "reference/role-model"
                 context["role_model_unverified"] = bool(model_info.get("unverified"))
+                if model_info.get("source"):
+                    context["role_model_source"] = model_info.get("source")
                 context["role_model_loader"] = target.loader
                 context["role_model_candidates"] = [
                     {
