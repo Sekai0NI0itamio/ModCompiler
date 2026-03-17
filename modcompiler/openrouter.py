@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import os
 import random
+import socket
 import threading
 import time
 import sys
@@ -222,6 +224,9 @@ class OpenRouterClient:
             if _is_provider_error(error_body):
                 self._mark_last_key_cooldown(30.0)
             raise ModCompilerError(f"OpenRouter API error {error.code}: {error_body[:500]}")
+        except (http.client.RemoteDisconnected, ConnectionResetError, TimeoutError, socket.timeout) as error:
+            self._mark_last_key_cooldown(5.0)
+            raise ModCompilerError(f"Remote disconnected while contacting OpenRouter: {error}")
         except urllib.error.URLError as error:
             self._mark_last_key_cooldown(5.0)
             raise ModCompilerError(f"Failed to connect to OpenRouter: {error.reason}")
