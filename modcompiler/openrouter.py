@@ -160,8 +160,13 @@ class OpenRouterClient:
         temperature: float = 0.7,
         max_tokens: int | None = None,
         tools: list[dict[str, Any]] | None = None,
+        key_state: KeyState | None = None,
     ) -> dict[str, Any]:
-        key_state = self.select_key()
+        if key_state is None:
+            key_state = self.select_key()
+        else:
+            if key_state not in self.key_states:
+                raise ModCompilerError("No API keys available")
         if key_state is None:
             raise ModCompilerError("No API keys available")
 
@@ -218,10 +223,8 @@ class OpenRouterClient:
                 self._mark_last_key_cooldown(WINDOW_SECONDS)
                 raise ModCompilerError(f"Rate limited on current key. Retrying with another key. Details: {error_body[:500]}")
             if error.code == 402:
-                if self._last_key_state is not None:
-                    self._disable_key(self._last_key_state.key)
-                raise ModCompilerError(
-                    "Insufficient credits on current key. Retrying with another key. "
+                raise InsufficientCreditsError(
+                    "Insufficient credits on current key. "
                     f"Details: {error_body[:500]}"
                 )
             if error.code == 401:
@@ -257,6 +260,45 @@ class OpenRouterClient:
         last_error: Exception | None = None
         max_attempts = _max_attempts()
 
+        def _try_fallback_with_key(key_state: KeyState) -> tuple[dict[str, Any] | None, bool]:
+            """Return (result, all_insufficient)."""
+            nonlocal last_error
+            if not self.fallback_models:
+                return None, False
+            all_insufficient = True
+            for model in self.fallback_models:
+                model_insufficient = False
+                for attempt in range(1, max_attempts + 1):
+                    try:
+                        return (
+                            self.chat_completion(
+                                messages,
+                                model=model,
+                                temperature=temperature,
+                                max_tokens=max_tokens,
+                                tools=tools,
+                                key_state=key_state,
+                            ),
+                            False,
+                        )
+                    except InsufficientCreditsError as e:
+                        last_error = e
+                        model_insufficient = True
+                        break
+                    except ModCompilerError as e:
+                        last_error = e
+                        all_insufficient = False
+                        if "PySocks is required to use OPENROUTER_SOCKS_PROXY" in str(e):
+                            raise
+                        print(
+                            f"OpenRouter fallback attempt {attempt}/{max_attempts} failed: {e}",
+                            file=sys.stderr,
+                        )
+                        time.sleep(_retry_delay(attempt))
+                if not model_insufficient:
+                    all_insufficient = False
+            return None, all_insufficient
+
         for attempt in range(1, max_attempts + 1):
             try:
                 return self.chat_completion(
@@ -266,6 +308,21 @@ class OpenRouterClient:
                     max_tokens=max_tokens,
                     tools=tools,
                 )
+            except InsufficientCreditsError as e:
+                last_error = e
+                key_state = self._last_key_state
+                if key_state is None:
+                    raise
+                result, all_insufficient = _try_fallback_with_key(key_state)
+                if result is not None:
+                    return result
+                if all_insufficient:
+                    self._disable_key(key_state.key)
+                    if not self.key_states or (
+                        self._assigned_key_state and self._assigned_key_state.key == key_state.key
+                    ):
+                        raise last_error
+                    continue
             except ModCompilerError as e:
                 last_error = e
                 if "PySocks is required to use OPENROUTER_SOCKS_PROXY" in str(e):
@@ -286,6 +343,16 @@ class OpenRouterClient:
                         max_tokens=max_tokens,
                         tools=tools,
                     )
+                except InsufficientCreditsError as e:
+                    last_error = e
+                    key_state = self._last_key_state
+                    if key_state is not None:
+                        self._disable_key(key_state.key)
+                        if not self.key_states or (
+                            self._assigned_key_state and self._assigned_key_state.key == key_state.key
+                        ):
+                            raise last_error
+                    continue
                 except ModCompilerError as e:
                     last_error = e
                     if "PySocks is required to use OPENROUTER_SOCKS_PROXY" in str(e):
@@ -400,6 +467,10 @@ def _open_with_proxy(
 
 
 class ModCompilerError(Exception):
+    pass
+
+
+class InsufficientCreditsError(ModCompilerError):
     pass
 
 
