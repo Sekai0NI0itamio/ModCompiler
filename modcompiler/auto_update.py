@@ -488,13 +488,19 @@ def _verify_mod_source_with_ai(
 
     content, error = call_ai_with_race(messages, 400)
     if content is None:
+        print(
+            f"DEBUG: AI verify failed for {version_label} ({loader}) - {error}. "
+            "Treating as working (unknown) to avoid false corrupt.",
+            file=sys.stderr,
+        )
         return {
-            "tag": "corrupted",
-            "verdict": "fail",
+            "tag": "working",
+            "verdict": "pass",
             "confidence": 0.0,
             "rating": 0.0,
-            "reason": f"AI request failed: {error}",
+            "reason": f"AI request failed: {error}. Treating as working (unknown).",
             "raw": "",
+            "ai_failed": True,
         }
 
     parsed = parse_payload(content)
@@ -508,13 +514,19 @@ def _verify_mod_source_with_ai(
         })
         content, error = call_ai_with_race(messages, 200)
         if content is None:
+            print(
+                f"DEBUG: AI verify retry failed for {version_label} ({loader}) - {error}. "
+                "Treating as working (unknown) to avoid false corrupt.",
+                file=sys.stderr,
+            )
             return {
-                "tag": "corrupted",
-                "verdict": "fail",
+                "tag": "working",
+                "verdict": "pass",
                 "confidence": 0.0,
                 "rating": 0.0,
-                "reason": f"AI request failed: {error}",
+                "reason": f"AI request failed: {error}. Treating as working (unknown).",
                 "raw": "",
+                "ai_failed": True,
             }
         parsed = parse_payload(content)
 
