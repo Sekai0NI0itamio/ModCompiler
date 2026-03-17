@@ -1848,6 +1848,7 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
             predecompiled_dir=predecompiled_dir,
             verification_entries=verification_entries,
         )
+        corruption_report_path = str(report_path)
 
     working_role_models = _load_working_role_model_from_env()
     if working_role_models:
@@ -1865,7 +1866,6 @@ def command_auto_update_decompose(args: argparse.Namespace) -> int:
                     existing["unverified"] = False
             else:
                 role_models[loader] = info
-        corruption_report_path = str(report_path)
 
     print("DEBUG: Starting decompile...", file=sys.stderr)
     decomp_dir = config.output_dir / "_decompiled"
