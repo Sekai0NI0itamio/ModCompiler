@@ -3789,7 +3789,7 @@ def _tool_library_dir(args: dict[str, str], library_sources: Path | None) -> str
 def _tool_library_read(args: dict[str, str], library_sources: Path | None) -> str:
     if not library_sources:
         return "Error: Minecraft library sources not available."
-    
+
     path = args.get("path", "")
     if not path:
         return "Error: path is required"
@@ -3829,30 +3829,212 @@ def _tool_library_read(args: dict[str, str], library_sources: Path | None) -> st
 
     if file_path is None:
         return f"Error: File not found: {raw_path}\n\nSearch for it using library_search first."
-    
+
+    def _parse_int(value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except Exception:
+            return default
+
+    start_line = _parse_int(args.get("start_line"), 0)
+    offset = _parse_int(args.get("offset"), 0)
+    max_lines = _parse_int(args.get("max_lines"), 0)
+    limit = _parse_int(args.get("limit"), 0)
+    if start_line <= 0 and offset > 0:
+        start_line = offset + 1
+    if max_lines <= 0 and limit > 0:
+        max_lines = limit
+
+    pattern = str(args.get("pattern", "") or "").strip()
+    context_lines = _parse_int(args.get("context_lines"), 3)
+    case_sensitive = _parse_bool(args.get("case_sensitive"), False)
+    regex_flag = args.get("regex")
+    regex_hint = bool(re.search(r"(\\.|\\(|\\)|\\[|\\]|\\{|\\}|\\+|\\*|\\?|\\||\\^|\\$)", pattern))
+    use_regex = _parse_bool(regex_flag, regex_hint)
+
     try:
-        content = file_path.read_text(encoding="utf-8")
-        if len(content) > 15000:
-            content = content[:15000] + "\n... (truncated)"
-        return f"=== Minecraft: {path} ===\n{content}"
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
     except Exception as e:
         return f"Error reading file: {e}"
+
+    lines = content.splitlines()
+    total_lines = len(lines)
+    header = f"=== Minecraft: {path} ({total_lines} lines) ==="
+
+    def render_lines(start_idx: int, end_idx: int) -> str:
+        rendered = []
+        width = len(str(end_idx))
+        for idx in range(start_idx, end_idx):
+            line_no = idx + 1
+            prefix = str(line_no).rjust(width)
+            rendered.append(f"{prefix} | {lines[idx]}")
+        return "\n".join(rendered)
+
+    if pattern:
+        flags = 0 if case_sensitive else re.IGNORECASE
+        try:
+            matcher = re.compile(pattern, flags) if use_regex else None
+        except re.error as exc:
+            return f"{header}\nError: invalid regex pattern: {exc}"
+        matches = []
+        for idx, line in enumerate(lines):
+            haystack = line if case_sensitive else line.lower()
+            found = matcher.search(line) if matcher else (pattern if case_sensitive else pattern.lower()) in haystack
+            if found:
+                start_idx = max(0, idx - context_lines)
+                end_idx = min(total_lines, idx + context_lines + 1)
+                matches.append((idx + 1, render_lines(start_idx, end_idx)))
+            if len(matches) >= 3:
+                break
+        if not matches:
+            return f"{header}\nNo matches found for pattern: {pattern}"
+        chunks = [header, f"Matches for pattern '{pattern}':"]
+        for line_no, snippet in matches:
+            chunks.append(f"--- match at line {line_no} ---")
+            chunks.append(snippet)
+        return "\n".join(chunks)
+
+    if start_line > 0 or max_lines > 0:
+        start_idx = max(0, start_line - 1)
+        end_idx = total_lines if max_lines <= 0 else min(total_lines, start_idx + max_lines)
+        if start_idx >= total_lines:
+            return f"{header}\nError: start_line {start_line} is beyond end of file."
+        return "\n".join(
+            [
+                header,
+                f"Lines {start_idx + 1}-{end_idx}:",
+                render_lines(start_idx, end_idx),
+            ]
+        )
+
+    # Default: return a truncated view with line numbers.
+    max_chars = 15000
+    rendered_lines = []
+    width = len(str(total_lines))
+    current_len = 0
+    for idx, line in enumerate(lines):
+        text = f"{str(idx + 1).rjust(width)} | {line}"
+        if current_len + len(text) + 1 > max_chars:
+            rendered_lines.append("... (truncated)")
+            break
+        rendered_lines.append(text)
+        current_len += len(text) + 1
+    return "\n".join([header, *rendered_lines])
+
+
+def _format_library_search_results(
+    library_sources: Path,
+    query: str,
+    results: list[dict[str, Any]],
+    *,
+    case_sensitive: bool,
+    use_regex: bool,
+    context_lines: int,
+    preview_chars: int,
+    path_filter: str,
+) -> str:
+    tokens = [t for t in re.split(r"[^A-Za-z0-9_]+", query) if t]
+    tokens_cmp = tokens if case_sensitive else [t.lower() for t in tokens]
+    header = f"Found {len(results)} matches for '{query}'. Showing top {len(results)}:"
+    lines = [header]
+
+    for idx, result in enumerate(results, start=1):
+        rel = result.get("rel", "")
+        reason = result.get("reason", "")
+        lines.append(f"{idx}) {rel} ({reason})")
+
+        file_path = library_sources / rel
+        try:
+            content = file_path.read_text(encoding="utf-8", errors="ignore")
+        except Exception as exc:
+            lines.append(f"--- preview error: {exc} ---")
+            continue
+
+        content_lines = content.splitlines()
+        max_line = len(content_lines)
+
+        def render_snippet(start_idx: int, end_idx: int) -> str:
+            width = len(str(end_idx))
+            rendered = []
+            for line_idx in range(start_idx, end_idx):
+                prefix = str(line_idx + 1).rjust(width)
+                rendered.append(f"{prefix} | {content_lines[line_idx]}")
+            return "\n".join(rendered)
+
+        matched_snippets = []
+        if use_regex:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                matcher = re.compile(query, flags)
+            except re.error:
+                matcher = None
+            if matcher:
+                for line_idx, line in enumerate(content_lines):
+                    if matcher.search(line):
+                        start_idx = max(0, line_idx - context_lines)
+                        end_idx = min(max_line, line_idx + context_lines + 1)
+                        matched_snippets.append(render_snippet(start_idx, end_idx))
+                        if len(matched_snippets) >= 3:
+                            break
+        else:
+            for line_idx, line in enumerate(content_lines):
+                haystack = line if case_sensitive else line.lower()
+                if any(token in haystack for token in tokens_cmp):
+                    start_idx = max(0, line_idx - context_lines)
+                    end_idx = min(max_line, line_idx + context_lines + 1)
+                    matched_snippets.append(render_snippet(start_idx, end_idx))
+                    if len(matched_snippets) >= 3:
+                        break
+
+        if matched_snippets:
+            lines.append("--- snippet ---")
+            lines.extend(matched_snippets)
+            continue
+
+        preview = content[:preview_chars]
+        lines.append("--- preview ---")
+        lines.append(preview)
+
+    if path_filter:
+        lines.append(f"Path filter: {path_filter}")
+    return "\n".join(lines)
 
 
 def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> str:
     if not library_sources:
         return "Error: Minecraft library sources not available."
-    
+
     query = args.get("query", "")
     if not query:
         return "Error: query is required"
     cleaned = query.strip()
     cleaned = re.sub(r"^class\s+", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"^(interface|record|enum)\s+", "", cleaned, flags=re.IGNORECASE)
-    token = cleaned.split()[-1] if cleaned.split() else cleaned
-    query_lower = token.lower()
 
-    results: list[str] = []
+    path_filter = str(args.get("path", "") or "").strip().replace("\\", "/")
+    case_sensitive = _parse_bool(args.get("case_sensitive"), False)
+    regex_flag = args.get("regex")
+    regex_hint = bool(re.search(r"(\\.|\\[|\\]|\\{|\\}|\\+|\\*|\\?|\\||\\^|\\$)", cleaned))
+    use_regex = _parse_bool(regex_flag, regex_hint)
+
+    def _parse_int(value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except Exception:
+            return default
+
+    max_results = _parse_int(args.get("max_results"), 3)
+    max_results = max(1, min(10, max_results))
+    preview_chars = _parse_int(args.get("preview_chars"), 2000)
+    preview_chars = max(200, min(6000, preview_chars))
+    context_lines = _parse_int(args.get("context_lines"), 3)
+    context_lines = max(0, min(10, context_lines))
+
+    tokens = [t for t in re.split(r"[^A-Za-z0-9_]+", cleaned) if t]
+    tokens_cmp = tokens if case_sensitive else [t.lower() for t in tokens]
+    query_cmp = cleaned if case_sensitive else cleaned.lower()
+
+    results: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     def build_index() -> dict[str, Any]:
@@ -3860,8 +4042,9 @@ def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> 
         cached = _library_index_cache.get(key)
         if cached:
             return cached
-        entries = []
+        entries: list[dict[str, str]] = []
         paths_set = set()
+        stem_map: dict[str, list[str]] = {}
         try:
             for file_path in library_sources.rglob("*"):
                 if not file_path.is_file():
@@ -3869,99 +4052,133 @@ def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> 
                 name_lower = file_path.name.lower()
                 if not (name_lower.endswith(".java") or name_lower.endswith(".java.patch")):
                     continue
-                rel = str(file_path.relative_to(library_sources))
+                rel = str(file_path.relative_to(library_sources)).replace("\\", "/")
                 paths_set.add(rel)
                 stem = name_lower
                 if stem.endswith(".java.patch"):
                     stem = stem[: -len(".java.patch")]
                 elif stem.endswith(".java"):
                     stem = stem[: -len(".java")]
-                entries.append((rel, name_lower, stem))
+                stem_map.setdefault(stem, []).append(rel)
+                entries.append({"rel": rel, "name_lower": name_lower, "stem": stem})
         except Exception:
             entries = []
             paths_set = set()
-        cached = {"entries": entries, "paths": paths_set}
+            stem_map = {}
+        cached = {"entries": entries, "paths": paths_set, "stem_map": stem_map}
         _library_index_cache[key] = cached
         return cached
+
+    def _add_result(rel: str, score: int, reason: str) -> None:
+        if rel in seen:
+            return
+        seen.add(rel)
+        results.append({"rel": rel, "score": score, "reason": reason})
 
     index = build_index()
     entries = index["entries"]
     paths_set = index["paths"]
+    stem_map = index["stem_map"]
+
+    def _path_matches(rel: str) -> bool:
+        return not path_filter or rel.startswith(path_filter.rstrip("/") + "/")
 
     # If query looks like a path, try direct resolution first.
-    if "/" in cleaned or "." in cleaned:
+    if ("/" in cleaned or "." in cleaned) and not use_regex:
         candidate = cleaned.replace(".", "/")
         for suffix in (".java", ".java.patch", ""):
             direct = candidate if suffix == "" else candidate + suffix
-            for alt in (direct, f"minecraft/{direct}"):
-                if alt in paths_set:
-                    results.append(alt)
-                    seen.add(alt)
+            for alt in (direct, f"minecraft/{direct}", f"net/minecraft/{direct}"):
+                if alt in paths_set and _path_matches(alt):
+                    _add_result(alt, 200, "direct path match")
         if results:
-            total_direct = len(results)
-            top_direct = results[:3]
-            lines = [
-                f"Found {total_direct} direct match(es) for '{query}'. Showing top 3 with 2KB previews:"
-            ]
-            for idx, rel in enumerate(top_direct, 1):
-                lines.append(f"{idx}) {rel}")
-                lines.append("--- preview ---")
-                try:
-                    content = (library_sources / rel).read_text(encoding="utf-8", errors="ignore")
-                    if len(content) > 2000:
-                        content = content[:2000] + "\n... (truncated)"
-                    lines.append(content)
-                except Exception as e:
-                    lines.append(f"[Error reading file: {e}]")
-            return "\n".join(lines)
+            results.sort(key=lambda r: (-r["score"], r["rel"]))
+            return _format_library_search_results(
+                library_sources,
+                query,
+                results[:max_results],
+                case_sensitive=case_sensitive,
+                use_regex=use_regex,
+                context_lines=context_lines,
+                preview_chars=preview_chars,
+                path_filter=path_filter,
+            )
 
-    # Scan .java and .java.patch for name matches.
-    for rel, name_lower, stem in entries:
-        if query_lower in name_lower or query_lower in stem:
-            if rel not in seen:
-                results.append(rel)
-                seen.add(rel)
+    # Exact stem matches.
+    if not use_regex:
+        stem_keys = []
+        if tokens_cmp:
+            stem_keys.extend(tokens_cmp)
+        else:
+            stem_keys.append(query_cmp.lower() if not case_sensitive else query_cmp)
+        for stem_key in stem_keys:
+            for rel in stem_map.get(stem_key, []):
+                if _path_matches(rel):
+                    _add_result(rel, 120, "exact file name match")
+
+    # Filename contains query.
+    for entry in entries:
+        rel = entry["rel"]
+        if not _path_matches(rel):
+            continue
+        name = entry["name_lower"] if not case_sensitive else entry["rel"].split("/")[-1]
+        stem = entry["stem"] if case_sensitive else entry["stem"].lower()
+        if query_cmp and (query_cmp in name or query_cmp in stem):
+            _add_result(rel, 95, "filename match")
+            continue
+        if tokens_cmp and any(token in name or token in stem for token in tokens_cmp):
+            _add_result(rel, 90, "filename token match")
         if len(results) >= 50:
             break
 
-    # Fallback: content scan if filename search didn't help.
-    if not results:
+    # Content scan if filename search didn't help.
+    if len(results) < max_results:
         scanned = 0
+        flags = 0 if case_sensitive else re.IGNORECASE
         try:
-            for rel, _name_lower, _stem in entries:
-                file_path = library_sources / rel
-                try:
-                    content = file_path.read_text(encoding="utf-8", errors="ignore")
-                except Exception:
-                    continue
-                scanned += 1
-                if query_lower in content.lower():
-                    if rel not in seen:
-                        results.append(rel)
-                        seen.add(rel)
-                if len(results) >= 20 or scanned >= 2000:
-                    break
-        except Exception:
-            pass
-    
+            matcher = re.compile(cleaned, flags) if use_regex else None
+        except re.error:
+            matcher = None
+            use_regex = False
+        for entry in entries:
+            rel = entry["rel"]
+            if not _path_matches(rel) or rel in seen:
+                continue
+            file_path = library_sources / rel
+            try:
+                content = file_path.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+            scanned += 1
+            if matcher:
+                if matcher.search(content):
+                    _add_result(rel, 70, "content match (regex)")
+            else:
+                haystack = content if case_sensitive else content.lower()
+                if tokens_cmp:
+                    hit_tokens = [token for token in tokens_cmp if token in haystack]
+                    if hit_tokens:
+                        score = 60 + min(10, len(hit_tokens)) * 2
+                        _add_result(rel, score, f"content token match ({', '.join(hit_tokens[:3])})")
+                elif query_cmp and query_cmp in haystack:
+                    _add_result(rel, 60, "content match")
+            if len(results) >= max_results * 5 or scanned >= 2000:
+                break
+
     if not results:
         return f"No results found for: {query}"
 
-    top_results = results[:3]
-    lines = [
-        f"Found {len(results)} matches for '{query}'. Showing top 3 with 2KB previews:"
-    ]
-    for idx, rel in enumerate(top_results, 1):
-        lines.append(f"{idx}) {rel}")
-        lines.append("--- preview ---")
-        try:
-            content = (library_sources / rel).read_text(encoding="utf-8", errors="ignore")
-            if len(content) > 2000:
-                content = content[:2000] + "\n... (truncated)"
-            lines.append(content)
-        except Exception as e:
-            lines.append(f"[Error reading file: {e}]")
-    return "\n".join(lines)
+    results.sort(key=lambda r: (-r["score"], r["rel"]))
+    return _format_library_search_results(
+        library_sources,
+        query,
+        results[:max_results],
+        case_sensitive=case_sensitive,
+        use_regex=use_regex,
+        context_lines=context_lines,
+        preview_chars=preview_chars,
+        path_filter=path_filter,
+    )
 
 
 def _tool_file_write(version_dir: Path, args: dict[str, str]) -> str:
