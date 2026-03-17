@@ -9,5 +9,5 @@ These templates are verified by the template-verify workflow. Keep these rules:
 - Keep version-specific API notes in the Java sources so future updates do not regress.
 
 Range-specific notes:
-- Forge 1.21.9-1.21.11: SubscribeEvent lives in net.minecraftforge.eventbus.api.listener.
-- Forge 1.21.9-1.21.11: BuildCreativeModeTabContentsEvent.BUS exists and is used in ExampleMod.
+- Forge 1.21.9-1.21.11: SubscribeEvent lives in net.minecraftforge.eventbus.api.
+- Forge 1.21.9-1.21.11: Use FMLJavaModLoadingContext.getModEventBus(); do not use getModBusGroup.

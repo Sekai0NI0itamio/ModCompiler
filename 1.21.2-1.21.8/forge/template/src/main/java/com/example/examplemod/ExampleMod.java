@@ -13,7 +13,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -25,9 +26,9 @@ import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
 
 // TEMPLATE NOTES (Forge 1.21.2-1.21.8):
-// - Use FMLJavaModLoadingContext.getModBusGroup(); getModEventBus() is not available here.
-// - SubscribeEvent lives in net.minecraftforge.eventbus.api.listener.
-// - BuildCreativeModeTabContentsEvent.BUS is not available, so do not register via BUS.
+// - Use FMLJavaModLoadingContext.getModEventBus(); getModBusGroup() is not available here.
+// - SubscribeEvent lives in net.minecraftforge.eventbus.api.
+// - Register listeners directly on the mod event bus (no FMLCommonSetupEvent.getBus()).
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(ExampleMod.MODID)
 public final class ExampleMod {
@@ -76,17 +77,17 @@ public final class ExampleMod {
             }).build());
 
     public ExampleMod(FMLJavaModLoadingContext context) {
-        var modBusGroup = context.getModBusGroup();
+        IEventBus modEventBus = context.getModEventBus();
 
         // Register the commonSetup method for modloading
-        FMLCommonSetupEvent.getBus(modBusGroup).addListener(this::commonSetup);
+        modEventBus.addListener(this::commonSetup);
 
         // Register the Deferred Register to the mod event bus so blocks get registered
-        BLOCKS.register(modBusGroup);
+        BLOCKS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so items get registered
-        ITEMS.register(modBusGroup);
+        ITEMS.register(modEventBus);
         // Register the Deferred Register to the mod event bus so tabs get registered
-        CREATIVE_MODE_TABS.register(modBusGroup);
+        CREATIVE_MODE_TABS.register(modEventBus);
 
         // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
         context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
