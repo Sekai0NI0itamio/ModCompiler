@@ -449,6 +449,14 @@ def select_primary_modrinth_file(files: list[dict[str, Any]]) -> dict[str, Any] 
     primary = [file_info for file_info in files if file_info.get("primary")]
     candidates = primary or files
 
+    required = [
+        file_info
+        for file_info in candidates
+        if str(file_info.get("file_type", "")).lower() == "required"
+    ]
+    if required:
+        candidates = required
+
     jar_candidates = [
         file_info
         for file_info in candidates
