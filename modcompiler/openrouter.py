@@ -217,6 +217,13 @@ class OpenRouterClient:
             if error.code == 429:
                 self._mark_last_key_cooldown(WINDOW_SECONDS)
                 raise ModCompilerError(f"Rate limited on current key. Retrying with another key. Details: {error_body[:500]}")
+            if error.code == 402:
+                if self._last_key_state is not None:
+                    self._disable_key(self._last_key_state.key)
+                raise ModCompilerError(
+                    "Insufficient credits on current key. Retrying with another key. "
+                    f"Details: {error_body[:500]}"
+                )
             if error.code == 401:
                 if self._last_key_state is not None:
                     self._disable_key(self._last_key_state.key)
