@@ -9,7 +9,7 @@ These templates are verified by the template-verify workflow. Keep these rules:
 - Keep version-specific API notes in the Java sources so future updates do not regress.
 
 Range-specific notes:
-- Forge 1.21.2-1.21.8: use FMLJavaModLoadingContext.getModBusGroup(); getModEventBus() is not available.
-- Forge 1.21.2-1.21.8: SubscribeEvent lives in net.minecraftforge.eventbus.api.listener.
+- Forge 1.21.2-1.21.8: use FMLJavaModLoadingContext.getModEventBus(); getModBusGroup() is not available.
+- Forge 1.21.2-1.21.8: SubscribeEvent lives in net.minecraftforge.eventbus.api.
 - Forge 1.21.2-1.21.8: BuildCreativeModeTabContentsEvent.BUS is not available.
 - Forge 1.21.2-1.21.8: ResourceLocation(String, String) is private; use ResourceLocation.fromNamespaceAndPath.

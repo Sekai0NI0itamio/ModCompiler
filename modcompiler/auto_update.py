@@ -374,6 +374,7 @@ def _verify_mod_source_with_ai(
         "Evaluate whether this source appears to implement the described mod. "
         "Use tag=working only if the source matches the description and intended purpose. "
         "Use tag=corrupted if the source is missing, unrelated, or does not match the description. "
+        "If the source looks like a shell (no real code, only metadata or empty stubs), tag must be corrupted. "
         "If uncertain, tag must be corrupted."
     )
 
@@ -658,15 +659,25 @@ def _run_auto_fix_corrupted(
                 "reason": "Decompiler produced no sources.",
             }
             if decompile_status == "success":
-                verdict_payload = _verify_mod_source_with_ai(
-                    client=client,
-                    project_name=project_name,
-                    project_description=project_description,
-                    version_label=version_number or version_id,
-                    loader=loaders[0] if loaders else "unknown",
-                    game_versions=game_versions,
-                    src_dir=src_dir,
-                )
+                shell_reason = _detect_shell_source(src_dir)
+                if shell_reason:
+                    verdict_payload = {
+                        "tag": "corrupted",
+                        "verdict": "fail",
+                        "confidence": 0.0,
+                        "rating": 0.0,
+                        "reason": shell_reason,
+                    }
+                else:
+                    verdict_payload = _verify_mod_source_with_ai(
+                        client=client,
+                        project_name=project_name,
+                        project_description=project_description,
+                        version_label=version_number or version_id,
+                        loader=loaders[0] if loaders else "unknown",
+                        game_versions=game_versions,
+                        src_dir=src_dir,
+                    )
 
             tag = str(verdict_payload.get("tag", "")).lower()
             if tag not in {"working", "corrupted"}:
@@ -1491,6 +1502,44 @@ def get_tools_definition() -> list[dict[str, Any]]:
                     "required": ["query"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "doc_search",
+                "description": "Search local documentation cache (docs/ or MODCOMPILER_DOCS_DIR). Use to verify exact API signatures.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query - class/method name or phrase"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "Optional subdirectory filter inside docs"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "doc_read",
+                "description": "Read a documentation file from docs/ or MODCOMPILER_DOCS_DIR.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Path to documentation file relative to docs root."
+                        }
+                    },
+                    "required": ["path"]
+                }
+            }
         }
     ]
 
@@ -1601,6 +1650,31 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
             f"for {target_l} {target_v} (current source is already {current_l} {current_v})."
         )
 
+    forge_guidance = ""
+    if target_l in {"forge", "neoforge"}:
+        parsed = None
+        try:
+            parsed = parse_version_tuple(target_v)
+        except Exception:
+            parsed = None
+        if parsed and parsed >= (1, 13, 0):
+            forge_guidance = (
+                "\nCOMMON FORGE PITFALLS (1.13+):\n"
+                "- Commands use Brigadier. Commands.argument expects an ArgumentType (e.g., "
+                "StringArgumentType.word(), IntegerArgumentType.integer()). Do NOT pass String.class.\n"
+                "- StringArgumentType is in net.minecraft.commands.arguments.StringArgumentType. "
+                "Use MessageArgumentType for greedy strings. Do NOT use EntityArgument for plain strings.\n"
+                "- If you need method signatures (teleport/command APIs), check reference files first; "
+                "if still unsure, use library_search/doc_search. Do NOT guess.\n"
+            )
+        if parsed and parsed >= (1, 20, 0):
+            forge_guidance += (
+                "- Mod event bus: use FMLJavaModLoadingContext.get().getModEventBus() "
+                "(not getModBusGroup). Register listeners directly on the mod event bus.\n"
+                "- Do NOT call FMLCommonSetupEvent.getBus(...); register with modEventBus.addListener(...).\n"
+                "- Ensure ModConfigEvent listeners are registered on the MOD bus or via @Mod.EventBusSubscriber.\n"
+            )
+
     return f"""{intro_line}
 
 CURRENT DATE: {current_date} (Year {current_year})
@@ -1630,7 +1704,8 @@ Use `library_search` to find the exact path, then `library_read` to open it.
 **Reference paths note:** When using `read_reference`, paths are relative to `reference/` (do NOT include the `reference/` prefix).
 **Forge resources note:** For Forge/NeoForge 1.13+, use `META-INF/mods.toml` (do NOT create `mcmod.info` unless the reference explicitly contains it).
 
-If original source has no Java/Kotlin files, treat it as missing and use the selected role model folder as your starting point.
+If original source has no Java/Kotlin files, treat it as missing and use the reference template as your starting point.
+If a role model is available, use it as a behavior reference (not necessarily the starting skeleton).
 
 **PATHS: The original source is under src/java/ NOT src/main/java/**
 
@@ -1651,11 +1726,13 @@ If original source has no Java/Kotlin files, treat it as missing and use the sel
 - Do NOT explore the repo root or parent directories; only work under src/, reference/, and role-model/ paths
 - library_* tools only contain Minecraft sources (no Forge/Fabric/NeoForge APIs). Use reference/role-model for loader APIs.
 - Avoid using library_* tools unless you have a specific missing Minecraft class; some library context is preloaded
+{forge_guidance}
 
 **TOOLS:**
 - read_file: Use path "java/com/package/File.java" (this resolves to src/java/...; do NOT look for a top-level java/ folder)
 - write_mod_file: Use path "com/package/File.java" (src/java/ prefix auto-added)
 - write_resource: Just filename like "mcmod.info" (src/resources/ prefix auto-added)
+- doc_search/doc_read: Search local documentation cache (docs/ or MODCOMPILER_DOCS_DIR) for exact API signatures
 - build: Compile the mod - do this as soon as possible!
 - read_build_log: Read build.log if a build fails (optional regex via pattern)
 - complete: Mark done after successful build"""
@@ -2378,6 +2455,25 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
         src_dir = version_dir / "src"
         ref_dir = version_dir / "reference"
         template_dir = context.get("template_dir", "")
+        if not template_dir or not Path(template_dir).exists():
+            manifest_path = Path("version-manifest.json")
+            if manifest_path.exists():
+                try:
+                    manifest = load_json(manifest_path)
+                    resolved = _resolve_template_dir_for_version(target_version, target_loader, manifest)
+                    if resolved:
+                        _range_folder, loader_config = resolved
+                        candidate = loader_config.get("template_dir", "")
+                        if candidate and Path(candidate).exists():
+                            template_dir = candidate
+                            context["template_dir"] = template_dir
+                            print(
+                                f"DEBUG: Resolved template_dir from manifest: {template_dir}",
+                                file=sys.stderr,
+                            )
+                except Exception as exc:
+                    print(f"DEBUG: Failed to resolve template_dir from manifest: {exc}", file=sys.stderr)
+
         if template_dir and not ref_dir.exists():
             template_source = Path(template_dir)
             if template_source.exists():
@@ -2394,6 +2490,13 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
                 rel = item.relative_to(path)
                 items.append(f"{prefix}{rel}{'/' if item.is_dir() else ''}")
             return "\n".join(items)
+
+        def count_source_files(root: Path) -> int:
+            if not root.exists():
+                return 0
+            return sum(
+                1 for f in root.rglob("*") if f.is_file() and f.suffix in {".java", ".kt", ".kts"}
+            )
 
         def build_library_tree(root: Path, max_chars: int = 6000) -> str:
             if not root or not root.exists():
@@ -2492,6 +2595,10 @@ def command_ai_rebuild(args: argparse.Namespace) -> int:
 
         src_tree = get_dir_tree(src_dir)
         ref_tree = get_dir_tree(ref_dir) if ref_dir.exists() else ""
+        print(
+            f"DEBUG: src/java files={count_source_files(src_dir)}; reference files={count_source_files(ref_dir)}",
+            file=sys.stderr,
+        )
 
         lib_sources = _get_library_sources(version_dir, target_version, target_loader)
         library_tree_block = "\nMINECRAFT LIBRARY TREE: not available\n"
@@ -2578,6 +2685,12 @@ ACTION: Read files, update them, write to src/java/, then call build."""
 USER DESCRIPTION:
 {context.get('user_description', 'No description provided')}
 
+DIRECTORY STRUCTURE - ORIGINAL SOURCE:
+{src_tree}
+
+DIRECTORY STRUCTURE - REFERENCE TEMPLATE:
+{ref_tree}
+
 TARGET VERSION: {target_version} (valid in this system — do NOT change it)
 {fix_note}{role_model_note}
 {library_tree_block}
@@ -2588,6 +2701,8 @@ PATH INFO:
 - RESOURCES: "mcmod.info" (goes to src/resources/)
 
 NOTE: If src/java has no .java/.kt files, treat the original source as missing and start from the selected role model folder.
+If the reference template contains .java/.kt files, use those as your starting skeleton before consulting the role model.
+If you are uncertain about a method signature, use reference files first, then doc_search/library_search; do NOT guess.
 
 ACTION: Update files for {target_version}, write to src/java/, then build."""
 
@@ -2805,7 +2920,7 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
                 print(f"DEBUG: Sending continue prompt...", file=sys.stderr)
                 messages.append({
                     "role": "user", 
-                    "content": "Please continue with a tool call. Don't respond without using a tool - use Read File, List Files, File Write, Move File, or Build when ready to continue updating the mod."
+                    "content": "Please continue with a tool call. Don't respond without using a tool - use Read File, List Files, File Write, Move File, Build, or doc_search/library_search when needed."
                 })
                 continue
 
@@ -2872,6 +2987,12 @@ ACTION: Update files for {target_version}, write to src/java/, then build."""
                         print(f"DEBUG: Calling _tool_library_search...", file=sys.stderr)
                         lib_sources = _get_library_sources(version_dir, context.get("target_version", ""), context.get("target_loader", ""))
                         result_msg = _tool_library_search(arguments, lib_sources)
+                    elif name == "doc_search":
+                        print(f"DEBUG: Calling _tool_doc_search...", file=sys.stderr)
+                        result_msg = _tool_doc_search(arguments)
+                    elif name == "doc_read":
+                        print(f"DEBUG: Calling _tool_doc_read...", file=sys.stderr)
+                        result_msg = _tool_doc_read(arguments)
                     elif name == "write_mod_file" or name == "write_resource":
                         files_written_count += 1
                         tools_without_build += 1
@@ -2957,6 +3078,39 @@ def _generate_src_summary(src_dir: Path, files: list[dict[str, Any]]) -> str:
         summary_lines.append(f"  ... and {len(files) - 20} more files")
 
     return "\n".join(summary_lines)
+
+
+def _detect_shell_source(src_dir: Path) -> str | None:
+    java_files: list[Path] = []
+    if src_dir.exists():
+        for f in src_dir.rglob("*"):
+            if not f.is_file():
+                continue
+            if f.suffix not in {".java", ".kt", ".kts"}:
+                continue
+            if f.name in {"package-info.java", "module-info.java"}:
+                continue
+            java_files.append(f)
+
+    if not java_files:
+        return "No Java/Kotlin source files found."
+
+    total_non_ws = 0
+    keyword_found = False
+    keyword_pattern = re.compile(r"\b(class|interface|enum|record|object|fun)\b")
+
+    for f in java_files:
+        try:
+            text = f.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        total_non_ws += len(re.sub(r"\s+", "", text))
+        if keyword_pattern.search(text):
+            keyword_found = True
+
+    if total_non_ws < 200 or not keyword_found:
+        return "Source appears to be a shell (no real code beyond metadata or stubs)."
+    return None
 
 
 def _tool_read_file(version_dir: Path, args: dict[str, str]) -> str:
@@ -3945,6 +4099,8 @@ def _tool_library_read(args: dict[str, str], library_sources: Path | None) -> st
     lines = content.splitlines()
     total_lines = len(lines)
     header = f"=== Minecraft: {path} ({total_lines} lines) ==="
+    if str(file_path).endswith(".java.patch"):
+        header += "\nNOTE: This is a .java.patch file (diff only). It may omit full method signatures. Prefer reference/doc_search when unsure."
 
     def render_lines(start_idx: int, end_idx: int) -> str:
         rendered = []
@@ -4026,7 +4182,8 @@ def _format_library_search_results(
     for idx, result in enumerate(results, start=1):
         rel = result.get("rel", "")
         reason = result.get("reason", "")
-        lines.append(f"{idx}) {rel} ({reason})")
+        note = " (patch file; may be incomplete)" if rel.endswith(".java.patch") else ""
+        lines.append(f"{idx}) {rel} ({reason}){note}")
 
         file_path = library_sources / rel
         try:
@@ -4155,6 +4312,11 @@ def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> 
         return cached
 
     def _add_result(rel: str, score: int, reason: str) -> None:
+        if rel.endswith(".java.patch"):
+            candidate = rel[:-len(".patch")]
+            if candidate in paths_set and _path_matches(candidate):
+                rel = candidate
+                reason = f"{reason}; preferred .java over .java.patch"
         if rel in seen:
             return
         seen.add(rel)
@@ -4264,6 +4426,155 @@ def _tool_library_search(args: dict[str, str], library_sources: Path | None) -> 
         preview_chars=preview_chars,
         path_filter=path_filter,
     )
+
+
+def _get_doc_roots() -> list[Path]:
+    roots: list[Path] = []
+    env_raw = os.environ.get("MODCOMPILER_DOCS_DIR") or os.environ.get("DOCS_DIR") or ""
+    if env_raw:
+        for part in env_raw.split(os.pathsep):
+            candidate = Path(part).expanduser()
+            if candidate.exists():
+                roots.append(candidate)
+    default_docs = Path("docs")
+    if default_docs.exists():
+        roots.append(default_docs)
+    # De-duplicate
+    seen = set()
+    unique: list[Path] = []
+    for root in roots:
+        key = str(root.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(root)
+    return unique
+
+
+def _tool_doc_search(args: dict[str, str]) -> str:
+    roots = _get_doc_roots()
+    if not roots:
+        return "Error: documentation roots not available. Add docs/ or set MODCOMPILER_DOCS_DIR."
+
+    query = str(args.get("query", "") or "").strip()
+    if not query:
+        return "Error: query is required"
+    path_filter = str(args.get("path", "") or "").strip().replace("\\", "/")
+
+    def _parse_int(value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except Exception:
+            return default
+
+    max_results = _parse_int(args.get("max_results"), 3)
+    max_results = max(1, min(10, max_results))
+    preview_chars = _parse_int(args.get("preview_chars"), 2000)
+    preview_chars = max(200, min(6000, preview_chars))
+
+    tokens = [t for t in re.split(r"[^A-Za-z0-9_]+", query) if t]
+    query_lower = query.lower()
+
+    results: list[dict[str, Any]] = []
+
+    def _add_result(root: Path, rel: str, score: int, reason: str, content: str) -> None:
+        results.append({
+            "root": root,
+            "rel": rel,
+            "score": score,
+            "reason": reason,
+            "content": content,
+        })
+
+    exts = {".md", ".txt", ".rst", ".adoc", ".java", ".kt", ".kts"}
+    for root in roots:
+        base = root
+        if path_filter:
+            candidate = root / path_filter
+            if candidate.exists():
+                base = candidate
+        for file_path in base.rglob("*"):
+            if not file_path.is_file():
+                continue
+            if file_path.suffix.lower() not in exts:
+                continue
+            rel = str(file_path.relative_to(root)).replace("\\", "/")
+            try:
+                content = file_path.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+            name_lower = file_path.name.lower()
+            score = 0
+            reason = ""
+            if query_lower in name_lower:
+                score += 80
+                reason = "filename match"
+            if query_lower in content.lower():
+                score += 60
+                reason = reason or "content match"
+            if tokens:
+                hits = [t for t in tokens if t.lower() in content.lower()]
+                if hits:
+                    score += 10 * min(3, len(hits))
+                    reason = reason or f"content token match ({', '.join(hits[:3])})"
+            if score <= 0:
+                continue
+            _add_result(root, rel, score, reason, content)
+            if len(results) >= max_results * 10:
+                break
+
+    if not results:
+        return f"No documentation results found for: {query}"
+
+    results.sort(key=lambda r: (-r["score"], r["rel"]))
+    top = results[:max_results]
+    lines = [
+        f"Found {len(results)} matches for '{query}'. Showing top {len(top)}:"
+    ]
+    for idx, result in enumerate(top, start=1):
+        rel = result["rel"]
+        reason = result["reason"]
+        lines.append(f"{idx}) {rel} ({reason})")
+        preview = result["content"][:preview_chars]
+        lines.append("--- preview ---")
+        lines.append(preview)
+    return "\n".join(lines)
+
+
+def _tool_doc_read(args: dict[str, str]) -> str:
+    roots = _get_doc_roots()
+    if not roots:
+        return "Error: documentation roots not available. Add docs/ or set MODCOMPILER_DOCS_DIR."
+
+    raw_path = str(args.get("path", "") or "").strip().replace("\\", "/").lstrip("/")
+    if not raw_path:
+        return "Error: path is required"
+
+    candidates: list[Path] = []
+    for root in roots:
+        candidate = root / raw_path
+        if candidate.exists():
+            candidates.append(candidate)
+        else:
+            # allow prefix with docs/
+            if raw_path.startswith("docs/"):
+                alt = root / raw_path[len("docs/"):]
+                if alt.exists():
+                    candidates.append(alt)
+
+    if not candidates:
+        return f"Error: doc not found: {raw_path}"
+
+    file_path = candidates[0]
+    try:
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception as exc:
+        return f"Error reading doc: {exc}"
+
+    if len(content) > 15000:
+        content = content[:15000] + "\n... (truncated)"
+    rel = str(file_path)
+    return f"Doc: {rel}\n```\n{content}\n```"
 
 
 def _tool_file_write(version_dir: Path, args: dict[str, str]) -> str:
