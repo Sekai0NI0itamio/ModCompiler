@@ -983,6 +983,8 @@ jobs:
         if: ${{ steps.detect_corrupt.outputs.is_corrupt != 'true' }}
         id: ai_verify
         shell: bash
+        env:
+          OPENROUTER_FALLBACK_MODELS: stepfun/step-3.5-flash:free
         run: |
           python3 - <<'PY'
           import json
