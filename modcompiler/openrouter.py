@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-DEFAULT_PRIMARY_MODEL = "openrouter/hunter-alpha"
+DEFAULT_PRIMARY_MODEL = "deepseek/deepseek-chat-v3.1"
 DEFAULT_FALLBACK_MODEL = "stepfun/step-3.5-flash:free"
 UNAVAILABLE_THRESHOLD = 20
 WINDOW_SECONDS = 60
