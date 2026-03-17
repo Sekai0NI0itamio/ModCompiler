@@ -59,11 +59,6 @@ on:
         required: false
         default: ""
         type: string
-      modrinth_version_id:
-        description: "Optional: Modrinth version ID to download a specific jar (overrides latest selection)"
-        required: false
-        default: ""
-        type: string
       resume_from:
         description: Resume from previous run (provide previous run ID or leave blank for fresh start)
         required: false
@@ -102,7 +97,6 @@ jobs:
         shell: bash
         env:
           MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
-          MODRINTH_VERSION_ID: ${{ inputs.modrinth_version_id }}
           MOD_JAR_PATH_INPUT: ${{ inputs.mod_jar_path }}
           MOD_DESCRIPTION_INPUT: ${{ inputs.mod_description }}
           AUTO_FETCH_MODRINTH: ${{ inputs.auto_fetch_modrinth }}
@@ -140,42 +134,27 @@ jobs:
           setup_dir = Path(".workflow_state/setup")
           setup_dir.mkdir(parents=True, exist_ok=True)
           
-          state = {"project": None, "versions": None, "project_ref": "", "version": None}
+          state = {"project": None, "versions": None, "project_ref": ""}
           
           def ensure_project() -> None:
               if state["project"] is not None:
                   return
+              if not modrinth_url:
+                  fail("Modrinth URL is required to auto-fetch the jar/description.")
+              project_ref = normalize_modrinth_project_ref(modrinth_url)
+              state["project_ref"] = project_ref
               token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
               client = ModrinthClient(token=token, user_agent=build_modrinth_user_agent())
-              if modrinth_url:
-                  project_ref = normalize_modrinth_project_ref(modrinth_url)
-                  state["project_ref"] = project_ref
-                  project = client.resolve_project(project_ref)
-                  versions = client.request_json(
-                      "GET",
-                      f"/project/{urllib.parse.quote(project_ref, safe='')}/version",
-                      params={"include_changelog": "false"},
-                  )
-                  if not isinstance(versions, list):
-                      fail("Unexpected Modrinth versions response.")
-                  state["project"] = project
-                  state["versions"] = versions
-                  return
-              version_id = os.environ.get("MODRINTH_VERSION_ID", "").strip()
-              if version_id:
-                  version = client.request_json("GET", f"/version/{urllib.parse.quote(version_id, safe='')}")
-                  if isinstance(version, dict):
-                      state["version"] = version
-                      project_id = version.get("project_id") or version.get("project")
-                      if project_id:
-                          try:
-                              project = client.request_json("GET", f"/project/{urllib.parse.quote(str(project_id), safe='')}")
-                              if isinstance(project, dict):
-                                  state["project"] = project
-                          except Exception:
-                              pass
-                      return
-              fail("Modrinth URL or version ID is required to auto-fetch the jar/description.")
+              project = client.resolve_project(project_ref)
+              versions = client.request_json(
+                  "GET",
+                  f"/project/{urllib.parse.quote(project_ref, safe='')}/version",
+                  params={"include_changelog": "false"},
+              )
+              if not isinstance(versions, list):
+                  fail("Unexpected Modrinth versions response.")
+              state["project"] = project
+              state["versions"] = versions
           
           resolved_jar = ""
           resolved_jar_name = ""
@@ -227,48 +206,25 @@ jobs:
           if not resolved_jar:
               if not auto_fetch:
                   fail("Mod jar path is required when auto-fetch is disabled.")
-              version_id = os.environ.get("MODRINTH_VERSION_ID", "").strip()
-              if version_id:
-                  token = os.environ.get("MODRINTH_TOKEN", "").strip() or None
-                  client = ModrinthClient(token=token, user_agent=build_modrinth_user_agent())
-                  version = state.get("version")
-                  if not isinstance(version, dict):
-                      version = client.request_json("GET", f"/version/{urllib.parse.quote(version_id, safe='')}")
-                  if not isinstance(version, dict):
-                      fail("Unexpected Modrinth version response.")
-                  file_info = select_primary_modrinth_file(version.get("files", []))
-                  if not file_info:
-                      fail("No downloadable file found for the provided Modrinth version.")
-                  file_url = str(file_info.get("url", "")).strip()
-                  if not file_url:
-                      fail("Modrinth file entry is missing a download URL.")
-                  filename = str(file_info.get("filename", "")).strip() or f"{version_id}.jar"
-                  dest = setup_dir / filename
-                  _download_modrinth_file(file_url, dest)
-                  print(f"Using Modrinth version {version_id} file {filename}")
-                  resolved_jar = str(dest)
-                  resolved_jar_name = dest.name
-                  state["version"] = version
-              else:
-                  ensure_project()
-                  latest = _select_latest_modrinth_version(state["versions"] or [])
-                  if latest is None:
-                      fail("No Modrinth versions were available to download.")
-                  file_info = select_primary_modrinth_file(latest.get("files", []))
-                  if not file_info:
-                      fail("No downloadable file was found for the latest Modrinth version.")
-                  file_url = str(file_info.get("url", "")).strip()
-                  if not file_url:
-                      fail("Modrinth file entry is missing a download URL.")
-                  filename = str(file_info.get("filename", "")).strip()
-                  if not filename:
-                      filename = f"{state['project_ref'] or 'mod'}.jar"
-                  prefix = build_prefix()
-                  name = f"{prefix}_{filename}" if prefix else filename
-                  dest = setup_dir / name
-                  _download_modrinth_file(file_url, dest)
-                  resolved_jar = str(dest)
-                  resolved_jar_name = dest.name
+              ensure_project()
+              latest = _select_latest_modrinth_version(state["versions"] or [])
+              if latest is None:
+                  fail("No Modrinth versions were available to download.")
+              file_info = select_primary_modrinth_file(latest.get("files", []))
+              if not file_info:
+                  fail("No downloadable file was found for the latest Modrinth version.")
+              file_url = str(file_info.get("url", "")).strip()
+              if not file_url:
+                  fail("Modrinth file entry is missing a download URL.")
+              filename = str(file_info.get("filename", "")).strip()
+              if not filename:
+                  filename = f"{state['project_ref'] or 'mod'}.jar"
+              prefix = build_prefix()
+              name = f"{prefix}_{filename}" if prefix else filename
+              dest = setup_dir / name
+              _download_modrinth_file(file_url, dest)
+              resolved_jar = str(dest)
+              resolved_jar_name = dest.name
           
           resolved_desc = ""
           if desc_input:
@@ -280,7 +236,7 @@ jobs:
                   dest.write_text(desc_input, encoding="utf-8")
               resolved_desc = str(dest)
               resolved_desc_name = dest.name
-          elif auto_fetch and (modrinth_url or os.environ.get("MODRINTH_VERSION_ID", "").strip()):
+          elif auto_fetch and modrinth_url:
               ensure_project()
               text = _extract_modrinth_description(state["project"] or {})
               if text:
@@ -320,9 +276,9 @@ jobs:
           from modcompiler.common import load_json
           from modcompiler.decompile import decompile_jar_internal
           from modcompiler.modrinth import (
+              PRIMARY_JAR_EXCLUDE_MARKERS,
               ModrinthClient,
               build_modrinth_user_agent,
-              select_primary_modrinth_file,
           )
 
           version_id = os.environ.get("WORKING_VERSION_ID", "").strip()
@@ -337,8 +293,56 @@ jobs:
           version = client.request_json("GET", f"/version/{urllib.parse.quote(version_id, safe='')}")
           if not isinstance(version, dict):
               raise SystemExit("Unexpected Modrinth version response.")
+          if str(version.get("id") or "").strip() and str(version.get("id")).strip() != version_id:
+              raise SystemExit(f"Modrinth version id mismatch: requested {version_id}, got {version.get('id')}")
+          try:
+              files_debug = [
+                  {
+                      "filename": f.get("filename", ""),
+                      "primary": f.get("primary", False),
+                      "file_type": f.get("file_type", ""),
+                      "size": f.get("size", ""),
+                  }
+                  for f in (version.get("files", []) or [])
+              ]
+              print("Available files for working role model version:", json.dumps(files_debug, indent=2))
+          except Exception:
+              pass
 
-          file_info = select_primary_modrinth_file(version.get("files", []))
+          def pick_version_file(version_payload: dict) -> dict | None:
+              files = version_payload.get("files", []) or []
+              if not files:
+                  return None
+              loaders = [str(l).lower() for l in version_payload.get("loaders", []) if str(l).strip()]
+
+              def is_excluded(name: str) -> bool:
+                  return any(marker in name for marker in PRIMARY_JAR_EXCLUDE_MARKERS)
+
+              jar_files = [
+                  f for f in files
+                  if str(f.get("filename", "")).lower().endswith(".jar")
+              ]
+              candidates = jar_files or files
+
+              def score(f: dict) -> int:
+                  name = str(f.get("filename", "")).lower()
+                  score_val = 0
+                  if f.get("primary"):
+                      score_val += 100
+                  if str(f.get("file_type", "")).lower() == "required":
+                      score_val += 80
+                  if name.endswith(".jar"):
+                      score_val += 50
+                  if is_excluded(name):
+                      score_val -= 50
+                  for token in loaders:
+                      if token and token in name:
+                          score_val += 20
+                  return score_val
+
+              return max(candidates, key=score)
+
+          file_info = pick_version_file(version)
           if not file_info:
               raise SystemExit("No downloadable file found for the provided Modrinth version.")
           file_url = str(file_info.get("url", "")).strip()
