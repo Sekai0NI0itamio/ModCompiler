@@ -198,10 +198,18 @@ class OpenRouterClient:
             proxy = _load_socks_proxy()
             if proxy:
                 with _open_with_proxy(request, timeout=120, proxy=proxy) as response:
-                    result = json.loads(response.read().decode("utf-8"))
+                    body = response.read().decode("utf-8", errors="replace")
             else:
                 with urllib.request.urlopen(request, timeout=120) as response:
-                    result = json.loads(response.read().decode("utf-8"))
+                    body = response.read().decode("utf-8", errors="replace")
+            try:
+                result = json.loads(body)
+            except json.JSONDecodeError:
+                if _is_provider_error(body):
+                    self._mark_last_key_cooldown(30.0)
+                else:
+                    self._mark_last_key_cooldown(5.0)
+                raise ModCompilerError(f"Invalid OpenRouter response (non-JSON): {body[:500]}")
         except urllib.error.HTTPError as error:
             error_body = error.read().decode("utf-8", errors="replace")
             if error.code == 429:
