@@ -720,6 +720,27 @@ def decompile_jar_internal(jar_path: Path, manifest: dict[str, Any], output_dir:
 
         copy_tree(package_src.parent, output_dir)
 
+        dump_sources = os.environ.get("MODCOMPILER_DECOMPILE_DUMP", "").strip().lower() in {"1", "true", "yes"}
+        if dump_sources:
+            print("DEBUG: Dumping decompiled sources (this can be very large)...", file=sys.stderr)
+            if not package_src.exists():
+                print("DEBUG: No decompiled sources found to dump.", file=sys.stderr)
+            else:
+                for source_file in sorted(package_src.rglob("*")):
+                    if not source_file.is_file():
+                        continue
+                    if source_file.suffix.lower() not in {".java", ".kt"}:
+                        continue
+                    rel_path = source_file.relative_to(package_src)
+                    print(f"----- BEGIN {rel_path} -----", file=sys.stderr)
+                    try:
+                        with source_file.open("r", encoding="utf-8", errors="replace") as handle:
+                            for line in handle:
+                                print(line.rstrip("\n"), file=sys.stderr)
+                    except Exception as exc:
+                        print(f"[dump error] {rel_path}: {exc}", file=sys.stderr)
+                    print(f"----- END {rel_path} -----", file=sys.stderr)
+
         return DecompileResult(
             extracted_src=output_dir,
             metadata=metadata,

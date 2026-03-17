@@ -955,6 +955,34 @@ def _modrinth_version_timestamp(version: dict[str, Any]) -> float:
     return 0.0
 
 
+def _parse_modrinth_version_number(value: str, game_version: str | None = None) -> tuple[int, ...] | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+
+    def _extract_tokens(source: str) -> list[str]:
+        return re.findall(r"\d+(?:\.\d+)+|\d+", source)
+
+    tokens: list[str] = []
+    if game_version:
+        gv = str(game_version or "").strip()
+        if gv:
+            cleaned = re.sub(rf"(?i)mc\s*{re.escape(gv)}", " ", text)
+            cleaned = re.sub(re.escape(gv), " ", cleaned, flags=re.IGNORECASE)
+            tokens = _extract_tokens(cleaned)
+
+    if not tokens:
+        tokens = _extract_tokens(text)
+    if not tokens:
+        return None
+
+    token = tokens[0]
+    try:
+        return tuple(int(part) for part in token.split("."))
+    except ValueError:
+        return None
+
+
 def _select_latest_modrinth_versions_by_loader_game(
     versions: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -967,13 +995,39 @@ def _select_latest_modrinth_versions_by_loader_game(
         game_versions = [str(v) for v in version.get("game_versions", []) if str(v).strip()]
         if not loaders or not game_versions:
             continue
-        published_at = _modrinth_version_timestamp(version)
         for loader in loaders:
             for gv in game_versions:
                 key = (loader, gv)
+                published_at = _modrinth_version_timestamp(version)
+                version_number = str(version.get("version_number") or version.get("name") or "").strip()
+                version_key = _parse_modrinth_version_number(version_number, gv)
                 current = best_by_pair.get(key)
-                if current is None or published_at > float(current.get("published_at", 0.0)):
-                    best_by_pair[key] = {"version": version, "published_at": published_at}
+                if current is None:
+                    best_by_pair[key] = {
+                        "version": version,
+                        "published_at": published_at,
+                        "version_key": version_key,
+                    }
+                    continue
+
+                current_key = current.get("version_key")
+                choose_candidate = False
+                if version_key and current_key:
+                    if version_key > current_key:
+                        choose_candidate = True
+                    elif version_key == current_key and published_at > float(current.get("published_at", 0.0)):
+                        choose_candidate = True
+                elif version_key and not current_key:
+                    choose_candidate = True
+                elif not version_key and not current_key:
+                    if published_at > float(current.get("published_at", 0.0)):
+                        choose_candidate = True
+                if choose_candidate:
+                    best_by_pair[key] = {
+                        "version": version,
+                        "published_at": published_at,
+                        "version_key": version_key,
+                    }
 
     unique: dict[str, dict[str, Any]] = {}
     for entry in best_by_pair.values():
@@ -1479,6 +1533,14 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     fix_corrupted = bool(context.get("fix_corrupted"))
     supported_versions_text = ", ".join(supported_versions) if supported_versions else "unknown"
     range_versions_text = ", ".join(supported_versions_for_range) if supported_versions_for_range else "unknown"
+    same_version = current_v == target_v and current_l == target_l
+    same_version_block = ""
+    if same_version:
+        same_version_block = (
+            "\nNOTE: Current and target are the SAME version/loader. This is a same-version "
+            "repair/cleanup pass — NOT a no-op. Ensure the mod matches the description and "
+            "builds for this target, but do NOT change the version or loader.\n"
+        )
 
     role_model_block = ""
     if role_model_dir:
@@ -1517,7 +1579,17 @@ def build_ai_system_prompt(context: dict[str, Any]) -> str:
     if fix_corrupted:
         fix_block = "\nTHIS TARGET IS MARKED AS CORRUPTED: ensure the mod matches the description and intended behavior.\n"
 
-    return f"""You are an expert Minecraft mod developer. Your task is to update this mod from {current_l} {current_v} to {target_l} {target_v}.
+    intro_line = (
+        f"You are an expert Minecraft mod developer. Your task is to update this mod from "
+        f"{current_l} {current_v} to {target_l} {target_v}."
+    )
+    if same_version:
+        intro_line = (
+            f"You are an expert Minecraft mod developer. Your task is to update/repair this mod "
+            f"for {target_l} {target_v} (current source is already {current_l} {current_v})."
+        )
+
+    return f"""{intro_line}
 
 CURRENT DATE: {current_date} (Year {current_year})
 
@@ -1531,7 +1603,7 @@ MOD INFORMATION:
 - Mod ID: {mod_info.get('mod_id', 'unknown')}
 - Current Version: {mod_info.get('mod_version', '1.0.0')}
 - Description: {desc}
-{fix_block}{role_model_block}
+{fix_block}{same_version_block}{role_model_block}
 
 Older versions may use SRG/obf names (e.g., Minecraft.func_71410_x()); modern versions use official names (e.g., Minecraft.getInstance()). Follow reference templates for exact names.
 
@@ -1564,11 +1636,12 @@ If original source has no Java/Kotlin files, treat it as missing and use the sel
 - Don't re-read files you've already read - use the info you have
 - Never change the target Minecraft version or loader
 - Do NOT create or edit gradle/build config files (gradle.properties, build.gradle, settings.gradle)
+- Do NOT explore the repo root or parent directories; only work under src/, reference/, and role-model/ paths
 - library_* tools only contain Minecraft sources (no Forge/Fabric/NeoForge APIs). Use reference/role-model for loader APIs.
 - Avoid using library_* tools unless you have a specific missing Minecraft class; some library context is preloaded
 
 **TOOLS:**
-- read_file: Use path "java/com/package/File.java" (src/ prefix is auto-added)
+- read_file: Use path "java/com/package/File.java" (this resolves to src/java/...; do NOT look for a top-level java/ folder)
 - write_mod_file: Use path "com/package/File.java" (src/java/ prefix auto-added)
 - write_resource: Just filename like "mcmod.info" (src/resources/ prefix auto-added)
 - build: Compile the mod - do this as soon as possible!
