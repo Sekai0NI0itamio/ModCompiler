@@ -224,7 +224,7 @@ class OpenRouterClient:
             if _is_provider_error(error_body):
                 self._mark_last_key_cooldown(30.0)
             raise ModCompilerError(f"OpenRouter API error {error.code}: {error_body[:500]}")
-        except (http.client.RemoteDisconnected, ConnectionResetError, TimeoutError, socket.timeout) as error:
+        except (http.client.RemoteDisconnected, http.client.IncompleteRead, ConnectionResetError, TimeoutError, socket.timeout) as error:
             self._mark_last_key_cooldown(5.0)
             raise ModCompilerError(f"Remote disconnected while contacting OpenRouter: {error}")
         except urllib.error.URLError as error:
