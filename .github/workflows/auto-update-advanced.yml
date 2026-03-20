@@ -388,6 +388,7 @@ jobs:
           AUTO_FIX_ONLY: ${{ inputs.auto_fix_only }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MODCOMPILER_WORKING_ROLE_MODEL_DIR: ${{ steps.working_role_model.outputs.has_working_role_model == 'true' && '.workflow_state/working-role-model' || '' }}
         run: |
           mkdir -p .workflow_state/decomposed-single
           MOD_JAR_PATH=""
