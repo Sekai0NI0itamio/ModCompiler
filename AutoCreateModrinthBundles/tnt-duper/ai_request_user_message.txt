@@ -1,0 +1,329 @@
+Generate Modrinth listing copy for one Minecraft mod.
+
+Use only the facts found in PROJECT INFO below.
+Do not invent features, commands, compatibility, authors, loaders, game versions, or licensing facts.
+Use the perfect template examples below for tone, quality, and formatting only.
+Do not copy the example mod's features unless PROJECT INFO proves them.
+Lead with the main player-facing feature, not the internal implementation.
+If the jar metadata already contains a solid name, keep it very close to that name.
+Keep the short description to one accurate sentence under 96 characters.
+Make the long description feel like a polished manual Modrinth page.
+You may use Markdown headings and bullet lists when they improve clarity.
+Mention secondary features only if they are clearly present and worth surfacing.
+Avoid implementation details like reflection, event hooks, custom damage sources,
+cooldown fields, package names, class names, or internal APIs.
+Avoid filler compatibility lines unless PROJECT INFO makes them unusually important.
+Choose categories only from this list: adventure, cursed, decoration, economy, equipment, food, game-mechanics, library, magic, management, minigame, mobs, optimization, social, storage, technology, transportation, utility, worldgen
+Choose client_side and server_side only from: required, optional, unsupported, unknown
+Choose license_id only from this list when PROJECT INFO clearly supports it: CC0-1.0, CC-BY-4.0, Apache-2.0, BSD-2-Clause, BSD-3-Clause
+If the best answer would be custom or all-rights-reserved, leave license_id empty and set license_url only when PROJECT INFO provides one.
+If the license is unclear, return an empty string for license_id and license_url.
+Return only valid JSON that matches this template exactly:
+
+{
+  "name": "Short memorable mod name",
+  "short_description": "One accurate sentence under 96 characters.",
+  "long_description": "Player-facing Markdown that matches the perfect template style.",
+  "categories": [
+    "utility"
+  ],
+  "additional_categories": [],
+  "client_side": "optional",
+  "server_side": "required",
+  "license_id": "",
+  "license_url": ""
+}
+
+PERFECT TEMPLATE EXAMPLES
+
+modname.txt
+Common Server Core
+
+summary.txt
+/tpa, /home, /rtp, random spawn all included in one mod. Compatible for single player worlds!
+
+description.txt
+# ServerCore
+
+## Description
+
+**ServerCore** is a lightweight utility mod for Minecraft Forge 1.12.2 that adds a complete, player-friendly teleport toolkit to both singleplayer and multiplayer—without requiring cheats or operator status. Whether you're exploring, building, or just getting started, ServerCore gives you the tools to move around your world with ease.
+
+### What It Does (for the user)
+
+**Teleport Requests**
+- Send a teleport request to another player:  
+  `/tpa <player>` – Request to teleport to them.  
+  `/tpahere <player>` – Request them to teleport to you.
+- Incoming requests last 60 seconds before expiring.
+- Accept or deny requests individually or all at once:  
+  `/tpaccept [player]` – Accept a specific request.  
+  `/tpacceptall` – Accept all pending requests.  
+  `/tpadeny [player]` – Deny a specific request.  
+  `/tpadenyall` – Deny all pending requests.
+- Cancel requests you've sent:  
+  `/tpacancel <player>` – Cancel a specific outgoing request.  
+  `/tpacancel all` – Cancel all outgoing requests.
+
+**Personal Homes**
+- Set your own named homes that remember your exact location, dimension, and even which way you're facing:  
+  `/sethome <name>` – Save your current position as a home.
+- Teleport to any of your homes anytime:  
+  `/home <name>` – Go to that home.  
+  `/home list` – See all your saved homes.  
+  `/delhome <name>` – Remove a home.
+- Homes are private to you and persist across sessions in the world data.
+
+**Safe Random Teleport**
+- Instantly teleport to a random, safe location without leaving your dimension:  
+  `/rtp overworld` – Random location in the Overworld.  
+  `/rtp nether` – Random location in the Nether.  
+  `/rtp end` – Random location in the End.
+- The search area is a 10,000-block square centered at 0,0 (respecting your world border).
+- The mod ensures you land on a safe spot—no mid-air or suffocation spawns.
+
+**First-Join Auto-Teleport**
+- When a player joins a world for the very first time, they are automatically teleported to a safe random overworld location (using the same RTP system).
+- Perfect for survival servers: new players start somewhere fresh and unexplored, not at world spawn.
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-03-29T02:20:18+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/TNT-Duper.jar
+jar_size_bytes=22835
+jar_sha1=81e327d06533d5ebb002fa2a7559935aff141899
+
+## Detected Metadata
+
+jar_name=TNT-Duper.jar
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=tnt_duper
+name=TNT Duper
+mod_version=1.0
+description=Allows dispensers to duplicate and dispense TNT infinitely.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/decompiled/src/main/java
+source_file_count=22
+package_count=5
+packages=com.tntduper,com.tntduper.blocks,com.tntduper.init,com.tntduper.items,com.tntduper.proxy
+
+## Source Tree
+
+com/tntduper/BehaviorDispenseTNTDuper.java
+com/tntduper/Main.java
+com/tntduper/blocks/BlockBase.java
+com/tntduper/blocks/BlockCompressedCobblestone.java
+com/tntduper/init/BlocksRegistry.java
+com/tntduper/init/ItemsRegistry.java
+com/tntduper/items/AluminumAxe.java
+com/tntduper/items/AluminumHoe.java
+com/tntduper/items/AluminumIngot.java
+com/tntduper/items/AluminumPickaxe.java
+com/tntduper/items/AluminumShovel.java
+com/tntduper/items/AluminumSword.java
+com/tntduper/items/ICreativeTabbable.java
+com/tntduper/items/IRegisterable.java
+com/tntduper/items/ItemAxeBase.java
+com/tntduper/items/ItemBase.java
+com/tntduper/items/ItemPickaxeBase.java
+com/tntduper/items/ItemShovelBase.java
+com/tntduper/items/ItemSwordBase.java
+com/tntduper/items/ItemToolBase.java
+com/tntduper/proxy/ClientProxy.java
+com/tntduper/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/tntduper/BehaviorDispenseTNTDuper.java
+```
+package com.tntduper;
+
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.dispenser.BehaviorDefaultDispenseItem;
+import net.minecraft.dispenser.IBlockSource;
+import net.minecraft.entity.item.EntityTNTPrimed;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+public class BehaviorDispenseTNTDuper extends BehaviorDefaultDispenseItem {
+   protected ItemStack func_82487_b(IBlockSource source, ItemStack stack) {
+      World world = source.func_82618_k();
+      BlockPos blockpos = source.func_180699_d().func_177972_a((EnumFacing)source.func_189992_e().func_177229_b(BlockDispenser.field_176441_a));
+      EntityTNTPrimed entitytntprimed = new EntityTNTPrimed(
+         world, blockpos.func_177958_n() + 0.5, blockpos.func_177956_o(), blockpos.func_177952_p() + 0.5, null
+      );
+      world.func_72838_d(entitytntprimed);
+      world.func_184148_a(
+         null,
+         entitytntprimed.field_70165_t,
+         entitytntprimed.field_70163_u,
+         entitytntprimed.field_70161_v,
+         SoundEvents.field_187904_gd,
+         SoundCategory.BLOCKS,
+         1.0F,
+         1.0F
+      );
+      return stack;
+   }
+}
+```
+
+### com/tntduper/Main.java
+```
+package com.tntduper;
+
+import com.tntduper.proxy.CommonProxy;
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.init.Blocks;
+import net.minecraft.item.Item;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(
+   modid = "tnt_duper",
+   version = "1.0",
+   name = "TNT Duper",
+   acceptedMinecraftVersions = "[1.12.2]"
+)
+public class Main {
+   public static final String MOD_ID = "tnt_duper";
+   public static final String VERSION = "1.0";
+   public static final String NAME = "TNT Duper";
+   @Instance
+   public static Main main;
+   @SidedProxy(
+      serverSide = "com.tntduper.proxy.CommonProxy",
+      clientSide = "com.tntduper.proxy.ClientProxy"
+   )
+   public static CommonProxy proxy;
+
+   @EventHandler
+   public void preInit(FMLPreInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void init(FMLInitializationEvent event) {
+      BlockDispenser.field_149943_a.func_82595_a(Item.func_150898_a(Blocks.field_150335_W), new BehaviorDispenseTNTDuper());
+   }
+
+   @EventHandler
+   public void postInit(FMLPostInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void serverStarting(FMLServerStartingEvent event) {
+   }
+}
+```
+
+### com/tntduper/items/ItemBase.java
+```
+package com.tntduper.items;
+
+import com.tntduper.Main;
+import com.tntduper.init.ItemsRegistry;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraft.item.Item.ToolMaterial;
+
+public class ItemBase extends Item implements IRegisterable, ICreativeTabbable {
+   protected String name;
+
+   public ItemBase(String name) {
+      this.name = name;
+      this.updateRegistryAndLocalizedName(name);
+   }
+
+   @Override
+   public void registerItemModel() {
+      Main.proxy.registerItemRenderer(this, 0, this.name);
+   }
+
+   public ItemBase(ToolMaterial material, String name) {
+      this.name = name;
+   }
+
+   public ItemBase setCreativeTab(CreativeTabs tab) {
+      super.func_77637_a(tab);
+      return this;
+   }
+
+   @Override
+   public void updateRegistryAndLocalizedName(String name) {
+      this.func_77655_b(name);
+      this.setRegistryName(name);
+      ItemsRegistry.ITEMS.add(this);
+   }
+}
+```
+
+### com/tntduper/blocks/BlockBase.java
+```
+package com.tntduper.blocks;
+
+import com.tntduper.Main;
+import com.tntduper.init.BlocksRegistry;
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
+
+public class BlockBase extends Block {
+   protected String name;
+
+   public BlockBase(Material material, String name) {
+      super(material);
+      this.func_149663_c(name);
+      this.setRegistryName(name);
+      BlocksRegistry.BLOCKS.add(this);
+   }
+
+   public void registerItemModel(Item itemBlock) {
+      Main.proxy.registerItemRenderer(itemBlock, 0, this.name);
+   }
+
+   public Item createItemBlock() {
+      ItemBlock itemBlock = new ItemBlock(this);
+      itemBlock.setRegistryName(this.getRegistryName());
+      return itemBlock;
+   }
+
+   public BlockBase setCreativeTab(CreativeTabs tab) {
+      super.func_149647_a(tab);
+      return this;
+   }
+}
+```
+
+### com/tntduper/items/AluminumAxe.java
+```
+package com.tntduper.items;
+
+import net.minecraft.item.Item.ToolMaterial;
+import net.minecraftforge.common.util.EnumHelper;
+
+public class AluminumAxe extends ItemAxeBase {
+   public static final ToolMaterial ALUMINUM_TOOL_MATERIAL = EnumHelper.addToolMaterial("ALUMINUM", 3, 99999, 9999.0F, 9999999.0F, 14);
+
+   public AluminumAxe(String name) {
+      super(ALUMINUM_TOOL_MATERIAL, name);
+   }
+}
+```
