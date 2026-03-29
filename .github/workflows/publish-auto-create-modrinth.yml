@@ -1,4 +1,4 @@
-name: Publish Auto Create Modrinth Bundle
+name: Create Auto Create Modrinth Draft
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         default: AutoCreateModrinthBundles
         type: string
       bundle_slug:
-        description: Bundle directory name to publish
+        description: Bundle directory name to turn into a Modrinth draft
         required: true
         type: string
 
@@ -18,7 +18,7 @@ permissions:
   actions: read
 
 jobs:
-  publish:
+  create_draft:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,17 +36,17 @@ jobs:
             echo "::add-mask::$MODRINTH_TOKEN"
           fi
 
-      - id: publish
+      - id: create_draft
         shell: bash
         continue-on-error: true
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: |
           set +e
-          python3 scripts/auto_create_modrinth_page_and_publish_mod.py publish \
+          python3 scripts/auto_create_modrinth_draft_projects.py create-drafts \
             --output-dir "${{ inputs.output_dir }}" \
             --only-bundle "${{ inputs.bundle_slug }}" \
-            --publish-via local
+            --create-via local
           exit_code=$?
           set -e
           printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT"
@@ -55,9 +55,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: auto-create-modrinth-publish-output
+          name: auto-create-modrinth-draft-output
           path: |
             ${{ inputs.output_dir }}/${{ inputs.bundle_slug }}
+            ${{ inputs.output_dir }}/draft-upload-summary.json
+            ${{ inputs.output_dir }}/DRAFT_UPLOAD_SUMMARY.md
             ${{ inputs.output_dir }}/publish-summary.json
             ${{ inputs.output_dir }}/PUBLISH_SUMMARY.md
           if-no-files-found: warn
@@ -73,7 +75,7 @@ jobs:
       - if: always()
         shell: bash
         run: |
-          code="${{ steps.publish.outputs.exit_code }}"
+          code="${{ steps.create_draft.outputs.exit_code }}"
           if [ -z "$code" ]; then
             code=1
           fi
