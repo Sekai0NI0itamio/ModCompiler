@@ -1,0 +1,80 @@
+name: Publish Auto Create Modrinth Bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      output_dir:
+        description: Repo-relative bundle root
+        required: true
+        default: AutoCreateModrinthBundles
+        type: string
+      bundle_slug:
+        description: Bundle directory name to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - id: publish
+        shell: bash
+        continue-on-error: true
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set +e
+          python3 scripts/auto_create_modrinth_page_and_publish_mod.py publish \
+            --output-dir "${{ inputs.output_dir }}" \
+            --only-bundle "${{ inputs.bundle_slug }}" \
+            --publish-via local
+          exit_code=$?
+          set -e
+          printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auto-create-modrinth-publish-output
+          path: |
+            ${{ inputs.output_dir }}/${{ inputs.bundle_slug }}
+            ${{ inputs.output_dir }}/publish-summary.json
+            ${{ inputs.output_dir }}/PUBLISH_SUMMARY.md
+          if-no-files-found: warn
+
+      - if: always()
+        shell: bash
+        run: |
+          summary_path="${{ inputs.output_dir }}/${{ inputs.bundle_slug }}/SUMMARY.md"
+          if [ -f "$summary_path" ]; then
+            cat "$summary_path" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - if: always()
+        shell: bash
+        run: |
+          code="${{ steps.publish.outputs.exit_code }}"
+          if [ -z "$code" ]; then
+            code=1
+          fi
+          exit "$code"
