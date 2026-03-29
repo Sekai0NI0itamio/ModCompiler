@@ -284,6 +284,39 @@ def render_modrinth_summary_markdown(result: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def required_modrinth_scope_for_request(method: str, path: str) -> str:
+    method_upper = method.upper()
+    if method_upper == "POST" and path == "/project":
+        return "PROJECT_CREATE"
+    if method_upper == "POST" and path == "/version":
+        return "VERSION_CREATE"
+    if method_upper == "PATCH" and path.startswith("/project/"):
+        return "PROJECT_WRITE"
+    if method_upper == "PATCH" and path.startswith("/version/"):
+        return "VERSION_WRITE"
+    return ""
+
+
+def build_modrinth_auth_failure_message(*, method: str, path: str, payload_text: str) -> str:
+    detail = "Modrinth authentication failed."
+    lowered = payload_text.lower()
+    if "invalid authentication credentials" in lowered or "invalid authentication" in lowered:
+        detail += " The token looks invalid or expired."
+    elif "scope" in lowered or "no authorization to access" in lowered:
+        detail += " The token looks present, but it may be missing required Modrinth scopes."
+    else:
+        detail += " Modrinth rejected the supplied token."
+
+    required_scope = required_modrinth_scope_for_request(method, path)
+    if required_scope:
+        detail += f" Required scope for this request: {required_scope}."
+
+    detail += " Check the MODRINTH_TOKEN secret."
+    if payload_text:
+        detail += f" Response: {payload_text[:300]}"
+    return detail
+
+
 class ModrinthClient:
     def __init__(self, *, token: str | None, user_agent: str, api_base: str = MODRINTH_API_BASE) -> None:
         self.token = token or ""
@@ -335,6 +368,22 @@ class ModrinthClient:
             extra_headers={"Content-Type": content_type},
         )
 
+    def modify_project(self, *, project_ref: str, payload: dict[str, Any]) -> None:
+        self.request_json(
+            "PATCH",
+            f"/project/{urllib.parse.quote(project_ref, safe='')}",
+            body=json.dumps(payload).encode("utf-8"),
+            extra_headers={"Content-Type": "application/json"},
+        )
+
+    def modify_version(self, *, version_id: str, payload: dict[str, Any]) -> None:
+        self.request_json(
+            "PATCH",
+            f"/version/{urllib.parse.quote(version_id, safe='')}",
+            body=json.dumps(payload).encode("utf-8"),
+            extra_headers={"Content-Type": "application/json"},
+        )
+
     def request_json(
         self,
         method: str,
@@ -366,7 +415,11 @@ class ModrinthClient:
                 payload_text = error.read().decode("utf-8", errors="replace").strip()
                 if error.code in {401, 403}:
                     raise ModCompilerError(
-                        "Modrinth authentication failed. Check the MODRINTH_TOKEN secret."
+                        build_modrinth_auth_failure_message(
+                            method=method_upper,
+                            path=path,
+                            payload_text=payload_text,
+                        )
                     ) from None
                 if error.code == 404 and path.startswith("/project/"):
                     raise ModCompilerError("The Modrinth project could not be found.") from None
