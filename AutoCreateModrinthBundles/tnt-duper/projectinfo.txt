@@ -1,0 +1,240 @@
+# Project Info
+
+generated_at=2026-03-29T05:04:37+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/TNT-Duper.jar
+jar_size_bytes=22835
+jar_sha1=81e327d06533d5ebb002fa2a7559935aff141899
+
+## Detected Metadata
+
+jar_name=TNT-Duper.jar
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=tnt_duper
+name=TNT Duper
+mod_version=1.0
+description=Allows dispensers to duplicate and dispense TNT infinitely.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/decompiled/src/main/java
+source_file_count=22
+package_count=5
+packages=com.tntduper,com.tntduper.blocks,com.tntduper.init,com.tntduper.items,com.tntduper.proxy
+
+## Source Tree
+
+com/tntduper/BehaviorDispenseTNTDuper.java
+com/tntduper/Main.java
+com/tntduper/blocks/BlockBase.java
+com/tntduper/blocks/BlockCompressedCobblestone.java
+com/tntduper/init/BlocksRegistry.java
+com/tntduper/init/ItemsRegistry.java
+com/tntduper/items/AluminumAxe.java
+com/tntduper/items/AluminumHoe.java
+com/tntduper/items/AluminumIngot.java
+com/tntduper/items/AluminumPickaxe.java
+com/tntduper/items/AluminumShovel.java
+com/tntduper/items/AluminumSword.java
+com/tntduper/items/ICreativeTabbable.java
+com/tntduper/items/IRegisterable.java
+com/tntduper/items/ItemAxeBase.java
+com/tntduper/items/ItemBase.java
+com/tntduper/items/ItemPickaxeBase.java
+com/tntduper/items/ItemShovelBase.java
+com/tntduper/items/ItemSwordBase.java
+com/tntduper/items/ItemToolBase.java
+com/tntduper/proxy/ClientProxy.java
+com/tntduper/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/tntduper/BehaviorDispenseTNTDuper.java
+```
+package com.tntduper;
+
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.dispenser.BehaviorDefaultDispenseItem;
+import net.minecraft.dispenser.IBlockSource;
+import net.minecraft.entity.item.EntityTNTPrimed;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+public class BehaviorDispenseTNTDuper extends BehaviorDefaultDispenseItem {
+   protected ItemStack func_82487_b(IBlockSource source, ItemStack stack) {
+      World world = source.func_82618_k();
+      BlockPos blockpos = source.func_180699_d().func_177972_a((EnumFacing)source.func_189992_e().func_177229_b(BlockDispenser.field_176441_a));
+      EntityTNTPrimed entitytntprimed = new EntityTNTPrimed(
+         world, blockpos.func_177958_n() + 0.5, blockpos.func_177956_o(), blockpos.func_177952_p() + 0.5, null
+      );
+      world.func_72838_d(entitytntprimed);
+      world.func_184148_a(
+         null,
+         entitytntprimed.field_70165_t,
+         entitytntprimed.field_70163_u,
+         entitytntprimed.field_70161_v,
+         SoundEvents.field_187904_gd,
+         SoundCategory.BLOCKS,
+         1.0F,
+         1.0F
+      );
+      return stack;
+   }
+}
+```
+
+### com/tntduper/Main.java
+```
+package com.tntduper;
+
+import com.tntduper.proxy.CommonProxy;
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.init.Blocks;
+import net.minecraft.item.Item;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(
+   modid = "tnt_duper",
+   version = "1.0",
+   name = "TNT Duper",
+   acceptedMinecraftVersions = "[1.12.2]"
+)
+public class Main {
+   public static final String MOD_ID = "tnt_duper";
+   public static final String VERSION = "1.0";
+   public static final String NAME = "TNT Duper";
+   @Instance
+   public static Main main;
+   @SidedProxy(
+      serverSide = "com.tntduper.proxy.CommonProxy",
+      clientSide = "com.tntduper.proxy.ClientProxy"
+   )
+   public static CommonProxy proxy;
+
+   @EventHandler
+   public void preInit(FMLPreInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void init(FMLInitializationEvent event) {
+      BlockDispenser.field_149943_a.func_82595_a(Item.func_150898_a(Blocks.field_150335_W), new BehaviorDispenseTNTDuper());
+   }
+
+   @EventHandler
+   public void postInit(FMLPostInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void serverStarting(FMLServerStartingEvent event) {
+   }
+}
+```
+
+### com/tntduper/items/ItemBase.java
+```
+package com.tntduper.items;
+
+import com.tntduper.Main;
+import com.tntduper.init.ItemsRegistry;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraft.item.Item.ToolMaterial;
+
+public class ItemBase extends Item implements IRegisterable, ICreativeTabbable {
+   protected String name;
+
+   public ItemBase(String name) {
+      this.name = name;
+      this.updateRegistryAndLocalizedName(name);
+   }
+
+   @Override
+   public void registerItemModel() {
+      Main.proxy.registerItemRenderer(this, 0, this.name);
+   }
+
+   public ItemBase(ToolMaterial material, String name) {
+      this.name = name;
+   }
+
+   public ItemBase setCreativeTab(CreativeTabs tab) {
+      super.func_77637_a(tab);
+      return this;
+   }
+
+   @Override
+   public void updateRegistryAndLocalizedName(String name) {
+      this.func_77655_b(name);
+      this.setRegistryName(name);
+      ItemsRegistry.ITEMS.add(this);
+   }
+}
+```
+
+### com/tntduper/blocks/BlockBase.java
+```
+package com.tntduper.blocks;
+
+import com.tntduper.Main;
+import com.tntduper.init.BlocksRegistry;
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
+
+public class BlockBase extends Block {
+   protected String name;
+
+   public BlockBase(Material material, String name) {
+      super(material);
+      this.func_149663_c(name);
+      this.setRegistryName(name);
+      BlocksRegistry.BLOCKS.add(this);
+   }
+
+   public void registerItemModel(Item itemBlock) {
+      Main.proxy.registerItemRenderer(itemBlock, 0, this.name);
+   }
+
+   public Item createItemBlock() {
+      ItemBlock itemBlock = new ItemBlock(this);
+      itemBlock.setRegistryName(this.getRegistryName());
+      return itemBlock;
+   }
+
+   public BlockBase setCreativeTab(CreativeTabs tab) {
+      super.func_149647_a(tab);
+      return this;
+   }
+}
+```
+
+### com/tntduper/items/AluminumAxe.java
+```
+package com.tntduper.items;
+
+import net.minecraft.item.Item.ToolMaterial;
+import net.minecraftforge.common.util.EnumHelper;
+
+public class AluminumAxe extends ItemAxeBase {
+   public static final ToolMaterial ALUMINUM_TOOL_MATERIAL = EnumHelper.addToolMaterial("ALUMINUM", 3, 99999, 9999.0F, 9999999.0F, 14);
+
+   public AluminumAxe(String name) {
+      super(ALUMINUM_TOOL_MATERIAL, name);
+   }
+}
+```
