@@ -1,0 +1,235 @@
+# Original Source Context
+
+generated_at=2026-03-30T13:43:36+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/source/src/main/java
+source_file_count=22
+package_count=5
+packages=com.forgetemplatemod,com.forgetemplatemod.blocks,com.forgetemplatemod.init,com.forgetemplatemod.items,com.forgetemplatemod.proxy
+
+## Source Tree
+
+com/forgetemplatemod/BehaviorDispenseTNTDuper.java
+com/forgetemplatemod/Main.java
+com/forgetemplatemod/blocks/BlockBase.java
+com/forgetemplatemod/blocks/BlockCompressedCobblestone.java
+com/forgetemplatemod/init/BlocksRegistry.java
+com/forgetemplatemod/init/ItemsRegistry.java
+com/forgetemplatemod/items/AluminumAxe.java
+com/forgetemplatemod/items/AluminumHoe.java
+com/forgetemplatemod/items/AluminumIngot.java
+com/forgetemplatemod/items/AluminumPickaxe.java
+com/forgetemplatemod/items/AluminumShovel.java
+com/forgetemplatemod/items/AluminumSword.java
+com/forgetemplatemod/items/ICreativeTabbable.java
+com/forgetemplatemod/items/IRegisterable.java
+com/forgetemplatemod/items/ItemAxeBase.java
+com/forgetemplatemod/items/ItemBase.java
+com/forgetemplatemod/items/ItemPickaxeBase.java
+com/forgetemplatemod/items/ItemShovelBase.java
+com/forgetemplatemod/items/ItemSwordBase.java
+com/forgetemplatemod/items/ItemToolBase.java
+com/forgetemplatemod/proxy/ClientProxy.java
+com/forgetemplatemod/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/forgetemplatemod/BehaviorDispenseTNTDuper.java
+```
+package com.forgetemplatemod;
+
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.dispenser.BehaviorDefaultDispenseItem;
+import net.minecraft.dispenser.IBlockSource;
+import net.minecraft.entity.item.EntityTNTPrimed;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+public class BehaviorDispenseTNTDuper extends BehaviorDefaultDispenseItem {
+    @Override
+    protected ItemStack dispenseStack(IBlockSource source, ItemStack stack) {
+        World world = source.getWorld();
+        BlockPos blockpos = source.getBlockPos().offset(source.getBlockState().getValue(BlockDispenser.FACING));
+        EntityTNTPrimed entitytntprimed = new EntityTNTPrimed(world, (double)blockpos.getX() + 0.5D, (double)blockpos.getY(), (double)blockpos.getZ() + 0.5D, null);
+        world.spawnEntity(entitytntprimed);
+        world.playSound(null, entitytntprimed.posX, entitytntprimed.posY, entitytntprimed.posZ, SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0F, 1.0F);
+        
+        // Return the stack unchanged! We intentionally DO NOT call stack.shrink(1)
+        // This makes the dispenser act as a TNT Duper without consuming the item.
+        return stack;
+    }
+}
+```
+
+### com/forgetemplatemod/Main.java
+```
+package com.forgetemplatemod;
+
+import com.forgetemplatemod.proxy.CommonProxy;
+
+import net.minecraft.item.Item;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(modid= Main.MOD_ID, version = Main.VERSION, name = Main.NAME)
+public class Main {
+	public static final String MOD_ID = "tnt_duper";
+	public static final String VERSION = "1.0";
+	public static final String NAME = "TNT Duper";
+	
+	@Instance
+	public static Main main;	
+	
+	/**
+	 * must include package paths
+	 */
+	@SidedProxy(serverSide = "com.forgetemplatemod.proxy.CommonProxy", clientSide = "com.forgetemplatemod.proxy.ClientProxy")
+	public static CommonProxy proxy;  
+	
+	@EventHandler
+	public void preInit(FMLPreInitializationEvent event) {
+		
+	}
+	
+	@EventHandler
+	public void init(FMLInitializationEvent event) {
+		net.minecraft.block.BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(
+			Item.getItemFromBlock(net.minecraft.init.Blocks.TNT), 
+			new BehaviorDispenseTNTDuper()
+		);
+	}
+	
+	@EventHandler
+	public void postInit(FMLPostInitializationEvent event) {
+		
+	}
+	
+	@EventHandler
+	public void serverStarting(FMLServerStartingEvent event) {
+		
+	}
+}
+```
+
+### com/forgetemplatemod/items/ItemBase.java
+```
+package com.forgetemplatemod.items;
+
+import com.forgetemplatemod.Main;
+import com.forgetemplatemod.init.ItemsRegistry;
+
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+
+public class ItemBase extends Item implements IRegisterable, ICreativeTabbable {
+	
+	protected String name;	
+	
+	public ItemBase(String name) {
+		this.name = name;	
+		
+		updateRegistryAndLocalizedName(name);
+	}
+	
+	public void registerItemModel() {
+		Main.proxy.registerItemRenderer(this, 0, name);
+	}
+
+	
+	public ItemBase(ToolMaterial material, String name) {
+		this.name = name;
+	}
+	
+	public ItemBase setCreativeTab(CreativeTabs tab) {
+		super.setCreativeTab(tab);
+		return this;
+	}
+	
+	@Override
+	public void updateRegistryAndLocalizedName(String name) {
+		//used for language files
+		setTranslationKey(name);
+		//used for registering the item and its models
+		setRegistryName(name);
+		
+		ItemsRegistry.ITEMS.add(this);
+	}	
+}
+```
+
+### com/forgetemplatemod/blocks/BlockBase.java
+```
+package com.forgetemplatemod.blocks;
+
+import com.forgetemplatemod.Main;
+import com.forgetemplatemod.init.BlocksRegistry;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
+
+public class BlockBase extends Block {
+
+	protected String name;
+	
+	public BlockBase(Material material, String name) {
+		super(material);
+
+		setTranslationKey(name);
+		setRegistryName(name);
+		
+		BlocksRegistry.BLOCKS.add(this);
+	}
+	
+	public void registerItemModel(Item itemBlock) {
+		Main.proxy.registerItemRenderer(itemBlock, 0, name);
+	}
+	
+	public Item createItemBlock() {
+		ItemBlock itemBlock = new ItemBlock(this);
+		itemBlock.setRegistryName(getRegistryName());
+		return itemBlock;
+	}
+	
+	@Override
+	public BlockBase setCreativeTab(CreativeTabs tab) {
+		super.setCreativeTab(tab);
+		return this;
+	}
+
+}
+```
+
+### com/forgetemplatemod/items/AluminumAxe.java
+```
+package com.forgetemplatemod.items;
+
+import com.forgetemplatemod.Main;
+
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemAxe;
+import net.minecraftforge.common.util.EnumHelper;
+
+public class AluminumAxe extends ItemAxeBase {
+	
+	public static final Item.ToolMaterial ALUMINUM_TOOL_MATERIAL = EnumHelper.addToolMaterial("ALUMINUM", 3, 99999, 9999, 9999999, 14); 
+	
+	public AluminumAxe(String name) {
+		super(ALUMINUM_TOOL_MATERIAL, name);		
+	}
+}
+```

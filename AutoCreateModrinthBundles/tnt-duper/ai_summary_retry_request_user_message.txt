@@ -1,0 +1,606 @@
+Wrong your generated summary is incorrect, see my instructions and examples again.
+Look back at the earlier history in this chat and follow those examples and verified facts more closely.
+Previous generated summary:
+Hate when [problem]? This mod [simple payoff].
+Your previous summary did not copy the example structure closely enough.
+Rewrite it by following the earlier examples much more directly.
+Only use things that the verified facts clearly prove.
+Do not invent a fake second complaint if the project only clearly supports one main annoyance.
+Do not fall back to patch-note wording or overly literal mechanic wording if a more relatable player problem fits better.
+Do not repeat placeholder text like [problem] or [main payoff]. Replace those with the real mod details.
+Use small helper words like well, so, or now if that makes it sound more natural.
+Slightly imperfect grammar is okay if it reads more like a real person wrote it.
+Here is the original summary task again. Follow it directly this time:
+Write only the Modrinth summary for one Minecraft mod.
+
+You already reviewed the original source folder earlier in this chat.
+Use that source-based understanding first, then use the chosen name and long description below only to stay aligned.
+Use SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT as the highest-trust fact list.
+Use ORIGINAL SOURCE CONTEXT below as direct evidence from the provided src folder, not just as background history.
+Return plain text only.
+Do not return JSON.
+Do not return markdown bullets, headings, explanations, quotes, or multiple options.
+Focus only on producing one strong player-facing summary line.
+
+Summary rules:
+- Usually 1 sentence, or 2 very short sentences.
+- Write naturally. The script will shorten the final summary later if needed.
+- Sound like a real human mod page, not corporate marketing copy.
+- Prefer an accurate complaint/problem -> payoff cadence when the mod naturally fits it.
+- Learn from the examples very closely, but do not force every mod into the exact same sentence shape.
+- It is okay to copy an example structure almost directly when it fits, but switch to a different example style when that fits the mod better.
+- Prefer the most relatable player pain over the most literal implementation detail.
+- When it fits naturally, strongly prefer starting with a player frustration hook like "Hate...", "Tired of...", or "Wanting...".
+- Be specific about the actual player-visible benefit.
+- Keep the wording simple and casual rather than polished or dramatic.
+- Small helper words and bridge phrases are good, like "well", "now", "so", "basically", or "which means", when they make it sound more human.
+- Slightly imperfect grammar is okay if it sounds clearer, more casual, and closer to the examples.
+- Do not mention internal implementation details, package names, event names, hooks, APIs, or metadata trivia.
+- Do not add compatibility or command claims unless the project info clearly proves them.
+- Do not mention exact numbers, cooldown values, tick counts, `vanilla cooldown`, `bulk transfer`, or similar internal timing in the summary.
+- If the source clearly proves a bigger visible effect than just "faster", say that bigger visible effect in simple words.
+- For example, if the source clearly shows whole-stack transfer or repeated transfer loops, prefer wording like "moves full stacks in one go" over just "moves items faster".
+- Do not exaggerate.
+- Never count characters, words, or tokens out loud.
+- Never show your steps, analysis, or any 'Count:' style output.
+- Avoid generic openings like "Hostile mobs..." or "This mod..." when a sharper player-facing hook would fit better.
+- Avoid advanced wording like "ignite", "deadly zones", or "roaming safely in daylight" when simpler wording would sound more human.
+- Avoid clever rewrites, slogans, or edgy phrases like "free-range mob-killer".
+- Avoid sounding like patch notes, changelogs, or technical documentation.
+- Never output template placeholders like `[problem]`, `[main payoff]`, or bracketed labels. Always replace them with the real mod details.
+
+Important:
+- Treat the examples below like strong style references, not a single fixed script.
+- Copy the example pattern closely when it helps, but pick the example angle that best matches the mod's real player problem.
+- Prefer sounding like the examples over sounding polished or over-explained.
+- Reuse phrases like "Hate that...", "Hate the...", "This mod makes it so that...", "Wanting to...", and "Well this mod cancels that pain..." when they fit.
+- Do not paraphrase the examples into brand new wording if the example phrasing already works.
+- Do not invent a fake second complaint just to fit Template A. If only one real complaint is clearly supported, use Template C.
+- Reuse the concrete nouns already present in PROJECT INFO. Do not swap in new problems like raids, bases, or travel unless PROJECT INFO really proves them.
+- If the verified notes only prove one clear complaint, stick to one clear complaint.
+
+Preferred reusable templates:
+- Template A: Hate that [annoying thing]? Hate the [second annoying thing]? This mod makes it so that [main payoff].
+- Template B: Wanting to [goal]? Tired of [pain]? Well this mod cancels that pain, you can [main payoff].
+- Template C: Hate when [problem]? This mod [simple payoff].
+
+Good vs bad examples:
+- Good: Why look for TNT dupers when you could just build one with one dispenser and one tnt? No need for slime, no need for tutorials, no anything else then a dispenser and tnt.
+- Why good: it sounds like a real player, it talks about the usual pain players face, and it keeps the wording casual.
+- Bad: Tired of dispensers using up your TNT? Well this mod makes dispensers fire TNT without consuming it.
+- Why bad: too literal, too implementation-specific, and it reads more like patch notes than a real player-facing summary.
+
+SPECIFIC GUIDANCE FOR THIS MOD:
+- Do not lock onto the literal dispenser behavior as the whole sentence.
+- Better angle: talk about the usual player pain of needing a complicated TNT duper setup, tutorials, slime parts, or extra nonsense.
+- Good example:
+  Why look for TNT dupers when you could just build one with one dispenser and one tnt? No need for slime, no need for tutorials, no anything else then a dispenser and tnt.
+- Bad example:
+  Tired of dispensers using up your TNT? Well this mod makes dispensers fire TNT without consuming it.
+- Why bad: it is too literal, too Minecraft-mechanic focused, and not attractive to read.
+
+Good style examples:
+Wanting to play as if your in a server? Tired of digging back up just to go back to your base? Well this mod cancels that pain, you can use /rtp, /tpa, /rtp just like if your in a server, but in single player!
+
+Hate that creeper that doesn't burn after day? Hate the slimes that spawn in super flat worlds? This mob makes it so that ALL mobs burn in day.
+
+Chosen mod name:
+TNT Duper
+
+Chosen long description:
+# TNT Duper
+
+A tiny Forge mod that changes dispensers so they can duplicate TNT without consuming it.
+
+## What It Does
+- Dispensers duplicate TNT when they dispense it, leaving the original TNT inside.
+- The duplicated TNT can be taken from the dispenser again.
+- When TNT is dispensed, a primed TNT entity appears and will explode.
+- The dispenser keeps the TNT item, allowing infinite TNT dispensing.
+- Dispensers can fire TNT without using up the TNT item.
+
+ORIGINAL SOURCE CONTEXT (DIRECT EXCERPTS FROM PROVIDED SRC):
+# Original Source Context
+
+generated_at=2026-03-30T13:43:36+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/source/src/main/java
+source_file_count=22
+package_count=5
+packages=com.forgetemplatemod,com.forgetemplatemod.blocks,com.forgetemplatemod.init,com.forgetemplatemod.items,com.forgetemplatemod.proxy
+
+## Source Tree
+
+com/forgetemplatemod/BehaviorDispenseTNTDuper.java
+com/forgetemplatemod/Main.java
+com/forgetemplatemod/blocks/BlockBase.java
+com/forgetemplatemod/blocks/BlockCompressedCobblestone.java
+com/forgetemplatemod/init/BlocksRegistry.java
+com/forgetemplatemod/init/ItemsRegistry.java
+com/forgetemplatemod/items/AluminumAxe.java
+com/forgetemplatemod/items/AluminumHoe.java
+com/forgetemplatemod/items/AluminumIngot.java
+com/forgetemplatemod/items/AluminumPickaxe.java
+com/forgetemplatemod/items/AluminumShovel.java
+com/forgetemplatemod/items/AluminumSword.java
+com/forgetemplatemod/items/ICreativeTabbable.java
+com/forgetemplatemod/items/IRegisterable.java
+com/forgetemplatemod/items/ItemAxeBase.java
+com/forgetemplatemod/items/ItemBase.java
+com/forgetemplatemod/items/ItemPickaxeBase.java
+com/forgetemplatemod/items/ItemShovelBase.java
+com/forgetemplatemod/items/ItemSwordBase.java
+com/forgetemplatemod/items/ItemToolBase.java
+com/forgetemplatemod/proxy/ClientProxy.java
+com/forgetemplatemod/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/forgetemplatemod/BehaviorDispenseTNTDuper.java
+```
+package com.forgetemplatemod;
+
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.dispenser.BehaviorDefaultDispenseItem;
+import net.minecraft.dispenser.IBlockSource;
+import net.minecraft.entity.item.EntityTNTPrimed;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+public class BehaviorDispenseTNTDuper extends BehaviorDefaultDispenseItem {
+    @Override
+    protected ItemStack dispenseStack(IBlockSource source, ItemStack stack) {
+        World world = source.getWorld();
+        BlockPos blockpos = source.getBlockPos().offset(source.getBlockState().getValue(BlockDispenser.FACING));
+        EntityTNTPrimed entitytntprimed = new EntityTNTPrimed(world, (double)blockpos.getX() + 0.5D, (double)blockpos.getY(), (double)blockpos.getZ() + 0.5D, null);
+        world.spawnEntity(entitytntprimed);
+        world.playSound(null, entitytntprimed.posX, entitytntprimed.posY, entitytntprimed.posZ, SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0F, 1.0F);
+
+        // Return the stack unchanged! We intentionally DO NOT call stack.shrink(1)
+        // This makes the dispenser act as a TNT Duper without consuming the item.
+        return stack;
+    }
+}
+```
+
+### com/forgetemplatemod/Main.java
+```
+package com.forgetemplatemod;
+
+import com.forgetemplatemod.proxy.CommonProxy;
+
+import net.minecraft.item.Item;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(modid= Main.MOD_ID, version = Main.VERSION, name = Main.NAME)
+public class Main {
+	public static final String MOD_ID = "tnt_duper";
+	public static final String VERSION = "1.0";
+	public static final String NAME = "TNT Duper";
+
+	@Instance
+	public static Main main;	
+
+	/**
+	 * must include package paths
+	 */
+	@SidedProxy(serverSide = "com.forgetemplatemod.proxy.CommonProxy", clientSide = "com.forgetemplatemod.proxy.ClientProxy")
+	public static CommonProxy proxy;  
+
+	@EventHandler
+	public void preInit(FMLPreInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void init(FMLInitializationEvent event) {
+		net.minecraft.block.BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(
+			Item.getItemFromBlock(net.minecraft.init.Blocks.TNT), 
+			new BehaviorDispenseTNTDuper()
+		);
+	}
+
+	@EventHandler
+	public void postInit(FMLPostInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void serverStarting(FMLServerStartingEvent event) {
+
+	}
+}
+```
+
+### com/forgetemplatemod/items/ItemBase.java
+```
+package com.forgetemplatemod.items;
+
+import com.forgetemplatemod.Main;
+import com.forgetemplatemod.init.ItemsRegistry;
+
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+
+public class ItemBase extends Item implements IRegisterable, ICreativeTabbable {
+
+	protected String name;	
+
+	public ItemBase(String name) {
+		this.name = name;	
+
+		updateRegistryAndLocalizedName(name);
+	}
+
+	public void registerItemModel() {
+		Main.proxy.registerItemRenderer(this, 0, name);
+	}
+
+
+	public ItemBase(ToolMaterial material, String name) {
+		this.name = name;
+	}
+
+	public ItemBase setCreativeTab(CreativeTabs tab) {
+		super.setCreativeTab(tab);
+		return this;
+	}
+
+	@Override
+	public void updateRegistryAndLocalizedName(String name) {
+		//used for language files
+		setTranslationKey(name);
+		//used for registering the item and its models
+		setRegistryName(name);
+
+		ItemsRegistry.ITEMS.add(this);
+	}	
+}
+```
+
+### com/forgetemplatemod/blocks/BlockBase.java
+```
+package com.forgetemplatemod.blocks;
+
+import com.forgetemplatemod.Main;
+import com.forgetemplatemod.init.BlocksRegistry;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
+
+public class BlockBase extends Block {
+
+	protected String name;
+
+	public BlockBase(Material material, String name) {
+		super(material);
+
+		setTranslationKey(name);
+		setRegistryName(name);
+
+		BlocksRegistry.BLOCKS.add(this);
+	}
+
+	public void registerItemModel(Item itemBlock) {
+		Main.proxy.registerItemRenderer(itemBlock, 0, name);
+	}
+
+	public Item createItemBlock() {
+		ItemBlock itemBlock = new ItemBlock(this);
+		itemBlock.setRegistryName(getRegistryName());
+		return itemBlock;
+	}
+
+	@Override
+	public BlockBase setCreativeTab(CreativeTabs tab) {
+		super.setCreativeTab(tab);
+		return this;
+	}
+
+}
+```
+
+### com/forgetemplatemod/items/AluminumAxe.java
+```
+package com.forgetemplatemod.items;
+
+import com.forgetemplatemod.Main;
+
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemAxe;
+import net.minecraftforge.common.util.EnumHelper;
+
+public class AluminumAxe extends ItemAxeBase {
+
+	public static final Item.ToolMaterial ALUMINUM_TOOL_MATERIAL = EnumHelper.addToolMaterial("ALUMINUM", 3, 99999, 9999, 9999999, 14); 
+
+	public AluminumAxe(String name) {
+		super(ALUMINUM_TOOL_MATERIAL, name);		
+	}
+}
+```
+
+SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT:
+GUARANTEED PLAYER-VISIBLE FACTS
+- The duplicated TNT can be taken from the dispenser again.
+- When a dispenser dispenses TNT, a primed TNT entity appears and will explode.
+- The original TNT stays in the dispenser and is not consumed.
+
+DO NOT CLAIM
+- The mod adds new tools or weapons.
+- The mod adds new crafting recipes.
+- The mod adds new blocks or items that are used elsewhere.
+- The mod changes mob AI.
+- The mod adds new commands.
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-03-30T13:43:36+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/3/TNT-Duper.jar
+jar_size_bytes=22835
+jar_sha1=81e327d06533d5ebb002fa2a7559935aff141899
+
+## Detected Metadata
+
+jar_name=TNT-Duper.jar
+jar_display_name=TNT Duper
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=tnt_duper
+name=TNT Duper
+mod_version=1.0
+description=Allows dispensers to duplicate and dispense TNT infinitely.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/source
+decompiled_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/decompiled
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/tnt-duper/source/src/main/java
+source_file_count=22
+package_count=5
+packages=com.forgetemplatemod,com.forgetemplatemod.blocks,com.forgetemplatemod.init,com.forgetemplatemod.items,com.forgetemplatemod.proxy
+
+## Source Tree
+
+com/forgetemplatemod/BehaviorDispenseTNTDuper.java
+com/forgetemplatemod/Main.java
+com/forgetemplatemod/blocks/BlockBase.java
+com/forgetemplatemod/blocks/BlockCompressedCobblestone.java
+com/forgetemplatemod/init/BlocksRegistry.java
+com/forgetemplatemod/init/ItemsRegistry.java
+com/forgetemplatemod/items/AluminumAxe.java
+com/forgetemplatemod/items/AluminumHoe.java
+com/forgetemplatemod/items/AluminumIngot.java
+com/forgetemplatemod/items/AluminumPickaxe.java
+com/forgetemplatemod/items/AluminumShovel.java
+com/forgetemplatemod/items/AluminumSword.java
+com/forgetemplatemod/items/ICreativeTabbable.java
+com/forgetemplatemod/items/IRegisterable.java
+com/forgetemplatemod/items/ItemAxeBase.java
+com/forgetemplatemod/items/ItemBase.java
+com/forgetemplatemod/items/ItemPickaxeBase.java
+com/forgetemplatemod/items/ItemShovelBase.java
+com/forgetemplatemod/items/ItemSwordBase.java
+com/forgetemplatemod/items/ItemToolBase.java
+com/forgetemplatemod/proxy/ClientProxy.java
+com/forgetemplatemod/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/forgetemplatemod/BehaviorDispenseTNTDuper.java
+```
+package com.forgetemplatemod;
+
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.dispenser.BehaviorDefaultDispenseItem;
+import net.minecraft.dispenser.IBlockSource;
+import net.minecraft.entity.item.EntityTNTPrimed;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+public class BehaviorDispenseTNTDuper extends BehaviorDefaultDispenseItem {
+    @Override
+    protected ItemStack dispenseStack(IBlockSource source, ItemStack stack) {
+        World world = source.getWorld();
+        BlockPos blockpos = source.getBlockPos().offset(source.getBlockState().getValue(BlockDispenser.FACING));
+        EntityTNTPrimed entitytntprimed = new EntityTNTPrimed(world, (double)blockpos.getX() + 0.5D, (double)blockpos.getY(), (double)blockpos.getZ() + 0.5D, null);
+        world.spawnEntity(entitytntprimed);
+        world.playSound(null, entitytntprimed.posX, entitytntprimed.posY, entitytntprimed.posZ, SoundEvents.ENTITY_TNT_PRIMED, SoundCategory.BLOCKS, 1.0F, 1.0F);
+
+        // Return the stack unchanged! We intentionally DO NOT call stack.shrink(1)
+        // This makes the dispenser act as a TNT Duper without consuming the item.
+        return stack;
+    }
+}
+```
+
+### com/forgetemplatemod/Main.java
+```
+package com.forgetemplatemod;
+
+import com.forgetemplatemod.proxy.CommonProxy;
+
+import net.minecraft.item.Item;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(modid= Main.MOD_ID, version = Main.VERSION, name = Main.NAME)
+public class Main {
+	public static final String MOD_ID = "tnt_duper";
+	public static final String VERSION = "1.0";
+	public static final String NAME = "TNT Duper";
+
+	@Instance
+	public static Main main;	
+
+	/**
+	 * must include package paths
+	 */
+	@SidedProxy(serverSide = "com.forgetemplatemod.proxy.CommonProxy", clientSide = "com.forgetemplatemod.proxy.ClientProxy")
+	public static CommonProxy proxy;  
+
+	@EventHandler
+	public void preInit(FMLPreInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void init(FMLInitializationEvent event) {
+		net.minecraft.block.BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(
+			Item.getItemFromBlock(net.minecraft.init.Blocks.TNT), 
+			new BehaviorDispenseTNTDuper()
+		);
+	}
+
+	@EventHandler
+	public void postInit(FMLPostInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void serverStarting(FMLServerStartingEvent event) {
+
+	}
+}
+```
+
+### com/forgetemplatemod/items/ItemBase.java
+```
+package com.forgetemplatemod.items;
+
+import com.forgetemplatemod.Main;
+import com.forgetemplatemod.init.ItemsRegistry;
+
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+
+public class ItemBase extends Item implements IRegisterable, ICreativeTabbable {
+
+	protected String name;	
+
+	public ItemBase(String name) {
+		this.name = name;	
+
+		updateRegistryAndLocalizedName(name);
+	}
+
+	public void registerItemModel() {
+		Main.proxy.registerItemRenderer(this, 0, name);
+	}
+
+
+	public ItemBase(ToolMaterial material, String name) {
+		this.name = name;
+	}
+
+	public ItemBase setCreativeTab(CreativeTabs tab) {
+		super.setCreativeTab(tab);
+		return this;
+	}
+
+	@Override
+	public void updateRegistryAndLocalizedName(String name) {
+		//used for language files
+		setTranslationKey(name);
+		//used for registering the item and its models
+		setRegistryName(name);
+
+		ItemsRegistry.ITEMS.add(this);
+	}	
+}
+```
+
+### com/forgetemplatemod/blocks/BlockBase.java
+```
+package com.forgetemplatemod.blocks;
+
+import com.forgetemplatemod.Main;
+import com.forgetemplatemod.init.BlocksRegistry;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
+
+public class BlockBase extends Block {
+
+	protected String name;
+
+	public BlockBase(Material material, String name) {
+		super(material);
+
+		setTranslationKey(name);
+		setRegistryName(name);
+
+		BlocksRegistry.BLOCKS.add(this);
+	}
+
+	public void registerItemModel(Item itemBlock) {
+		Main.proxy.registerItemRenderer(itemBlock, 0, name);
+	}
+
+	public Item createItemBlock() {
+		ItemBlock itemBlock = new ItemBlock(this);
+		itemBlock.setRegistryName(getRegistryName());
+		return itemBlock;
+	}
+
+	@Override
+	public BlockBase setCreativeTab(CreativeTabs tab) {
+		super.setCreativeTab(tab);
+		return this;
+	}
+
+}
+```
+
+### com/forgetemplatemod/items/AluminumAxe.java
+```
+package com.forgetemplatemod.items;
+
+import com.forgetemplatemod.Main;
+
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemAxe;
+import net.minecraftforge.common.util.EnumHelper;
+
+public class AluminumAxe extends ItemAxeBase {
+
+	public static final Item.ToolMaterial ALUMINUM_TOOL_MATERIAL = EnumHelper.addToolMaterial("ALUMINUM", 3, 99999, 9999, 9999999, 14); 
+
+	public AluminumAxe(String name) {
+		super(ALUMINUM_TOOL_MATERIAL, name);		
+	}
+}
+```
+Return only the corrected summary line.

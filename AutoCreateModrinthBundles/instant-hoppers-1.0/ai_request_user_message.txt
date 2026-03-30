@@ -1,0 +1,392 @@
+Generate Modrinth listing copy for one Minecraft mod.
+
+You already reviewed the original source folder earlier in this chat.
+Use that source-based understanding as the main truth for what the mod actually does.
+Use only the facts found in PROJECT INFO below.
+Use SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT as the highest-trust description of what the mod actually does.
+Use ORIGINAL SOURCE CONTEXT below as direct evidence from the provided src folder, not just as background history.
+If PROJECT INFO, code comments, or your own instincts suggest extra claims that are not clearly supported by SOURCE-VERIFIED NOTES, leave them out.
+Do not invent features, commands, compatibility, authors, loaders, game versions, or licensing facts.
+Use the perfect template examples below for tone, quality, and formatting only.
+Do not copy the example mod's features unless PROJECT INFO proves them.
+Lead with the main player-facing feature, not the internal implementation.
+If the jar metadata already contains a solid name, keep it very close to that name.
+Compare the raw jar filename, jar_display_name, metadata name, and primary_mod_id before choosing the final name.
+If one candidate has an obvious typo and another candidate is clearly the corrected human-readable name, use the corrected one.
+Prefer fixing obvious spelling mistakes like "most" to "mobs" when the jar naming proves the intended public name.
+Make the long description feel like a real human-written Modrinth page in simple everyday wording.
+You may use Markdown headings and bullet lists when they improve clarity.
+Prefer this easy-to-scan structure when it fits:
+- `# Mod Name`
+- one short intro paragraph in plain words
+- `## What It Does`
+- 2 to 4 short bullets about what the player will actually notice
+Keep it organized and easy to skim.
+Mention secondary features only if they are clearly present and worth surfacing.
+If the original source clearly shows a repeated transfer loop, whole-stack movement, or "keep going until empty/full" behavior,
+explain that in plain player wording like "moves full stacks in one go" or "keeps pulling items until it is full"
+instead of only saying it is "faster".
+If the source clearly shows dropped items or loose entities getting pulled in, mention that in simple player wording too.
+Avoid implementation details like reflection, event hooks, custom damage sources,
+cooldown fields, package names, class names, or internal APIs.
+Avoid exact internal trigger details like cooldown values, tick counts, `vanilla cooldown`, or bulk-transfer internals unless players truly need that detail to understand the mod.
+Avoid filler compatibility lines unless PROJECT INFO makes them unusually important.
+Avoid overly advanced or dramatic wording like "ignite", "deadly zones", "seamless", or "streamlines" when simpler wording would be more natural.
+Do not pad the description with generic filler like "works in single-player and multiplayer", "works on existing saves",
+"lightweight", or broad "why use it" claims unless PROJECT INFO clearly proves them.
+Reuse the concrete nouns and behavior already present in PROJECT INFO instead of broadening them into extra gameplay claims.
+Small helper phrases are good when they make the writing feel more human, like "so", "well", "basically", "which means", or "that means".
+Slightly imperfect or casual grammar is okay if it makes the explanation easier to read and closer to the examples.
+Do not over-polish the wording into marketing copy or textbook English.
+Keep long_description focused and compact enough to complete cleanly in a single JSON response.
+Usually 3 to 7 short paragraphs or bullets is enough.
+Choose 1 to 3 most relevant primary categories for the categories array.
+Put any other clearly relevant search tags into additional_categories.
+Do not repeat a category across both arrays.
+Do not use loader names like forge, fabric, quilt, or neoforge as categories.
+Use only these official Modrinth mod category slugs: adventure, cursed, decoration, economy, equipment, food, game-mechanics, library, magic, management, minigame, mobs, optimization, social, storage, technology, transportation, utility, worldgen
+These classifier hints are inferred from Modrinth's official category names because the API does not return prose descriptions:
+- adventure: Exploration, progression, quests, dungeons, or travel-driven gameplay.
+- food: Cooking, crops, meals, hunger systems, or edible content.
+- minigame: Self-contained game modes, arenas, or score-based side activities.
+- technology: Machines, automation, engineering systems, power, or technical progression.
+- cursed: Intentionally weird, chaotic, trollish, or unsettling gameplay changes.
+- game-mechanics: Core rule changes, balance tweaks, combat rules, or vanilla behavior changes.
+- mobs: Adds, changes, or heavily focuses on creatures, NPCs, or mob behavior.
+- transportation: Movement, vehicles, teleportation, rails, portals, or travel helpers.
+- decoration: Building aesthetics, furniture, cosmetics, or decorative blocks/items.
+- library: Shared APIs, framework code, dependencies, or developer-facing support mods.
+- optimization: Performance, FPS, memory, loading, server tick, or lag reduction.
+- utility: General quality-of-life features, helpers, tools, or convenience tweaks.
+- economy: Currency, shops, trading, markets, or resource-value systems.
+- magic: Spells, mana, rituals, enchantment-focused systems, or mystical progression.
+- social: Multiplayer interactions, chat, parties, friends, sharing, or community features.
+- worldgen: Biomes, structures, terrain, ore generation, or world creation changes.
+- equipment: Armor, weapons, tools, trinkets, or gear-focused progression.
+- management: Admin tools, automation control panels, config-heavy oversight, or organization.
+- storage: Inventories, containers, item transport, sorting, logistics, or storage systems.
+Choose client_side and server_side only from: required, optional, unsupported, unknown
+Choose license_id only from this list when PROJECT INFO clearly supports it: CC0-1.0, CC-BY-4.0, Apache-2.0, BSD-2-Clause, BSD-3-Clause
+If the license is custom and PROJECT INFO provides a license link, return an empty license_id and include the license_url.
+If the license is all-rights-reserved or unclear, return an empty license_id and license_url. The script will apply a safe fallback.
+Return only valid JSON that matches this template exactly:
+
+{
+  "name": "Short memorable mod name",
+  "long_description": "Player-facing Markdown that matches the perfect template style.",
+  "categories": [
+    "utility",
+    "management"
+  ],
+  "additional_categories": [
+    "storage",
+    "technology"
+  ],
+  "client_side": "optional",
+  "server_side": "required",
+  "license_id": "",
+  "license_url": ""
+}
+
+PERFECT TEMPLATE EXAMPLES
+
+modname.txt
+Common Server Core
+
+description.txt
+# ServerCore
+
+## Description
+
+**ServerCore** is a lightweight utility mod for Minecraft Forge 1.12.2 that adds a complete, player-friendly teleport toolkit to both singleplayer and multiplayer—without requiring cheats or operator status. Whether you're exploring, building, or just getting started, ServerCore gives you the tools to move around your world with ease.
+
+### What It Does (for the user)
+
+**Teleport Requests**
+- Send a teleport request to another player:  
+  `/tpa <player>` – Request to teleport to them.  
+  `/tpahere <player>` – Request them to teleport to you.
+- Incoming requests last 60 seconds before expiring.
+- Accept or deny requests individually or all at once:  
+  `/tpaccept [player]` – Accept a specific request.  
+  `/tpacceptall` – Accept all pending requests.  
+  `/tpadeny [player]` – Deny a specific request.  
+  `/tpadenyall` – Deny all pending requests.
+- Cancel requests you've sent:  
+  `/tpacancel <player>` – Cancel a specific outgoing request.  
+  `/tpacancel all` – Cancel all outgoing requests.
+
+**Personal Homes**
+- Set your own named homes that remember your exact location, dimension, and even which way you're facing:  
+  `/sethome <name>` – Save your current position as a home.
+- Teleport to any of your homes anytime:  
+  `/home <name>` – Go to that home.  
+  `/home list` – See all your saved homes.  
+  `/delhome <name>` – Remove a home.
+- Homes are private to you and persist across sessions in the world data.
+
+**Safe Random Teleport**
+- Instantly teleport to a random, safe location without leaving your dimension:  
+  `/rtp overworld` – Random location in the Overworld.  
+  `/rtp nether` – Random location in the Nether.  
+  `/rtp end` – Random location in the End.
+- The search area is a 10,000-block square centered at 0,0 (respecting your world border).
+- The mod ensures you land on a safe spot—no mid-air or suffocation spawns.
+
+**First-Join Auto-Teleport**
+- When a player joins a world for the very first time, they are automatically teleported to a safe random overworld location (using the same RTP system).
+- Perfect for survival servers: new players start somewhere fresh and unexplored, not at world spawn.
+
+ORIGINAL SOURCE CONTEXT (DIRECT EXCERPTS FROM PROVIDED SRC):
+# Original Source Context
+
+generated_at=2026-03-30T13:41:03+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-hoppers-1.0/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-hoppers-1.0/source
+source_file_count=1
+package_count=1
+packages=com.instanthoppers
+
+## Source Tree
+
+instanthoppers/Main.java
+
+## Key Source Excerpts
+
+### instanthoppers/Main.java
+```
+package com.instanthoppers;
+
+import net.minecraft.block.BlockHopper;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.tileentity.TileEntityHopper;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.ReflectionHelper;
+import net.minecraftforge.items.CapabilityItemHandler;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
+
+import java.lang.reflect.Field;
+import java.util.List;
+
+@Mod(modid = Main.MOD_ID, version = Main.VERSION, name = Main.NAME)
+@Mod.EventBusSubscriber(modid = Main.MOD_ID)
+public class Main {
+    public static final String MOD_ID = "instant_hoppers";
+    public static final String VERSION = "1.0";
+    public static final String NAME = "Instant Hoppers";
+
+    private static Field transferCooldownField = null;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(Main.class);
+        try {
+            // "field_145903_q" is the obfuscated SRG name for transferCooldown in 1.12.2
+            transferCooldownField = ReflectionHelper.findField(TileEntityHopper.class, "transferCooldown", "field_145901_j");
+            transferCooldownField.setAccessible(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @SubscribeEvent
+    public static void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && !event.world.isRemote && transferCooldownField != null) {
+            World world = event.world;
+            List<TileEntity> list = world.loadedTileEntityList;
+
+            // Loop through loaded TileEntities looking for hoppers
+            for (int i = 0; i < list.size(); i++) {
+                TileEntity te = list.get(i);
+                if (te != null && te.getClass() == TileEntityHopper.class) {
+                    TileEntityHopper hopper = (TileEntityHopper) te;
+                    if (hopper.isInvalid()) continue;
+
+                    try {
+                        int cd = transferCooldownField.getInt(hopper);
+                        // A cooldown of 8 triggers right after the vanilla hopper successfully performs a single item transfer
+                        // We intercept here to complete the rest of the bulk movement!
+                        if (cd == 8) {
+                            bulkTransfer(hopper, world);
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }
+        }
+    }
+
+    private static void bulkTransfer(TileEntityHopper hopper, World world) {
+        boolean changed = false;
+
+        IBlockState state = world.getBlockState(hopper.getPos());
+        if (!(state.getBlock() instanceof BlockHopper)) return;
+        EnumFacing facing = state.getValue(BlockHopper.FACING);
+
+        IItemHandler hopperExtract = hopper.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, EnumFacing.DOWN);
+        IItemHandler hopperInsert = hopper.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, EnumFacing.UP);
+
+        // 1. PUSH to connected target container
+        BlockPos targetPos = hopper.getPos().offset(facing);
+        TileEntity targetTE = world.getTileEntity(targetPos);
+        IItemHandler target = null;
+        if (targetTE != null && targetTE.hasCapa
+... truncated ...
+```
+
+SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT:
+GUARANTEED PLAYER-VISIBLE FACTS
+- Hoppers can move full stacks in one go instead of only one item at a time.
+- Hoppers also pull dropped items on top into themselves right away.
+
+DO NOT CLAIM
+- (no additional do-not-claim notes extracted)
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-03-30T13:41:03+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/2/Instant-Hoppers-1.0.jar
+jar_size_bytes=5513
+jar_sha1=53e24719f13301d4063b136eee0e06487af97fc5
+
+## Detected Metadata
+
+jar_name=Instant-Hoppers-1.0.jar
+jar_display_name=Instant Hoppers
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=instant_hoppers
+name=Instant-Hoppers
+mod_version=1.0
+description=Instant-Hoppers automated build.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-hoppers-1.0/source
+decompiled_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-hoppers-1.0/decompiled
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-hoppers-1.0/source
+source_file_count=1
+package_count=1
+packages=com.instanthoppers
+
+## Source Tree
+
+instanthoppers/Main.java
+
+## Key Source Excerpts
+
+### instanthoppers/Main.java
+```
+package com.instanthoppers;
+
+import net.minecraft.block.BlockHopper;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.tileentity.TileEntityHopper;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.ReflectionHelper;
+import net.minecraftforge.items.CapabilityItemHandler;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
+
+import java.lang.reflect.Field;
+import java.util.List;
+
+@Mod(modid = Main.MOD_ID, version = Main.VERSION, name = Main.NAME)
+@Mod.EventBusSubscriber(modid = Main.MOD_ID)
+public class Main {
+    public static final String MOD_ID = "instant_hoppers";
+    public static final String VERSION = "1.0";
+    public static final String NAME = "Instant Hoppers";
+
+    private static Field transferCooldownField = null;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(Main.class);
+        try {
+            // "field_145903_q" is the obfuscated SRG name for transferCooldown in 1.12.2
+            transferCooldownField = ReflectionHelper.findField(TileEntityHopper.class, "transferCooldown", "field_145901_j");
+            transferCooldownField.setAccessible(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @SubscribeEvent
+    public static void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && !event.world.isRemote && transferCooldownField != null) {
+            World world = event.world;
+            List<TileEntity> list = world.loadedTileEntityList;
+
+            // Loop through loaded TileEntities looking for hoppers
+            for (int i = 0; i < list.size(); i++) {
+                TileEntity te = list.get(i);
+                if (te != null && te.getClass() == TileEntityHopper.class) {
+                    TileEntityHopper hopper = (TileEntityHopper) te;
+                    if (hopper.isInvalid()) continue;
+
+                    try {
+                        int cd = transferCooldownField.getInt(hopper);
+                        // A cooldown of 8 triggers right after the vanilla hopper successfully performs a single item transfer
+                        // We intercept here to complete the rest of the bulk movement!
+                        if (cd == 8) {
+                            bulkTransfer(hopper, world);
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }
+        }
+    }
+
+    private static void bulkTransfer(TileEntityHopper hopper, World world) {
+        boolean changed = false;
+
+        IBlockState state = world.getBlockState(hopper.getPos());
+        if (!(state.getBlock() instanceof BlockHopper)) return;
+        EnumFacing facing = state.getValue(BlockHopper.FACING);
+
+        IItemHandler hopperExtract = hopper.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, EnumFacing.DOWN);
+        IItemHandler hopperInsert = hopper.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, EnumFacing.UP);
+
+        // 1. PUSH to connected target container
+        BlockPos targetPos = hopper.getPos().offset(facing);
+        TileEntity targetTE = world.getTileEntity(targetPos);
+        IItemHandler target = null;
+        if (targetTE != null && targetTE.hasCapa
+... truncated ...
+```
