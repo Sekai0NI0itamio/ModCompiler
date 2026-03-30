@@ -1,0 +1,95 @@
+{
+  "com/tntduper/Main": {
+    "name": "com/tntduper/Main",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "com/tntduper/Main",
+        "values": {
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "modid": {
+            "value": "tnt_duper"
+          },
+          "name": {
+            "value": "TNT Duper"
+          },
+          "version": {
+            "value": "1.0"
+          }
+        }
+      },
+      {
+        "type": "FIELD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$Instance;",
+        "target": "main"
+      },
+      {
+        "type": "FIELD",
+        "name": "Lnet/minecraftforge/fml/common/SidedProxy;",
+        "target": "proxy",
+        "values": {
+          "clientSide": {
+            "value": "com.tntduper.proxy.ClientProxy"
+          },
+          "serverSide": {
+            "value": "com.tntduper.proxy.CommonProxy"
+          }
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "preInit(Lnet/minecraftforge/fml/common/event/FMLPreInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "init(Lnet/minecraftforge/fml/common/event/FMLInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "postInit(Lnet/minecraftforge/fml/common/event/FMLPostInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "serverStarting(Lnet/minecraftforge/fml/common/event/FMLServerStartingEvent;)V"
+      }
+    ]
+  },
+  "com/tntduper/items/ItemAxeBase": {
+    "name": "com/tntduper/items/ItemAxeBase",
+    "interfaces": [
+      "com/tntduper/items/IRegisterable"
+    ]
+  },
+  "com/tntduper/items/ItemBase": {
+    "name": "com/tntduper/items/ItemBase",
+    "interfaces": [
+      "com/tntduper/items/IRegisterable",
+      "com/tntduper/items/ICreativeTabbable"
+    ]
+  },
+  "com/tntduper/items/ItemPickaxeBase": {
+    "name": "com/tntduper/items/ItemPickaxeBase",
+    "interfaces": [
+      "com/tntduper/items/IRegisterable"
+    ]
+  },
+  "com/tntduper/items/ItemShovelBase": {
+    "name": "com/tntduper/items/ItemShovelBase",
+    "interfaces": [
+      "com/tntduper/items/IRegisterable"
+    ]
+  },
+  "com/tntduper/items/ItemSwordBase": {
+    "name": "com/tntduper/items/ItemSwordBase",
+    "interfaces": [
+      "com/tntduper/items/IRegisterable"
+    ]
+  }
+}
