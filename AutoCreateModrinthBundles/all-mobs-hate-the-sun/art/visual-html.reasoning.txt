@@ -1,0 +1,85 @@
+We need to output JSON with shape as described. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must use approved example composition language but adapt words to this mod.
+
+We need to choose background image from options that best fits mod. The mod is about making mobs burn in sunlight. That suggests "fire burning.jpg" or "purple flowers and sun set or sun rise.png" or "ocean.jpg". Probably "fire burning.jpg" matches theme of fire/sun. Or "purple flowers and sun set or sun rise.png" maybe not. Fire burning seems appropriate.
+
+Accent color: choose a hex like #ff7f2f (orange) as example. Could use something else but must be a single hex color. Use #ff7f2f maybe.
+
+Logo: need eyebrow (short phrase), mark (2-4 chars), title (mod name?), subtitle (short phrase), rail_left and rail_right (short phrases describing behavior). Must be concise.
+
+Our mod title: "All Mobs Hate The SUN". But maybe we want a shorter title? The JSON expects "title" under logo. Should be the mod's name. Could be "All Mobs Hate The SUN". That's long but okay. Might be okay. But maybe we can use "Sunburn". But must reflect mod title. Use "All Mobs Hate The SUN". Keep it as title.
+
+Subtitle: short phrase describing behavior: "Daylight ignites every hostile entity". Something like that.
+
+Rail_left and rail_right: describe actual behavior: maybe "Instant Scorch" and "Sunlight Trigger". Must be short.
+
+Description: kicker: maybe "Utility Mod". Title: same as mod? maybe "All Mobs Hate The SUN". Tagline: short description: "Sunlight automatically incinerates hostile mobs, preserving your resources." Chips: 2-4 short labels: maybe "Daylight Burn", "No Fuel", "Forge 1.12.2". Stats: exactly 2 items. Each with value (string), label, note (short sentence). Must describe actual behavior. For example:
+
+- value "100%" label "Burn Chance" note "All eligible mobs ignite when exposed to sun."
+- value "Unlimited" label "Resource Safe" note "Hostile mobs no longer consume torches or flint."
+
+But need to keep concise.
+
+Make sure chips count 2-4. Provide maybe 3 chips.
+
+Stats exactly 2 items. Each stats object has value, label, note.
+
+Make sure each note is one short sentence.
+
+All strings concise and polished.
+
+Make sure no mention of draft etc.
+
+Now produce JSON only.
+
+Let's craft:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "fire burning.jpg",
+  "logo": {
+    "eyebrow": "Daylight Ignition",
+    "mark": "AH",
+    "title": "All Mobs Hate The SUN",
+    "subtitle": "Sunlight automatically incinerates hostile mobs.",
+    "rail_left": "Instant Scorch",
+    "rail_right": "Sunlight Trigger"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "All Mobs Hate The SUN",
+    "tagline": "Daylight ignites every hostile entity, preserving your resources without manual intervention.",
+    "chips": [
+      "Daylight Burn",
+      "No Fuel",
+      "Forge 1.12.2"
+    ],
+    "stats": [
+      {
+        "value": "100%",
+        "label": "Burn Chance",
+        "note": "All eligible mobs ignite when exposed to sun."
+      },
+      {
+        "value": "Unlimited",
+        "label": "Resource Safe",
+        "note": "Hostile mobs no longer consume torches or flint."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, yes. background_image exact filename from options: "fire burning.jpg" matches option "fire burning.jpg". Good.
+
+logo fields: eyebrow short phrase, okay. mark "AH" 2 chars. title is mod title. subtitle short phrase. rail_left and rail_right short phrases describing behavior.
+
+description.chips: 3 items, okay. description.stats: exactly 2 items, each with value, label, note. notes are short sentences.
+
+All strings concise and polished. No mention of draft etc.
+
+Make sure no extra fields. Provide only JSON.
+
+Check that "value" is string, okay.
+
+Make sure "stats" array items each have value, label, note. Good.
+
+Now output JSON only.
