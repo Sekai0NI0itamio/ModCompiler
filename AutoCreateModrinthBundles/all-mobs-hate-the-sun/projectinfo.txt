@@ -1,0 +1,151 @@
+# Project Info
+
+generated_at=2026-03-30T01:01:23+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/All-Mobs-Hate-The-SUN.jar
+jar_size_bytes=5800
+jar_sha1=f24effd6268502df14bb0cea53a85e7e67dda1b6
+
+## Detected Metadata
+
+jar_name=All-Mobs-Hate-The-SUN.jar
+jar_display_name=All Mobs Hate The SUN
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=all_most_hate_the_sun
+name=All Most Hate The SUN
+mod_version=1.0
+description=All hostile mobs burn during the day. Sun burns harder.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/all-mobs-hate-the-sun/decompiled/src/main/java
+source_file_count=4
+package_count=2
+packages=com.sunhate,com.sunhate.proxy
+
+## Source Tree
+
+com/sunhate/Main.java
+com/sunhate/SunBurnEvent.java
+com/sunhate/proxy/ClientProxy.java
+com/sunhate/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/sunhate/SunBurnEvent.java
+```
+package com.sunhate;
+
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+@EventBusSubscriber(
+   modid = "all_most_hate_the_sun"
+)
+public class SunBurnEvent {
+   public static final DamageSource SUN_DAMAGE = new DamageSource("sun").func_76361_j().func_76348_h();
+
+   @SubscribeEvent
+   public static void onLivingUpdate(LivingUpdateEvent event) {
+      EntityLivingBase entity = event.getEntityLiving();
+      if (!entity.field_70170_p.field_72995_K && entity instanceof IMob && entity.func_70089_S() && entity.field_70170_p.func_72935_r()) {
+         float f = entity.func_70013_c();
+         BlockPos pos = new BlockPos(entity.field_70165_t, Math.round(entity.field_70163_u), entity.field_70161_v);
+         if (f > 0.5F && entity.field_70170_p.func_175678_i(pos) && entity.field_70170_p.field_73012_v.nextFloat() * 30.0F < (f - 0.4F) * 2.0F) {
+            boolean inWater = entity.func_70090_H() || entity.func_70026_G();
+            if (!inWater && !entity.func_70045_F()) {
+               entity.func_70015_d(8);
+               if (entity.field_70173_aa % 20 == 0) {
+                  entity.func_70097_a(SUN_DAMAGE, 6.0F);
+               }
+            }
+         }
+      }
+   }
+}
+```
+
+### com/sunhate/Main.java
+```
+package com.sunhate;
+
+import com.sunhate.proxy.CommonProxy;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(
+   modid = "all_most_hate_the_sun",
+   version = "1.0",
+   name = "All Most Hate The SUN",
+   acceptedMinecraftVersions = "[1.12.2]"
+)
+public class Main {
+   public static final String MOD_ID = "all_most_hate_the_sun";
+   public static final String VERSION = "1.0";
+   public static final String NAME = "All Most Hate The SUN";
+   @Instance
+   public static Main main;
+   @SidedProxy(
+      serverSide = "com.sunhate.proxy.CommonProxy",
+      clientSide = "com.sunhate.proxy.ClientProxy"
+   )
+   public static CommonProxy proxy;
+
+   @EventHandler
+   public void preInit(FMLPreInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void init(FMLInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void postInit(FMLPostInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void serverStarting(FMLServerStartingEvent event) {
+   }
+}
+```
+
+### com/sunhate/proxy/ClientProxy.java
+```
+package com.sunhate.proxy;
+
+import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraft.item.Item;
+import net.minecraftforge.client.model.ModelLoader;
+
+public class ClientProxy extends CommonProxy {
+   @Override
+   public void registerItemRenderer(Item item, int metadataValue, String itemId) {
+      ModelLoader.setCustomModelResourceLocation(item, metadataValue, new ModelResourceLocation("all_most_hate_the_sun:" + itemId, "inventory"));
+   }
+}
+```
+
+### com/sunhate/proxy/CommonProxy.java
+```
+package com.sunhate.proxy;
+
+import net.minecraft.item.Item;
+
+public class CommonProxy {
+   public void registerItemRenderer(Item item, int creativeTabValue, String name) {
+   }
+}
+```
