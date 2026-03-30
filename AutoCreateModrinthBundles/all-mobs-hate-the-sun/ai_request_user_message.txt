@@ -1,0 +1,275 @@
+Generate Modrinth listing copy for one Minecraft mod.
+
+Use only the facts found in PROJECT INFO below.
+Do not invent features, commands, compatibility, authors, loaders, game versions, or licensing facts.
+Use the perfect template examples below for tone, quality, and formatting only.
+Do not copy the example mod's features unless PROJECT INFO proves them.
+Lead with the main player-facing feature, not the internal implementation.
+If the jar metadata already contains a solid name, keep it very close to that name.
+Compare the raw jar filename, jar_display_name, metadata name, and primary_mod_id before choosing the final name.
+If one candidate has an obvious typo and another candidate is clearly the corrected human-readable name, use the corrected one.
+Prefer fixing obvious spelling mistakes like "most" to "mobs" when the jar naming proves the intended public name.
+Write the short description like a sharp player-facing hook.
+It can be one sentence or two very short sentences, usually under 160 characters total.
+An accurate complaint/problem -> payoff cadence is great when the mod naturally fits it.
+Make the long description feel like a polished manual Modrinth page.
+You may use Markdown headings and bullet lists when they improve clarity.
+Mention secondary features only if they are clearly present and worth surfacing.
+Avoid implementation details like reflection, event hooks, custom damage sources,
+cooldown fields, package names, class names, or internal APIs.
+Avoid filler compatibility lines unless PROJECT INFO makes them unusually important.
+Choose 1 to 3 most relevant primary categories for the categories array.
+Put any other clearly relevant search tags into additional_categories.
+Do not repeat a category across both arrays.
+Do not use loader names like forge, fabric, quilt, or neoforge as categories.
+Use only these official Modrinth mod category slugs: adventure, cursed, decoration, economy, equipment, food, game-mechanics, library, magic, management, minigame, mobs, optimization, social, storage, technology, transportation, utility, worldgen
+These classifier hints are inferred from Modrinth's official category names because the API does not return prose descriptions:
+- adventure: Exploration, progression, quests, dungeons, or travel-driven gameplay.
+- food: Cooking, crops, meals, hunger systems, or edible content.
+- minigame: Self-contained game modes, arenas, or score-based side activities.
+- technology: Machines, automation, engineering systems, power, or technical progression.
+- cursed: Intentionally weird, chaotic, trollish, or unsettling gameplay changes.
+- game-mechanics: Core rule changes, balance tweaks, combat rules, or vanilla behavior changes.
+- mobs: Adds, changes, or heavily focuses on creatures, NPCs, or mob behavior.
+- transportation: Movement, vehicles, teleportation, rails, portals, or travel helpers.
+- decoration: Building aesthetics, furniture, cosmetics, or decorative blocks/items.
+- library: Shared APIs, framework code, dependencies, or developer-facing support mods.
+- optimization: Performance, FPS, memory, loading, server tick, or lag reduction.
+- utility: General quality-of-life features, helpers, tools, or convenience tweaks.
+- economy: Currency, shops, trading, markets, or resource-value systems.
+- magic: Spells, mana, rituals, enchantment-focused systems, or mystical progression.
+- social: Multiplayer interactions, chat, parties, friends, sharing, or community features.
+- worldgen: Biomes, structures, terrain, ore generation, or world creation changes.
+- equipment: Armor, weapons, tools, trinkets, or gear-focused progression.
+- management: Admin tools, automation control panels, config-heavy oversight, or organization.
+- storage: Inventories, containers, item transport, sorting, logistics, or storage systems.
+Choose client_side and server_side only from: required, optional, unsupported, unknown
+Choose license_id only from this list when PROJECT INFO clearly supports it: CC0-1.0, CC-BY-4.0, Apache-2.0, BSD-2-Clause, BSD-3-Clause
+If the license is custom and PROJECT INFO provides a license link, return an empty license_id and include the license_url.
+If the license is all-rights-reserved or unclear, return an empty license_id and license_url. The script will apply a safe fallback.
+Return only valid JSON that matches this template exactly:
+
+{
+  "name": "Short memorable mod name",
+  "short_description": "A punchy player-facing hook, usually 1 to 2 short sentences under 160 characters.",
+  "long_description": "Player-facing Markdown that matches the perfect template style.",
+  "categories": [
+    "utility",
+    "management"
+  ],
+  "additional_categories": [
+    "storage",
+    "technology"
+  ],
+  "client_side": "optional",
+  "server_side": "required",
+  "license_id": "",
+  "license_url": ""
+}
+
+PERFECT TEMPLATE EXAMPLES
+
+modname.txt
+Common Server Core
+
+summary.txt
+Wanting to play as if your in a server? Tired of digging back up just to go back to your base? Well this mod cancels that pain, you can use /rtp, /tpa, /rtp just like if your in a server, but in single player!
+
+Hate that creeper that doesn't burn after day? Hate the slimes that spawn in super flat worlds? This mob makes it so that ALL mobs burn in day.
+
+description.txt
+# ServerCore
+
+## Description
+
+**ServerCore** is a lightweight utility mod for Minecraft Forge 1.12.2 that adds a complete, player-friendly teleport toolkit to both singleplayer and multiplayer—without requiring cheats or operator status. Whether you're exploring, building, or just getting started, ServerCore gives you the tools to move around your world with ease.
+
+### What It Does (for the user)
+
+**Teleport Requests**
+- Send a teleport request to another player:  
+  `/tpa <player>` – Request to teleport to them.  
+  `/tpahere <player>` – Request them to teleport to you.
+- Incoming requests last 60 seconds before expiring.
+- Accept or deny requests individually or all at once:  
+  `/tpaccept [player]` – Accept a specific request.  
+  `/tpacceptall` – Accept all pending requests.  
+  `/tpadeny [player]` – Deny a specific request.  
+  `/tpadenyall` – Deny all pending requests.
+- Cancel requests you've sent:  
+  `/tpacancel <player>` – Cancel a specific outgoing request.  
+  `/tpacancel all` – Cancel all outgoing requests.
+
+**Personal Homes**
+- Set your own named homes that remember your exact location, dimension, and even which way you're facing:  
+  `/sethome <name>` – Save your current position as a home.
+- Teleport to any of your homes anytime:  
+  `/home <name>` – Go to that home.  
+  `/home list` – See all your saved homes.  
+  `/delhome <name>` – Remove a home.
+- Homes are private to you and persist across sessions in the world data.
+
+**Safe Random Teleport**
+- Instantly teleport to a random, safe location without leaving your dimension:  
+  `/rtp overworld` – Random location in the Overworld.  
+  `/rtp nether` – Random location in the Nether.  
+  `/rtp end` – Random location in the End.
+- The search area is a 10,000-block square centered at 0,0 (respecting your world border).
+- The mod ensures you land on a safe spot—no mid-air or suffocation spawns.
+
+**First-Join Auto-Teleport**
+- When a player joins a world for the very first time, they are automatically teleported to a safe random overworld location (using the same RTP system).
+- Perfect for survival servers: new players start somewhere fresh and unexplored, not at world spawn.
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-03-30T04:29:23+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/All-Mobs-Hate-The-SUN.jar
+jar_size_bytes=5800
+jar_sha1=f24effd6268502df14bb0cea53a85e7e67dda1b6
+
+## Detected Metadata
+
+jar_name=All-Mobs-Hate-The-SUN.jar
+jar_display_name=All Mobs Hate The SUN
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=all_most_hate_the_sun
+name=All Most Hate The SUN
+mod_version=1.0
+description=All hostile mobs burn during the day. Sun burns harder.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/all-mobs-hate-the-sun/decompiled/src/main/java
+source_file_count=4
+package_count=2
+packages=com.sunhate,com.sunhate.proxy
+
+## Source Tree
+
+com/sunhate/Main.java
+com/sunhate/SunBurnEvent.java
+com/sunhate/proxy/ClientProxy.java
+com/sunhate/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/sunhate/SunBurnEvent.java
+```
+package com.sunhate;
+
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+@EventBusSubscriber(
+   modid = "all_most_hate_the_sun"
+)
+public class SunBurnEvent {
+   public static final DamageSource SUN_DAMAGE = new DamageSource("sun").func_76361_j().func_76348_h();
+
+   @SubscribeEvent
+   public static void onLivingUpdate(LivingUpdateEvent event) {
+      EntityLivingBase entity = event.getEntityLiving();
+      if (!entity.field_70170_p.field_72995_K && entity instanceof IMob && entity.func_70089_S() && entity.field_70170_p.func_72935_r()) {
+         float f = entity.func_70013_c();
+         BlockPos pos = new BlockPos(entity.field_70165_t, Math.round(entity.field_70163_u), entity.field_70161_v);
+         if (f > 0.5F && entity.field_70170_p.func_175678_i(pos) && entity.field_70170_p.field_73012_v.nextFloat() * 30.0F < (f - 0.4F) * 2.0F) {
+            boolean inWater = entity.func_70090_H() || entity.func_70026_G();
+            if (!inWater && !entity.func_70045_F()) {
+               entity.func_70015_d(8);
+               if (entity.field_70173_aa % 20 == 0) {
+                  entity.func_70097_a(SUN_DAMAGE, 6.0F);
+               }
+            }
+         }
+      }
+   }
+}
+```
+
+### com/sunhate/Main.java
+```
+package com.sunhate;
+
+import com.sunhate.proxy.CommonProxy;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(
+   modid = "all_most_hate_the_sun",
+   version = "1.0",
+   name = "All Most Hate The SUN",
+   acceptedMinecraftVersions = "[1.12.2]"
+)
+public class Main {
+   public static final String MOD_ID = "all_most_hate_the_sun";
+   public static final String VERSION = "1.0";
+   public static final String NAME = "All Most Hate The SUN";
+   @Instance
+   public static Main main;
+   @SidedProxy(
+      serverSide = "com.sunhate.proxy.CommonProxy",
+      clientSide = "com.sunhate.proxy.ClientProxy"
+   )
+   public static CommonProxy proxy;
+
+   @EventHandler
+   public void preInit(FMLPreInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void init(FMLInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void postInit(FMLPostInitializationEvent event) {
+   }
+
+   @EventHandler
+   public void serverStarting(FMLServerStartingEvent event) {
+   }
+}
+```
+
+### com/sunhate/proxy/ClientProxy.java
+```
+package com.sunhate.proxy;
+
+import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraft.item.Item;
+import net.minecraftforge.client.model.ModelLoader;
+
+public class ClientProxy extends CommonProxy {
+   @Override
+   public void registerItemRenderer(Item item, int metadataValue, String itemId) {
+      ModelLoader.setCustomModelResourceLocation(item, metadataValue, new ModelResourceLocation("all_most_hate_the_sun:" + itemId, "inventory"));
+   }
+}
+```
+
+### com/sunhate/proxy/CommonProxy.java
+```
+package com.sunhate.proxy;
+
+import net.minecraft.item.Item;
+
+public class CommonProxy {
+   public void registerItemRenderer(Item item, int creativeTabValue, String name) {
+   }
+}
+```
