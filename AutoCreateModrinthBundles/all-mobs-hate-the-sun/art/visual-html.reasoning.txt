@@ -1,0 +1,116 @@
+We need to generate compact visual content data for one mod page. Must return only valid JSON with exact shape given. Provide accent_color, background_image, logo with fields, description with kicker, title, tagline, chips (2-4), stats (exactly 2 items), each stats.note one short sentence.
+
+We must not write HTML or explanations. Provide only JSON.
+
+We need to adapt to the mod "All Mobs Hate The SUN". Provide concise polished strings.
+
+We need to choose background_image from options. Which fits? The mod is about burning mobs in daylight. Could use "fire burning.jpg" or "sunset in grassfield.jpg" etc. Probably "fire burning.jpg" matches burning theme. Or "purple flowers and sun set or sun rise.png"? Might be less appropriate. Fire burning seems apt.
+
+Accent color: choose a hex like #ff7f2f (orange). Could also choose #ff4500 etc. Must be single hex.
+
+Logo: fields: eyebrow, mark, title, subtitle, rail_left, rail_right.
+
+We need to fill with short phrases describing mod behavior.
+
+Eyebrow: maybe "Daylight Burn". Mark: "AMH"? Or "SUN"? Should be 2-4 characters. Could be "SUN". Title: "All Mobs Hate The SUN". Subtitle: a short description: "Forces every hostile mob to ignite in sunlight, dealing true damage regardless of armor." Must be concise.
+
+Rail_left: "Sunlight Ignition". Rail_right: "Armor‑Piercing Burn". Must describe actual behavior.
+
+Description: kicker, title, tagline, chips (2-4 short labels), stats (exactly 2 items). Each stats.note one short sentence.
+
+Kicker: maybe "Utility". Title: "All Mobs Hate The SUN". Tagline: "Turn daylight into a weapon, making all hostile mobs burn instantly in the sun, ignoring armor and preserving your resources." Must be concise.
+
+Chips: 2-4 short labels describing features: "Daylight Burn", "Armor‑Piercing", "No Cooldown", "Pure Damage". Must be 2-4 items.
+
+Stats: exactly 2 items. Each has value, label, note. Value can be "100%"? Or "Instant". Provide label like "Burn Duration". Note: "Mobs ignite for 5 seconds". Another stat: "Damage Type". Note: "True damage, ignores armor". Provide value maybe "Instant". Provide note short sentence.
+
+Make sure each stats.note is one short sentence.
+
+Make sure chips length 2-4. Provide maybe 3 chips.
+
+Make sure description.stats exactly 2 items.
+
+Make sure description.chips is array of strings.
+
+Make sure description.title is the mod title.
+
+Make sure description.kicker is a short label maybe "Utility". Provide short phrase.
+
+Make sure description.tagline is a short tagline.
+
+Make sure all strings concise and polished.
+
+Now produce JSON.
+
+Check shape:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "fire burning.jpg",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+    "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      }
+    ]
+  }
+}
+
+Make sure no extra fields.
+
+Now craft values.
+
+accent_color: maybe "#ff7f2f" (orange). Use that.
+
+background_image: "fire burning.jpg" (exact filename). Good.
+
+logo.eyebrow: "Daylight Burn". That's short.
+
+logo.mark: maybe "SUN". That's 3 chars.
+
+logo.title: "All Mobs Hate The SUN". That's the title.
+
+logo.subtitle: "Ignites every hostile mob in sunlight, dealing true damage regardless of armor." Must be concise but okay.
+
+logo.rail_left: "Sunlight Ignition". That's behavior.
+
+logo.rail_right: "Armor‑Piercing Burn". That's behavior.
+
+description.kicker: "Utility". Could be "Utility". Or "Gameplay". Keep concise.
+
+description.title: "All Mobs Hate The SUN". Same as title.
+
+description.tagline: "Daylight becomes a weapon, instantly incinerating hostile mobs while ignoring armor." Must be concise.
+
+description.chips: maybe ["Daylight Burn","Armor‑Piercing","Instant Ignite"] (3 items). Must be short labels.
+
+description.stats: two items.
+
+First stat: value "Instant", label "Ignition", note "Mobs catch fire the moment they step into sunlight." That's one sentence.
+
+Second stat: value "True Damage", label "Damage Type", note "Damage ignores armor and enchantments." That's one sentence.
+
+Make sure each note is one short sentence, no extra punctuation beyond period maybe okay.
+
+Now ensure JSON is valid, no trailing commas.
+
+Now produce final JSON.

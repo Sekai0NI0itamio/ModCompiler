@@ -1,0 +1,274 @@
+Write only the Modrinth summary for one Minecraft mod.
+
+You already reviewed the original source folder earlier in this chat.
+Use that source-based understanding first, then use the chosen name and long description below only to stay aligned.
+Use SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT as the highest-trust fact list.
+Return plain text only.
+Do not return JSON.
+Do not return markdown bullets, headings, explanations, quotes, or multiple options.
+Focus only on producing one strong player-facing summary line.
+
+Summary rules:
+- Usually 1 sentence, or 2 very short sentences.
+- Write naturally. The script will shorten the final summary later if needed.
+- Sound like a real human mod page, not corporate marketing copy.
+- Prefer an accurate complaint/problem -> payoff cadence when the mod naturally fits it.
+- Match the rhythm, wording, and sentence structure of the examples very closely.
+- It is okay to copy the example structure almost directly and just swap in the real mod details.
+- Do not try to be original if the examples already fit. Reuse their shape.
+- When it fits naturally, strongly prefer starting with a player frustration hook like "Hate...", "Tired of...", or "Wanting...".
+- Be specific about the actual player-visible benefit.
+- Keep the wording simple and casual rather than polished or dramatic.
+- Small helper words and bridge phrases are good, like "well", "now", "so", "basically", or "which means", when they make it sound more human.
+- Slightly imperfect grammar is okay if it sounds clearer, more casual, and closer to the examples.
+- Do not mention internal implementation details, package names, event names, hooks, APIs, or metadata trivia.
+- Do not add compatibility or command claims unless the project info clearly proves them.
+- Do not exaggerate.
+- Never count characters, words, or tokens out loud.
+- Never show your steps, analysis, or any 'Count:' style output.
+- Avoid generic openings like "Hostile mobs..." or "This mod..." when a sharper player-facing hook would fit better.
+- Avoid advanced wording like "ignite", "deadly zones", or "roaming safely in daylight" when simpler wording would sound more human.
+- Avoid clever rewrites, slogans, or edgy phrases like "free-range mob-killer".
+
+Important:
+- Treat the examples below like fill-in-the-blank templates.
+- Copy their sentence pattern very closely when the mod fits.
+- Prefer sounding a lot like the examples over sounding polished.
+- Reuse phrases like "Hate that...", "Hate the...", "This mod makes it so that...", "Wanting to...", and "Well this mod cancels that pain..." when they fit.
+- Do not paraphrase the examples into brand new wording if the example phrasing already works.
+- Do not invent a fake second complaint just to fit Template A. If only one real complaint is clearly supported, use Template C.
+- Reuse the concrete nouns already present in PROJECT INFO. Do not swap in new problems like raids, bases, or travel unless PROJECT INFO really proves them.
+- If the verified notes only prove one clear complaint, stick to one clear complaint.
+
+Preferred reusable templates:
+- Template A: Hate that [annoying thing]? Hate the [second annoying thing]? This mod makes it so that [main payoff].
+- Template B: Wanting to [goal]? Tired of [pain]? Well this mod cancels that pain, you can [main payoff].
+- Template C: Hate when [problem]? This mod [simple payoff].
+
+SPECIFIC GUIDANCE FOR THIS MOD:
+- Use Template C for this mod.
+- The one clear complaint is that hostile mobs do not burn in daylight.
+- Stay concrete and close to this exact shape:
+  Hate when hostile mobs don't burn in daylight? Well this mod makes it so that ALL hostile mobs burn in the sun.
+- Do not use vague complaints like "wander around", "ignore the sun", "keep walking at noon", or "unscathed".
+
+Good style examples:
+Wanting to play as if your in a server? Tired of digging back up just to go back to your base? Well this mod cancels that pain, you can use /rtp, /tpa, /rtp just like if your in a server, but in single player!
+
+Hate that creeper that doesn't burn after day? Hate the slimes that spawn in super flat worlds? This mob makes it so that ALL mobs burn in day.
+
+Chosen mod name:
+All Mobs Hate The SUN
+
+Chosen long description:
+# All Mobs Hate The SUN
+
+When hostile mobs are out in bright daylight they catch fire and take damage. Every second they lose three hearts of health, and a flame overlay appears on them. The fire damage ignores armor, so even heavily armored mobs still burn.
+
+The effect only happens during the day and only for hostile mobs.
+
+SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT:
+UARANTEED PLAYER-VISIBLE FACTS
+- Mobs caught in bright sunlight catch fire and lose 3 hearts of health each second
+- The fire effect appears as a flame overlay on the mob
+- The damage from sunlight ignores armor
+
+DO NOT CLAIM
+- All hostile mobs will always burn in sunlight
+- The mod adds new items or commands
+- The mod changes block behavior
+- The mod affects player health directly
+- The mod works on client-side only
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-03-30T09:57:40+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/1/All-Mobs-Hate-The-SUN.jar
+jar_size_bytes=5800
+jar_sha1=f24effd6268502df14bb0cea53a85e7e67dda1b6
+
+## Detected Metadata
+
+jar_name=All-Mobs-Hate-The-SUN.jar
+jar_display_name=All Mobs Hate The SUN
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=all_most_hate_the_sun
+name=All Most Hate The SUN
+mod_version=1.0
+description=All hostile mobs burn during the day. Sun burns harder.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/all-mobs-hate-the-sun/source
+decompiled_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/all-mobs-hate-the-sun/decompiled
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/all-mobs-hate-the-sun/source/src/main/java
+source_file_count=4
+package_count=2
+packages=com.forgetemplatemod,com.forgetemplatemod.proxy
+
+## Source Tree
+
+com/forgetemplatemod/Main.java
+com/forgetemplatemod/SunBurnEvent.java
+com/forgetemplatemod/proxy/ClientProxy.java
+com/forgetemplatemod/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/forgetemplatemod/SunBurnEvent.java
+```
+package com.forgetemplatemod;
+
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+@Mod.EventBusSubscriber(modid = Main.MOD_ID)
+public class SunBurnEvent {
+
+    public static final DamageSource SUN_DAMAGE = new DamageSource("sun").setFireDamage().setDamageBypassesArmor();
+
+    @SubscribeEvent
+    public static void onLivingUpdate(LivingUpdateEvent event) {
+        EntityLivingBase entity = event.getEntityLiving();
+
+        // We only process logic on the server side and for hostile mobs
+        if (!entity.world.isRemote && entity instanceof IMob && entity.isEntityAlive()) {
+
+            // If it is day time
+            if (entity.world.isDaytime()) {
+                float f = entity.getBrightness();
+                BlockPos pos = new BlockPos(entity.posX, Math.round(entity.posY), entity.posZ);
+
+                // If exposed to the sun correctly (brightness > 0.5 and can see sky)
+                if (f > 0.5F && entity.world.canSeeSky(pos) && entity.world.rand.nextFloat() * 30.0F < (f - 0.4F) * 2.0F) {
+
+                    // Note: In vanilla, wearing a helmet protects them and damages the helmet instead.
+                    // We'll let the sun burn them regardless, OR we can respect the helmet rule but they still take the hard damage if they catch fire.
+                    // We will just force them to catch fire if they aren't immune to it.
+                    boolean inWater = entity.isInWater() || entity.isWet();
+
+                    if (!inWater && !entity.isImmuneToFire()) {
+                        // Apply normal fire effect so they visually burn
+                        entity.setFire(8);
+
+                        // Drain 3 hearts (6.0F damage) per second (every 20 ticks) specifically due to sun
+                        if (entity.ticksExisted % 20 == 0) {
+                            entity.attackEntityFrom(SUN_DAMAGE, 6.0F); // 3 Full Hearts of damage
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+### com/forgetemplatemod/Main.java
+```
+package com.forgetemplatemod;
+
+import com.forgetemplatemod.proxy.CommonProxy;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(modid= Main.MOD_ID, version = Main.VERSION, name = Main.NAME)
+public class Main {
+	public static final String MOD_ID = "all_most_hate_the_sun";
+	public static final String VERSION = "1.0";
+	public static final String NAME = "All Most Hate The SUN";
+
+	@Instance
+	public static Main main;	
+
+	/**
+	 * must include package paths
+	 */
+	@SidedProxy(serverSide = "com.forgetemplatemod.proxy.CommonProxy", clientSide = "com.forgetemplatemod.proxy.ClientProxy")
+	public static CommonProxy proxy;  
+
+	@EventHandler
+	public void preInit(FMLPreInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void init(FMLInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void postInit(FMLPostInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void serverStarting(FMLServerStartingEvent event) {
+
+	}
+}
+```
+
+### com/forgetemplatemod/proxy/ClientProxy.java
+```
+package com.forgetemplatemod.proxy;
+
+import com.forgetemplatemod.Main;
+
+import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraft.item.Item;
+import net.minecraftforge.client.model.ModelLoader;
+
+/**
+ * Client-side proxy
+ * @author ezric
+ *
+ */
+public class ClientProxy extends CommonProxy{
+	/**
+	 * Find the mod ID in the assets folder in [mod id]/models/[item id].json
+	 */
+	@Override
+	public void registerItemRenderer(Item item, int metadataValue, String itemId) {
+		ModelLoader.setCustomModelResourceLocation(item, metadataValue, new ModelResourceLocation(Main.MOD_ID + ":" + itemId, "inventory"));
+	}
+}
+```
+
+### com/forgetemplatemod/proxy/CommonProxy.java
+```
+package com.forgetemplatemod.proxy;
+
+import net.minecraft.item.Item;
+
+/**
+ * Server side proxy
+ * @author ezric
+ *
+ */
+public class CommonProxy {
+
+	public void registerItemRenderer(Item item, int creativeTabValue, String name) {
+
+	}
+
+}
+```

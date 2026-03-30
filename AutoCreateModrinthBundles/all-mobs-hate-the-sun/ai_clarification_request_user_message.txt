@@ -1,0 +1,196 @@
+Look at this original Minecraft mod source folder and explain, in simple everyday language, what this mod appears to do for players.
+
+Use only the ORIGINAL SOURCE CONTEXT below.
+Do not use jar metadata, decompiled output, old summaries, or guesses from past mods.
+If something is uncertain, say that it is uncertain.
+Keep the wording plain and direct.
+Avoid polished or dramatic phrases like "ignite", "deadly zones", "streamlines", or "player-facing utility" unless the source itself really demands that wording.
+Prefer leaving details out over guessing.
+
+Return plain text with exactly these sections:
+GUARANTEED PLAYER-VISIBLE FACTS
+- short bullets with only things the source clearly proves will happen in-game
+
+DO NOT CLAIM
+- short bullets for things that are unclear, not proven, or should be left out
+
+Rules:
+- Lead with the main thing the player will notice in-game.
+- Mention commands, mobs, blocks, items, or rules only when the source clearly proves them.
+- Prefer concrete wording over fancy wording.
+- Do not return JSON.
+
+ORIGINAL SOURCE CONTEXT:
+# Original Source Context
+
+generated_at=2026-03-30T09:57:40+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/all-mobs-hate-the-sun/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/all-mobs-hate-the-sun/source/src/main/java
+source_file_count=4
+package_count=2
+packages=com.forgetemplatemod,com.forgetemplatemod.proxy
+
+## Source Tree
+
+com/forgetemplatemod/Main.java
+com/forgetemplatemod/SunBurnEvent.java
+com/forgetemplatemod/proxy/ClientProxy.java
+com/forgetemplatemod/proxy/CommonProxy.java
+
+## Key Source Excerpts
+
+### com/forgetemplatemod/SunBurnEvent.java
+```
+package com.forgetemplatemod;
+
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+@Mod.EventBusSubscriber(modid = Main.MOD_ID)
+public class SunBurnEvent {
+
+    public static final DamageSource SUN_DAMAGE = new DamageSource("sun").setFireDamage().setDamageBypassesArmor();
+
+    @SubscribeEvent
+    public static void onLivingUpdate(LivingUpdateEvent event) {
+        EntityLivingBase entity = event.getEntityLiving();
+
+        // We only process logic on the server side and for hostile mobs
+        if (!entity.world.isRemote && entity instanceof IMob && entity.isEntityAlive()) {
+
+            // If it is day time
+            if (entity.world.isDaytime()) {
+                float f = entity.getBrightness();
+                BlockPos pos = new BlockPos(entity.posX, Math.round(entity.posY), entity.posZ);
+
+                // If exposed to the sun correctly (brightness > 0.5 and can see sky)
+                if (f > 0.5F && entity.world.canSeeSky(pos) && entity.world.rand.nextFloat() * 30.0F < (f - 0.4F) * 2.0F) {
+
+                    // Note: In vanilla, wearing a helmet protects them and damages the helmet instead.
+                    // We'll let the sun burn them regardless, OR we can respect the helmet rule but they still take the hard damage if they catch fire.
+                    // We will just force them to catch fire if they aren't immune to it.
+                    boolean inWater = entity.isInWater() || entity.isWet();
+
+                    if (!inWater && !entity.isImmuneToFire()) {
+                        // Apply normal fire effect so they visually burn
+                        entity.setFire(8);
+
+                        // Drain 3 hearts (6.0F damage) per second (every 20 ticks) specifically due to sun
+                        if (entity.ticksExisted % 20 == 0) {
+                            entity.attackEntityFrom(SUN_DAMAGE, 6.0F); // 3 Full Hearts of damage
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+### com/forgetemplatemod/Main.java
+```
+package com.forgetemplatemod;
+
+import com.forgetemplatemod.proxy.CommonProxy;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+
+@Mod(modid= Main.MOD_ID, version = Main.VERSION, name = Main.NAME)
+public class Main {
+	public static final String MOD_ID = "all_most_hate_the_sun";
+	public static final String VERSION = "1.0";
+	public static final String NAME = "All Most Hate The SUN";
+
+	@Instance
+	public static Main main;	
+
+	/**
+	 * must include package paths
+	 */
+	@SidedProxy(serverSide = "com.forgetemplatemod.proxy.CommonProxy", clientSide = "com.forgetemplatemod.proxy.ClientProxy")
+	public static CommonProxy proxy;  
+
+	@EventHandler
+	public void preInit(FMLPreInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void init(FMLInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void postInit(FMLPostInitializationEvent event) {
+
+	}
+
+	@EventHandler
+	public void serverStarting(FMLServerStartingEvent event) {
+
+	}
+}
+```
+
+### com/forgetemplatemod/proxy/ClientProxy.java
+```
+package com.forgetemplatemod.proxy;
+
+import com.forgetemplatemod.Main;
+
+import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraft.item.Item;
+import net.minecraftforge.client.model.ModelLoader;
+
+/**
+ * Client-side proxy
+ * @author ezric
+ *
+ */
+public class ClientProxy extends CommonProxy{
+	/**
+	 * Find the mod ID in the assets folder in [mod id]/models/[item id].json
+	 */
+	@Override
+	public void registerItemRenderer(Item item, int metadataValue, String itemId) {
+		ModelLoader.setCustomModelResourceLocation(item, metadataValue, new ModelResourceLocation(Main.MOD_ID + ":" + itemId, "inventory"));
+	}
+}
+```
+
+### com/forgetemplatemod/proxy/CommonProxy.java
+```
+package com.forgetemplatemod.proxy;
+
+import net.minecraft.item.Item;
+
+/**
+ * Server side proxy
+ * @author ezric
+ *
+ */
+public class CommonProxy {
+
+	public void registerItemRenderer(Item item, int creativeTabValue, String name) {
+
+	}
+
+}
+```
