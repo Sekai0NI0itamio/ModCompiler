@@ -1,0 +1,59 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items) each with value, label, note. Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior, not project status. Must not mention draft, review, etc. Must match composition language from approved examples but adapt words to this mod.
+
+We need to choose background image filename from options that best fits "Always Rain". Likely "winter forest with sunset.jpg" or "ocean.jpg" or "purple flowers and sun set or sun rise.png". The mod is about rain, so maybe "ocean.jpg" fits water/rain vibe. Or "winter forest with sunset.jpg" maybe not. The recommended options include winter forest with sunset, ocean, purple flowers... The mod is about rain, so ocean fits water. Let's choose "ocean.jpg". That is exact filename.
+
+Accent color: choose a hex color, maybe #1e90ff (dodger blue) or #00bfff. Must be single hex like "#ff7f2f" in example. Choose something appropriate: maybe "#4a90e2". Provide as string.
+
+Logo: eyebrow: short label, maybe "Weather Control". mark: short monogram, maybe "AR". title: "Always Rain". subtitle: a short phrase describing behavior: "Endless precipitation, configurable storms, live‑tuned settings." rail_left: "Never Stops". rail_right: "Thunder On Demand". Must be actual mod behavior.
+
+Description: kicker: maybe "Utility Mod". title: "Always Rain". tagline: short phrase describing core behavior: "Continuous rain and optional thunder, adjustable in‑game without restart." chips: 2-4 short labels: maybe "All‑Weather", "Live Config", "No UI". stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior.
+
+stats: maybe first: value "100%" label "Rain Coverage" note "Every biome receives precipitation continuously." second: value "Toggle" label "Thunder Control" note "Enable perpetual storms with a single config change."
+
+But note must be one short sentence. Ensure each note is short.
+
+Make sure chips length 2-4. Let's do 3 chips: "All‑Weather", "Live Config", "Zero UI". That's 3.
+
+Stats: exactly 2 items. Provide value as string maybe "∞" or "Always". Use "Always" maybe. Provide label and note.
+
+Make sure JSON keys exactly as specified: "accent_color", "background_image", "logo": { "eyebrow": "...", "mark": "...", "title": "...", "subtitle": "...", "rail_left": "...", "rail_right": "..." }, "description": { "kicker": "...", "title": "...", "tagline": "...", "chips": [ "...", "...", "..." ], "stats": [ { "value": "...", "label": "...", "note": "..." }, { "value": "...", "label": "...", "note": "..." } ] }
+
+All strings concise and polished.
+
+Make sure no extra fields.
+
+Now produce JSON only.
+
+Check constraints: accent_color must be a single hex color like "#ff7f2f". Provide "#4a90e2". That's okay.
+
+background_image must be exact filename from options: "ocean.jpg". Use that.
+
+logo.mark should be short monogram 2-4 characters: "AR" is 2 characters, okay.
+
+logo.eyebrow: short label, maybe "Weather Control". That's 14 characters, okay.
+
+logo.title: "Always Rain". That's fine.
+
+logo.subtitle: "Endless precipitation, configurable storms, live‑tuned settings." Must be concise but okay.
+
+logo.rail_left: "Never Stops". That's behavior.
+
+logo.rail_right: "Thunder On Demand". That's behavior.
+
+description.kicker: "Utility Mod". description.title: "Always Rain". description.tagline: "Continuous rain and optional thunder, adjustable in‑game without restart." That's concise.
+
+description.chips: array of 2-4 short labels: maybe ["All‑Weather","Live Config","Zero UI"].
+
+description.stats: array of 2 items. Each item: value string, label, note.
+
+Let's craft:
+
+First stat: value "Always", label "Rain Coverage", note "Every biome stays wet continuously."
+
+Second stat: value "Toggle", label "Thunder Control", note "Switch storms on or off instantly."
+
+Make sure note is one short sentence.
+
+Now ensure JSON is valid, no trailing commas.
+
+Now produce final JSON.

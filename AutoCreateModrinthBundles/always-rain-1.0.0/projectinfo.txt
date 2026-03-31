@@ -1,0 +1,222 @@
+# Project Info
+
+generated_at=2026-03-31T03:07:58+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/6/Always-Rain-1.0.0.jar
+jar_size_bytes=7707
+jar_sha1=39395fe5285ef67a1286feb4efb001234ab9d70d
+
+## Detected Metadata
+
+jar_name=Always-Rain-1.0.0.jar
+jar_display_name=Always Rain
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=alwaysrain
+name=Always Rain
+mod_version=1.0.0
+description=Keeps the world raining at all times, with thunderstorms enabled by default and normal rain available in the config.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/always-rain-1.0.0/source
+decompiled_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/always-rain-1.0.0/decompiled
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/always-rain-1.0.0/source/src/main/java
+source_file_count=2
+package_count=2
+packages=com.alwaysrain,com.alwaysrain.config
+
+## Source Tree
+
+com/alwaysrain/AlwaysRainMod.java
+com/alwaysrain/config/AlwaysRainConfig.java
+
+## Key Source Excerpts
+
+### com/alwaysrain/AlwaysRainMod.java
+```
+package com.alwaysrain;
+
+import com.alwaysrain.config.AlwaysRainConfig;
+import java.io.File;
+import net.minecraft.world.World;
+import net.minecraft.world.storage.WorldInfo;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = AlwaysRainMod.MOD_ID, name = AlwaysRainMod.NAME, version = AlwaysRainMod.VERSION)
+@Mod.EventBusSubscriber(modid = AlwaysRainMod.MOD_ID)
+public final class AlwaysRainMod {
+    public static final String MOD_ID = "alwaysrain";
+    public static final String NAME = "Always Rain";
+    public static final String VERSION = "1.0.0";
+    public static final Logger LOGGER = LogManager.getLogger(NAME);
+
+    private static AlwaysRainConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        config = new AlwaysRainConfig(new File(event.getModConfigurationDirectory(), "alwaysrain.txt"));
+        config.load();
+    }
+
+    @SubscribeEvent
+    public static void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || event.world == null || event.world.isRemote) {
+            return;
+        }
+
+        if (!event.world.provider.isSurfaceWorld() || config == null) {
+            return;
+        }
+
+        config.reloadIfChanged();
+        if ((event.world.getTotalWorldTime() % 20L) != 0L) {
+            return;
+        }
+
+        enforceWeather(event.world, config.getWeatherMode());
+    }
+
+    private static void enforceWeather(World world, AlwaysRainConfig.WeatherMode weatherMode) {
+        WorldInfo worldInfo = world.getWorldInfo();
+        worldInfo.setCleanWeatherTime(0);
+        worldInfo.setRainTime(Integer.MAX_VALUE);
+        worldInfo.setRaining(true);
+        worldInfo.setThunderTime(Integer.MAX_VALUE);
+        worldInfo.setThundering(weatherMode == AlwaysRainConfig.WeatherMode.THUNDERSTORM);
+    }
+}
+```
+
+### com/alwaysrain/config/AlwaysRainConfig.java
+```
+package com.alwaysrain.config;
+
+import com.alwaysrain.AlwaysRainMod;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public class AlwaysRainConfig {
+
+    private static final long RELOAD_CHECK_INTERVAL_MS = 500L;
+
+    private final File file;
+
+    private WeatherMode weatherMode = WeatherMode.THUNDERSTORM;
+    private long lastModified = -1L;
+    private long lastLength = -1L;
+    private long lastCheckTime = 0L;
+
+    public AlwaysRainConfig(File file) {
+        this.file = file;
+    }
+
+    public synchronized void load() {
+        ensureParentDirectoryExists();
+        if (!file.exists()) {
+            writeDefaultFile();
+        }
+        readFile();
+    }
+
+    public synchronized void reloadIfChanged() {
+        long now = System.currentTimeMillis();
+        if (now - lastCheckTime < RELOAD_CHECK_INTERVAL_MS) {
+            return;
+        }
+        lastCheckTime = now;
+
+        if (!file.exists()) {
+            writeDefaultFile();
+            readFile();
+            return;
+        }
+
+        long modified = file.lastModified();
+        long length = file.length();
+        if (modified != lastModified || length != lastLength) {
+            readFile();
+        }
+    }
+
+    public synchronized WeatherMode getWeatherMode() {
+        return weatherMode;
+    }
+
+    private void ensureParentDirectoryExists() {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            AlwaysRainMod.LOGGER.warn("Always Rain could not create config directory: {}", parent.getAbsolutePath());
+        }
+    }
+
+    private void writeDefaultFile() {
+        List<String> lines = new ArrayList<String>();
+        lines.add("# Always Rain configuration");
+        lines.add("# This file hot-reloads while the game is running.");
+        lines.add("#");
+        lines.add("# weather_mode options:");
+        lines.add("# thunderstorm");
+        lines.add("# rain");
+        lines.add("weather_mode=thunderstorm");
+
+        try {
+            Files.write(file.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException exception) {
+            AlwaysRainMod.LOGGER.error("Always Rain could not write the default config file.", exception);
+        }
+    }
+
+    private void readFile() {
+        try {
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            applyLines(lines);
+            lastModified = file.lastModified();
+            lastLength = file.length();
+        } catch (IOException exception) {
+            AlwaysRainMod.LOGGER.error("Always Rain could not read its config file.", exception);
+        }
+    }
+
+    private void applyLines(List<String> lines) {
+        WeatherMode parsedWeatherMode = WeatherMode.THUNDERSTORM;
+
+        for (String rawLine : lines) {
+            String line = rawLine == null ? "" : rawLine.trim();
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+
+            int separatorIndex = line.indexOf('=');
+            if (separatorIndex <= 0 || separatorIndex >= line.length() - 1) {
+                continue;
+            }
+
+            String key = line.substring(0, separatorIndex).trim().toLowerCase(Locale.ROOT);
+            String value = line.substring(separatorIndex + 1).trim();
+            if ("weather_mode".equals(key)) {
+                parsedWeatherMode = WeatherMode.fromConfig(value, parsedWeatherMode);
+            }
+        }
+
+        weatherMode = parsedWeatherMode;
+    }
+
+    public enum WeatherMode {
+        THUNDERSTORM,
+... truncated ...
+```
