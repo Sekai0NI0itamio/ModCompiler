@@ -1,0 +1,292 @@
+# Original Source Context
+
+generated_at=2026-03-31T01:11:15+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/day-counter-1.0.0/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/day-counter-1.0.0/source/src/main/java
+source_file_count=4
+package_count=4
+packages=com.daycounter,com.daycounter.client,com.daycounter.config,com.daycounter.util
+
+## Source Tree
+
+com/daycounter/DayCounterMod.java
+com/daycounter/client/DayCounterClientHandler.java
+com/daycounter/config/DayCounterConfig.java
+com/daycounter/util/DayCounterFormatter.java
+
+## Key Source Excerpts
+
+### com/daycounter/client/DayCounterClientHandler.java
+```
+package com.daycounter.client;
+
+import com.daycounter.config.DayCounterConfig;
+import com.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.ScaledResolution;
+import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+public class DayCounterClientHandler {
+
+    private final DayCounterConfig config;
+
+    public DayCounterClientHandler(DayCounterConfig config) {
+        this.config = config;
+    }
+
+    @SubscribeEvent
+    public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
+        Minecraft minecraft = Minecraft.getMinecraft();
+        if (minecraft == null || minecraft.player == null || minecraft.world == null || minecraft.gameSettings.hideGUI) {
+            return;
+        }
+
+        config.reloadIfChanged();
+
+        String text = DayCounterFormatter.format(
+            minecraft.world.getTotalWorldTime(),
+            minecraft.world.getWorldTime(),
+            config.getDisplayMode()
+        );
+        if (text.isEmpty()) {
+            return;
+        }
+
+        FontRenderer fontRenderer = minecraft.fontRenderer;
+        ScaledResolution resolution = event.getResolution();
+        int width = fontRenderer.getStringWidth(text);
+        int x = config.getAnchor().resolveX(resolution.getScaledWidth(), width, config.getOffsetX());
+        int y = config.getAnchor().resolveY(resolution.getScaledHeight(), fontRenderer.FONT_HEIGHT, config.getOffsetY());
+
+        fontRenderer.drawStringWithShadow(text, x, y, 0xFFFFFF);
+    }
+}
+```
+
+### com/daycounter/DayCounterMod.java
+```
+package com.daycounter;
+
+import com.daycounter.client.DayCounterClientHandler;
+import com.daycounter.config.DayCounterConfig;
+import java.io.File;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(
+    modid = DayCounterMod.MODID,
+    name = DayCounterMod.NAME,
+    version = DayCounterMod.VERSION,
+    clientSideOnly = true,
+    acceptableRemoteVersions = "*"
+)
+public class DayCounterMod {
+
+    public static final String MODID = "daycounter";
+    public static final String NAME = "Day Counter";
+    public static final String VERSION = "1.0.0";
+    public static final Logger LOGGER = LogManager.getLogger(NAME);
+
+    private static DayCounterConfig config;
+
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        File configFile = new File(event.getModConfigurationDirectory(), "daycounter.txt");
+        config = new DayCounterConfig(configFile);
+        config.load();
+    }
+
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        if (event.getSide().isClient()) {
+            MinecraftForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+        }
+    }
+}
+```
+
+### com/daycounter/config/DayCounterConfig.java
+```
+package com.daycounter.config;
+
+import com.daycounter.DayCounterMod;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public class DayCounterConfig {
+
+    private static final long RELOAD_CHECK_INTERVAL_MS = 500L;
+
+    private final File file;
+
+    private Anchor anchor = Anchor.TOP_RIGHT;
+    private DisplayMode displayMode = DisplayMode.DAYS;
+    private int offsetX = 6;
+    private int offsetY = 6;
+    private long lastModified = -1L;
+    private long lastLength = -1L;
+    private long lastCheckTime = 0L;
+
+    public DayCounterConfig(File file) {
+        this.file = file;
+    }
+
+    public synchronized void load() {
+        ensureParentDirectoryExists();
+        if (!file.exists()) {
+            writeDefaultFile();
+        }
+        readFile();
+    }
+
+    public synchronized void reloadIfChanged() {
+        long now = System.currentTimeMillis();
+        if (now - lastCheckTime < RELOAD_CHECK_INTERVAL_MS) {
+            return;
+        }
+        lastCheckTime = now;
+
+        if (!file.exists()) {
+            writeDefaultFile();
+            readFile();
+            return;
+        }
+
+        long modified = file.lastModified();
+        long length = file.length();
+        if (modified != lastModified || length != lastLength) {
+            readFile();
+        }
+    }
+
+    public synchronized Anchor getAnchor() {
+        return anchor;
+    }
+
+    public synchronized DisplayMode getDisplayMode() {
+        return displayMode;
+    }
+
+    public synchronized int getOffsetX() {
+        return offsetX;
+    }
+
+    public synchronized int getOffsetY() {
+        return offsetY;
+    }
+
+    private void ensureParentDirectoryExists() {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            DayCounterMod.LOGGER.warn("Day Counter could not create config directory: {}", parent.getAbsolutePath());
+        }
+    }
+
+    private void writeDefaultFile() {
+        List<String> lines = new ArrayList<String>();
+        lines.add("# Day Counter configuration");
+        lines.add("# This file hot-reloads while the game is running.");
+        lines.add("#");
+        lines.add("# display_mode options:");
+        lines.add("# days");
+        lines.add("# days_hour");
+        lines.add("# days_hour_minute");
+        lines.add("display_mode=days");
+        lines.add("");
+        lines.add("# anchor options:");
+        lines.add("# top_left");
+        lines.add("# top_right");
+        lines.add("# bottom_left");
+        lines.add("# bottom_right");
+        lines.add("# center_top");
+        lines.add("# center_bottom");
+        lines.add("anchor=top_right");
+        lines.add("");
+        lines.add("# Pixel offsets from the selected anchor.");
+        lines.add("offset_x=6");
+        lines.add("offset_y=6");
+
+        try {
+            Files.write(file.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException exception) {
+            DayCounterMod.LOGGER.error("Day Counter could not write the default config file.", exception);
+        }
+    }
+
+    private void readFile() {
+        try {
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            applyLines(lines);
+            lastModified = file.lastModified();
+            lastLength = file.length();
+        } catch (IOException exception) {
+            DayCounterMod.LOGGER.error("Day Counter could not read its config file.", exception);
+... truncated ...
+```
+
+### com/daycounter/util/DayCounterFormatter.java
+```
+package com.daycounter.util;
+
+import com.daycounter.config.DayCounterConfig.DisplayMode;
+
+public final class DayCounterFormatter {
+
+    private static final long TICKS_PER_DAY = 24000L;
+    private static final long TICKS_PER_HOUR = 1000L;
+
+    private DayCounterFormatter() {
+    }
+
+    public static String format(long totalWorldTime, long worldTime, DisplayMode displayMode) {
+        long dayNumber = Math.max(1L, (totalWorldTime / TICKS_PER_DAY) + 1L);
+        String dayText = "Day " + dayNumber;
+
+        if (displayMode == DisplayMode.DAYS) {
+            return dayText;
+        }
+
+        long ticksOfDay = normalizeTicks(worldTime % TICKS_PER_DAY);
+        long shiftedTicks = normalizeTicks(ticksOfDay + (TICKS_PER_HOUR * 6L));
+        long totalMinutes = (shiftedTicks * 1440L) / TICKS_PER_DAY;
+
+        int hour24 = (int) (totalMinutes / 60L);
+        int minute = (int) (totalMinutes % 60L);
+        int hour12 = hour24 % 12;
+        if (hour12 == 0) {
+            hour12 = 12;
+        }
+        String meridiem = hour24 >= 12 ? "PM" : "AM";
+
+        if (displayMode == DisplayMode.DAYS_HOUR) {
+            return dayText + " | " + hour12 + " " + meridiem;
+        }
+
+        return dayText + " | " + hour12 + ":" + twoDigits(minute) + " " + meridiem;
+    }
+
+    private static long normalizeTicks(long ticks) {
+        long normalized = ticks % TICKS_PER_DAY;
+        return normalized < 0L ? normalized + TICKS_PER_DAY : normalized;
+    }
+
+    private static String twoDigits(int value) {
+        return value < 10 ? "0" + value : Integer.toString(value);
+    }
+}
+```
