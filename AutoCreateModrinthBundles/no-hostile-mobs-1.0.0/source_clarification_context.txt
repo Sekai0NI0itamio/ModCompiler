@@ -1,0 +1,186 @@
+# Original Source Context
+
+generated_at=2026-04-03T05:15:02+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-hostile-mobs-1.0.0/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-hostile-mobs-1.0.0/source/src/main/java
+source_file_count=3
+package_count=1
+packages=com.nohostilemobs
+
+## Source Tree
+
+com/nohostilemobs/MobSpawnHandler.java
+com/nohostilemobs/NoHostileMobsConfig.java
+com/nohostilemobs/NoHostileMobsMod.java
+
+## Key Source Excerpts
+
+### com/nohostilemobs/MobSpawnHandler.java
+```
+package com.nohostilemobs;
+
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityList;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.event.entity.living.LivingSpawnEvent;
+import net.minecraftforge.fml.common.eventhandler.Event.Result;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+public class MobSpawnHandler {
+    private int tickCounter = 0;
+    private static final int CONFIG_CHECK_INTERVAL = 100; // Check config every 100 ticks (5 seconds)
+
+    @SubscribeEvent
+    public void onMobSpawn(LivingSpawnEvent.CheckSpawn event) {
+        if (event.getEntity() instanceof EntityLiving) {
+            EntityLiving entity = (EntityLiving) event.getEntity();
+            ResourceLocation entityId = EntityList.getKey(entity);
+            
+            if (entityId != null) {
+                String entityIdString = entityId.toString();
+                
+                if (NoHostileMobsMod.config.isMobBlocked(entityIdString)) {
+                    event.setResult(Result.DENY);
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            tickCounter++;
+            if (tickCounter >= CONFIG_CHECK_INTERVAL) {
+                tickCounter = 0;
+                NoHostileMobsMod.config.checkAndReload();
+            }
+        }
+    }
+}
+```
+
+### com/nohostilemobs/NoHostileMobsMod.java
+```
+package com.nohostilemobs;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = NoHostileMobsMod.MODID, name = NoHostileMobsMod.NAME, version = NoHostileMobsMod.VERSION)
+public class NoHostileMobsMod {
+    public static final String MODID = "nohostilemobs";
+    public static final String NAME = "No Hostile Mobs";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static NoHostileMobsConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new NoHostileMobsConfig(event.getSuggestedConfigurationFile());
+        MinecraftForge.EVENT_BUS.register(new MobSpawnHandler());
+        logger.info("No Hostile Mobs initialized - blocking hostile mob spawns");
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        logger.info("No Hostile Mobs config loaded with " + config.getBlockedMobs().size() + " blocked mobs");
+    }
+}
+```
+
+### com/nohostilemobs/NoHostileMobsConfig.java
+```
+package com.nohostilemobs;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class NoHostileMobsConfig {
+    private Configuration config;
+    private List<String> blockedMobs;
+    private File configFile;
+    private long lastModified;
+
+    private static final String[] DEFAULT_HOSTILE_MOBS = {
+        "minecraft:zombie",
+        "minecraft:skeleton",
+        "minecraft:creeper",
+        "minecraft:spider",
+        "minecraft:cave_spider",
+        "minecraft:enderman",
+        "minecraft:blaze",
+        "minecraft:ghast",
+        "minecraft:slime",
+        "minecraft:magma_cube",
+        "minecraft:witch",
+        "minecraft:silverfish",
+        "minecraft:endermite",
+        "minecraft:guardian",
+        "minecraft:elder_guardian",
+        "minecraft:shulker",
+        "minecraft:husk",
+        "minecraft:stray",
+        "minecraft:zombie_villager",
+        "minecraft:wither_skeleton",
+        "minecraft:zombie_pigman",
+        "minecraft:evoker",
+        "minecraft:vindicator",
+        "minecraft:vex"
+    };
+
+    public NoHostileMobsConfig(File configFile) {
+        this.configFile = configFile;
+        this.config = new Configuration(configFile);
+        loadConfig();
+        this.lastModified = configFile.lastModified();
+    }
+
+    private void loadConfig() {
+        config.load();
+        
+        String[] mobArray = config.getStringList(
+            "blockedMobs",
+            Configuration.CATEGORY_GENERAL,
+            DEFAULT_HOSTILE_MOBS,
+            "List of mob entity IDs that will be prevented from spawning. Edit this list to customize which mobs are blocked."
+        );
+        
+        blockedMobs = new ArrayList<>(Arrays.asList(mobArray));
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+
+    public void checkAndReload() {
+        long currentModified = configFile.lastModified();
+        if (currentModified != lastModified) {
+            NoHostileMobsMod.logger.info("Config file changed, reloading...");
+            loadConfig();
+            lastModified = currentModified;
+            NoHostileMobsMod.logger.info("Config reloaded with " + blockedMobs.size() + " blocked mobs");
+        }
+    }
+
+    public List<String> getBlockedMobs() {
+        return blockedMobs;
+    }
+
+    public boolean isMobBlocked(String entityId) {
+        return blockedMobs.contains(entityId);
+    }
+}
+```
