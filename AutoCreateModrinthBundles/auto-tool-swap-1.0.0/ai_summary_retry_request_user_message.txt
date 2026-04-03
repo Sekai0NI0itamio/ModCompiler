@@ -1,0 +1,361 @@
+Wrong your generated summary is incorrect, see my instructions and examples again.
+Look back at the earlier history in this chat and follow those examples and verified facts more closely.
+Previous generated summary:
+Hate having to switch tools while mining? This mod automatically picks the right tool for you.
+Your previous summary did not copy the example structure closely enough.
+Rewrite it by following the earlier examples much more directly.
+Only use things that the verified facts clearly prove.
+Do not invent a fake second complaint if the project only clearly supports one main annoyance.
+Do not fall back to patch-note wording or overly literal mechanic wording if a more relatable player problem fits better.
+Do not repeat placeholder text like [problem] or [main payoff]. Replace those with the real mod details.
+Use small helper words like well, so, or now if that makes it sound more natural.
+Slightly imperfect grammar is okay if it reads more like a real person wrote it.
+Here is the original summary task again. Follow it directly this time:
+Write only the Modrinth summary for one Minecraft mod.
+
+You already reviewed the original source folder earlier in this chat.
+Use that source-based understanding first, then use the chosen name and long description below only to stay aligned.
+Use SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT as the highest-trust fact list.
+Use ORIGINAL SOURCE CONTEXT below as direct evidence from the provided src folder, not just as background history.
+Return plain text only.
+Do not return JSON.
+Do not return markdown bullets, headings, explanations, quotes, or multiple options.
+Focus only on producing one strong player-facing summary line.
+
+Summary rules:
+- Usually 1 sentence, or 2 very short sentences.
+- Write naturally. The script will shorten the final summary later if needed.
+- Sound like a real human mod page, not corporate marketing copy.
+- Prefer an accurate complaint/problem -> payoff cadence when the mod naturally fits it.
+- Learn from the examples very closely, but do not force every mod into the exact same sentence shape.
+- It is okay to copy an example structure almost directly when it fits, but switch to a different example style when that fits the mod better.
+- Prefer the most relatable player pain over the most literal implementation detail.
+- When it fits naturally, strongly prefer starting with a player frustration hook like "Hate...", "Tired of...", or "Wanting...".
+- Be specific about the actual player-visible benefit.
+- Keep the wording simple and casual rather than polished or dramatic.
+- Small helper words and bridge phrases are good, like "well", "now", "so", "basically", or "which means", when they make it sound more human.
+- Slightly imperfect grammar is okay if it sounds clearer, more casual, and closer to the examples.
+- Do not mention internal implementation details, package names, event names, hooks, APIs, or metadata trivia.
+- Do not add compatibility or command claims unless the project info clearly proves them.
+- Do not mention exact numbers, cooldown values, tick counts, `vanilla cooldown`, `bulk transfer`, or similar internal timing in the summary.
+- If the source clearly proves a bigger visible effect than just "faster", say that bigger visible effect in simple words.
+- For example, if the source clearly shows whole-stack transfer or repeated transfer loops, prefer wording like "moves full stacks in one go" over just "moves items faster".
+- Do not exaggerate.
+- Never count characters, words, or tokens out loud.
+- Never show your steps, analysis, or any 'Count:' style output.
+- Avoid generic openings like "Hostile mobs..." or "This mod..." when a sharper player-facing hook would fit better.
+- Avoid advanced wording like "ignite", "deadly zones", or "roaming safely in daylight" when simpler wording would sound more human.
+- Avoid clever rewrites, slogans, or edgy phrases like "free-range mob-killer".
+- Avoid sounding like patch notes, changelogs, or technical documentation.
+- Never output template placeholders like `[problem]`, `[main payoff]`, or bracketed labels. Always replace them with the real mod details.
+
+Important:
+- Treat the examples below like strong style references, not a single fixed script.
+- Copy the example pattern closely when it helps, but pick the example angle that best matches the mod's real player problem.
+- Prefer sounding like the examples over sounding polished or over-explained.
+- Reuse phrases like "Hate that...", "Hate the...", "This mod makes it so that...", "Wanting to...", and "Well this mod cancels that pain..." when they fit.
+- Do not paraphrase the examples into brand new wording if the example phrasing already works.
+- Do not invent a fake second complaint just to fit Template A. If only one real complaint is clearly supported, use Template C.
+- Reuse the concrete nouns already present in PROJECT INFO. Do not swap in new problems like raids, bases, or travel unless PROJECT INFO really proves them.
+- If the verified notes only prove one clear complaint, stick to one clear complaint.
+
+Preferred reusable templates:
+- Template A: Hate that [annoying thing]? Hate the [second annoying thing]? This mod makes it so that [main payoff].
+- Template B: Wanting to [goal]? Tired of [pain]? Well this mod cancels that pain, you can [main payoff].
+- Template C: Hate when [problem]? This mod [simple payoff].
+
+Good vs bad examples:
+- Good: Why look for TNT dupers when you could just build one with one dispenser and one tnt? No need for slime, no need for tutorials, no anything else then a dispenser and tnt.
+- Why good: it sounds like a real player, it talks about the usual pain players face, and it keeps the wording casual.
+- Bad: Tired of dispensers using up your TNT? Well this mod makes dispensers fire TNT without consuming it.
+- Why bad: too literal, too implementation-specific, and it reads more like patch notes than a real player-facing summary.
+
+SPECIFIC GUIDANCE FOR THIS MOD:
+- Use the template that best fits the concrete, proven annoyance for this mod.
+
+Good style examples:
+Wanting to play as if your in a server? Tired of digging back up just to go back to your base? Well this mod cancels that pain, you can use /rtp, /tpa, /rtp just like if your in a server, but in single player!
+
+Hate that creeper that doesn't burn after day? Hate the slimes that spawn in super flat worlds? This mob makes it so that ALL mobs burn in day.
+
+Chosen mod name:
+Auto Tool Swap
+
+Chosen long description:
+# Auto Tool Swap
+
+Never waste time manually switching tools while mining! This mod automatically selects the best tool from your inventory when you start breaking a block.
+
+## Features
+
+- ✅ **Smart Tool Detection** - Automatically uses the right tool type for each block
+- Shovels for dirt, grass, sand, gravel, clay, farmland, soul sand, snow
+- Axes for logs, planks, fences, doors, chests, crafting tables
+- Pickaxes for stone, ores, and everything else
+- ✅ **Enchantment Preferences** - Prioritizes tools with better enchantments
+- Efficiency (higher levels preferred)
+- Unbreaking (higher levels preferred)
+- ✅ **Switch Back Feature** - Returns to your previous item after mining (2 second delay)
+- ✅ **Flexible Search** - Choose between hotbar-only or full inventory search
+
+## How It Works
+
+Left-click on any block to start mining.
+The mod detects the block type and finds the best matching tool.
+Your hotbar automatically switches to that tool.
+After you finish mining (2 seconds of inactivity), it switches back to your original item.
+
+```.
+enableAutoSwap (default: true).
+Enable or disable automatic tool swapping.
+
+hotbarOnly (default: true).
+Only search hotbar slots (0-8) for tools.
+Set to false to search entire inventory.
+
+ORIGINAL SOURCE CONTEXT (DIRECT EXCERPTS FROM PROVIDED SRC):
+Pre-generated metadata used
+
+SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT:
+Using pre-generated AI metadata
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-04-03T12:24:51+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/17/Auto-Tool-Swap-1.0.0.jar
+jar_size_bytes=10285
+jar_sha1=f72a5f48aca42b8d2b826ee309cd2f4d733af135
+
+## Detected Metadata
+
+jar_name=Auto-Tool-Swap-1.0.0.jar
+jar_display_name=Auto Tool Swap
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=autotoolswap
+name=Auto Tool Swap
+mod_version=1.0.0
+description=Automatically switches to the best tool when you start breaking a block. Supports enchantment preferences.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-tool-swap-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-tool-swap-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.autotoolswap
+
+## Source Tree
+
+asd/itamio/autotoolswap/AutoToolSwapConfig.java
+asd/itamio/autotoolswap/AutoToolSwapHandler.java
+asd/itamio/autotoolswap/AutoToolSwapMod.java
+
+## Key Source Excerpts
+
+### asd/itamio/autotoolswap/AutoToolSwapHandler.java
+```
+package asd.itamio.autotoolswap;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
+import net.minecraft.init.Enchantments;
+import net.minecraft.item.*;
+import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+import java.util.*;
+
+public class AutoToolSwapHandler {
+
+    private final Map<UUID, Integer> previousSlots = new HashMap<>();
+    private final Map<UUID, Integer> switchBackTimers = new HashMap<>();
+    private static final int SWITCH_BACK_DELAY = 40; // Ticks to wait before switching back (2 seconds)
+
+    // Blocks that should use a shovel
+    private static final Set<Block> SHOVEL_BLOCKS = new HashSet<>(Arrays.asList(
+        Blocks.DIRT, Blocks.GRASS, Blocks.SAND, Blocks.GRAVEL, Blocks.CLAY,
+        Blocks.FARMLAND, Blocks.GRASS_PATH, Blocks.MYCELIUM, Blocks.SOUL_SAND,
+        Blocks.SNOW, Blocks.SNOW_LAYER, Blocks.CONCRETE_POWDER
+    ));
+
+    // Blocks that should use an axe
+    private static final Set<Block> AXE_BLOCKS = new HashSet<>(Arrays.asList(
+        Blocks.LOG, Blocks.LOG2, Blocks.PLANKS, Blocks.WOODEN_SLAB, Blocks.WOODEN_PRESSURE_PLATE,
+        Blocks.OAK_FENCE, Blocks.OAK_FENCE_GATE, Blocks.SPRUCE_FENCE, Blocks.SPRUCE_FENCE_GATE,
+        Blocks.BIRCH_FENCE, Blocks.BIRCH_FENCE_GATE, Blocks.JUNGLE_FENCE, Blocks.JUNGLE_FENCE_GATE,
+        Blocks.DARK_OAK_FENCE, Blocks.DARK_OAK_FENCE_GATE, Blocks.ACACIA_FENCE, Blocks.ACACIA_FENCE_GATE,
+        Blocks.CRAFTING_TABLE, Blocks.BOOKSHELF, Blocks.CHEST, Blocks.TRAPPED_CHEST,
+        Blocks.JUKEBOX, Blocks.NOTEBLOCK, Blocks.WOODEN_BUTTON, Blocks.LADDER,
+        Blocks.OAK_STAIRS, Blocks.SPRUCE_STAIRS, Blocks.BIRCH_STAIRS, Blocks.JUNGLE_STAIRS,
+        Blocks.ACACIA_STAIRS, Blocks.DARK_OAK_STAIRS, Blocks.TRAPDOOR,
+        Blocks.OAK_DOOR, Blocks.SPRUCE_DOOR, Blocks.BIRCH_DOOR, Blocks.JUNGLE_DOOR,
+        Blocks.ACACIA_DOOR, Blocks.DARK_OAK_DOOR
+    ));
+
+    @SubscribeEvent
+    public void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
+        if (!AutoToolSwapMod.config.enableAutoSwap) {
+            return;
+        }
+
+        EntityPlayer player = event.getEntityPlayer();
+        if (player == null) {
+            return;
+        }
+
+        // Only run on client side to ensure visual sync
+        if (!player.world.isRemote) {
+            return;
+        }
+
+        BlockPos pos = event.getPos();
+        IBlockState state = player.world.getBlockState(pos);
+        Block block = state.getBlock();
+
+        // Determine which tool type is needed
+        ToolType neededTool = determineToolType(block);
+
+        // Find best tool of that type
+        int bestSlot = findBestToolOfType(player, neededTool, state);
+
+        if (bestSlot != -1 && bestSlot != player.inventory.currentItem) {
+            // Save previous slot if switchBack is enabled (only if not already saved)
+            if (AutoToolSwapMod.config.switchBack && !previousSlots.containsKey(player.getUniqueID())) {
+                previousSlots.put(player.getUniqueID(), player.inventory.currentItem);
+            }
+
+            // Switch to best tool
+            player.inventory.currentItem = bestSlot;
+
+            // Reset the switch back timer
+            if (AutoToolSwapMod.config.switchBack) {
+                switchBackTimers.put(player.getUniqueID(), SWITCH_BACK_DELAY);
+            }
+        } else if (bestSlot == player.inventory.currentItem) {
+            // Already holding the right tool, reset timer
+            if (AutoToolSwapMod.config.switchBack && switchBackTimers.containsKey(player.getUniqueID())) {
+                switchBackTimers.put(player.getUniqueID(), SWITCH_BACK_
+... truncated ...
+```
+
+### asd/itamio/autotoolswap/AutoToolSwapMod.java
+```
+package asd.itamio.autotoolswap;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = AutoToolSwapMod.MODID, name = AutoToolSwapMod.NAME, version = AutoToolSwapMod.VERSION)
+public class AutoToolSwapMod {
+    public static final String MODID = "autotoolswap";
+    public static final String NAME = "Auto Tool Swap";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static AutoToolSwapConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+
+        // Load configuration
+        File configFile = new File(event.getModConfigurationDirectory(), "autotoolswap.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new AutoToolSwapConfig(configuration);
+
+        MinecraftForge.EVENT_BUS.register(new AutoToolSwapHandler());
+        logger.info("Auto Tool Swap initialized!");
+    }
+}
+```
+
+### asd/itamio/autotoolswap/AutoToolSwapConfig.java
+```
+package asd.itamio.autotoolswap;
+
+import net.minecraftforge.common.config.Configuration;
+
+public class AutoToolSwapConfig {
+    private final Configuration config;
+
+    public boolean enableAutoSwap;
+    public boolean hotbarOnly;
+    public boolean switchBack;
+    public boolean preferFortune;
+    public boolean preferSilkTouch;
+
+    public AutoToolSwapConfig(Configuration configuration) {
+        this.config = configuration;
+        load();
+    }
+
+    public void load() {
+        config.load();
+
+        // Enable auto tool swap
+        enableAutoSwap = config.getBoolean(
+            "enableAutoSwap",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Enable automatic tool swapping. Default: true"
+        );
+
+        // Only search hotbar
+        hotbarOnly = config.getBoolean(
+            "hotbarOnly",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Only search hotbar for tools (slots 0-8). If false, searches entire inventory. Default: true"
+        );
+
+        // Switch back after breaking
+        switchBack = config.getBoolean(
+            "switchBack",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Switch back to previous item after breaking block. Default: true"
+        );
+
+        // Prefer fortune tools
+        preferFortune = config.getBoolean(
+            "preferFortune",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Prefer tools with Fortune enchantment when available. Default: true"
+        );
+
+        // Prefer silk touch tools
+        preferSilkTouch = config.getBoolean(
+            "preferSilkTouch",
+            Configuration.CATEGORY_GENERAL,
+            false,
+            "Prefer tools with Silk Touch enchantment when available. Default: false"
+        );
+
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+
+    public void reload() {
+        load();
+    }
+}
+```
+Return only the corrected summary line.

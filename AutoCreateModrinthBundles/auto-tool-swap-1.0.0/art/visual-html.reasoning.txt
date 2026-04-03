@@ -1,0 +1,63 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items) each with value, label, note.
+
+We must not include any extra text. Must be valid JSON.
+
+We need to adapt to mod "Auto Tool Swap". Provide concise polished strings.
+
+We need to choose background_image from options. Choose one that matches mood. Probably "winter forest with sunset.jpg" or "purple flowers and sun set or sun rise.png". Let's pick "winter forest with sunset.jpg". That filename is exactly "winter forest with sunset.jpg"? In options list: "winter forest with sunset.jpg -> Winter Forest With Sunset". So background_image should be that filename exactly: "winter forest with sunset.jpg". Use that string.
+
+Accent color: choose a hex, maybe "#ff7f2f" as example but we can choose any. Must be a single hex color. Let's use "#ff7f2f" (orange). That's okay.
+
+Logo: eyebrow: short phrase maybe "Tool Swapper". mark: maybe "AT". title: "Auto Tool Swap". subtitle: a short phrase describing mod: "Automatic tool selection for uninterrupted mining." rail_left: maybe "Smart Detection". rail_right: "Instant Switch". Must describe actual behavior.
+
+Description: kicker: maybe "Utility". title: "Auto Tool Swap". tagline: short tagline describing behavior: "Switch tools instantly based on block type, preserving inventory flow." chips: 2-4 short labels, e.g., ["Smart Detection","Enchant Priorities","Switch Back","Full Inventory Search"] (that's 4). stats: exactly 2 items. Each stats has value (string), label, note (short sentence). Provide two stats: maybe "Switch Delay" value "2s" label "Auto Return" note "Returns to previous item after 2 seconds of inactivity." And "Search Scope" value "Hotbar+Inventory" label "Search Mode" note "Toggle between hotbar‑only and full‑inventory scanning." Must be exactly 2 stats objects.
+
+Make sure stats array has exactly 2 objects.
+
+All strings concise and polished.
+
+Make sure JSON shape matches exactly: top-level keys: accent_color, background_image, logo: {eyebrow, mark, title, subtitle, rail_left, rail_right}, description: {kicker, title, tagline, chips: [ ... ], stats: [ {value: "...", label: "...", note: "..."}, {value: "...", label: "...", note: "..."} ] }.
+
+Make sure no extra keys.
+
+Now produce JSON.
+
+Check that chips array length between 2 and 4. We'll use 4 items.
+
+Now craft.
+
+Accent_color: "#ff7f2f"
+
+background_image: "winter forest with sunset.jpg"
+
+logo:
+eyebrow: "Tool Swapper"
+mark: "AT"
+title: "Auto Tool Swap"
+subtitle: "Automatic tool selection for uninterrupted mining."
+rail_left: "Smart Detection"
+rail_right: "Instant Switch"
+
+description:
+kicker: "Utility"
+title: "Auto Tool Swap"
+tagline: "Switch tools instantly based on block type, preserving inventory flow."
+chips: ["Smart Detection","Enchant Priorities","Switch Back","Full Inventory Search"]
+stats: [
+  {
+    "value": "2s",
+    "label": "Auto Return",
+    "note": "Returns to previous item after 2 seconds of inactivity."
+  },
+  {
+    "value": "Full",
+    "label": "Search Scope",
+    "note": "Toggle between hotbar‑only and full‑inventory scanning."
+  }
+]
+
+Check that each note is one short sentence. Yes.
+
+Make sure value strings are concise.
+
+Now produce JSON only.
