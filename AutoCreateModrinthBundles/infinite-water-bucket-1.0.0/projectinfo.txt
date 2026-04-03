@@ -1,0 +1,240 @@
+# Project Info
+
+generated_at=2026-04-03T10:03:21+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/15/Infinite-Water-Bucket-1.0.0.jar
+jar_size_bytes=6999
+jar_sha1=be7a2b610cfcb804a5dc1ca1c9e4edc8ddbe98c8
+
+## Detected Metadata
+
+jar_name=Infinite-Water-Bucket-1.0.0.jar
+jar_display_name=Infinite Water Bucket
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=infinitebucket
+name=Infinite Water Bucket
+mod_version=1.0.0
+description=Water buckets never empty when placed. Optionally supports infinite lava and milk buckets.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/infinite-water-bucket-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/infinite-water-bucket-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.infinitebucket
+
+## Source Tree
+
+main/java/asd/itamio/infinitebucket/InfiniteBucketConfig.java
+main/java/asd/itamio/infinitebucket/InfiniteBucketHandler.java
+main/java/asd/itamio/infinitebucket/InfiniteBucketMod.java
+
+## Key Source Excerpts
+
+### main/java/asd/itamio/infinitebucket/InfiniteBucketHandler.java
+```
+package asd.itamio.infinitebucket;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumActionResult;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class InfiniteBucketHandler {
+    
+    // Track players who just used a bucket
+    private final Map<UUID, BucketReplacement> pendingReplacements = new HashMap<>();
+    
+    private static class BucketReplacement {
+        ItemStack bucket;
+        int ticksLeft;
+        
+        BucketReplacement(ItemStack bucket) {
+            this.bucket = bucket;
+            this.ticksLeft = 1; // Replace after 1 tick
+        }
+    }
+    
+    @SubscribeEvent
+    public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (event.getWorld().isRemote) {
+            return;
+        }
+        
+        EntityPlayer player = event.getEntityPlayer();
+        ItemStack heldItem = player.getHeldItem(event.getHand());
+        
+        if (heldItem.isEmpty()) {
+            return;
+        }
+        
+        // Check if player is using a water bucket
+        if (heldItem.getItem() == Items.WATER_BUCKET && InfiniteBucketMod.config.enableInfiniteWater) {
+            // Schedule replacement after the bucket is used
+            pendingReplacements.put(player.getUniqueID(), new BucketReplacement(new ItemStack(Items.WATER_BUCKET)));
+        }
+        // Check if player is using a lava bucket
+        else if (heldItem.getItem() == Items.LAVA_BUCKET && InfiniteBucketMod.config.enableInfiniteLava) {
+            pendingReplacements.put(player.getUniqueID(), new BucketReplacement(new ItemStack(Items.LAVA_BUCKET)));
+        }
+    }
+    
+    @SubscribeEvent
+    public void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        if (event.getWorld().isRemote) {
+            return;
+        }
+        
+        EntityPlayer player = event.getEntityPlayer();
+        ItemStack heldItem = player.getHeldItem(event.getHand());
+        
+        if (heldItem.isEmpty()) {
+            return;
+        }
+        
+        // Check if player is drinking milk
+        if (heldItem.getItem() == Items.MILK_BUCKET && InfiniteBucketMod.config.enableInfiniteMilk) {
+            pendingReplacements.put(player.getUniqueID(), new BucketReplacement(new ItemStack(Items.MILK_BUCKET)));
+        }
+    }
+    
+    @SubscribeEvent
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || event.player.world.isRemote) {
+            return;
+        }
+        
+        EntityPlayer player = event.player;
+        UUID playerId = player.getUniqueID();
+        
+        if (pendingReplacements.containsKey(playerId)) {
+            BucketReplacement replacement = pendingReplacements.get(playerId);
+            replacement.ticksLeft--;
+            
+            if (replacement.ticksLeft <= 0) {
+                // Find and replace the empty bucket with the filled bucket
+                boolean replaced = false;
+                for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
+                    ItemStack stack = player.inventory.getStackInSlot(i);
+                    if (!stack.isEmpty() && stack.getItem() == Items.BUCKET) {
+                        player.inventory.setInventorySlotContents(i, replacement.bucket.copy());
+                        replaced = true;
+                        break;
+                    }
+                }
+                
+                // If no empty bucket found, add to inventory
+                if (!replaced) {
+                    player.inventory.addItemStackToInventory(replacement.bucket.copy());
+                }
+                
+                pendingReplacements.remove(playerId);
+            }
+        }
+    }
+}
+```
+
+### main/java/asd/itamio/infinitebucket/InfiniteBucketMod.java
+```
+package asd.itamio.infinitebucket;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = InfiniteBucketMod.MODID, name = InfiniteBucketMod.NAME, version = InfiniteBucketMod.VERSION)
+public class InfiniteBucketMod {
+    public static final String MODID = "infinitebucket";
+    public static final String NAME = "Infinite Water Bucket";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static InfiniteBucketConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        
+        // Load configuration
+        File configFile = new File(event.getModConfigurationDirectory(), "infinitebucket.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new InfiniteBucketConfig(configuration);
+        
+        MinecraftForge.EVENT_BUS.register(new InfiniteBucketHandler());
+        logger.info("Infinite Water Bucket initialized!");
+    }
+}
+```
+
+### main/java/asd/itamio/infinitebucket/InfiniteBucketConfig.java
+```
+package asd.itamio.infinitebucket;
+
+import net.minecraftforge.common.config.Configuration;
+
+public class InfiniteBucketConfig {
+    private final Configuration config;
+    
+    public boolean enableInfiniteWater;
+    public boolean enableInfiniteLava;
+    public boolean enableInfiniteMilk;
+    
+    public InfiniteBucketConfig(Configuration configuration) {
+        this.config = configuration;
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        // Enable infinite water buckets
+        enableInfiniteWater = config.getBoolean(
+            "enableInfiniteWater",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Enable infinite water buckets (never empties). Default: true"
+        );
+        
+        // Enable infinite lava buckets
+        enableInfiniteLava = config.getBoolean(
+            "enableInfiniteLava",
+            Configuration.CATEGORY_GENERAL,
+            false,
+            "Enable infinite lava buckets (never empties). Default: false (can be overpowered)"
+        );
+        
+        // Enable infinite milk buckets
+        enableInfiniteMilk = config.getBoolean(
+            "enableInfiniteMilk",
+            Configuration.CATEGORY_GENERAL,
+            false,
+            "Enable infinite milk buckets (never empties). Default: false"
+        );
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void reload() {
+        load();
+    }
+}
+```

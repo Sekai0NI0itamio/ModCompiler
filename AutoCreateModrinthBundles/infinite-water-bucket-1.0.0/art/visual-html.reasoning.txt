@@ -1,0 +1,66 @@
+We need to output JSON with shape exactly as specified. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items) each with value, label, note. Must be concise, polished, modern, premium, non-Minecraft-themed. Must not mention draft, etc. Must describe actual mod behavior.
+
+We have mod title "Infinite Water Bucket". Need to adapt description accordingly.
+
+We need to choose background_image filename from options that matches mood. Probably "fire burning.jpg" or "ocean.jpg" or "mountain breeze with spring forest.png". Since it's about water, maybe "ocean.jpg" fits. Or "fire burning.jpg" less appropriate. "ocean.jpg" seems apt. Choose "ocean.jpg". Must be exact filename.
+
+Accent color: choose a hex, maybe "#00bfff" (cyan) or something. Must be single hex.
+
+Logo: eyebrow: short phrase maybe "Infinite Resource". mark: maybe "IWB" or "IWB"? Should be 2-4 characters. Title: "Infinite Water Bucket". subtitle: short phrase describing behavior: "Buckets refill instantly, endless flow." rail_left: maybe "Endless Flow". rail_right: maybe "Zero Waste". Must describe actual behavior.
+
+description.kicker: maybe "Utility Mod". description.title: "Infinite Water Bucket". description.tagline: short tagline describing behavior. chips: 2-4 short labels, e.g., ["Infinite Flow","No Drain","Survival Ready"]. Must be 2-4 items.
+
+stats: exactly 2 items. Each with value (string), label, note (short sentence). For example:
+
+- value "Never Empty", label "Bucket Retention", note "Buckets refill instantly after placement."
+- value "Works Everywhere", label "Universal Use", note "Functions in all biomes and dimensions."
+
+Make sure each note is one short sentence.
+
+All strings concise and polished.
+
+Make sure JSON is valid, no trailing commas.
+
+Let's craft.
+
+accent_color: "#00bfff" (cyan). Could also be "#00ffcc". Choose "#00bfff".
+
+background_image: "ocean.jpg"
+
+logo:
+eyebrow: "Infinite Resource"
+mark: "IWB"
+title: "Infinite Water Bucket"
+subtitle: "Buckets refill instantly, endless flow."
+rail_left: "Endless Flow"
+rail_right: "Zero Waste"
+
+description:
+kicker: "Utility Mod"
+title: "Infinite Water Bucket"
+tagline: "Place water buckets endlessly without ever emptying."
+chips: ["Infinite Flow","No Drain","Survival Ready"] (3 items)
+
+stats: two items.
+
+First:
+value: "Never Empty"
+label: "Bucket Retention"
+note: "Buckets refill instantly after placement."
+
+Second:
+value: "Universal"
+label: "Worldwide Use"
+note: "Works in all biomes and dimensions."
+
+Make sure each note is one short sentence.
+
+Now produce JSON exactly as shape.
+
+Check fields: "accent_color", "background_image", "logo": { "eyebrow": "...", "mark": "...", "title": "...", "subtitle": "...", "rail_left": "...", "rail_right": "..." }, "description": { "kicker": "...", "title": "...", "tagline": "...", "chips": [...], "stats": [ { "value": "...", "label": "...", "note": "..." }, { "value": "...", "label": "...", "note": "..." } ] }
+
+All strings concise.
+
+Make sure no extra fields.
+
+Now output only JSON.
