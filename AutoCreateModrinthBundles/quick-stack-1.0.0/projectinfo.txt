@@ -1,0 +1,349 @@
+# Project Info
+
+generated_at=2026-04-03T12:58:52+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/18/Quick-Stack-1.0.0.jar
+jar_size_bytes=12507
+jar_sha1=4b71f751759704b4e3beba12cb38083a8b60aa1d
+
+## Detected Metadata
+
+jar_name=Quick-Stack-1.0.0.jar
+jar_display_name=Quick Stack
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=quickstack
+name=Quick Stack
+mod_version=1.0.0
+description=Quickly stack items from your inventory to nearby containers with a single keypress. Inspired by Terraria's Quick Stack feature.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/quick-stack-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/quick-stack-1.0.0/source
+source_file_count=6
+package_count=1
+packages=asd.itamio.quickstack
+
+## Source Tree
+
+asd/itamio/quickstack/QuickStackConfig.java
+asd/itamio/quickstack/QuickStackHandler.java
+asd/itamio/quickstack/QuickStackKeyHandler.java
+asd/itamio/quickstack/QuickStackMod.java
+asd/itamio/quickstack/QuickStackPacket.java
+asd/itamio/quickstack/QuickStackServerHandler.java
+
+## Key Source Excerpts
+
+### asd/itamio/quickstack/QuickStackServerHandler.java
+```
+package asd.itamio.quickstack;
+
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.tileentity.TileEntityChest;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class QuickStackServerHandler {
+    
+    public static void performQuickStack(EntityPlayerMP player) {
+        if (!QuickStackMod.config.enableQuickStack) {
+            return;
+        }
+        
+        if (player == null || player.world == null) {
+            return;
+        }
+        
+        // Find nearby containers
+        List<IInventory> nearbyContainers = findNearbyContainers(player);
+        
+        if (nearbyContainers.isEmpty()) {
+            return;
+        }
+        
+        // Track what items were moved
+        Map<String, Integer> movedItems = new HashMap<>();
+        int totalItemsMoved = 0;
+        
+        // Get inventory range (skip hotbar if configured)
+        int startSlot = QuickStackMod.config.includeHotbar ? 0 : 9;
+        int endSlot = player.inventory.getSizeInventory();
+        
+        // Go through player inventory
+        for (int playerSlot = startSlot; playerSlot < endSlot; playerSlot++) {
+            ItemStack playerStack = player.inventory.getStackInSlot(playerSlot);
+            
+            if (playerStack.isEmpty()) {
+                continue;
+            }
+            
+            // Try to stack this item to containers
+            for (IInventory container : nearbyContainers) {
+                if (playerStack.isEmpty()) {
+                    break;
+                }
+                
+                // Check if container has this item type
+                boolean containerHasItem = false;
+                for (int containerSlot = 0; containerSlot < container.getSizeInventory(); containerSlot++) {
+                    ItemStack containerStack = container.getStackInSlot(containerSlot);
+                    if (!containerStack.isEmpty() && areItemsStackable(playerStack, containerStack)) {
+                        containerHasItem = true;
+                        break;
+                    }
+                }
+                
+                if (!containerHasItem) {
+                    continue;
+                }
+                
+                // Stack items to this container
+                for (int containerSlot = 0; containerSlot < container.getSizeInventory(); containerSlot++) {
+                    if (playerStack.isEmpty()) {
+                        break;
+                    }
+                    
+                    ItemStack containerStack = container.getStackInSlot(containerSlot);
+                    
+                    if (containerStack.isEmpty()) {
+                        // Empty slot - create new stack
+                        ItemStack toMove = playerStack.copy();
+                        container.setInventorySlotContents(containerSlot, toMove);
+                        
+                        String itemName = toMove.getDisplayName();
+                        int count = toMove.getCount();
+                        movedItems.put(itemName, movedItems.getOrDefault(itemName, 0) + count);
+                        totalItemsMoved += count;
+                        
+                        player.inventory.setInventorySlotContents(playerSlot, ItemStack.EMPTY);
+                        playerStack = ItemStack.EMPTY;
+                        
+                    } else if (areItemsStackable(playerStack, containerStack)) {
+                        // Stack with existing items
+                        int maxStackSize = containerStack.getMaxStackSize();
+                        int currentSize = containerStack.getCount();
+... truncated ...
+```
+
+### asd/itamio/quickstack/QuickStackHandler.java
+```
+package asd.itamio.quickstack;
+
+import net.minecraft.client.Minecraft;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+
+@SideOnly(Side.CLIENT)
+public class QuickStackHandler {
+    
+    public static void performQuickStack() {
+        if (!QuickStackMod.config.enableQuickStack) {
+            return;
+        }
+        
+        Minecraft mc = Minecraft.getMinecraft();
+        
+        if (mc.player == null || mc.player.world == null) {
+            return;
+        }
+        
+        // Send packet to server to perform quick stack
+        QuickStackMod.network.sendToServer(new QuickStackPacket());
+    }
+}
+```
+
+### asd/itamio/quickstack/QuickStackKeyHandler.java
+```
+package asd.itamio.quickstack;
+
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.InputEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import org.lwjgl.input.Keyboard;
+
+@SideOnly(Side.CLIENT)
+public class QuickStackKeyHandler {
+    
+    private static final KeyBinding QUICK_STACK_KEY = new KeyBinding(
+        "key.quickstack.stack",
+        Keyboard.KEY_V,
+        "key.categories.inventory"
+    );
+    
+    public QuickStackKeyHandler() {
+        ClientRegistry.registerKeyBinding(QUICK_STACK_KEY);
+    }
+    
+    @SubscribeEvent
+    public void onKeyInput(InputEvent.KeyInputEvent event) {
+        if (QUICK_STACK_KEY.isPressed()) {
+            QuickStackHandler.performQuickStack();
+        }
+    }
+}
+```
+
+### asd/itamio/quickstack/QuickStackMod.java
+```
+package asd.itamio.quickstack;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.network.NetworkRegistry;
+import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
+import net.minecraftforge.fml.relauncher.Side;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = QuickStackMod.MODID, name = QuickStackMod.NAME, version = QuickStackMod.VERSION)
+public class QuickStackMod {
+    public static final String MODID = "quickstack";
+    public static final String NAME = "Quick Stack";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static QuickStackConfig config;
+    public static SimpleNetworkWrapper network;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        
+        File configFile = new File(event.getModConfigurationDirectory(), "quickstack.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new QuickStackConfig(configuration);
+        
+        // Register network
+        network = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
+        network.registerMessage(QuickStackPacket.Handler.class, QuickStackPacket.class, 0, Side.SERVER);
+        
+        logger.info("Quick Stack initialized!");
+    }
+    
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        if (event.getSide() == Side.CLIENT) {
+            MinecraftForge.EVENT_BUS.register(new QuickStackKeyHandler());
+        }
+    }
+}
+```
+
+### asd/itamio/quickstack/QuickStackConfig.java
+```
+package asd.itamio.quickstack;
+
+import net.minecraftforge.common.config.Configuration;
+
+public class QuickStackConfig {
+    private final Configuration config;
+    
+    public boolean enableQuickStack;
+    public int searchRange;
+    public boolean includeHotbar;
+    public boolean playSound;
+    public boolean showMessage;
+    public boolean stackToChests;
+    public boolean stackToBarrels;
+    public boolean stackToShulkerBoxes;
+    
+    public QuickStackConfig(Configuration configuration) {
+        this.config = configuration;
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enableQuickStack = config.getBoolean(
+            "enableQuickStack",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Enable Quick Stack feature. Default: true"
+        );
+        
+        searchRange = config.getInt(
+            "searchRange",
+            Configuration.CATEGORY_GENERAL,
+            8,
+            1,
+            16,
+            "Range in blocks to search for containers. Default: 8"
+        );
+        
+        includeHotbar = config.getBoolean(
+            "includeHotbar",
+            Configuration.CATEGORY_GENERAL,
+            false,
+            "Include hotbar items in quick stack. Default: false (hotbar items are kept safe)"
+        );
+        
+        playSound = config.getBoolean(
+            "playSound",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Play sound when items are stacked. Default: true"
+        );
+        
+        showMessage = config.getBoolean(
+            "showMessage",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Show on-screen message when items are stacked. Default: true"
+        );
+        
+        stackToChests = config.getBoolean(
+            "stackToChests",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Stack items to chests and trapped chests. Default: true"
+        );
+        
+        stackToBarrels = config.getBoolean(
+            "stackToBarrels",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Stack items to barrels (if available). Default: true"
+        );
+        
+        stackToShulkerBoxes = config.getBoolean(
+            "stackToShulkerBoxes",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Stack items to shulker boxes. Default: true"
+        );
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void reload() {
+        load();
+    }
+}
+```
