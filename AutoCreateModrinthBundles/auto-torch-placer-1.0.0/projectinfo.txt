@@ -1,0 +1,366 @@
+# Project Info
+
+generated_at=2026-04-04T00:51:47+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/19/Auto-Torch-Placer-1.0.0.jar
+jar_size_bytes=11113
+jar_sha1=c2a7315128cbf724c575603ca515b752004d4edb
+
+## Detected Metadata
+
+jar_name=Auto-Torch-Placer-1.0.0.jar
+jar_display_name=Auto Torch Placer
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=autotorch
+name=Auto Torch Placer
+mod_version=1.0.0
+description=Automatically places torches from your inventory when light level is too low. Never mine in darkness again!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-torch-placer-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-torch-placer-1.0.0/source
+source_file_count=4
+package_count=1
+packages=asd.itamio.autotorch
+
+## Source Tree
+
+asd/itamio/autotorch/AutoTorchConfig.java
+asd/itamio/autotorch/AutoTorchHandler.java
+asd/itamio/autotorch/AutoTorchKeyHandler.java
+asd/itamio/autotorch/AutoTorchMod.java
+
+## Key Source Excerpts
+
+### asd/itamio/autotorch/AutoTorchHandler.java
+```
+package asd.itamio.autotorch;
+
+import net.minecraft.block.Block;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.world.World;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class AutoTorchHandler {
+    
+    private final Map<UUID, Integer> cooldowns = new HashMap<>();
+    private final Map<UUID, BlockPos> lastTorchPositions = new HashMap<>();
+    private final Map<UUID, BlockPos> lastPlayerPositions = new HashMap<>();
+    
+    @SubscribeEvent
+    public void onPlayerUpdate(LivingEvent.LivingUpdateEvent event) {
+        if (!(event.getEntityLiving() instanceof EntityPlayer)) {
+            return;
+        }
+        
+        EntityPlayer player = (EntityPlayer) event.getEntityLiving();
+        
+        if (!AutoTorchMod.config.enableAutoTorch) {
+            return;
+        }
+        
+        // Only run on server side
+        if (player.world.isRemote) {
+            return;
+        }
+        
+        // Check dimension
+        if (!isDimensionAllowed(player.world)) {
+            return;
+        }
+        
+        UUID playerId = player.getUniqueID();
+        BlockPos currentPos = player.getPosition();
+        
+        // Check if player is moving
+        boolean isMoving = false;
+        if (lastPlayerPositions.containsKey(playerId)) {
+            BlockPos lastPos = lastPlayerPositions.get(playerId);
+            isMoving = !currentPos.equals(lastPos);
+        }
+        lastPlayerPositions.put(playerId, currentPos);
+        
+        // Only check every 2 ticks when moving, or every 10 ticks when stationary
+        int checkInterval = isMoving ? 2 : 10;
+        
+        // Handle cooldown
+        if (cooldowns.containsKey(playerId)) {
+            int cooldown = cooldowns.get(playerId);
+            cooldown--;
+            if (cooldown <= 0) {
+                cooldowns.remove(playerId);
+            } else {
+                cooldowns.put(playerId, cooldown);
+                return;
+            }
+        }
+        
+        // Only check on the interval
+        if (player.ticksExisted % checkInterval != 0) {
+            return;
+        }
+        
+        // Check average light level around player
+        BlockPos playerPos = player.getPosition();
+        int averageLight = calculateAverageLightLevel(player.world, playerPos);
+        
+        if (averageLight >= AutoTorchMod.config.lightThreshold) {
+            return;
+        }
+        
+        // Check if we're too close to last placed torch
+        if (lastTorchPositions.containsKey(playerId)) {
+            BlockPos lastPos = lastTorchPositions.get(playerId);
+            double distance = playerPos.getDistance(lastPos.getX(), lastPos.getY(), lastPos.getZ());
+            if (distance < AutoTorchMod.config.minTorchDistance) {
+                return;
+            }
+        }
+        
+        // Find torch in inventory
+        ItemStack torchStack = findTorchInInventory(player);
+        if (torchStack.isEmpty()) {
+            return;
+        }
+        
+        // Try to place torch
+        BlockPos placePos = findTorchPlacement(player.world, playerPos);
+        if (placePos != null) {
+            placeTorch(player, placePos, torchStack);
+            cooldowns.put(playerId, AutoTorchMod.config.placementCooldown);
+            lastTorchPositions.put(playerId, placePos);
+        }
+    }
+    
+    private boolean isDimensionAllowed(World world) {
+        int dimension = world.provider.getDimension();
+        
+        // Overworld is always allowed
+        if (dimension == 0) {
+            return
+... truncated ...
+```
+
+### asd/itamio/autotorch/AutoTorchKeyHandler.java
+```
+package asd.itamio.autotorch;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.InputEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import org.lwjgl.input.Keyboard;
+
+@SideOnly(Side.CLIENT)
+public class AutoTorchKeyHandler {
+    
+    private static final KeyBinding TOGGLE_KEY = new KeyBinding(
+        "key.autotorch.toggle",
+        Keyboard.KEY_K,
+        "key.categories.gameplay"
+    );
+    
+    public AutoTorchKeyHandler() {
+        ClientRegistry.registerKeyBinding(TOGGLE_KEY);
+    }
+    
+    @SubscribeEvent
+    public void onKeyInput(InputEvent.KeyInputEvent event) {
+        if (TOGGLE_KEY.isPressed()) {
+            toggleAutoTorch();
+        }
+    }
+    
+    private void toggleAutoTorch() {
+        AutoTorchMod.config.enableAutoTorch = !AutoTorchMod.config.enableAutoTorch;
+        
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player != null) {
+            String status = AutoTorchMod.config.enableAutoTorch ? 
+                TextFormatting.GREEN + "ON" : 
+                TextFormatting.RED + "OFF";
+            
+            mc.player.sendMessage(
+                new TextComponentString(
+                    TextFormatting.YELLOW + "Auto Torch Placer: " + status
+                )
+            );
+        }
+    }
+}
+```
+
+### asd/itamio/autotorch/AutoTorchMod.java
+```
+package asd.itamio.autotorch;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = AutoTorchMod.MODID, name = AutoTorchMod.NAME, version = AutoTorchMod.VERSION)
+public class AutoTorchMod {
+    public static final String MODID = "autotorch";
+    public static final String NAME = "Auto Torch Placer";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static AutoTorchConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        
+        File configFile = new File(event.getModConfigurationDirectory(), "autotorch.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new AutoTorchConfig(configuration);
+        
+        MinecraftForge.EVENT_BUS.register(new AutoTorchHandler());
+        
+        logger.info("Auto Torch Placer initialized!");
+    }
+    
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        if (event.getSide() == Side.CLIENT) {
+            MinecraftForge.EVENT_BUS.register(new AutoTorchKeyHandler());
+        }
+    }
+}
+```
+
+### asd/itamio/autotorch/AutoTorchConfig.java
+```
+package asd.itamio.autotorch;
+
+import net.minecraftforge.common.config.Configuration;
+
+public class AutoTorchConfig {
+    private final Configuration config;
+    
+    public boolean enableAutoTorch;
+    public int lightThreshold;
+    public int placementCooldown;
+    public String placementMode;
+    public int minTorchDistance;
+    public boolean enableInNether;
+    public boolean enableInEnd;
+    public boolean playSound;
+    public boolean showMessage;
+    
+    public AutoTorchConfig(Configuration configuration) {
+        this.config = configuration;
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enableAutoTorch = config.getBoolean(
+            "enableAutoTorch",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Enable automatic torch placement. Default: true"
+        );
+        
+        lightThreshold = config.getInt(
+            "lightThreshold",
+            Configuration.CATEGORY_GENERAL,
+            7,
+            0,
+            15,
+            "Light level threshold for torch placement (0-15). Torches place when light is below this value. Default: 7"
+        );
+        
+        placementCooldown = config.getInt(
+            "placementCooldown",
+            Configuration.CATEGORY_GENERAL,
+            2,
+            1,
+            100,
+            "Cooldown in ticks between torch placements when moving (2 ticks = 0.1 second). Default: 2"
+        );
+        
+        placementMode = config.getString(
+            "placementMode",
+            Configuration.CATEGORY_GENERAL,
+            "auto",
+            "Torch placement mode: 'auto' (walls and ground), 'wall' (walls only), 'ground' (ground only). Default: auto"
+        );
+        
+        minTorchDistance = config.getInt(
+            "minTorchDistance",
+            Configuration.CATEGORY_GENERAL,
+            8,
+            1,
+            16,
+            "Minimum distance in blocks between placed torches. Default: 8"
+        );
+        
+        enableInNether = config.getBoolean(
+            "enableInNether",
+            Configuration.CATEGORY_GENERAL,
+            false,
+            "Enable torch placement in the Nether. Default: false"
+        );
+        
+        enableInEnd = config.getBoolean(
+            "enableInEnd",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Enable torch placement in the End. Default: true"
+        );
+        
+        playSound = config.getBoolean(
+            "playSound",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Play sound when torch is placed. Default: true"
+        );
+        
+        showMessage = config.getBoolean(
+            "showMessage",
+            Configuration.CATEGORY_GENERAL,
+            false,
+            "Show on-screen message when torch is placed. Default: false"
+        );
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void reload() {
+        load();
+    }
+}
+```
