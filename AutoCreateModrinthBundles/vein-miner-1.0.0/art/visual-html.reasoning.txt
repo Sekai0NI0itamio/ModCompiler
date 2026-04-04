@@ -1,0 +1,84 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must not mention draft etc. Must describe actual mod behavior.
+
+We need to adapt to "Vein Miner". Provide appropriate content.
+
+We need to choose background_image from options. Which matches mood? Vein Miner is about mining veins, maybe "mountain breeze with spring forest.png" or "ocean.jpg"? Probably "mountain breeze with spring forest.png" fits mining? Or "fire burning.jpg"? Not sure. Choose one that matches "mountain breeze with spring forest.png" maybe appropriate for mining? Could be "ocean.jpg"? The recommended options: ocean.jpg, mountain breeze..., purple flowers... Choose one that clearly matches mod better. Vein Miner is about mining underground, maybe "mountain breeze with spring forest.png" is more outdoors. Could be "fire burning.jpg"? Not relevant. I'd choose "mountain breeze with spring forest.png" as it suggests natural environment.
+
+Now fill JSON.
+
+accent_color: choose a hex, maybe "#ff7f2f" as example, but can be any. Use something like "#ff6b6b"? Keep single hex.
+
+logo:
+- eyebrow: short phrase, maybe "Efficiency Mod"? Should be concise, maybe "Vein Mining". Keep uppercase? In example they used "Automation Class". So we can use "Vein Miner". But eyebrow is a label, maybe "Vein Mining". Keep concise.
+
+- mark: short monogram, maybe "VM". 2-4 chars. Use "VM".
+
+- title: "Vein Miner"
+
+- subtitle: a short phrase describing mod, similar to example: "A streamlined approach to bulk extraction, delivering precision and efficiency in resource harvesting." Must be concise, polished.
+
+- rail_left: describe actual behavior, maybe "Instant Vein Extraction". Must be short phrase.
+
+- rail_right: maybe "Bulk Yield". Keep short.
+
+description:
+- kicker: maybe "Efficiency Mod"
+
+- title: "Vein Miner"
+
+- tagline: short tagline describing behavior: "Extract entire ore veins instantly, preserving tool durability and inventory flow."
+
+- chips: array 2-4 short labels, e.g., ["Bulk Harvest", "Tool Preservation", "Forge 1.12.2"] (3 items). Must be short.
+
+- stats: exactly 2 items. Each has value (string), label, note (short sentence). Provide values maybe "100%"? But must be concise. Example: value "0" label "Blocks Lost". For Vein Miner, maybe "0%"? But value must be string; could be "0". Use "0". Provide label "Blocks Skipped". note: "No individual block clicks required." Another stat: value "24/7" label "Automation". note: "Works continuously in any world." Must be exactly 2 stats.
+
+Make sure each stats.note is one short sentence.
+
+Now produce JSON with exact shape.
+
+Check constraints: description.chips must be 2-4 items. We'll use 3.
+
+stats array must contain exactly 2 items. Each item has value, label, note.
+
+Make sure no extra fields.
+
+Now craft JSON:
+
+{
+  "accent_color": "#ff6b6b",
+  "background_image": "mountain breeze with spring forest.png",
+  "logo": {
+    "eyebrow": "Vein Mining",
+    "mark": "VM",
+    "title": "Vein Miner",
+    "subtitle": "A streamlined approach to bulk extraction, delivering precision and efficiency in resource harvesting.",
+    "rail_left": "Instant Vein Extraction",
+    "rail_right": "Bulk Yield"
+  },
+  "description": {
+    "kicker": "Efficiency Mod",
+    "title": "Vein Miner",
+    "tagline": "Extract entire ore veins instantly, preserving tool durability and inventory flow.",
+    "chips": [
+      "Bulk Harvest",
+      "Tool Preservation",
+      "Forge 1.12.2"
+    ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Blocks Skipped",
+        "note": "No individual block clicks required."
+      },
+      {
+        "value": "24/7",
+        "label": "Automation",
+        "note": "Operates continuously in any world."
+      }
+    ]
+  }
+}
+
+Check all constraints: accent_color single hex, background_image exact filename from options, we used "mountain breeze with spring forest.png" which is in options. logo.mark is "VM" (2 chars). description.chips has 3 items (2-4). stats has exactly 2 items. Each note is one short sentence. All strings concise. No mention of draft etc. Looks good.
+
+Now output only JSON.
