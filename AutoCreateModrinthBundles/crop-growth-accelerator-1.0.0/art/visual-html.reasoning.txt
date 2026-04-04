@@ -1,0 +1,76 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4 items), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must not mention draft etc. Must describe actual mod behavior.
+
+We have mod title "Crop Growth Accelerator". Need to fill fields.
+
+accent_color: choose a hex color, maybe #ff7f2f (orange) or something else. Must be single hex.
+
+background_image: choose one from options that matches mood. Probably "winter forest with sunset.jpg" or "mountain breeze with spring forest.png" etc. Since mod is about crop growth acceleration, maybe "fresh spring.png" or "purple flowers and sun set or sun rise.png". Choose one that fits. Let's pick "fresh spring.png" maybe. But recommended options: winter forest with sunset, mountain breeze with spring forest, purple flowers and sun set or sun rise. Choose "purple flowers and sun set or sun rise.png" maybe. Let's pick "purple flowers and sun set or sun rise.png". That filename is exactly that.
+
+logo: eyebrow: short phrase maybe "Growth Boost". mark: short monogram maybe "CGA". title: "Crop Growth Accelerator". subtitle: a short phrase describing behavior: "Accelerates crops near players, during sleep, and in favorable weather." rail_left: maybe "Proximity Trigger". rail_right: "Weather Enhanced". Must describe actual behavior.
+
+description: kicker: maybe "Utility Mod". title: same as mod title? In example they used "TNT Duper". So we can use "Crop Growth Accelerator". tagline: short tagline describing core behavior: "Boosts crop growth when you're nearby, sleeping, or in rain/thunder, letting you harvest faster." chips: 2-4 short labels, e.g., ["Proximity Boost","Sleep Bonus","Weather Bonus","Universal Crops"] but must be 2-4 items. Let's do 3 items: ["Proximity Boost","Sleep Bonus","Weather Bonus"]. stats: exactly 2 items. Each with value (string), label, note (short sentence). Provide values maybe "1.5x" or "50%". Let's craft:
+
+stats[0]: value "1.5×", label "Growth Multiplier", note "Crops grow 1.5× faster when conditions apply."
+
+stats[1]: value "8h", label "Sleep Bonus", note "Sleeping adds 50 extra growth ticks per crop."
+
+But note must be one short sentence. That's okay.
+
+Make sure each stats.note is one short sentence.
+
+Now ensure JSON shape exactly matches. Provide fields in same order? Not required but shape must match. Provide exactly the keys.
+
+Let's craft JSON:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "purple flowers and sun set or sun rise.png",
+  "logo": {
+    "eyebrow": "Growth Boost",
+    "mark": "CGA",
+    "title": "Crop Growth Accelerator",
+    "subtitle": "Accelerates crops near players, during sleep, and in favorable weather.",
+    "rail_left": "Proximity Trigger",
+    "rail_right": "Weather Enhanced"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Crop Growth Accelerator",
+    "tagline": "Boosts crop growth when you're nearby, sleeping, or in rain/thunder, letting you harvest faster.",
+    "chips": [
+      "Proximity Boost",
+      "Sleep Bonus",
+      "Weather Bonus"
+    ],
+    "stats": [
+      {
+        "value": "1.5×",
+        "label": "Growth Multiplier",
+        "note": "Crops grow 1.5× faster under active conditions."
+      },
+      {
+        "value": "8h",
+        "label": "Sleep Bonus",
+        "note": "Sleeping adds 50 extra growth ticks per crop."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, yes. background_image exact filename from options: "purple flowers and sun set or sun rise.png" is exactly one of the options? The list includes "purple flowers and sun set or sun rise.png". Yes. Good.
+
+logo.mark is short monogram 3 chars "CGA". Good.
+
+logo.rail_left and rail_right describe actual behavior: "Proximity Trigger" and "Weather Enhanced" are okay.
+
+description.chips length 3, within 2-4. Good.
+
+description.stats exactly 2 items. Good.
+
+Each stats.note is one short sentence. Yes.
+
+All strings concise and polished.
+
+No mention of draft etc.
+
+Return only valid JSON. Ensure no trailing commas. Provide exactly as above.

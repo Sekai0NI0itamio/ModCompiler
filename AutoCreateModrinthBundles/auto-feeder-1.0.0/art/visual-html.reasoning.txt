@@ -1,0 +1,60 @@
+We need to output JSON with shape exactly as given. Provide accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4), stats (exactly 2 items), each stats has value, label, note.
+
+We must not include any extra text. Must be valid JSON.
+
+We need to adapt to mod "Auto Feeder". Provide concise polished strings. Use background image filename that matches one of options and matches mood. Probably "fresh spring.png" or "mountain breeze with spring forest.png". Choose one that fits feeding animals? Maybe "fresh spring.png" (fresh spring). Or "mountain breeze with spring forest.png". Let's pick "fresh spring.png". That is in options.
+
+Accent color: maybe #ff7f2f (orange) as example, but can choose any hex. Use #ff7f2f.
+
+Logo: eyebrow: maybe "Animal Husbandry". mark: "AF". title: "Auto Feeder". subtitle: something like "Automated breeding support built around silent feeding, pair logic, and passive growth." rail_left: "Chest Proximity". rail_right: "Pair‑Aware Breeding". Must describe actual behavior.
+
+description: kicker: maybe "Utility Mod". title: "Auto Feeder". tagline: "Automatically feeds breeding animals from nearby chests, preserving your inventory and enabling hands‑off farm expansion." chips: maybe ["Auto Feed", "Pair Logic", "Chest Sync"] (2-4). stats: two items. Provide value and label and note.
+
+stats[0]: value "0", label "Manual Effort", note "Zero player feeding required once set up." stats[1]: value "100%", label "Breeding Speed", note "Continuous pair feeding boosts reproduction rates."
+
+But note must be one short sentence. Provide value as string maybe "0". Provide label and note.
+
+Make sure JSON structure matches exactly.
+
+Let's craft JSON:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "fresh spring.png",
+  "logo": {
+    "eyebrow": "Animal Husbandry",
+    "mark": "AF",
+    "title": "Auto Feeder",
+    "subtitle": "Automated breeding support built around silent feeding, pair logic, and passive growth.",
+    "rail_left": "Chest Proximity",
+    "rail_right": "Pair‑Aware Breeding"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Auto Feeder",
+    "tagline": "Automatically feeds breeding animals from nearby chests, preserving your inventory and enabling hands‑off farm expansion.",
+    "chips": [
+      "Auto Feed",
+      "Pair Logic",
+      "Chest Sync"
+    ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Manual Effort",
+        "note": "Zero player feeding required once set up."
+      },
+      {
+        "value": "100%",
+        "label": "Breeding Speed",
+        "note": "Continuous pair feeding boosts reproduction rates."
+      }
+    ]
+  }
+}
+
+Check constraints: chips 2-4 items, we have 3, okay. stats exactly 2 items, we have 2. Each stats.note is one short sentence, okay. All strings concise and polished. No mention of draft etc. Use background_image "fresh spring.png" which is in options. Accent color #ff7f2f matches example but okay.
+
+Make sure JSON is valid: no trailing commas. Use straight quotes. Provide exactly that JSON.
+
+Let's output only JSON.

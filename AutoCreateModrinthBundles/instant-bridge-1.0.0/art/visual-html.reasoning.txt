@@ -1,0 +1,89 @@
+We need to output JSON with shape as described. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items) each with value, label, note. Must be concise, polished, modern premium, non-Minecraft-themed. Must not mention draft status etc. Must describe actual mod behavior.
+
+We have mod title "Instant Bridge". Need to fill fields accordingly.
+
+We need to choose background_image from options. The mod is about bridging gaps, automatic block placement. Mood maybe "fire burning.jpg" or "purple flowers and sun set or sun rise.png". Probably "fire burning.jpg" fits industrial? But maybe "purple flowers and sun set or sun rise.png" is more serene. The mod is about utility, maybe "fire burning.jpg" matches "sharp industrial identity"? The example used fire burning.jpg as recommended. Let's choose "fire burning.jpg". That filename is "fire burning.jpg". Must match exactly.
+
+Accent color: choose a hex like "#ff7f2f" (orange). Could also choose something else but must be a single hex. Use "#ff7f2f" as example.
+
+Logo: eyebrow: short phrase maybe "Bridge Builder". mark: maybe "IB". title: "Instant Bridge". subtitle: a short phrase describing behavior: "Automatic block placement while sneaking and walking". rail_left: maybe "Gap Crossing". rail_right: maybe "Seamless Descent". Must be concise.
+
+description: kicker: maybe "Utility Mod". title: "Instant Bridge". tagline: short phrase describing core behavior: "Place blocks beneath you automatically while sneaking and walking". chips: 2-4 short labels: maybe "Auto Place", "Sneak Activation", "Inventory Safe". stats: exactly 2 items. Each with value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats could be:
+
+- value: "100%" label: "Reliability" note: "Never fails to place a block when needed."
+- value: "0" label: "Block Cost" note: "Consumes no blocks in creative mode."
+
+But note must be one short sentence. Value can be "100%" or "0". Must be string.
+
+Make sure stats array has exactly 2 objects.
+
+chips array can have 2-4 items; we can include 3.
+
+Now ensure all strings concise and polished.
+
+Now produce JSON only.
+
+Check required fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "fire burning.jpg",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+    "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      }
+    ]
+  }
+}
+
+Make sure no extra fields.
+
+Now craft values.
+
+eyebrow: maybe "Bridge Utility". Keep concise.
+
+mark: "IB".
+
+title: "Instant Bridge".
+
+subtitle: "Automatic block placement while sneaking and walking". That's a bit long but okay; must be short phrase. Maybe "Place blocks beneath you automatically". That's concise.
+
+rail_left: "Gap Crossing". rail_right: "Seamless Descent". Good.
+
+description.kicker: "Utility Mod". title: "Instant Bridge". tagline: "Place blocks beneath you automatically while sneaking and walking". chips: maybe ["Auto Place", "Sneak‑Only", "Inventory Safe"] (3 items). stats: two items.
+
+Stat 1: value "100%" label "Reliability" note "Places a block each tick when conditions are met." That's short.
+
+Stat 2: value "0" label "Block Cost" note "No blocks consumed in creative mode." That's short.
+
+Make sure note is one short sentence, ends with period.
+
+Now ensure chips are short labels, 2-4 items. We'll have 3.
+
+Now produce JSON.
+
+Check that background_image filename exactly matches one of the options: "fire burning.jpg". Yes.
+
+Now output only JSON.

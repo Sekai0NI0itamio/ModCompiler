@@ -1,0 +1,311 @@
+# Project Info
+
+generated_at=2026-04-04T01:34:49+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/20/Auto-Feeder-1.0.0.jar
+jar_size_bytes=9154
+jar_sha1=88dc17194be5323f0ca528caf876cd21ab3a3e6c
+
+## Detected Metadata
+
+jar_name=Auto-Feeder-1.0.0.jar
+jar_display_name=Auto Feeder
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=autofeeder
+name=Auto Feeder
+mod_version=1.0.0
+description=Automatically feeds animals from nearby chests to breed them. Perfect for automated farms!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-feeder-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-feeder-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.autofeeder
+
+## Source Tree
+
+asd/itamio/autofeeder/AutoFeederConfig.java
+asd/itamio/autofeeder/AutoFeederHandler.java
+asd/itamio/autofeeder/AutoFeederMod.java
+
+## Key Source Excerpts
+
+### asd/itamio/autofeeder/AutoFeederHandler.java
+```
+package asd.itamio.autofeeder;
+
+import net.minecraft.entity.passive.*;
+import net.minecraft.entity.Entity;
+import net.minecraft.init.Items;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.tileentity.TileEntityChest;
+import net.minecraft.util.EnumParticleTypes;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+import java.util.*;
+
+public class AutoFeederHandler {
+    
+    private final Map<BlockPos, Long> lastFeedTime = new HashMap<>();
+    private final Set<BlockPos> chestsToCheck = new HashSet<>();
+    
+    @SubscribeEvent
+    public void onPlayerInteractBlock(PlayerInteractEvent.RightClickBlock event) {
+        // When player interacts with a chest, mark it for checking
+        if (event.getWorld().isRemote) {
+            return;
+        }
+        
+        TileEntity te = event.getWorld().getTileEntity(event.getPos());
+        if (te instanceof TileEntityChest) {
+            chestsToCheck.add(event.getPos());
+        }
+    }
+    
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+        
+        if (!AutoFeederMod.config.enableAutoFeeder) {
+            return;
+        }
+        
+        // Only run on server side
+        if (event.world.isRemote) {
+            return;
+        }
+        
+        long currentTime = event.world.getTotalWorldTime();
+        
+        // Check marked chests
+        Iterator<BlockPos> iterator = chestsToCheck.iterator();
+        while (iterator.hasNext()) {
+            BlockPos pos = iterator.next();
+            
+            // Check if enough time has passed since last feed
+            if (lastFeedTime.containsKey(pos)) {
+                long timeSinceLastFeed = currentTime - lastFeedTime.get(pos);
+                if (timeSinceLastFeed < AutoFeederMod.config.feedingInterval) {
+                    continue;
+                }
+            }
+            
+            // Try to feed animals
+            if (tryFeedAnimals(event.world, pos)) {
+                lastFeedTime.put(pos, currentTime);
+            }
+            
+            // Remove from check list after attempting
+            iterator.remove();
+        }
+        
+        // Periodically check all known chests (every feeding interval)
+        if (currentTime % AutoFeederMod.config.feedingInterval == 0) {
+            for (TileEntity te : new ArrayList<>(event.world.loadedTileEntityList)) {
+                if (te instanceof TileEntityChest) {
+                    BlockPos pos = te.getPos();
+                    
+                    // Check if enough time has passed
+                    if (lastFeedTime.containsKey(pos)) {
+                        long timeSinceLastFeed = currentTime - lastFeedTime.get(pos);
+                        if (timeSinceLastFeed < AutoFeederMod.config.feedingInterval) {
+                            continue;
+                        }
+                    }
+                    
+                    // Try to feed animals
+                    if (tryFeedAnimals(event.world, pos)) {
+                        lastFeedTime.put(pos, currentTime);
+                    }
+                }
+            }
+        }
+    }
+    
+    private boolean tryFeedAnimals(World world, BlockPos containerPos) {
+        TileEntity te = world.getTileEntity(containerPos);
+        if (!(te instanceof IInventory)) {
+            return false;
+        }
+        
+        IInventory inventory = (IInventory) te;
+        
+        // Find animals in range
+... truncated ...
+```
+
+### asd/itamio/autofeeder/AutoFeederMod.java
+```
+package asd.itamio.autofeeder;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = AutoFeederMod.MODID, name = AutoFeederMod.NAME, version = AutoFeederMod.VERSION)
+public class AutoFeederMod {
+    public static final String MODID = "autofeeder";
+    public static final String NAME = "Auto Feeder";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static AutoFeederConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        
+        File configFile = new File(event.getModConfigurationDirectory(), "autofeeder.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new AutoFeederConfig(configuration);
+        
+        MinecraftForge.EVENT_BUS.register(new AutoFeederHandler());
+        
+        logger.info("Auto Feeder initialized!");
+    }
+}
+```
+
+### asd/itamio/autofeeder/AutoFeederConfig.java
+```
+package asd.itamio.autofeeder;
+
+import net.minecraftforge.common.config.Configuration;
+
+public class AutoFeederConfig {
+    private final Configuration config;
+    
+    public boolean enableAutoFeeder;
+    public int searchRange;
+    public int feedingInterval;
+    public boolean feedCows;
+    public boolean feedPigs;
+    public boolean feedSheep;
+    public boolean feedChickens;
+    public boolean feedHorses;
+    public boolean feedRabbits;
+    public boolean playSound;
+    public boolean showParticles;
+    
+    public AutoFeederConfig(Configuration configuration) {
+        this.config = configuration;
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enableAutoFeeder = config.getBoolean(
+            "enableAutoFeeder",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Enable automatic animal feeding. Default: true"
+        );
+        
+        searchRange = config.getInt(
+            "searchRange",
+            Configuration.CATEGORY_GENERAL,
+            8,
+            1,
+            32,
+            "Range in blocks to search for animals and containers. Default: 8"
+        );
+        
+        feedingInterval = config.getInt(
+            "feedingInterval",
+            Configuration.CATEGORY_GENERAL,
+            100,
+            20,
+            1200,
+            "Ticks between feeding attempts (20 ticks = 1 second). Default: 100 (5 seconds)"
+        );
+        
+        feedCows = config.getBoolean(
+            "feedCows",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Automatically feed cows. Default: true"
+        );
+        
+        feedPigs = config.getBoolean(
+            "feedPigs",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Automatically feed pigs. Default: true"
+        );
+        
+        feedSheep = config.getBoolean(
+            "feedSheep",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Automatically feed sheep. Default: true"
+        );
+        
+        feedChickens = config.getBoolean(
+            "feedChickens",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Automatically feed chickens. Default: true"
+        );
+        
+        feedHorses = config.getBoolean(
+            "feedHorses",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Automatically feed horses. Default: true"
+        );
+        
+        feedRabbits = config.getBoolean(
+            "feedRabbits",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Automatically feed rabbits. Default: true"
+        );
+        
+        playSound = config.getBoolean(
+            "playSound",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Play sound when animals are fed. Default: true"
+        );
+        
+        showParticles = config.getBoolean(
+            "showParticles",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Show heart particles when animals are fed. Default: true"
+        );
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void reload() {
+        load();
+    }
+}
+```

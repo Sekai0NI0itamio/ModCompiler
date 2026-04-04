@@ -1,0 +1,176 @@
+# Project Info
+
+generated_at=2026-04-03T08:46:14+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/12/Instant-Leaf-Decay-1.0.0.jar
+jar_size_bytes=8036
+jar_sha1=02d0b746fa1a10d4130f4d7b1d9e9d34af3db296
+
+## Detected Metadata
+
+jar_name=Instant-Leaf-Decay-1.0.0.jar
+jar_display_name=Instant Leaf Decay
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=instantleafdecay
+name=Instant Leaf Decay
+mod_version=1.0.0
+description=Leaves decay instantly when you cut down a tree! No more waiting for leaves to slowly disappear. All drops are collected and stacked at the center to reduce lag.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-leaf-decay-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-leaf-decay-1.0.0/source
+source_file_count=2
+package_count=1
+packages=asd.itamio.instantleafdecay
+
+## Source Tree
+
+asd/itamio/instantleafdecay/InstantLeafDecayMod.java
+asd/itamio/instantleafdecay/LeafDecayHandler.java
+
+## Key Source Excerpts
+
+### asd/itamio/instantleafdecay/LeafDecayHandler.java
+```
+package asd.itamio.instantleafdecay;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockLeaves;
+import net.minecraft.block.BlockOldLeaf;
+import net.minecraft.block.BlockPlanks;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+import java.util.*;
+
+public class LeafDecayHandler {
+
+    @SubscribeEvent
+    public void onBlockBreak(BlockEvent.BreakEvent event) {
+        World world = event.getWorld();
+        BlockPos pos = event.getPos();
+        IBlockState state = event.getState();
+        Block block = state.getBlock();
+        
+        // Only run on server side
+        if (world.isRemote) {
+            return;
+        }
+
+        // Check if a log was broken
+        if (block == Blocks.LOG || block == Blocks.LOG2) {
+            // Schedule leaf decay check for next tick
+            new java.util.Timer().schedule(new java.util.TimerTask() {
+                @Override
+                public void run() {
+                    decayNearbyLeaves(world, pos);
+                }
+            }, 100); // 100ms delay to let the log break complete
+        }
+    }
+
+    private void decayNearbyLeaves(World world, BlockPos centerPos) {
+        // Search for leaves in a large radius
+        int radius = 8;
+        Set<BlockPos> leavesToDecay = new HashSet<>();
+        
+        // Find all leaves that should decay
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    BlockPos checkPos = centerPos.add(x, y, z);
+                    IBlockState state = world.getBlockState(checkPos);
+                    Block block = state.getBlock();
+                    
+                    if (block instanceof BlockLeaves) {
+                        // Check if this leaf should decay (not player-placed and no nearby logs)
+                        if (!state.getValue(BlockLeaves.DECAYABLE)) {
+                            continue; // Skip player-placed leaves
+                        }
+                        
+                        if (!hasNearbyLog(world, checkPos, 4)) {
+                            leavesToDecay.add(checkPos);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Decay all leaves instantly
+        if (!leavesToDecay.isEmpty()) {
+            decayLeavesInstantly(world, leavesToDecay);
+        }
+    }
+
+    private boolean hasNearbyLog(World world, BlockPos leafPos, int range) {
+        // Check if there's a log within range
+        for (int x = -range; x <= range; x++) {
+            for (int y = -range; y <= range; y++) {
+                for (int z = -range; z <= range; z++) {
+                    BlockPos checkPos = leafPos.add(x, y, z);
+                    Block block = world.getBlockState(checkPos).getBlock();
+                    
+                    if (block == Blocks.LOG || block == Blocks.LOG2) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private void decayLeavesInstantly(World world, Set<BlockPos> leaves) {
+        // Calculate center position for item drops
+        BlockPos centerPos = calculateCenter(leaves);
+        
+        // Collect all drops with proper loot calculation
+        Map<ItemStack, Integer> itemCounts = new HashMap<>();
+        Random rand = world.rand;
+        
+        // Break all leaves without particles
+        for (BlockPos pos : leaves) {
+            IBlockState state = world.getBlockState(pos);
+            Block block = state.getBlock();
+            
+            if (block instanceof BlockLeaves) {
+                //
+... truncated ...
+```
+
+### asd/itamio/instantleafdecay/InstantLeafDecayMod.java
+```
+package asd.itamio.instantleafdecay;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = InstantLeafDecayMod.MODID, name = InstantLeafDecayMod.NAME, version = InstantLeafDecayMod.VERSION)
+public class InstantLeafDecayMod {
+    public static final String MODID = "instantleafdecay";
+    public static final String NAME = "Instant Leaf Decay";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        MinecraftForge.EVENT_BUS.register(new LeafDecayHandler());
+        logger.info("Instant Leaf Decay initialized - leaves will decay instantly!");
+    }
+}
+```
