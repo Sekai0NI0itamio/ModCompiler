@@ -1,0 +1,56 @@
+We need to generate JSON with shape exactly as described. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must not mention draft etc. Must describe actual mod behavior. Must reuse composition language from approved examples but adapt words to this mod.
+
+We need to pick background image filename that matches mood. Options list; recommended: mountain breeze with spring forest.png, purple flowers..., winter forest... Choose one that fits "Auto Totem". Probably "mountain breeze with spring forest.png" (spring forest vibe). Or "purple flowers and sun set or sun rise.png". Let's pick "mountain breeze with spring forest.png". That filename must be exactly as given.
+
+Accent color: choose a hex, maybe #ff7f2f (orange) as example, but can choose any. Must be single hex.
+
+Logo: eyebrow: short phrase, maybe "Auto Protection". mark: short monogram, maybe "AT". title: "Auto Totem". subtitle: a short phrase describing mod: "Keeps Totem of Undying in your offhand instantly". rail_left: "Instant Swap". rail_right: "Zero Lag". Must be concise.
+
+description: kicker: maybe "Utility Mod". title: "Auto Totem". tagline: short phrase describing behavior: "Auto‑swap Totem of Undying into your offhand the moment it’s used, with no delay." chips: 2-4 short labels: maybe ["Auto‑Swap", "Instant", "Zero‑Delay"] but need 2-4; we can do 3: ["Auto‑Swap","Zero‑Delay","Inventory‑Safe"]; stats: exactly 2 items. Provide value (string) maybe "0" or "1". Provide label and note. Example: first stat: value "0", label "Totems Used", note "Never runs out while enabled." second stat: value "1", label "Offhand Guard", note "Keeps a totem ready at all times."
+
+Make sure each stats.note is one short sentence.
+
+All strings concise and polished.
+
+Make sure JSON is valid, no trailing commas.
+
+Let's craft JSON:
+
+{
+  "accent_color": "#ff7f2f",
+ "background_image": "mountain breeze with spring forest.png",
+  "logo": {
+    "eyebrow": "Auto Protection",
+    "mark": "AT",
+    "title": "Auto Totem",
+    "subtitle": "Keeps Totem of Undying in your offhand instantly.",
+    "rail_left": "Instant Swap",
+    "rail_right": "Zero Lag"
+  },
+  "description": {
+   "kicker": "Utility Mod",
+    "title": "Auto Totem",
+    "tagline": "Auto‑swap Totem of Undying into your offhand the moment it’s used, with no delay.",
+    "chips": [
+      "Auto‑Swap",
+      "Zero‑Delay",
+      "Inventory‑Safe"
+   ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Totems Used",
+        "note": "Never runs out while enabled."
+      },
+      {
+       "value": "1",
+        "label": "Offhand Guard",
+        "note": "Keeps a totem ready at all times."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, background_image exact filename. logo.mark is 2 characters "AT". description.chips length 3 (allowed 2-4). stats length 2. Each note is one short sentence. All strings concise. No mention of draft etc. Good.
+
+Make sure JSON is only output, no extra text.
