@@ -239,6 +239,7 @@ def build_modrinth_version_payload(*, project_id: str, mod: dict[str, Any], jar_
         "featured": False,
         "project_id": project_id,
         "file_parts": ["file"],
+        "primary_file": "file",
     }
 
 
@@ -282,6 +283,39 @@ def render_modrinth_summary_markdown(result: dict[str, Any]) -> str:
             lines.append(f"- {warning}")
     lines.append("")
     return "\n".join(lines)
+
+
+def required_modrinth_scope_for_request(method: str, path: str) -> str:
+    method_upper = method.upper()
+    if method_upper == "POST" and path == "/project":
+        return "PROJECT_CREATE"
+    if method_upper == "POST" and path == "/version":
+        return "VERSION_CREATE"
+    if method_upper == "PATCH" and path.startswith("/project/"):
+        return "PROJECT_WRITE"
+    if method_upper == "PATCH" and path.startswith("/version/"):
+        return "VERSION_WRITE"
+    return ""
+
+
+def build_modrinth_auth_failure_message(*, method: str, path: str, payload_text: str) -> str:
+    detail = "Modrinth authentication failed."
+    lowered = payload_text.lower()
+    if "invalid authentication credentials" in lowered or "invalid authentication" in lowered:
+        detail += " The token looks invalid or expired."
+    elif "scope" in lowered or "no authorization to access" in lowered:
+        detail += " The token looks present, but it may be missing required Modrinth scopes."
+    else:
+        detail += " Modrinth rejected the supplied token."
+
+    required_scope = required_modrinth_scope_for_request(method, path)
+    if required_scope:
+        detail += f" Required scope for this request: {required_scope}."
+
+    detail += " Check the MODRINTH_TOKEN secret."
+    if payload_text:
+        detail += f" Response: {payload_text[:300]}"
+    return detail
 
 
 class ModrinthClient:
@@ -335,6 +369,66 @@ class ModrinthClient:
             extra_headers={"Content-Type": content_type},
         )
 
+    def get_project(self, *, project_ref: str) -> dict[str, Any]:
+        response = self.request_json(
+            "GET",
+            f"/project/{urllib.parse.quote(project_ref, safe='')}",
+        )
+        if not isinstance(response, dict):
+            raise ModCompilerError("Modrinth returned an invalid project response.")
+        return response
+
+    def modify_project(self, *, project_ref: str, payload: dict[str, Any]) -> None:
+        self.request_json(
+            "PATCH",
+            f"/project/{urllib.parse.quote(project_ref, safe='')}",
+            body=json.dumps(payload).encode("utf-8"),
+            extra_headers={"Content-Type": "application/json"},
+        )
+
+    def change_project_icon(self, *, project_ref: str, icon_path: Path) -> None:
+        ext = guess_content_type(icon_path.name)
+        self.request_json(
+            "PATCH",
+            f"/project/{urllib.parse.quote(project_ref, safe='')}/icon",
+            params={"ext": icon_path.suffix.lower().lstrip(".")},
+            body=icon_path.read_bytes(),
+            extra_headers={"Content-Type": ext},
+        )
+
+    def add_gallery_image(
+        self,
+        *,
+        project_ref: str,
+        image_path: Path,
+        featured: bool,
+        title: str,
+        description: str,
+        ordering: int,
+    ) -> None:
+        params = {
+            "ext": image_path.suffix.lower().lstrip("."),
+            "featured": "true" if featured else "false",
+            "title": title,
+            "description": description,
+            "ordering": str(ordering),
+        }
+        self.request_json(
+            "POST",
+            f"/project/{urllib.parse.quote(project_ref, safe='')}/gallery",
+            params=params,
+            body=image_path.read_bytes(),
+            extra_headers={"Content-Type": guess_content_type(image_path.name)},
+        )
+
+    def modify_version(self, *, version_id: str, payload: dict[str, Any]) -> None:
+        self.request_json(
+            "PATCH",
+            f"/version/{urllib.parse.quote(version_id, safe='')}",
+            body=json.dumps(payload).encode("utf-8"),
+            extra_headers={"Content-Type": "application/json"},
+        )
+
     def request_json(
         self,
         method: str,
@@ -366,7 +460,11 @@ class ModrinthClient:
                 payload_text = error.read().decode("utf-8", errors="replace").strip()
                 if error.code in {401, 403}:
                     raise ModCompilerError(
-                        "Modrinth authentication failed. Check the MODRINTH_TOKEN secret."
+                        build_modrinth_auth_failure_message(
+                            method=method_upper,
+                            path=path,
+                            payload_text=payload_text,
+                        )
                     ) from None
                 if error.code == 404 and path.startswith("/project/"):
                     raise ModCompilerError("The Modrinth project could not be found.") from None

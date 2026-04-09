@@ -1,0 +1,68 @@
+We need to output JSON with shape matching example. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items each with value, label, note). Must be concise, polished, modern premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must reuse composition language but adapt words.
+
+We have mod title "Auto Crystal". It's about automatic crystal PvP. So we need to craft JSON accordingly.
+
+We need to choose background_image from options. Which fits? Probably "fire burning.jpg" or "ocean.jpg"? The mod is about crystals, maybe "fire burning.jpg" fits explosive vibe. Or "mountain breeze with spring forest.png"? Not relevant. "anime girl alya eating lolipop.png" is generic. I'd choose "fire burning.jpg" as it's about explosion. Let's pick that.
+
+Accent color: maybe #ff7f2f (orange) as example uses. Could use #ff7f2f.
+
+Logo: need eyebrow (short phrase), mark (monogram), title (full name), subtitle (short description), rail_left and rail_right (short phrases describing behavior). Must be concise.
+
+Mark could be "AC". Title "Auto Crystal". Eyebrow maybe "PvP Automation". Subtitle maybe "Automatic crystal targeting and detonation". rail_left maybe "Zero Click". rail_right maybe "Infinite Detonations". Must be short.
+
+Description: kicker maybe "Utility Mod". title maybe "Auto Crystal". tagline: short phrase describing behavior. chips: 2-4 short labels like "Auto Attack", "Toggle C", "Crystal PvP". stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats could be: value "100%" label "Crystal Detonation" note "Explodes placed crystals instantly". Another: value "Toggle" label "C Key" note "Press to enable/disable". Or maybe "Instant Attack" label "Auto Target" note "No manual clicking required". Must be exactly 2 stats.
+
+Make sure each note is one short sentence.
+
+All strings concise and polished.
+
+Make sure JSON is valid, no trailing commas.
+
+Let's craft:
+
+{
+  "accent_color": "#ff7f2f",
+ "background_image": "fire burning.jpg",
+ "logo": {
+    "eyebrow": "PvP Automation",
+    "mark": "AC",
+    "title": "Auto Crystal",
+    "subtitle": "Automatic crystal targeting and detonation for PvP combat.",
+   "rail_left": "Zero Click",
+    "rail_right": "Infinite Detonations"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Auto Crystal",
+    "tagline": "Place crystals and watch them explode without lifting a finger.",
+    "chips": [
+      "Auto Attack",
+      "C Toggle",
+      "PvP Optimized"
+    ],
+    "stats": [
+      {
+        "value": "Instant",
+        "label": "Detonation",
+        "note": "Explodes placed crystals the moment they appear."
+      },
+      {
+        "value": "C Key",
+        "label": "Toggle",
+        "note": "Press C to enable or disable the auto‑attack mode."
+      }
+    ]
+  }
+}
+
+Check constraints: chips 3 items okay. stats exactly 2 items. Each note one short sentence. All strings concise. No mention of draft etc. Use actual behavior.
+
+Make sure accent_color is hex. background_image matches one of options exactly: "fire burning.jpg". That is in list. Good.
+
+Make sure logo.mark is short monogram 2-4 characters: "AC" okay.
+
+All good.
+
+Return only JSON.
