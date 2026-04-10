@@ -1,0 +1,213 @@
+# Project Info
+
+generated_at=2026-04-10T10:46:13+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/27/No-Particles-1.0.0.jar
+jar_size_bytes=6725
+jar_sha1=49f44af1eaf7557ab0038faff68ba2394dc960fc
+
+## Detected Metadata
+
+jar_name=No-Particles-1.0.0.jar
+jar_display_name=No Particles
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=noparticles
+name=No Particles
+mod_version=1.0.0
+description=Completely disables all particle spawning for maximum performance. No more lag from particles!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-particles-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-particles-1.0.0/source
+source_file_count=4
+package_count=2
+packages=asd.itamio.noparticles,asd.itamio.noparticles.asm
+
+## Source Tree
+
+asd/itamio/noparticles/NoParticlesConfig.java
+asd/itamio/noparticles/NoParticlesMod.java
+asd/itamio/noparticles/asm/NoParticlesLoadingPlugin.java
+asd/itamio/noparticles/asm/ParticleTransformer.java
+
+## Key Source Excerpts
+
+### asd/itamio/noparticles/NoParticlesMod.java
+```
+package asd.itamio.noparticles;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+import java.io.File;
+
+@Mod(modid = NoParticlesMod.MODID, name = NoParticlesMod.NAME, version = NoParticlesMod.VERSION, clientSideOnly = true)
+public class NoParticlesMod {
+    public static final String MODID = "noparticles";
+    public static final String NAME = "No Particles";
+    public static final String VERSION = "1.0.0";
+    
+    public static Logger logger;
+    public static NoParticlesConfig config;
+    
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new NoParticlesConfig(new File(event.getModConfigurationDirectory(), "noparticles.cfg"));
+        logger.info("No Particles mod initialized - all particles disabled!");
+    }
+}
+```
+
+### asd/itamio/noparticles/NoParticlesConfig.java
+```
+package asd.itamio.noparticles;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+
+public class NoParticlesConfig {
+    private Configuration config;
+    
+    public static boolean enabled = true;
+    
+    public NoParticlesConfig(File configFile) {
+        config = new Configuration(configFile);
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enabled = config.getBoolean("enabled", "general", true, 
+            "Enable no particles (completely disables all particle spawning)");
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void save() {
+        config.get("general", "enabled", true).set(enabled);
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+```
+
+### asd/itamio/noparticles/asm/ParticleTransformer.java
+```
+package asd.itamio.noparticles.asm;
+
+import net.minecraft.launchwrapper.IClassTransformer;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.*;
+
+public class ParticleTransformer implements IClassTransformer {
+    
+    @Override
+    public byte[] transform(String name, String transformedName, byte[] basicClass) {
+        // Target the World class to intercept spawnParticle method
+        if (transformedName.equals("net.minecraft.world.World")) {
+            return transformWorld(basicClass);
+        }
+        
+        // Target the ParticleManager class to intercept addEffect method
+        if (transformedName.equals("net.minecraft.client.particle.ParticleManager")) {
+            return transformParticleManager(basicClass);
+        }
+        
+        return basicClass;
+    }
+    
+    private byte[] transformWorld(byte[] basicClass) {
+        ClassNode classNode = new ClassNode();
+        ClassReader classReader = new ClassReader(basicClass);
+        classReader.accept(classNode, 0);
+        
+        // Find and modify spawnParticle methods
+        for (MethodNode method : classNode.methods) {
+            // spawnParticle method signature
+            if (method.name.equals("spawnParticle") || method.name.equals("func_175688_a")) {
+                // Clear the method and just return immediately
+                method.instructions.clear();
+                method.instructions.add(new InsnNode(Opcodes.RETURN));
+                System.out.println("[NoParticles] Patched World.spawnParticle");
+            }
+        }
+        
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        classNode.accept(writer);
+        return writer.toByteArray();
+    }
+    
+    private byte[] transformParticleManager(byte[] basicClass) {
+        ClassNode classNode = new ClassNode();
+        ClassReader classReader = new ClassReader(basicClass);
+        classReader.accept(classNode, 0);
+        
+        // Find and modify addEffect method
+        for (MethodNode method : classNode.methods) {
+            // addEffect method - prevents particles from being added to render queue
+            if (method.name.equals("addEffect") || method.name.equals("func_78873_a")) {
+                // Clear the method and just return immediately
+                method.instructions.clear();
+                method.instructions.add(new InsnNode(Opcodes.RETURN));
+                System.out.println("[NoParticles] Patched ParticleManager.addEffect");
+            }
+        }
+        
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        classNode.accept(writer);
+        return writer.toByteArray();
+    }
+}
+```
+
+### asd/itamio/noparticles/asm/NoParticlesLoadingPlugin.java
+```
+package asd.itamio.noparticles.asm;
+
+import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
+import javax.annotation.Nullable;
+import java.util.Map;
+
+@IFMLLoadingPlugin.Name("NoParticlesCore")
+@IFMLLoadingPlugin.MCVersion("1.12.2")
+@IFMLLoadingPlugin.SortingIndex(1001)
+public class NoParticlesLoadingPlugin implements IFMLLoadingPlugin {
+    
+    @Override
+    public String[] getASMTransformerClass() {
+        return new String[] { "asd.itamio.noparticles.asm.ParticleTransformer" };
+    }
+    
+    @Override
+    public String getModContainerClass() {
+        return null;
+    }
+    
+    @Nullable
+    @Override
+    public String getSetupClass() {
+        return null;
+    }
+    
+    @Override
+    public void injectData(Map<String, Object> data) {
+    }
+    
+    @Override
+    public String getAccessTransformerClass() {
+        return null;
+    }
+}
+```
