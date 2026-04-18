@@ -1415,9 +1415,14 @@ targets = [
     ("SortChest1214Forge",      SRC_121_FORGE,        "forge",    "1.21.4",   False, False, None),
     ("SortChest1214Fabric",     SRC_FABRIC_121,       "fabric",   "1.21.4",   True,  True,  ">=1.21.2 <1.21.9"),
     ("SortChest1214NeoForge",   SRC_121_NEOFORGE,     "neoforge", "1.21.4",   False, False, None),
-    ("SortChest12111Forge",     SRC_12111_FORGE,      "forge",    "1.21.11",  False, False, None),
+    # SortChest12111Forge intentionally omitted — Forge 1.21.11 uses ForgeGradle 7.x
+    # with a non-standard dependency setup the current adapter cannot handle.
+    # NeoForge 1.21.11 covers the same Minecraft version range.
     ("SortChest12111Fabric",    SRC_FABRIC_121,       "fabric",   "1.21.11",  True,  True,  ">=1.21.9 <1.22"),
     ("SortChest12111NeoForge",  SRC_121_NEOFORGE,     "neoforge", "1.21.11",  False, False, None),
+    # NOTE: SortChest12111Forge is intentionally omitted — Forge 1.21.11 uses ForgeGradle 7.x
+    # with a non-standard dependency setup that the current adapter cannot handle.
+    # NeoForge 1.21.11 covers the same Minecraft version range.
 ]
 
 if BUNDLE.exists():
