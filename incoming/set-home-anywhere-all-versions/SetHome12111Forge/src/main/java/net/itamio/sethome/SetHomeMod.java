@@ -86,15 +86,15 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::load, null), NAME);
+            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
-            ListTag players = tag.getList("players", 10);
+            ListTag players = tag.getList("players").orElse(new ListTag());
             for (int i = 0; i < players.size(); i++) {
                 CompoundTag pc = players.getCompound(i);
                 Map<String, double[]> homes = new HashMap<>();
-                ListTag hl = pc.getList("homes", 10);
+                ListTag hl = pc.getList("homes").orElse(new ListTag());
                 for (int j = 0; j < hl.size(); j++) {
                     CompoundTag hc = hl.getCompound(j);
                     homes.put(hc.getString("name"), new double[]{
