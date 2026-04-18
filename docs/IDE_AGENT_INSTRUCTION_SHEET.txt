@@ -1,0 +1,753 @@
+ModCompiler IDE Agent Instruction Sheet
+======================================
+
+Purpose
+-------
+This document explains the intended way to use this project when the main coding agent is an AI IDE assistant such as Codex.
+
+The primary product goal is:
+
+1. A user talks to the IDE agent and asks it to create a Minecraft mod.
+2. The agent builds the first working version in the local 1.12.2 Forge development workspace.
+3. The user compiles and tests that first version locally, then asks for changes until the mod feels right.
+4. Once the user approves the mod, the project helps package the jar and source into a Modrinth draft flow.
+5. Later, the same IDE agent can reopen that mod, reuse the saved source history, update it to all supported versions, and publish those versions through the remote GitHub compile pipeline.
+
+Important scope rule
+--------------------
+Ignore the AI auto-update workflow for now. It is not the main intended path.
+
+The main intended path is the user working directly with the IDE agent.
+
+The IDE agent is expected to understand:
+
+- what the active local workspace is
+- where previous mod source history is stored
+- when local testing is acceptable
+- when GitHub-only compilation must be used
+- how Modrinth draft bundles are organized
+
+Core operating rules
+--------------------
+1. Treat the IDE agent as the main coding assistant for the user.
+2. Start new mod creation in the local 1.12.2 Forge workspace at `Mod Developement/1.12.2-forge/`.
+3. Before generating or changing code, inspect `Mod Developement/1.12.2-forge/ModCollection/` for previous related mod source and jar history.
+4. Preserve previous source history. Do not overwrite or delete old mod snapshots unless the user explicitly asks.
+5. The first local mod iteration is allowed to be compiled and tested locally by the user in the 1.12.2 Forge workspace.
+6. Multi-version compilation is not supposed to happen locally. For cross-version builds, use the GitHub build pipeline only.
+7. For multi-version work, use `version-manifest.json` as the source of truth for what versions and loaders are supported.
+8. For Modrinth listing generation, use the existing draft helper flow and its folder contracts instead of inventing a new layout.
+
+Project intent in one sentence
+------------------------------
+This repo is meant to let a user co-build a mod with an IDE agent, approve the first working version locally, then reuse that approved mod as the source of truth for packaging, publishing, and updating across supported Minecraft versions through GitHub Actions.
+
+Main folders the agent must understand
+--------------------------------------
+`Mod Developement/1.12.2-forge/`
+The active local Forge 1.12.2 development workspace.
+
+`Mod Developement/1.12.2-forge/src/main/`
+The current live source tree for the mod being actively edited in the local 1.12.2 workflow.
+
+`Mod Developement/1.12.2-forge/ModCollection/`
+Saved mod history. This contains previously built jars and previously saved source snapshots.
+
+Examples already present there show two storage styles:
+
+- jar snapshots such as `Bot-Helpers-1.0.jar` and `Instant-Hoppers-1.0.jar`
+- source snapshots such as `Instant-Hoppers-Src/instanthoppers/Main.java`
+- full mod folders such as `TNT-Duper/src/...`
+
+The agent should treat `ModCollection` as a reusable library of prior work, not as throwaway files.
+
+`ToBeUploaded/`
+Input area for the Modrinth draft helper flow. Each bundle folder must contain exactly one top-level jar and exactly one top-level source folder.
+
+`AutoCreateModrinthBundles/`
+Generated output from the Modrinth draft helper flow. This includes generated descriptions, art, draft payloads, verification notes, and draft state files.
+
+`incoming/`
+Input area for committed zip bundles that are compiled remotely by GitHub Actions.
+
+`examples/`
+Reference examples for how a mod can be structured across one or many supported versions and loaders.
+
+`version-manifest.json`
+The source of truth for supported versions, version ranges, loaders, Java requirements, templates, and build behavior.
+
+Supported version families currently present in this repo
+---------------------------------------------------------
+The repository currently contains these active top-level version families:
+
+- `1.8.9`
+- `1.12-1.12.2`
+- `1.16.5`
+- `1.17-1.17.1`
+- `1.18-1.18.2`
+- `1.19-1.19.4`
+- `1.20-1.20.6`
+- `1.21-1.21.1`
+- `1.21.2-1.21.8`
+- `1.21.9-1.21.11`
+
+The agent should not guess supported targets. It should resolve them from `version-manifest.json`.
+
+Intended workflow for a brand new mod
+-------------------------------------
+Step 1: The user asks for a new mod, usually starting with 1.12.2 Forge.
+
+Example:
+`Build me a 1.12.2 Forge mod that does X.`
+
+Step 2: The agent inspects the current 1.12.2 Forge workspace.
+
+The agent should review:
+
+- `Mod Developement/1.12.2-forge/src/main/`
+- `Mod Developement/1.12.2-forge/build.gradle`
+- `Mod Developement/1.12.2-forge/src/main/resources/mcmod.info`
+- matching or related entries inside `Mod Developement/1.12.2-forge/ModCollection/`
+
+Step 3: The agent builds or edits the local first version inside:
+`Mod Developement/1.12.2-forge/`
+
+The local 1.12.2 workspace is the place where the idea is shaped into the first playable version.
+
+Step 4: The user compiles and tests the local 1.12.2 mod.
+
+This first stage is intentionally local and iterative.
+The user can test the mod, then ask the IDE agent to adjust code, assets, text, behavior, or balance until the mod feels correct.
+
+Step 5: Once the user approves the mod, preserve it as reusable source history.
+
+The approved version should be saved into `ModCollection` in a way that keeps it reusable later.
+
+Good preservation behavior:
+
+- keep or export the built jar into `ModCollection/`
+- save the final approved source snapshot into a clearly named source folder in `ModCollection/`
+- do not destroy the previous source snapshot when making a newer one
+
+The old helper scripts in this workspace already show this pattern:
+
+- `compile_mod.sh` copies finished jars into `ModCollection/`
+- `build_mods.sh` copies source packages into `ModCollection/<ModName>-Src/`
+
+That source-preservation idea should remain part of the intended workflow.
+
+How the source history system is supposed to work
+-------------------------------------------------
+`ModCollection` is the memory of previously approved or previously built mods.
+
+The agent should use it in these ways:
+
+1. Before starting a new mod, check whether a related mod or prototype already exists there.
+2. When continuing a previously made mod, reuse the saved source snapshot instead of starting over.
+3. When creating a successor version of a mod, preserve the old source snapshot and add a new one rather than replacing history.
+4. When preparing a multi-version update, use the approved source snapshot from `ModCollection` as the baseline reference.
+
+The intended result is that the same IDE agent can come back later and understand what the mod used to be, how it was structured, and what source tree should be used as the trusted starting point.
+
+Modrinth draft workflow intent
+------------------------------
+After the user approves the first working mod, the next goal is to prepare it for Modrinth.
+
+This repo already has a draft-oriented flow for that.
+
+The expected input layout is:
+
+`ToBeUploaded/<bundle-id>/`
+
+Inside each bundle folder there must be:
+
+- exactly one top-level `.jar`
+- exactly one top-level source folder
+
+Example:
+
+`ToBeUploaded/2/Instant-Hoppers-1.0.jar`
+`ToBeUploaded/2/Instant-Hoppers-Src/...`
+
+or
+
+`ToBeUploaded/3/TNT-Duper.jar`
+`ToBeUploaded/3/TNT-Duper/src/...`
+
+The intended flow is:
+
+1. Put the approved jar and its approved source snapshot into a bundle folder under `ToBeUploaded/`.
+2. Run:
+`python3 scripts/auto_create_modrinth_draft_projects.py generate`
+3. Review the generated bundle inside `AutoCreateModrinthBundles/<slug>/`
+4. Confirm or edit `verify.txt` as needed
+5. Run:
+`python3 scripts/auto_create_modrinth_draft_projects.py create-drafts --verified`
+
+Important wording note:
+The current implementation creates Modrinth drafts. It does not need to be described as a fully automatic final public release flow if that is not what the current scripts do.
+
+Useful generated files in each bundle include:
+
+- `modrinth.project.json`
+- `modrinth.version.json`
+- `verify.txt`
+- `draft_state.json`
+- `publish_state.json`
+- `SUMMARY.md`
+
+What the IDE agent should understand about publishing
+-----------------------------------------------------
+The publishing flow is approval-based.
+
+The agent is expected to:
+
+1. prepare the jar and trusted source folder
+2. generate the Modrinth draft bundle
+3. review the generated output with the user
+4. create the draft only after the bundle is verified
+
+The agent should not treat raw generated listing text as automatically final.
+
+Mod Version Update
+------------------
+Purpose: Allow the IDE agent to take an existing mod — either from a Modrinth
+link or from local source history — port it to every supported Minecraft version
+and loader, and auto-publish all working versions back to the Modrinth project.
+
+This is the primary workflow for updating an already-approved mod. It replaces
+any attempt to compile cross-version builds locally. Everything after the source
+is understood runs through GitHub Actions.
+
+There are two starting points depending on what the user provides:
+
+  Path A: User provides a Modrinth link
+  Path B: User provides local source (ModCollection snapshot or workspace src)
+
+------------------------------------------------------------------------
+PATH A: Starting from a Modrinth link
+------------------------------------------------------------------------
+
+Step A-1: Fetch and decompile the project using the Fetch Modrinth Project
+workflow. This is MANDATORY before writing any code. Do not skip it.
+
+  Workflow:   Fetch Modrinth Project
+  File:       .github/workflows/fetch-modrinth-project.yml
+  Input:      modrinth_project_url = <the link the user gave you>
+  Artifact:   modrinth-project-bundle
+
+  Download the artifact and read these files before doing anything else:
+    README.md                                  - start here
+    summary.txt                                - full project overview
+    project.json                               - raw Modrinth project object
+    index.json                                 - version list with decompile status
+    versions/<id>/decompiled/mod_info.txt      - mod_id, group, entrypoint_class,
+                                                 loader, supported_minecraft
+    versions/<id>/decompiled/src/main/java/... - the actual source code
+
+  From mod_info.txt extract and record:
+    mod_id, name, mod_version, group, entrypoint_class, loader, license,
+    description, authors
+
+  From project.json extract and record:
+    slug, client_side, server_side, categories, existing game_versions,
+    existing loaders
+
+  From the decompiled source, understand:
+    - what the mod does
+    - which Minecraft and loader APIs it calls
+    - which GUI, container, inventory, or event classes it uses
+    - which of those APIs changed between versions
+
+Step A-2: Identify all target versions and loaders.
+
+  Open version-manifest.json. For every range entry, note:
+    - the folder name (e.g. 1.20-1.20.6)
+    - which loaders are supported (forge / fabric / neoforge)
+    - the adapter_family for each loader
+    - the supported_versions list (exact versions to target)
+
+  The full target set from version-manifest.json is:
+
+    1.8.9          forge
+    1.12-1.12.2    forge
+    1.16.5         forge, fabric
+    1.17-1.17.1    forge, fabric
+    1.18-1.18.2    forge, fabric
+    1.19-1.19.4    forge, fabric
+    1.20-1.20.6    forge, fabric, neoforge
+    1.21-1.21.1    forge, fabric, neoforge
+    1.21.2-1.21.8  forge, fabric, neoforge
+    1.21.9-1.21.11 forge, fabric, neoforge
+
+  Note which versions the mod already covers (from project.json game_versions).
+  Target all versions NOT yet covered, plus any existing versions that need
+  updating. If the user specifies a subset, use only that subset.
+
+  For client-side only mods (client_side=required, server_side=unsupported),
+  note this in every mod.txt so the build adapter sets the correct side flags.
+
+Step A-3: Write version-specific source ports.
+
+  Use the decompiled source from the bundle as the reference implementation.
+  For each target version+loader combination:
+
+  - Adapt API calls to the correct version. Key areas that change across
+    versions:
+      * Container/Screen classes (ContainerScreen → AbstractContainerScreen
+        in 1.17+, then Screen split in 1.20.5+)
+      * Inventory slot access (getSlot, getItem, setItem patterns)
+      * ItemStack methods (isEmpty, getCount, setCount, getMaxStackSize)
+      * Event registration (static @SubscribeEvent vs bus registration)
+      * Fabric: use FabricAPI ScreenEvents / HandledScreenMixin patterns
+      * NeoForge: same mods.toml structure as Forge but different dep IDs
+      * Rendering: GuiGraphics replaces PoseStack direct calls in 1.20+
+      * Resource locations: ResourceLocation constructor changes in 1.21+
+
+  - For each target, create a folder in the build zip:
+      <ModName>-<version>-<loader>/
+        src/
+          (ported source tree)
+        mod.txt
+        version.txt
+
+  mod.txt fields (all key=value, no spaces around =):
+    mod_id=<from mod_info.txt>
+    name=<from mod_info.txt>
+    mod_version=1.0.0
+    group=<from mod_info.txt>
+    entrypoint_class=<from mod_info.txt, adapted per loader>
+    description=<from project.json>
+    authors=<from mod_info.txt>
+    license=<from mod_info.txt>
+    homepage=https://modrinth.com/mod/<slug>
+    runtime_side=client   (only if client_side=required)
+
+  version.txt fields:
+    minecraft_version=<exact version or range, e.g. 1.21-1.21.8>
+    loader=<forge|fabric|neoforge>
+
+Step A-4: Package all target folders into a zip and commit it to incoming/.
+
+  The zip must follow the repo zip contract exactly:
+    my-bundle.zip
+      <ModName>-1.8.9-forge/
+        src/
+        mod.txt
+        version.txt
+      <ModName>-1.12.2-forge/
+        src/
+        mod.txt
+        version.txt
+      ... (one folder per target)
+
+  Commit the zip to incoming/ in the repository.
+
+Step A-5: Trigger the Build Mods workflow via the autonomous run script.
+
+  PREFERRED — fully autonomous, no user interaction required:
+
+    python3 scripts/run_build.py incoming/<your-zip>.zip \
+        --modrinth https://modrinth.com/mod/<slug>
+
+  The script:
+    1. Dispatches the Build Mods GitHub Actions workflow
+    2. Streams live per-job progress to the terminal
+    3. Waits for completion (up to 2 hours by default)
+    4. Downloads the all-mod-builds artifact automatically
+    5. Downloads every per-job log into a logs/ folder
+    6. Writes a SUMMARY.md and result.json into the run folder
+    7. Exits 0 on success, 1 on failure
+
+  Full options:
+    python3 scripts/run_build.py <zip_path>
+        --modrinth <url-or-slug>     # triggers auto-publish on success
+        --max-parallel <n|all>       # default: all
+        --output-dir <dir>           # default: ModCompileRuns/
+        --timeout <seconds>          # default: 7200
+        --repo <owner/repo>          # default: auto-detect from git remote
+
+  Output folder layout (inside ModCompileRuns/run-<timestamp>/):
+    SUMMARY.md                  - read this first after the run
+    result.json                 - machine-readable run result
+    artifacts/
+      all-mod-builds/           - extracted build outputs (jars, per-mod logs)
+      modrinth-publish/         - publish results (if --modrinth was given)
+    logs/
+      run_overview.txt          - full workflow run log
+      <job-name>.txt            - per-job log for every build job
+      jobs.json                 - raw job list from GitHub API
+
+  Requirements:
+    - gh (GitHub CLI) must be installed: https://cli.github.com/
+    - gh must be authenticated: gh auth login
+    - The zip must already be committed and pushed (this script does NOT push)
+
+  DO NOT build locally. DO NOT run Gradle locally. The workflow handles all
+  compilation, Java version selection, and Gradle execution remotely.
+
+  When --modrinth is set, the workflow auto-publishes every successfully built
+  jar to that Modrinth project using the MODRINTH_TOKEN repository secret.
+
+  NOTE: It is NOT recommended to build locally for cross-version compilation.
+  Local builds are only appropriate when creating and testing the first version
+  of a mod in the 1.12.2 Forge workspace. For all multi-version rollouts, always
+  use this script to run the GitHub Actions workflow remotely.
+
+Step A-6: Review results and fix failures.
+
+  Download the all-mod-builds artifact from the completed run.
+  For each failed target:
+    - Read its build.log to find the compile error
+    - Fix only the source for that specific target
+    - Do not touch targets that already succeeded
+    - Rebuild only the failed targets by creating a new zip with just those
+      folders and re-running the Build Mods workflow
+
+  Repeat until every target is green.
+
+Step A-7: Confirm published versions on Modrinth.
+
+  After all targets succeed and the workflow has published them, verify by
+  running the Fetch Modrinth Project workflow again on the same link.
+  The new bundle's index.json should show all newly published versions.
+
+------------------------------------------------------------------------
+PATH B: Starting from local source (ModCollection or workspace)
+------------------------------------------------------------------------
+
+Step B-1: Locate the source.
+
+  Check these locations in order:
+    1. Mod Developement/1.12.2-forge/ModCollection/<ModName>-Src/
+    2. Mod Developement/1.12.2-forge/ModCollection/<ModName>/src/
+    3. Mod Developement/1.12.2-forge/src/main/java/
+
+  Read mod_id, group, entrypoint_class, and version from:
+    - mcmod.info or mods.toml in the local workspace resources
+    - or from the jar in ModCollection via the Jar Decompile workflow if
+      only a jar is available (see "Decompiling a jar" section)
+
+Step B-2: Continue from Step A-2 above.
+
+  Once you have the source and metadata, the rest of the process is identical
+  to Path A starting at Step A-2. Write the ports, package the zip, commit to
+  incoming/, trigger Build Mods, fix failures, confirm on Modrinth.
+
+------------------------------------------------------------------------
+Critical rules for Mod Version Update
+------------------------------------------------------------------------
+
+1. NEVER compile cross-version builds locally. Always use the Build Mods
+   GitHub Actions workflow (.github/workflows/build.yml).
+
+2. NEVER use the Auto Update Mod workflow (auto-update-mod.yml) for this.
+   That workflow uses a built-in AI compilation loop that is not the intended
+   path. The IDE agent (you) writes the code; GitHub Actions compiles it.
+
+3. ALWAYS fetch and decompile first when starting from a Modrinth link.
+   Do not guess the source structure from the jar filename or Modrinth page.
+
+4. ALWAYS resolve target versions from version-manifest.json. Do not invent
+   version targets or loader combinations that are not in the manifest.
+
+5. ALWAYS set modrinth_project_url in the Build Mods workflow input when the
+   goal is to publish. This is what triggers auto-publish of successful jars.
+
+6. Fix only failed targets on each retry. Do not re-submit already-green
+   targets unless a shared source change requires it.
+
+7. Preserve the original mod_id across all versions. Do not rename the mod
+   or change its mod_id when porting to new versions.
+
+8. For client-side mods, include runtime_side=client in every mod.txt.
+   This ensures the build adapter sets the correct environment annotations.
+
+------------------------------------------------------------------------
+Intended workflow for updating a published mod to all versions (summary)
+------------------------------------------------------------------------
+Once a mod exists, and especially once it has an approved source snapshot and a Modrinth project or draft, the user can later ask the IDE agent to update that same mod to all supported versions.
+
+The intended update loop is:
+
+1. Reopen the mod from saved source history, usually from `ModCollection` and the approved source snapshot.
+2. Decide the target versions and loaders from `version-manifest.json`.
+3. Prepare a remote build bundle that follows the repo zip contract.
+4. Send that bundle to the GitHub compile workflow.
+5. Review the returned artifacts.
+6. Fix only the failed targets.
+7. Repeat until every intended target compiles successfully.
+8. Publish successful outputs to the correct Modrinth project.
+
+Critical rule:
+Never do the cross-version compile loop locally.
+
+That part of the system is intended to run through GitHub Actions.
+
+Remote compile workflow that should be used
+-------------------------------------------
+The main remote compile workflow is:
+`Build Mods`
+
+Its workflow file is:
+`.github/workflows/build.yml`
+
+The correct way to trigger it from the IDE agent is:
+
+  python3 scripts/run_build.py incoming/<bundle>.zip [--modrinth <url>]
+
+This script is fully autonomous:
+- Dispatches the workflow via `gh`
+- Streams live per-job progress
+- Waits for completion
+- Downloads all artifacts and per-job logs
+- Writes SUMMARY.md and result.json to a local run folder
+- Exits 0 on success, 1 on failure
+
+The script requires `gh` (GitHub CLI) to be installed and authenticated.
+The zip must already be committed and pushed before running the script.
+
+IMPORTANT: Do NOT build locally for cross-version compilation.
+Local builds are only for creating and testing the first version of a mod.
+All multi-version rollouts must go through this script and GitHub Actions.
+
+Remote bundle contract the agent must respect
+---------------------------------------------
+The remote compile zip must contain one top-level folder per mod target.
+
+Each mod folder must contain:
+
+- `src/`
+- `mod.txt`
+- `version.txt`
+
+`version.txt` is strict `key=value`, for example:
+
+`minecraft_version=1.20.6`
+`loader=fabric`
+
+or a same-minor range such as:
+
+`minecraft_version=1.21-1.21.8`
+`loader=fabric`
+
+`mod.txt` is also strict `key=value` and defines mod metadata such as:
+
+- `mod_id`
+- `name`
+- `mod_version`
+- `group`
+- `entrypoint_class`
+- `description`
+- `authors`
+- `license`
+
+The agent should use the examples and the manifest to decide how many top-level mod folders are needed for a cross-version rollout.
+
+How failure handling is supposed to work
+----------------------------------------
+When the agent sends a bundle to GitHub for multi-version compilation:
+
+1. some targets may succeed immediately
+2. some targets may fail
+3. the agent should collect logs only for the failed targets
+4. the agent should fix only those failed targets unless a shared root cause requires a broader change
+5. the agent should rerun the remote compile flow until the intended target set is green
+
+The important artifact outputs include:
+
+- per-mod `build.log`
+- per-mod `result.json`
+- combined `all-mod-builds` artifact
+- optional `modrinth-publish` artifact when publish input is used
+
+The agent should not rebuild already successful targets unnecessarily unless the fix changes shared code or shared metadata.
+
+Relationship between local and remote work
+------------------------------------------
+Local work is for:
+
+- the first 1.12.2 Forge version
+- early user iteration
+- manual testing and behavior refinement
+- saving approved source history
+
+Remote GitHub work is for:
+
+- version fan-out
+- exact target matrix builds
+- repeatable cross-version compilation
+- collecting structured failure logs
+- later multi-version publishing
+
+This separation is intentional and should be preserved.
+
+Use of examples
+---------------
+The `examples/` directory is part of the intended learning and reuse path.
+
+The agent should use examples to understand:
+
+- how one mod can be laid out across many versions
+- how exact-version targets are broken into separate folders
+- how failed-only rerun bundles can be organized
+
+Examples should be treated as references, not as guaranteed drop-in templates for every mod.
+
+Fetching a Modrinth project for local understanding
+----------------------------------------------------
+When the user asks you to work on a mod that already exists on Modrinth, do NOT
+rely on live web search tools to understand it. Instead, use the dedicated
+GitHub Actions workflow to download a complete offline bundle that includes
+metadata AND fully decompiled source for every published version.
+
+Workflow: `Fetch Modrinth Project`
+Workflow file: `.github/workflows/fetch-modrinth-project.yml`
+
+How to trigger it:
+1. Go to GitHub Actions and run "Fetch Modrinth Project" manually.
+2. Provide the Modrinth project URL, slug, or project ID as the input.
+   Example: https://modrinth.com/mod/sort-chest
+3. Wait for all three jobs to complete: fetch → decompile (matrix) → assemble.
+   Runtime is typically 2-5 minutes depending on how many versions exist.
+4. Download the `modrinth-project-bundle` artifact from the completed run.
+5. Unzip it. Read `README.md` first, then `summary.txt` and `project.json`.
+
+What the bundle contains:
+- `README.md`                              - index and usage guide (read first)
+- `project.json`                           - full Modrinth project object
+- `summary.txt`                            - human-readable one-page overview
+- `index.json`                             - machine-readable version list
+- `versions/<id>/version.json`             - full Modrinth version object
+- `versions/<id>/changelog.txt`            - changelog for this version
+- `versions/<id>/files.json`               - file list (URLs, hashes, sizes)
+- `versions/<id>/<name>.jar`               - the primary jar for this version
+- `versions/<id>/decompiled/mod_info.txt`  - extracted mod metadata (key=value)
+- `versions/<id>/decompiled/result.json`   - full decompile result object
+- `versions/<id>/decompiled/src/main/java/...` - decompiled Java source tree
+- `versions/<id>/decompiled/decompile.log` - raw Vineflower output
+- `versions/<id>/decompiled/SUMMARY.md`    - decompile summary table
+
+How the workflow is structured internally:
+- Job 1 (fetch):      hits the Modrinth API, writes all metadata, downloads
+                      every primary jar, emits a matrix of version IDs.
+- Job 2 (decompile):  one runner per version; runs `build_mods.py decompile-jar`
+                      via Vineflower on the downloaded jar.
+- Job 3 (assemble):   merges all per-version artifacts into one clean bundle,
+                      extracts the decompiled source zip so it is directly
+                      browsable, and uploads the final artifact.
+
+Nothing in this workflow runs locally. It is entirely GitHub Actions.
+
+Use this bundle as your source of truth when:
+- Understanding what versions a mod already covers before planning a cross-version update.
+- Reading the actual source code of each published version.
+- Checking changelogs to understand what changed between versions.
+- Getting mod_id, group, entrypoint_class, and loader from mod_info.txt before
+  building a cross-version compile bundle.
+- Getting the exact mod description and summary to reuse in new versions.
+
+Decompiling a jar to view its source code
+------------------------------------------
+IMPORTANT: Never attempt to decompile a jar locally. The repository has a
+dedicated GitHub Actions workflow for this. Always use it.
+
+Workflow: `Jar Decompile`
+Workflow file: `.github/workflows/jar-decompile.yml`
+
+Step-by-step:
+1. Copy the jar you want to decompile into the `To Be Decompiled/` folder in
+   the repository root and commit it.
+2. Go to GitHub Actions and run "Jar Decompile" manually.
+3. Set the `jar_path` input to the bare filename or repo-relative path.
+   Example: `sortchest-1.0.0.jar`  or  `To Be Decompiled/sortchest-1.0.0.jar`
+4. Wait for the run to complete.
+5. Download the `jar-decompile-output` artifact from the completed run.
+6. Unzip it. The artifact contains:
+   - `<slug>.zip`     - the decompiled source tree (src/main/java/... layout)
+   - `mod_info.txt`   - extracted mod metadata (mod_id, version, loader, entrypoint, group, etc.)
+   - `result.json`    - full machine-readable result including all detected metadata
+   - `SUMMARY.md`     - human-readable decompile summary
+   - `decompile.log`  - raw Vineflower decompiler output for debugging
+
+The decompiled source zip unpacks to a standard Maven layout:
+  src/main/java/<package>/<ClassName>.java
+
+Use `mod_info.txt` and `result.json` as the source of truth for mod metadata
+(mod_id, group, entrypoint_class, loader, minecraft_version) before building
+a cross-version bundle.
+
+This workflow uses Vineflower 1.11.0, which produces clean, readable Java.
+
+When to use this workflow:
+- You need to read the source of an existing mod jar before porting it.
+- The user only has a jar and no source snapshot in ModCollection.
+- You downloaded a jar from Modrinth (via the Fetch Modrinth Project workflow)
+  and need to inspect its implementation before writing version-specific ports.
+
+Do NOT:
+- Run `javap`, `jar tf`, or any local decompiler command.
+- Try to read .class files directly.
+- Skip this step and guess the source structure from the jar filename alone.
+
+Agent checklist before doing work
+---------------------------------
+Before starting:
+
+1. Check whether the request is for the first local 1.12.2 version or for a cross-version update.
+2. Inspect `ModCollection` for prior source history.
+3. Confirm the active source of truth the agent should extend.
+4. Use the local 1.12.2 Forge workspace for first-version creation.
+5. Use GitHub-only compilation for cross-version rollouts.
+
+CRITICAL: Before creating a new mod in the local workspace:
+6. ALWAYS clean old mod source files from `src/main/java/com/` to prevent conflicts.
+7. ALWAYS clean old mod assets from `src/main/resources/assets/` to prevent conflicts.
+8. Save the previous mod to `ModCollection` before cleaning.
+9. Verify only ONE mod package exists in src before building.
+
+See `docs/LOCAL_MOD_DEVELOPMENT_WORKFLOW.md` for detailed workflow.
+See `docs/TROUBLESHOOTING_MOD_CONFLICTS.md` if conflicts occur.
+
+Before publishing or drafting:
+
+1. Make sure the jar and source folder are both present.
+2. Make sure the `ToBeUploaded` bundle has exactly one jar and one source folder.
+3. Run `generate`.
+4. Review `verify.txt` and generated outputs.
+5. Only then run `create-drafts --verified`.
+
+Before multi-version compilation:
+
+1. Build the zip bundle in the required contract.
+2. Resolve supported targets from `version-manifest.json`.
+3. Commit and push the zip to `incoming/`.
+4. Run: `python3 scripts/run_build.py incoming/<bundle>.zip --modrinth <url>`
+   This is the ONLY correct way to trigger a multi-version build.
+   It is fully autonomous — no user interaction needed.
+5. Read SUMMARY.md in the output run folder when complete.
+6. Fix failed targets from the per-job logs in logs/ and rerun.
+7. Do NOT compile locally. Do NOT run Gradle locally.
+
+What the agent should not do
+----------------------------
+1. Do not treat the broken AI auto-update workflow as the primary product flow.
+2. Do not destroy or replace old source history in `ModCollection`.
+3. Do not skip the local 1.12.2 approval stage when the user wants an iterative first version.
+4. Do not run the full cross-version compile process locally.
+5. Do not invent new folder contracts when the repo already has established ones for `incoming/`, `ToBeUploaded/`, and `AutoCreateModrinthBundles/`.
+6. Do not guess supported versions when `version-manifest.json` already defines them.
+
+Final intended story
+--------------------
+The intended user experience is:
+
+1. The user asks the IDE agent to make a mod.
+2. The agent builds the first working version in `Mod Developement/1.12.2-forge/`.
+3. The user compiles and tests it locally.
+4. The agent keeps refining it until the user is happy.
+5. The approved jar and source are preserved so the mod can be reused later.
+6. The repo helps turn that approved mod into a Modrinth draft bundle.
+7. Later, the same IDE agent can reopen the mod, update it to all supported versions, and use GitHub Actions to compile and publish those versions in a repeatable loop.
+
+That is the intended way to use this project.
