@@ -8,7 +8,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.event.GuiScreenEvent;
+import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -24,17 +24,16 @@ public class SortChestMod {
     public SortChestMod() { MinecraftForge.EVENT_BUS.register(this); }
 
     @SubscribeEvent
-    public void onScreenInit(GuiScreenEvent.InitGuiEvent.Post event) {
-        Screen screen = event.getGui();
+    public void onScreenInit(ScreenEvent.Init.Post event) {
+        Screen screen = event.getScreen();
         if (!(screen instanceof AbstractContainerScreen)) return;
         AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         int x = cs.getGuiLeft() + cs.getXSize() - 44;
         int y = cs.getGuiTop() + 6;
-        event.addWidget(new Button(x, y, 40, 14,
-                Component.translatable("sortchest.button.sort"),
-                btn -> sort(cs)));
+        event.addListener(Button.builder(Component.translatable("sortchest.button.sort"),
+                btn -> sort(cs)).pos(x,y).size(40,14).build());
     }
 
     private static void sort(AbstractContainerScreen<?> screen) {
