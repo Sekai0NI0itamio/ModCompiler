@@ -1,12 +1,8 @@
 package net.itamio.sethome;
-
-import net.minecraft.command.CommandBase;
-import net.minecraft.command.CommandException;
-import net.minecraft.command.ICommandSender;
-import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.ListNBT;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.world.storage.DimensionSavedDataManager;
 import net.minecraft.world.storage.WorldSavedData;
@@ -27,16 +23,13 @@ public class SetHomeMod {
     public static final String MODID = "sethome";
     static ForgeConfigSpec.IntValue MAX_HOMES;
     static ForgeConfigSpec SPEC;
-
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
         b.push("general");
         MAX_HOMES = b.comment("Maximum homes per player. Use -1 for unlimited.")
                      .defineInRange("maxHomes", -1, -1, Integer.MAX_VALUE);
-        b.pop();
-        SPEC = b.build();
+        b.pop(); SPEC = b.build();
     }
-
     public SetHomeMod() {
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
         MinecraftForge.EVENT_BUS.register(this);
@@ -62,43 +55,35 @@ public class SetHomeMod {
         HomeData d = HomeData.get(src.getServer());
         int max = MAX_HOMES.get();
         if (max > 0 && !d.hasHome(uuid, name) && d.getHomes(uuid).size() >= max) {
-            src.sendSuccess(new StringTextComponent("You have reached the maximum number of homes (" + max + ")."), false);
-            return 0;
+            src.sendSuccess(new StringTextComponent("You have reached the maximum number of homes (" + max + ")."), false); return 0;
         }
         d.setHome(uuid, name, p.getX(), p.getY(), p.getZ(), p.yRot, p.xRot);
-        src.sendSuccess(new StringTextComponent("Home '" + name + "' set."), false);
-        return 1;
+        src.sendSuccess(new StringTextComponent("Home '" + name + "' set."), false); return 1;
     }
-
     private static int home(CommandSource src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         if ("list".equalsIgnoreCase(name)) {
             ServerPlayerEntity p = src.asPlayer();
             Set<String> homes = HomeData.get(src.getServer()).getHomes(p.getUUID().toString());
             if (homes.isEmpty()) { src.sendSuccess(new StringTextComponent("You have no homes set."), false); return 1; }
-            src.sendSuccess(new StringTextComponent("Your homes: " + String.join(", ", new ArrayList<>(homes))), false);
-            return 1;
+            src.sendSuccess(new StringTextComponent("Your homes: " + String.join(", ", new ArrayList<>(homes))), false); return 1;
         }
         ServerPlayerEntity p = src.asPlayer();
         double[] h = HomeData.get(src.getServer()).getHome(p.getUUID().toString(), name);
         if (h == null) { src.sendSuccess(new StringTextComponent("Home '" + name + "' not found."), false); return 0; }
         p.teleportTo(h[0], h[1], h[2]);
-        src.sendSuccess(new StringTextComponent("Teleported to home '" + name + "'."), false);
-        return 1;
+        src.sendSuccess(new StringTextComponent("Teleported to home '" + name + "'."), false); return 1;
     }
-
     private static int delHome(CommandSource src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity p = src.asPlayer();
         if (!HomeData.get(src.getServer()).removeHome(p.getUUID().toString(), name)) {
             src.sendSuccess(new StringTextComponent("Home '" + name + "' not found."), false); return 0;
         }
-        src.sendSuccess(new StringTextComponent("Home '" + name + "' deleted."), false);
-        return 1;
+        src.sendSuccess(new StringTextComponent("Home '" + name + "' deleted."), false); return 1;
     }
 
     public static class HomeData extends WorldSavedData {
         private static final String NAME = "sethome_data";
         private final Map<String, Map<String, double[]>> data = new HashMap<>();
-
         public HomeData() { super(NAME); }
         public HomeData(String n) { super(n); }
 
@@ -106,11 +91,7 @@ public class SetHomeMod {
             DimensionSavedDataManager mgr = srv.getLevel(net.minecraft.world.dimension.DimensionType.OVERWORLD).getDataStorage();
             return mgr.computeIfAbsent(HomeData::new, HomeData::new, NAME);
         }
-
-        private Map<String, double[]> player(String uuid) {
-            return data.computeIfAbsent(uuid, k -> new HashMap<>());
-        }
-
+        private Map<String, double[]> player(String uuid) { return data.computeIfAbsent(uuid, k -> new HashMap<>()); }
         public void setHome(String uuid, String name, double x, double y, double z, float yaw, float pitch) {
             player(uuid).put(name, new double[]{x,y,z,yaw,pitch}); setDirty();
         }
@@ -132,14 +113,12 @@ public class SetHomeMod {
                 for (int j = 0; j < hl.size(); j++) {
                     CompoundNBT hc = hl.getCompound(j);
                     homes.put(hc.getString("name"), new double[]{
-                        hc.getDouble("x"), hc.getDouble("y"), hc.getDouble("z"),
-                        hc.getFloat("yaw"), hc.getFloat("pitch")
-                    });
+                        hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),
+                        hc.getFloat("yaw"),hc.getFloat("pitch")});
                 }
                 data.put(pc.getString("uuid"), homes);
             }
         }
-
         @Override
         public CompoundNBT save(CompoundNBT tag) {
             ListNBT players = new ListNBT();
@@ -155,11 +134,9 @@ public class SetHomeMod {
                     hc.putFloat("yaw",(float)v[3]); hc.putFloat("pitch",(float)v[4]);
                     hl.add(hc);
                 }
-                pc.put("homes", hl);
-                players.add(pc);
+                pc.put("homes", hl); players.add(pc);
             }
-            tag.put("players", players);
-            return tag;
+            tag.put("players", players); return tag;
         }
     }
 }
