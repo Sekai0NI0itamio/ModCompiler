@@ -8,8 +8,9 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -20,20 +21,23 @@ import java.util.Objects;
 @Mod(SortChestMod.MOD_ID)
 public class SortChestMod {
     public static final String MOD_ID = "sortchest";
-    public SortChestMod() {
-        MinecraftForge.EVENT_BUS.addListener(this::onScreenInit);
-    }
+    public SortChestMod() {}
 
-    public void onScreenInit(ScreenEvent.Init.Post event) {
-        Screen screen = event.getScreen();
-        if (!(screen instanceof AbstractContainerScreen)) return;
-        AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        int x = cs.getGuiLeft() + cs.getXSize() - 44;
-        int y = cs.getGuiTop() + 6;
-        event.addListener(Button.builder(Component.translatable("sortchest.button.sort"),
-                btn -> sort(cs)).pos(x,y).size(40,14).build());
+    @Mod.EventBusSubscriber(modid = MOD_ID, value = Dist.CLIENT)
+    public static class ClientEvents {
+        @SubscribeEvent
+        public static void onScreenInit(ScreenEvent.Init.Post event) {
+            Screen screen = event.getScreen();
+            if (!(screen instanceof AbstractContainerScreen)) return;
+            AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null) return;
+            int x = cs.getGuiLeft() + cs.getXSize() - 44;
+            int y = cs.getGuiTop() + 6;
+            event.addListener(Button.builder(
+                    Component.translatable("sortchest.button.sort"),
+                    btn -> sort(cs)).pos(x,y).size(40,14).build());
+        }
     }
 
     private static void sort(AbstractContainerScreen<?> screen) {
