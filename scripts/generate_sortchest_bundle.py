@@ -710,10 +710,16 @@ def to_neoforge(src: str) -> str:
                  "NeoForge.EVENT_BUS.register(this);")
     )
 
-# 1.21.11 Forge — SubscribeEvent moved to net.neoforged.bus.api, rest stays net.minecraftforge
-SRC_12111_FORGE = SRC_121_FORGE.replace(
-    "import net.minecraftforge.eventbus.api.SubscribeEvent;",
-    "import net.neoforged.bus.api.SubscribeEvent;"
+# 1.21.11 Forge — use addListener() instead of @SubscribeEvent (avoids eventbus.api import)
+SRC_12111_FORGE = (SRC_121_FORGE
+    .replace(
+        "import net.minecraftforge.eventbus.api.SubscribeEvent;\n",
+        ""
+    )
+    .replace(
+        "    public SortChestMod() { MinecraftForge.EVENT_BUS.register(this); }\n\n    @SubscribeEvent\n    public void onScreenInit(ScreenEvent.Init.Post event) {",
+        "    public SortChestMod() {\n        MinecraftForge.EVENT_BUS.addListener(this::onScreenInit);\n    }\n\n    public void onScreenInit(ScreenEvent.Init.Post event) {"
+    )
 )
 
 SRC_120_NEOFORGE  = to_neoforge(SRC_120_FORGE)

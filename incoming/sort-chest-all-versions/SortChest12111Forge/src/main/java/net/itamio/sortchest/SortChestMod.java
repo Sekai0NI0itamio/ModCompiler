@@ -10,7 +10,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -21,9 +20,10 @@ import java.util.Objects;
 @Mod(SortChestMod.MOD_ID)
 public class SortChestMod {
     public static final String MOD_ID = "sortchest";
-    public SortChestMod() { MinecraftForge.EVENT_BUS.register(this); }
+    public SortChestMod() {
+        MinecraftForge.EVENT_BUS.addListener(this::onScreenInit);
+    }
 
-    @SubscribeEvent
     public void onScreenInit(ScreenEvent.Init.Post event) {
         Screen screen = event.getScreen();
         if (!(screen instanceof AbstractContainerScreen)) return;
