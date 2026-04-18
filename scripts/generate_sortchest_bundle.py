@@ -1288,12 +1288,17 @@ for (folder, java_src, is_fabric, mc_ver, fabric_mc_dep) in targets:
 
 print(f"Generated {len(targets)} targets under {BUNDLE}")
 
-# Create the zip — each mod folder must be at the TOP LEVEL of the zip
-# (not nested under sort-chest-all-versions/)
+# Create the zip — each mod folder must be at the TOP LEVEL of the zip.
+# Only include folders that contain a version.txt (valid mod targets).
 zip_path = ROOT / "incoming" / "sort-chest-all-versions.zip"
 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
     for path in sorted(BUNDLE.rglob("*")):
-        if path.is_file():
-            # relative to BUNDLE itself, so top-level entries are the mod folders
-            zf.write(path, path.relative_to(BUNDLE))
+        if not path.is_file():
+            continue
+        rel = path.relative_to(BUNDLE)
+        # Skip any file that is not inside a mod target folder
+        # (i.e. skip top-level loose files like build_bundle.py)
+        if len(rel.parts) < 2:
+            continue
+        zf.write(path, rel)
 print(f"Zip created: {zip_path}")
