@@ -1,5 +1,4 @@
 package net.itamio.sortchest;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
@@ -34,33 +33,29 @@ public class SortChestMod {
         int x = cs.getGuiLeft() + cs.getXSize() - 44;
         int y = cs.getGuiTop() + 6;
         event.addWidget(new Button(x, y, 40, 14,
-                new StringTextComponent("Sort"), btn -> sortContainer(cs)));
+                new StringTextComponent("Sort"), btn -> sort(cs)));
     }
 
-    private static void sortContainer(ContainerScreen<?> screen) {
+    private static void sort(ContainerScreen<?> screen) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.gameMode == null) return;
         if (mc.screen != screen) return;
         Container menu = screen.getMenu();
-        if (!menu.getDraggedStack().isEmpty()) return;
-        List<Integer> slots = getSlots(menu, mc.player.inventory);
+        if (!menu.getCarried().isEmpty()) return;
+        List<Integer> slots = slots(menu, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(menu, slots, mc);
-        if (!menu.getDraggedStack().isEmpty()) return;
-        List<ItemStack> layout = buildLayout(menu, slots);
+        if (!menu.getCarried().isEmpty()) return;
+        List<ItemStack> layout = layout(menu, slots);
         reorder(menu, slots, layout, mc);
     }
 
-    private static List<Integer> getSlots(Container menu, net.minecraft.entity.player.PlayerInventory inv) {
+    private static List<Integer> slots(Container menu, net.minecraft.entity.player.PlayerInventory inv) {
         List<Integer> r = new ArrayList<Integer>();
         for (int i = 0; i < menu.slots.size(); i++) {
             if (menu.slots.get(i).container != inv) r.add(Integer.valueOf(i));
         }
         return r;
-    }
-
-    private static boolean sameItem(ItemStack a, ItemStack b) {
-        return ItemStack.isSameItem(a,b) && ItemStack.tagMatches(a,b);
     }
 
     private static void merge(Container menu, List<Integer> slots, Minecraft mc) {
@@ -71,22 +66,22 @@ public class SortChestMod {
                 if (a.getCount() >= a.getMaxStackSize()) break;
                 ItemStack b = menu.slots.get(slots.get(j)).getItem();
                 if (b.isEmpty()) continue;
-                if (sameItem(a,b)) {
+                if (ItemStack.isSameItemSameTags(a, b)) {
                     click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
-                    if (!menu.getDraggedStack().isEmpty()) click(menu, slots.get(j), mc);
+                    if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
                 }
             }
         }
     }
 
-    private static List<ItemStack> buildLayout(Container menu, List<Integer> slots) {
+    private static List<ItemStack> layout(Container menu, List<Integer> slots) {
         Map<ItemKey,List<ItemStack>> groups = new LinkedHashMap<ItemKey,List<ItemStack>>();
         for (int i = 0; i < slots.size(); i++) {
             ItemStack s = menu.slots.get(slots.get(i)).getItem();
             if (s.isEmpty()) continue;
-            ItemKey key = new ItemKey(s);
-            List<ItemStack> g = groups.get(key);
-            if (g == null) { g = new ArrayList<ItemStack>(); groups.put(key,g); }
+            ItemKey k = new ItemKey(s);
+            List<ItemStack> g = groups.get(k);
+            if (g == null) { g = new ArrayList<ItemStack>(); groups.put(k, g); }
             g.add(s.copy());
         }
         List<ItemStack> r = new ArrayList<ItemStack>();
@@ -99,7 +94,7 @@ public class SortChestMod {
         for (int i = 0; i < slots.size(); i++) {
             ItemStack cur = menu.slots.get(slots.get(i)).getItem();
             ItemStack des = layout.get(i);
-            if (match(cur,des)) continue;
+            if (match(cur, des)) continue;
             int from = find(menu, slots, i+1, des);
             if (from == -1) continue;
             swap(menu, slots.get(i), slots.get(from), mc);
@@ -116,12 +111,12 @@ public class SortChestMod {
         if (a.isEmpty() && b.isEmpty()) return true;
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getCount() != b.getCount()) return false;
-        return sameItem(a,b);
+        return ItemStack.isSameItemSameTags(a, b);
     }
 
     private static void swap(Container menu, int a, int b, Minecraft mc) {
-        click(menu,a,mc); click(menu,b,mc);
-        if (!menu.getDraggedStack().isEmpty()) click(menu,a,mc);
+        click(menu, a, mc); click(menu, b, mc);
+        if (!menu.getCarried().isEmpty()) click(menu, a, mc);
     }
 
     private static void click(Container menu, int slot, Minecraft mc) {
@@ -140,7 +135,7 @@ public class SortChestMod {
         public boolean equals(Object o) {
             if (!(o instanceof ItemKey)) return false;
             ItemKey k = (ItemKey)o;
-            return item==k.item && Objects.equals(tag,k.tag);
+            return item == k.item && Objects.equals(tag, k.tag);
         }
         public int hashCode() { return hash; }
     }
