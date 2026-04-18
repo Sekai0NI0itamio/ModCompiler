@@ -8,6 +8,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -31,9 +32,10 @@ public class SetHomeMod {
     }
     public SetHomeMod() {
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
-        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+        MinecraftForge.EVENT_BUS.register(this);
     }
 
+    @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
         d.register(Commands.literal("sethome")
@@ -97,11 +99,11 @@ public class SetHomeMod {
                 ListTag hl = pc.getList("homes").orElse(new ListTag());
                 for (int j = 0; j < hl.size(); j++) {
                     CompoundTag hc = hl.getCompound(j).orElse(new CompoundTag());
-                    homes.put(hc.getString("name"), new double[]{
-                        hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),
-                        hc.getFloat("yaw"),hc.getFloat("pitch")});
+                    homes.put(hc.getString("name").orElse(""), new double[]{
+                        hc.getDouble("x").orElse(0.0),hc.getDouble("y").orElse(0.0),hc.getDouble("z").orElse(0.0),
+                        hc.getFloat("yaw").orElse(0.0f),hc.getFloat("pitch").orElse(0.0f)});
                 }
-                d.data.put(pc.getString("uuid"), homes);
+                d.data.put(pc.getString("uuid").orElse(""), homes);
             }
             return d;
         }
