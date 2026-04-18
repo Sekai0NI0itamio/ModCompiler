@@ -1,5 +1,4 @@
 package net.itamio.sethome;
-
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.server.MinecraftServer;
@@ -24,16 +23,13 @@ public class SetHomeMod {
     public static final String MODID = "sethome";
     static ForgeConfigSpec.IntValue MAX_HOMES;
     static ForgeConfigSpec SPEC;
-
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
         b.push("general");
         MAX_HOMES = b.comment("Maximum homes per player. Use -1 for unlimited.")
                      .defineInRange("maxHomes", -1, -1, Integer.MAX_VALUE);
-        b.pop();
-        SPEC = b.build();
+        b.pop(); SPEC = b.build();
     }
-
     public SetHomeMod() {
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
         MinecraftForge.EVENT_BUS.register(this);
@@ -59,50 +55,41 @@ public class SetHomeMod {
         HomeData d = HomeData.get(src.getServer());
         int max = MAX_HOMES.get();
         if (max > 0 && !d.hasHome(uuid, name) && d.getHomes(uuid).size() >= max) {
-            src.sendSuccess(Component.literal("You have reached the maximum number of homes (" + max + ")."), false);
-            return 0;
+            src.sendSuccess(Component.literal("You have reached the maximum number of homes (" + max + ")."), false); return 0;
         }
-        d.setHome(uuid, name, p.getX(), p.getY(), p.getZ(), p.yRot, p.xRot);
-        src.sendSuccess(Component.literal("Home '" + name + "' set."), false);
-        return 1;
+        d.setHome(uuid, name, p.getX(), p.getY(), p.getZ(), p.getYRot(), p.getXRot());
+        src.sendSuccess(Component.literal("Home '" + name + "' set."), false); return 1;
     }
-
     private static int home(CommandSourceStack src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         if ("list".equalsIgnoreCase(name)) {
             ServerPlayer p = src.getPlayerOrException();
             Set<String> homes = HomeData.get(src.getServer()).getHomes(p.getUUID().toString());
             if (homes.isEmpty()) { src.sendSuccess(Component.literal("You have no homes set."), false); return 1; }
-            src.sendSuccess(Component.literal("Your homes: " + String.join(", ", new ArrayList<>(homes))), false);
-            return 1;
+            src.sendSuccess(Component.literal("Your homes: " + String.join(", ", new ArrayList<>(homes))), false); return 1;
         }
         ServerPlayer p = src.getPlayerOrException();
         double[] h = HomeData.get(src.getServer()).getHome(p.getUUID().toString(), name);
         if (h == null) { src.sendSuccess(Component.literal("Home '" + name + "' not found."), false); return 0; }
         p.teleportTo(h[0], h[1], h[2]);
-        src.sendSuccess(Component.literal("Teleported to home '" + name + "'."), false);
-        return 1;
+        src.sendSuccess(Component.literal("Teleported to home '" + name + "'."), false); return 1;
     }
-
     private static int delHome(CommandSourceStack src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer p = src.getPlayerOrException();
         if (!HomeData.get(src.getServer()).removeHome(p.getUUID().toString(), name)) {
             src.sendSuccess(Component.literal("Home '" + name + "' not found."), false); return 0;
         }
-        src.sendSuccess(Component.literal("Home '" + name + "' deleted."), false);
-        return 1;
+        src.sendSuccess(Component.literal("Home '" + name + "' deleted."), false); return 1;
     }
 
     public static class HomeData extends SavedData {
         private static final String NAME = "sethome_data";
         private final Map<String, Map<String, double[]>> data = new HashMap<>();
-
         public HomeData() {}
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
             return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
         }
-
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
             ListTag players = tag.getList("players", 10);
@@ -113,15 +100,13 @@ public class SetHomeMod {
                 for (int j = 0; j < hl.size(); j++) {
                     CompoundTag hc = hl.getCompound(j);
                     homes.put(hc.getString("name"), new double[]{
-                        hc.getDouble("x"), hc.getDouble("y"), hc.getDouble("z"),
-                        hc.getFloat("yaw"), hc.getFloat("pitch")
-                    });
+                        hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),
+                        hc.getFloat("yaw"),hc.getFloat("pitch")});
                 }
                 d.data.put(pc.getString("uuid"), homes);
             }
             return d;
         }
-
         @Override
         public CompoundTag save(CompoundTag tag) {
             ListTag players = new ListTag();
@@ -137,16 +122,11 @@ public class SetHomeMod {
                     hc.putFloat("yaw",(float)v[3]); hc.putFloat("pitch",(float)v[4]);
                     hl.add(hc);
                 }
-                pc.put("homes", hl);
-                players.add(pc);
+                pc.put("homes", hl); players.add(pc);
             }
-            tag.put("players", players);
-            return tag;
+            tag.put("players", players); return tag;
         }
-
-        private Map<String, double[]> player(String uuid) {
-            return data.computeIfAbsent(uuid, k -> new HashMap<>());
-        }
+        private Map<String, double[]> player(String uuid) { return data.computeIfAbsent(uuid, k -> new HashMap<>()); }
         public void setHome(String uuid, String name, double x, double y, double z, float yaw, float pitch) {
             player(uuid).put(name, new double[]{x,y,z,yaw,pitch}); setDirty();
         }
