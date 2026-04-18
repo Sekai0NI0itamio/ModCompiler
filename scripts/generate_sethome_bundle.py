@@ -1075,7 +1075,15 @@ SRC_1215_FORGE = (SRC_121_FORGE
 )
 
 # 1.21.11 Forge — addListener pattern (no @SubscribeEvent import)
-SRC_12111_FORGE = SRC_1215_FORGE  # 1.21.11 uses same API as 1.21.5+
+# 1.21.9+ Forge — net.minecraftforge.eventbus.api doesn't exist
+SRC_1219_FORGE = (SRC_1215_FORGE
+    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
+    .replace(
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);\n    }\n\n    public void onRegisterCommands(RegisterCommandsEvent e) {"
+    )
+)
+SRC_12111_FORGE = SRC_1219_FORGE
 
 # ============================================================
 # NEOFORGE variants
@@ -1142,7 +1150,7 @@ targets = [
     ("SetHome1217Forge",      SRC_1215_FORGE,   "forge",    "1.21.7"),
     ("SetHome1218Forge",      SRC_1215_FORGE,   "forge",    "1.21.8"),
     ("SetHome1219Forge",      SRC_1215_FORGE,   "forge",    "1.21.9"),
-    ("SetHome12110Forge",     SRC_1215_FORGE,  "forge",    "1.21.10"),
+    ("SetHome12110Forge",     SRC_1219_FORGE,  "forge",    "1.21.10"),
     ("SetHome12111Forge",     SRC_12111_FORGE, "forge",    "1.21.11"),
     ("SetHome1202NeoForge",   SRC_120_NEOFORGE,"neoforge", "1.20.2"),
     ("SetHome1204NeoForge",   SRC_120_NEOFORGE,"neoforge", "1.20.4"),
