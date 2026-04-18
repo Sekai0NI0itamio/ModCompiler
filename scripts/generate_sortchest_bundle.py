@@ -710,8 +710,11 @@ def to_neoforge(src: str) -> str:
                  "NeoForge.EVENT_BUS.register(this);")
     )
 
-# 1.21.11 Forge — same as 1.21.x, still uses net.minecraftforge.* (NOT NeoForge)
-SRC_12111_FORGE = SRC_121_FORGE
+# 1.21.11 Forge — SubscribeEvent moved to net.neoforged.bus.api, rest stays net.minecraftforge
+SRC_12111_FORGE = SRC_121_FORGE.replace(
+    "import net.minecraftforge.eventbus.api.SubscribeEvent;",
+    "import net.neoforged.bus.api.SubscribeEvent;"
+)
 
 SRC_120_NEOFORGE  = to_neoforge(SRC_120_FORGE)
 SRC_1205_NEOFORGE = to_neoforge(SRC_1205_FORGE)
