@@ -92,7 +92,7 @@ public class SetHomeMod {
         public HomeData(String n) { super(n); }
 
         public static HomeData get(MinecraftServer srv) {
-            net.minecraft.world.storage.DimensionSavedDataManager mgr = srv.getWorld(0).getSavedData();
+            net.minecraft.world.storage.DimensionSavedDataManager mgr = srv.getWorld(0).getDataStorage();
             HomeData d = mgr.get(HomeData::new, NAME);
             if (d == null) { d = new HomeData(); mgr.set(d); }
             return d;

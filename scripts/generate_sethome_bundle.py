@@ -791,7 +791,7 @@ public class SetHomeMod {
         public HomeData(String n) { super(n); }
 
         public static HomeData get(MinecraftServer srv) {
-            net.minecraft.world.storage.DimensionSavedDataManager mgr = srv.getWorld(0).getSavedData();
+            net.minecraft.world.storage.DimensionSavedDataManager mgr = srv.getWorld(0).getDataStorage();
             HomeData d = mgr.get(HomeData::new, NAME);
             if (d == null) { d = new HomeData(); mgr.set(d); }
             return d;
@@ -942,7 +942,7 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<>(HomeData::new, HomeData::load, null), NAME);
+            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::load, null), NAME);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
@@ -1039,7 +1039,13 @@ SRC_121_FORGE = SRC_120_FORGE.replace(
 )
 
 # 1.21.11 Forge — addListener pattern (no @SubscribeEvent)
-SRC_12111_FORGE = SRC_121_FORGE  # same as 1.21.x (MinecraftForge.EVENT_BUS works in 1.21.11)
+SRC_12111_FORGE = (SRC_121_FORGE
+    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
+    .replace(
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);\n    }\n\n    public void onRegisterCommands(RegisterCommandsEvent e) {"
+    )
+)
 
 # ============================================================
 # NEOFORGE variants
@@ -1071,6 +1077,11 @@ def to_neoforge_sethome(src: str) -> str:
     )
 
 SRC_120_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE)
+# NeoForge 1.20.5+ — save() takes HolderLookup.Provider
+SRC_1205_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE.replace(
+    "public CompoundTag save(CompoundTag tag) {",
+    "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
+))
 SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)
 
 # ============================================================
@@ -1103,8 +1114,8 @@ targets = [
     ("SetHome12111Forge",     SRC_12111_FORGE, "forge",    "1.21.11"),
     ("SetHome1202NeoForge",   SRC_120_NEOFORGE,"neoforge", "1.20.2"),
     ("SetHome1204NeoForge",   SRC_120_NEOFORGE,"neoforge", "1.20.4"),
-    ("SetHome1205NeoForge",   SRC_120_NEOFORGE,"neoforge", "1.20.5"),
-    ("SetHome1206NeoForge",   SRC_120_NEOFORGE,"neoforge", "1.20.6"),
+    ("SetHome1205NeoForge",   SRC_1205_NEOFORGE,"neoforge", "1.20.5"),
+    ("SetHome1206NeoForge",   SRC_1205_NEOFORGE,"neoforge", "1.20.6"),
     ("SetHome121NeoForge",    SRC_121_NEOFORGE,"neoforge", "1.21"),
     ("SetHome1211NeoForge",   SRC_121_NEOFORGE,"neoforge", "1.21.1"),
     ("SetHome1212NeoForge",   SRC_121_NEOFORGE,"neoforge", "1.21.2"),
