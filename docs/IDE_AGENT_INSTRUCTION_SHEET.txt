@@ -401,10 +401,27 @@ Step A-6: Review results and fix failures.
     - Read its build.log to find the compile error
     - Fix only the source for that specific target
     - Do not touch targets that already succeeded
-    - Rebuild only the failed targets by creating a new zip with just those
-      folders and re-running the Build Mods workflow
 
-  Repeat until every target is green.
+  CRITICAL — failed-only rerun (saves time and GitHub Actions minutes):
+  When rerunning after fixing failures, NEVER resubmit already-green targets.
+  Only bundle the targets that actually failed. Use the --failed-only flag:
+
+    python3 scripts/generate_sortchest_bundle.py --failed-only
+
+  This reads the most recent ModCompileRuns/ run, identifies which targets
+  failed, and generates a zip containing ONLY those targets. The already-green
+  targets are skipped entirely — they do not need to be recompiled.
+
+  Full rerun workflow after fixing failures:
+    1. Fix the source in generate_sortchest_bundle.py for the failing targets
+    2. python3 scripts/generate_sortchest_bundle.py --failed-only
+    3. git add incoming/sort-chest-all-versions.zip incoming/sort-chest-all-versions/
+    4. git commit -m "Fix failed targets: <list what you fixed>"
+    5. git push
+    6. python3 scripts/run_build.py incoming/sort-chest-all-versions.zip --modrinth <url>
+
+  Only use the full (no flag) mode when starting from scratch or when a fix
+  affects shared code that could break previously-green targets.
 
 Step A-7: Confirm published versions on Modrinth.
 
@@ -454,8 +471,9 @@ Critical rules for Mod Version Update
 5. ALWAYS set modrinth_project_url in the Build Mods workflow input when the
    goal is to publish. This is what triggers auto-publish of successful jars.
 
-6. Fix only failed targets on each retry. Do not re-submit already-green
-   targets unless a shared source change requires it.
+6. Fix only failed targets on each retry. Use `--failed-only` when regenerating
+   the bundle — never re-submit already-green targets. This saves significant
+   GitHub Actions time on large multi-version builds.
 
 7. Preserve the original mod_id across all versions. Do not rename the mod
    or change its mod_id when porting to new versions.

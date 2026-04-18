@@ -33,9 +33,9 @@ public class SortChestMod implements ClientModInitializer {
             HandledScreen<?> hs = (HandledScreen<?>) screen;
             int x = gi(hs,"x") + gi(hs,"backgroundWidth") - 44;
             int y = gi(hs,"y") + 6;
-            Screens.getButtons(screen).add(new ButtonWidget(x, y, 40, 14,
+            Screens.getButtons(screen).add(ButtonWidget.builder(
                     Text.translatable("sortchest.button.sort"),
-                    btn -> sort(hs)));
+                    btn -> sort(hs)).dimensions(x, y, 40, 14).build());
         });
     }
 
@@ -44,6 +44,7 @@ public class SortChestMod implements ClientModInitializer {
         if (mc.player == null || mc.interactionManager == null) return;
         if (mc.currentScreen != screen) return;
         ScreenHandler handler = screen.getScreenHandler();
+        // In 1.16.5 cursor stack is on the player inventory
         if (!handler.getCursorStack().isEmpty()) return;
         List<Integer> slots = slots(handler, mc.player.getInventory());
         if (slots.isEmpty()) return;
@@ -63,7 +64,7 @@ public class SortChestMod implements ClientModInitializer {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.areItemsEqual(a, b) && ItemStack.areTagsEqual(a, b);
+        return ItemStack.canCombine(a, b);
     }
 
     private static void merge(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
@@ -138,7 +139,7 @@ public class SortChestMod implements ClientModInitializer {
         final NbtCompound tag; final int hash;
         ItemKey(ItemStack s) {
             item = s.getItem();
-            tag = s.getTag() != null ? s.getTag().copy() : null;
+            tag = s.getNbt() != null ? s.getNbt().copy() : null;
             hash = Objects.hash(item, tag);
         }
         public boolean equals(Object o) {

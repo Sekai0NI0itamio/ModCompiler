@@ -44,11 +44,12 @@ public class SortChestMod implements ClientModInitializer {
         if (mc.player == null || mc.interactionManager == null) return;
         if (mc.currentScreen != screen) return;
         ScreenHandler handler = screen.getScreenHandler();
-        if (!handler.getStackInCursor().isEmpty()) return;
+        // In 1.16.5 cursor stack is on the player inventory
+        if (!mc.player.inventory.getCursorStack().isEmpty()) return;
         List<Integer> slots = slots(handler, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(handler, slots, mc);
-        if (!handler.getStackInCursor().isEmpty()) return;
+        if (!mc.player.inventory.getCursorStack().isEmpty()) return;
         List<ItemStack> layout = layout(handler, slots);
         reorder(handler, slots, layout, mc);
     }
@@ -76,7 +77,7 @@ public class SortChestMod implements ClientModInitializer {
                 if (b.isEmpty()) continue;
                 if (same(a, b)) {
                     click(handler, slots.get(j), mc); click(handler, slots.get(i), mc);
-                    if (!handler.getStackInCursor().isEmpty()) click(handler, slots.get(j), mc);
+                    if (!mc.player.inventory.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);
                 }
             }
         }
@@ -125,7 +126,7 @@ public class SortChestMod implements ClientModInitializer {
 
     private static void swap(ScreenHandler handler, int a, int b, MinecraftClient mc) {
         click(handler, a, mc); click(handler, b, mc);
-        if (!handler.getStackInCursor().isEmpty()) click(handler, a, mc);
+        if (!mc.player.inventory.getCursorStack().isEmpty()) click(handler, a, mc);
     }
 
     private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
