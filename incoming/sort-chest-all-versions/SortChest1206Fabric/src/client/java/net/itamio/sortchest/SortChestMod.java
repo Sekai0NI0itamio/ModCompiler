@@ -1,5 +1,4 @@
 package net.itamio.sortchest;
-
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
@@ -11,6 +10,7 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,34 +20,39 @@ import java.util.Objects;
 public class SortChestMod implements ClientModInitializer {
     public static final String MOD_ID = "sortchest";
 
+    private static int gi(HandledScreen<?> h, String n) {
+        try { Field f=HandledScreen.class.getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
+        catch(Exception e) { return 0; }
+    }
+
     @Override
     public void onInitializeClient() {
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (!(screen instanceof HandledScreen)) return;
             HandledScreen<?> hs = (HandledScreen<?>) screen;
-            int x = hs.x + hs.backgroundWidth - 44;
-            int y = hs.y + 6;
+            int x = gi(hs,"x") + gi(hs,"backgroundWidth") - 44;
+            int y = gi(hs,"y") + 6;
             Screens.getButtons(screen).add(ButtonWidget.builder(
                     Text.translatable("sortchest.button.sort"),
-                    btn -> sortContainer(hs)).dimensions(x, y, 40, 14).build());
+                    btn -> sort(hs)).dimensions(x, y, 40, 14).build());
         });
     }
 
-    private static void sortContainer(HandledScreen<?> screen) {
+    private static void sort(HandledScreen<?> screen) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.interactionManager == null) return;
         if (mc.currentScreen != screen) return;
         ScreenHandler handler = screen.getScreenHandler();
         if (!handler.getCursorStack().isEmpty()) return;
-        List<Integer> slots = getSlots(handler, mc.player.getInventory());
+        List<Integer> slots = slots(handler, mc.player.getInventory());
         if (slots.isEmpty()) return;
         merge(handler, slots, mc);
         if (!handler.getCursorStack().isEmpty()) return;
-        List<ItemStack> layout = buildLayout(handler, slots);
+        List<ItemStack> layout = layout(handler, slots);
         reorder(handler, slots, layout, mc);
     }
 
-    private static List<Integer> getSlots(ScreenHandler handler,
+    private static List<Integer> slots(ScreenHandler handler,
             net.minecraft.entity.player.PlayerInventory inv) {
         List<Integer> r = new ArrayList<Integer>();
         for (int i = 0; i < handler.slots.size(); i++) {
@@ -64,7 +69,7 @@ public class SortChestMod implements ClientModInitializer {
                 if (a.getCount() >= a.getMaxCount()) break;
                 ItemStack b = handler.slots.get(slots.get(j)).getStack();
                 if (b.isEmpty()) continue;
-                if (ItemStack.canCombine(a,b)) {
+                if (ItemStack.areItemsAndComponentsEqual(a, b)) {
                     click(handler, slots.get(j), mc); click(handler, slots.get(i), mc);
                     if (!handler.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);
                 }
@@ -72,14 +77,14 @@ public class SortChestMod implements ClientModInitializer {
         }
     }
 
-    private static List<ItemStack> buildLayout(ScreenHandler handler, List<Integer> slots) {
+    private static List<ItemStack> layout(ScreenHandler handler, List<Integer> slots) {
         Map<ItemKey,List<ItemStack>> groups = new LinkedHashMap<ItemKey,List<ItemStack>>();
         for (int i = 0; i < slots.size(); i++) {
             ItemStack s = handler.slots.get(slots.get(i)).getStack();
             if (s.isEmpty()) continue;
-            ItemKey key = new ItemKey(s);
-            List<ItemStack> g = groups.get(key);
-            if (g == null) { g = new ArrayList<ItemStack>(); groups.put(key,g); }
+            ItemKey k = new ItemKey(s);
+            List<ItemStack> g = groups.get(k);
+            if (g == null) { g = new ArrayList<ItemStack>(); groups.put(k, g); }
             g.add(s.copy());
         }
         List<ItemStack> r = new ArrayList<ItemStack>();
@@ -93,7 +98,7 @@ public class SortChestMod implements ClientModInitializer {
         for (int i = 0; i < slots.size(); i++) {
             ItemStack cur = handler.slots.get(slots.get(i)).getStack();
             ItemStack des = layout.get(i);
-            if (match(cur,des)) continue;
+            if (match(cur, des)) continue;
             int from = find(handler, slots, i+1, des);
             if (from == -1) continue;
             swap(handler, slots.get(i), slots.get(from), mc);
@@ -110,12 +115,12 @@ public class SortChestMod implements ClientModInitializer {
         if (a.isEmpty() && b.isEmpty()) return true;
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getCount() != b.getCount()) return false;
-        return ItemStack.canCombine(a,b);
+        return ItemStack.areItemsAndComponentsEqual(a, b);
     }
 
     private static void swap(ScreenHandler handler, int a, int b, MinecraftClient mc) {
-        click(handler,a,mc); click(handler,b,mc);
-        if (!handler.getCursorStack().isEmpty()) click(handler,a,mc);
+        click(handler, a, mc); click(handler, b, mc);
+        if (!handler.getCursorStack().isEmpty()) click(handler, a, mc);
     }
 
     private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
@@ -125,16 +130,16 @@ public class SortChestMod implements ClientModInitializer {
 
     static final class ItemKey {
         final net.minecraft.item.Item item;
-        final net.minecraft.nbt.NbtCompound tag; final int hash;
+        final net.minecraft.component.ComponentMap components; final int hash;
         ItemKey(ItemStack s) {
             item = s.getItem();
-            tag = s.getNbt() != null ? s.getNbt().copy() : null;
-            hash = Objects.hash(item, tag);
+            components = s.getComponents();
+            hash = Objects.hash(item, components);
         }
         public boolean equals(Object o) {
             if (!(o instanceof ItemKey)) return false;
             ItemKey k = (ItemKey)o;
-            return item==k.item && Objects.equals(tag,k.tag);
+            return item == k.item && Objects.equals(components, k.components);
         }
         public int hashCode() { return hash; }
     }
