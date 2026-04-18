@@ -791,7 +791,7 @@ public class SetHomeMod {
         public HomeData(String n) { super(n); }
 
         public static HomeData get(MinecraftServer srv) {
-            net.minecraft.world.storage.DimensionSavedDataManager mgr = srv.getWorld(0).getDataStorage();
+            net.minecraft.world.storage.DimensionSavedDataManager mgr = ((net.minecraft.world.server.ServerWorld)srv.getWorld(0)).getDataStorage();
             HomeData d = mgr.get(HomeData::new, NAME);
             if (d == null) { d = new HomeData(); mgr.set(d); }
             return d;
@@ -942,7 +942,7 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::load, null), NAME);
+            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
@@ -1044,6 +1044,14 @@ SRC_12111_FORGE = (SRC_121_FORGE
     .replace(
         "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
         "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);\n    }\n\n    public void onRegisterCommands(RegisterCommandsEvent e) {"
+    )
+    .replace(
+        "ListTag players = tag.getList(\"players\", 10);",
+        "ListTag players = tag.getList(\"players\").orElse(new ListTag());"
+    )
+    .replace(
+        "ListTag hl = pc.getList(\"homes\", 10);",
+        "ListTag hl = pc.getList(\"homes\").orElse(new ListTag());"
     )
 )
 
