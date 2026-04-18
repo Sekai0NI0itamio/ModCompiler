@@ -14,7 +14,11 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Mod(SortChestMod.MOD_ID)
 public class SortChestMod {
@@ -33,8 +37,10 @@ public class SortChestMod {
         if (mc.player == null) return;
         int x = cs.getGuiLeft() + cs.getXSize() - 44;
         int y = cs.getGuiTop() + 6;
-        event.addListener(Button.builder(Component.translatable("sortchest.button.sort"),
-                btn -> sortContainer(cs)).pos(x, y).size(40, 14).build());
+        event.addListener(Button.builder(
+                Component.translatable("sortchest.button.sort"),
+                btn -> sortContainer(cs))
+                .pos(x, y).size(40, 14).build());
     }
 
     private static void sortContainer(AbstractContainerScreen<?> screen) {
@@ -53,10 +59,10 @@ public class SortChestMod {
 
     private static List<Integer> getContainerSlots(AbstractContainerMenu menu,
             net.minecraft.world.entity.player.Inventory inv) {
-        List<Integer> result = new ArrayList<>();
+        List<Integer> result = new ArrayList<Integer>();
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot s = menu.slots.get(i);
-            if (s.container != inv) result.add(i);
+            if (s.container != inv) result.add(Integer.valueOf(i));
         }
         return result;
     }
@@ -69,7 +75,7 @@ public class SortChestMod {
                 if (stack.getCount() >= stack.getMaxStackSize()) break;
                 ItemStack other = menu.slots.get(slots.get(j)).getItem();
                 if (other.isEmpty()) continue;
-                if (ItemStack.isSameItemSameTags(stack, other)) {
+                if (ItemStack.isSameItemSameComponents(stack, other)) {
                     click(menu, slots.get(j), mc);
                     click(menu, slots.get(i), mc);
                     if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
@@ -79,13 +85,16 @@ public class SortChestMod {
     }
 
     private static List<ItemStack> buildLayout(AbstractContainerMenu menu, List<Integer> slots) {
-        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<>();
-        for (int idx : slots) {
-            ItemStack s = menu.slots.get(idx).getItem();
+        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+        for (int i = 0; i < slots.size(); i++) {
+            ItemStack s = menu.slots.get(slots.get(i)).getItem();
             if (s.isEmpty()) continue;
-            groups.computeIfAbsent(new ItemKey(s), k -> new ArrayList<>()).add(s.copy());
+            ItemKey key = new ItemKey(s);
+            List<ItemStack> group = groups.get(key);
+            if (group == null) { group = new ArrayList<ItemStack>(); groups.put(key, group); }
+            group.add(s.copy());
         }
-        List<ItemStack> result = new ArrayList<>();
+        List<ItemStack> result = new ArrayList<ItemStack>();
         for (List<ItemStack> g : groups.values()) result.addAll(g);
         while (result.size() < slots.size()) result.add(ItemStack.EMPTY);
         return result;
@@ -114,7 +123,7 @@ public class SortChestMod {
         if (a.isEmpty() && b.isEmpty()) return true;
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getCount() != b.getCount()) return false;
-        return ItemStack.isSameItemSameTags(a, b);
+        return ItemStack.isSameItemSameComponents(a, b);
     }
 
     private static void swap(AbstractContainerMenu menu, int slotA, int slotB, Minecraft mc) {
@@ -130,19 +139,19 @@ public class SortChestMod {
 
     static final class ItemKey {
         final net.minecraft.world.item.Item item;
-        final net.minecraft.nbt.CompoundTag tag;
+        final net.minecraft.core.component.DataComponentMap components;
         final int hash;
         ItemKey(ItemStack s) {
             this.item = s.getItem();
-            this.tag = s.getTag() != null ? s.getTag().copy() : null;
-            this.hash = Objects.hash(item, tag);
+            this.components = s.getComponents();
+            this.hash = Objects.hash(item, components);
         }
-        @Override public boolean equals(Object o) {
+        public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof ItemKey)) return false;
             ItemKey k = (ItemKey) o;
-            return item == k.item && Objects.equals(tag, k.tag);
+            return item == k.item && Objects.equals(components, k.components);
         }
-        @Override public int hashCode() { return hash; }
+        public int hashCode() { return hash; }
     }
 }

@@ -3,16 +3,20 @@ package net.itamio.sortchest;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.client.multiplayer.PlayerControllerMP;
 import net.minecraft.inventory.Container;
+import net.minecraft.inventory.ClickType;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.event.GuiScreenEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.registry.GameRegistry;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Mod(modid = SortChestMod.MOD_ID, name = "Sort Chest", version = "1.0.0",
      clientSideOnly = true, acceptedMinecraftVersions = "[1.8.9]")
@@ -20,7 +24,7 @@ public class SortChestMod {
     public static final String MOD_ID = "sortchest";
 
     public SortChestMod() {
-        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(this);
     }
 
     @SubscribeEvent
@@ -45,47 +49,37 @@ public class SortChestMod {
         if (mc.thePlayer == null || mc.playerController == null) return;
         if (mc.currentScreen != gui) return;
         Container container = gui.inventorySlots;
-        if (container.getSlotUnderMouse() != null && !container.getSlotUnderMouse().getStack().isEmpty()) return;
         List<Integer> slots = getContainerSlots(container, mc.thePlayer.inventory);
-        if (!isSortable(container, slots, mc.thePlayer.inventory)) return;
+        if (slots.isEmpty()) return;
         mergeStacks(container, slots, mc);
-        if (container.getSlotUnderMouse() != null && !container.getSlotUnderMouse().getStack().isEmpty()) return;
         List<ItemStack> layout = buildLayout(container, slots);
         reorder(container, slots, layout, mc);
     }
 
-    private static List<Integer> getContainerSlots(Container c, net.minecraft.entity.player.InventoryPlayer inv) {
-        List<Integer> result = new ArrayList<>();
+    private static List<Integer> getContainerSlots(Container c,
+            net.minecraft.entity.player.InventoryPlayer inv) {
+        List<Integer> result = new ArrayList<Integer>();
         for (int i = 0; i < c.inventorySlots.size(); i++) {
             Slot s = c.getSlot(i);
-            if (s.inventory != inv) result.add(i);
+            if (s.inventory != inv) result.add(Integer.valueOf(i));
         }
         return result;
     }
 
-    private static boolean isSortable(Container c, List<Integer> slots, net.minecraft.entity.player.InventoryPlayer inv) {
-        if (slots.isEmpty()) return false;
-        for (int idx : slots) {
-            if (c.getSlot(idx).inventory == inv) return false;
-        }
-        return true;
-    }
-
     private static void mergeStacks(Container c, List<Integer> slots, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
-            Slot si = c.getSlot(slots.get(i));
-            ItemStack stack = si.getStack();
+            ItemStack stack = c.getSlot(slots.get(i).intValue()).getStack();
             if (stack == null || stack.stackSize >= stack.getMaxStackSize()) continue;
             for (int j = i + 1; j < slots.size(); j++) {
-                Slot sj = c.getSlot(slots.get(j));
-                ItemStack other = sj.getStack();
-                if (other == null) continue;
                 if (stack.stackSize >= stack.getMaxStackSize()) break;
+                ItemStack other = c.getSlot(slots.get(j).intValue()).getStack();
+                if (other == null) continue;
                 if (ItemStack.areItemsEqual(stack, other) && ItemStack.areItemStackTagsEqual(stack, other)) {
-                    click(c, slots.get(j), 0, mc);
-                    click(c, slots.get(i), 0, mc);
-                    if (!mc.thePlayer.inventory.getItemStack().isEmpty()) {
-                        click(c, slots.get(j), 0, mc);
+                    click(c, slots.get(j).intValue(), mc);
+                    click(c, slots.get(i).intValue(), mc);
+                    ItemStack held = mc.thePlayer.inventory.getItemStack();
+                    if (held != null && held.stackSize > 0) {
+                        click(c, slots.get(j).intValue(), mc);
                     }
                 }
             }
@@ -93,33 +87,38 @@ public class SortChestMod {
     }
 
     private static List<ItemStack> buildLayout(Container c, List<Integer> slots) {
-        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<>();
-        for (int idx : slots) {
-            ItemStack s = c.getSlot(idx).getStack();
+        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+        for (int i = 0; i < slots.size(); i++) {
+            ItemStack s = c.getSlot(slots.get(i).intValue()).getStack();
             if (s == null) continue;
             ItemKey key = new ItemKey(s);
-            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(s.copy());
+            List<ItemStack> group = groups.get(key);
+            if (group == null) {
+                group = new ArrayList<ItemStack>();
+                groups.put(key, group);
+            }
+            group.add(s.copy());
         }
-        List<ItemStack> result = new ArrayList<>();
-        for (List<ItemStack> group : groups.values()) result.addAll(group);
+        List<ItemStack> result = new ArrayList<ItemStack>();
+        for (List<ItemStack> g : groups.values()) result.addAll(g);
         while (result.size() < slots.size()) result.add(null);
         return result;
     }
 
     private static void reorder(Container c, List<Integer> slots, List<ItemStack> layout, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
-            ItemStack current = c.getSlot(slots.get(i)).getStack();
-            ItemStack desired = layout.get(i);
-            if (stacksMatch(current, desired)) continue;
-            int from = findSlot(c, slots, i + 1, desired);
+            ItemStack cur = c.getSlot(slots.get(i).intValue()).getStack();
+            ItemStack des = layout.get(i);
+            if (stacksMatch(cur, des)) continue;
+            int from = findSlot(c, slots, i + 1, des);
             if (from == -1) continue;
-            swap(c, slots.get(i), slots.get(from), mc);
+            swap(c, slots.get(i).intValue(), slots.get(from).intValue(), mc);
         }
     }
 
     private static int findSlot(Container c, List<Integer> slots, int start, ItemStack target) {
         for (int i = start; i < slots.size(); i++) {
-            if (stacksMatch(c.getSlot(slots.get(i)).getStack(), target)) return i;
+            if (stacksMatch(c.getSlot(slots.get(i).intValue()).getStack(), target)) return i;
         }
         return -1;
     }
@@ -132,17 +131,15 @@ public class SortChestMod {
     }
 
     private static void swap(Container c, int slotA, int slotB, Minecraft mc) {
-        click(c, slotA, 0, mc);
-        click(c, slotB, 0, mc);
-        if (mc.thePlayer.inventory.getItemStack() != null && !mc.thePlayer.inventory.getItemStack().isEmpty()) {
-            click(c, slotA, 0, mc);
-        }
+        click(c, slotA, mc);
+        click(c, slotB, mc);
+        ItemStack held = mc.thePlayer.inventory.getItemStack();
+        if (held != null && held.stackSize > 0) click(c, slotA, mc);
     }
 
-    private static void click(Container c, int slot, int button, Minecraft mc) {
+    private static void click(Container c, int slot, Minecraft mc) {
         if (mc.thePlayer == null || mc.playerController == null) return;
-        mc.playerController.windowClick(c.windowId, slot, button,
-                net.minecraft.inventory.ClickType.PICKUP, mc.thePlayer);
+        mc.playerController.windowClick(c.windowId, slot, 0, ClickType.PICKUP, mc.thePlayer);
     }
 
     static final class ItemKey {
@@ -154,14 +151,14 @@ public class SortChestMod {
             this.item = s.getItem();
             this.meta = s.getMetadata();
             this.tag = s.getTagCompound() != null ? s.getTagCompound().copy() : null;
-            this.hash = Objects.hash(item, meta, tag);
+            this.hash = Objects.hash(item, Integer.valueOf(meta), tag);
         }
-        @Override public boolean equals(Object o) {
+        public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof ItemKey)) return false;
             ItemKey k = (ItemKey) o;
             return item == k.item && meta == k.meta && Objects.equals(tag, k.tag);
         }
-        @Override public int hashCode() { return hash; }
+        public int hashCode() { return hash; }
     }
 }
