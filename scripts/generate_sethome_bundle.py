@@ -183,7 +183,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.world.storage.MapStorage;
-import net.minecraft.world.storage.WorldSavedData;
+import net.minecraft.world.WorldSavedData;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -748,7 +748,8 @@ public class SetHomeMod {
     }
 
     private static int setHome(CommandSource src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity p = src.asPlayer();
+        if (!(src.getEntity() instanceof ServerPlayerEntity)) { src.sendSuccess(new StringTextComponent("Players only."), false); return 0; }
+        ServerPlayerEntity p = (ServerPlayerEntity) src.getEntity();
         String uuid = p.getUUID().toString();
         HomeData d = HomeData.get(src.getServer());
         int max = MAX_HOMES.get();
@@ -760,19 +761,22 @@ public class SetHomeMod {
     }
     private static int home(CommandSource src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         if ("list".equalsIgnoreCase(name)) {
-            ServerPlayerEntity p = src.asPlayer();
+            if (!(src.getEntity() instanceof ServerPlayerEntity)) { src.sendSuccess(new StringTextComponent("Players only."), false); return 0; }
+            ServerPlayerEntity p = (ServerPlayerEntity) src.getEntity();
             Set<String> homes = HomeData.get(src.getServer()).getHomes(p.getUUID().toString());
             if (homes.isEmpty()) { src.sendSuccess(new StringTextComponent("You have no homes set."), false); return 1; }
             src.sendSuccess(new StringTextComponent("Your homes: " + String.join(", ", new ArrayList<>(homes))), false); return 1;
         }
-        ServerPlayerEntity p = src.asPlayer();
+        if (!(src.getEntity() instanceof ServerPlayerEntity)) { src.sendSuccess(new StringTextComponent("Players only."), false); return 0; }
+        ServerPlayerEntity p = (ServerPlayerEntity) src.getEntity();
         double[] h = HomeData.get(src.getServer()).getHome(p.getUUID().toString(), name);
         if (h == null) { src.sendSuccess(new StringTextComponent("Home '" + name + "' not found."), false); return 0; }
         p.teleportTo(h[0], h[1], h[2]);
         src.sendSuccess(new StringTextComponent("Teleported to home '" + name + "'."), false); return 1;
     }
     private static int delHome(CommandSource src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity p = src.asPlayer();
+        if (!(src.getEntity() instanceof ServerPlayerEntity)) { src.sendSuccess(new StringTextComponent("Players only."), false); return 0; }
+        ServerPlayerEntity p = (ServerPlayerEntity) src.getEntity();
         if (!HomeData.get(src.getServer()).removeHome(p.getUUID().toString(), name)) {
             src.sendSuccess(new StringTextComponent("Home '" + name + "' not found."), false); return 0;
         }
@@ -935,7 +939,7 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
+            return storage.computeIfAbsent(new SavedData.Factory<>(HomeData::new, HomeData::load, null), NAME);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
@@ -998,7 +1002,7 @@ SRC_1194 = SRC_119
 
 # 1.20.x Forge — same as 1.19.4 but sendSuccess takes Supplier<Component>
 SRC_120_FORGE = SRC_1194.replace(
-    "src.sendSuccess(Component.literal(",
+    "src.sendSuccess(() -> Component.literal(",
     "src.sendSuccess(() -> Component.literal("
 ).replace(
     "), false); return 0;\n        }\n        d.setHome",
@@ -1007,13 +1011,13 @@ SRC_120_FORGE = SRC_1194.replace(
 # Simpler: just replace all sendSuccess patterns
 SRC_120_FORGE = SRC_1194
 for old, new in [
-    ('src.sendSuccess(Component.literal("You have reached', 'src.sendSuccess(() -> Component.literal("You have reached'),
-    ('src.sendSuccess(Component.literal("Home \'" + name + "\' set.")', 'src.sendSuccess(() -> Component.literal("Home \'" + name + "\' set.")'),
-    ('src.sendSuccess(Component.literal("You have no homes set.")', 'src.sendSuccess(() -> Component.literal("You have no homes set.")'),
-    ('src.sendSuccess(Component.literal("Your homes: "', 'src.sendSuccess(() -> Component.literal("Your homes: "'),
-    ('src.sendSuccess(Component.literal("Home \'" + name + "\' not found.")', 'src.sendSuccess(() -> Component.literal("Home \'" + name + "\' not found.")'),
-    ('src.sendSuccess(Component.literal("Teleported to home"', 'src.sendSuccess(() -> Component.literal("Teleported to home"'),
-    ('src.sendSuccess(Component.literal("Home \'" + name + "\' deleted.")', 'src.sendSuccess(() -> Component.literal("Home \'" + name + "\' deleted.")'),
+    ('src.sendSuccess(() -> Component.literal("You have reached', 'src.sendSuccess(() -> Component.literal("You have reached'),
+    ('src.sendSuccess(() -> Component.literal("Home \'" + name + "\' set.")', 'src.sendSuccess(() -> Component.literal("Home \'" + name + "\' set.")'),
+    ('src.sendSuccess(() -> Component.literal("You have no homes set.")', 'src.sendSuccess(() -> Component.literal("You have no homes set.")'),
+    ('src.sendSuccess(() -> Component.literal("Your homes: "', 'src.sendSuccess(() -> Component.literal("Your homes: "'),
+    ('src.sendSuccess(() -> Component.literal("Home \'" + name + "\' not found.")', 'src.sendSuccess(() -> Component.literal("Home \'" + name + "\' not found.")'),
+    ('src.sendSuccess(() -> Component.literal("Teleported to home"', 'src.sendSuccess(() -> Component.literal("Teleported to home"'),
+    ('src.sendSuccess(() -> Component.literal("Home \'" + name + "\' deleted.")', 'src.sendSuccess(() -> Component.literal("Home \'" + name + "\' deleted.")'),
 ]:
     SRC_120_FORGE = SRC_120_FORGE.replace(old, new)
 
@@ -1059,8 +1063,10 @@ def to_neoforge_sethome(src: str) -> str:
         .replace("ForgeConfigSpec SPEC;", "ModConfigSpec SPEC;")
         .replace("MinecraftForge.EVENT_BUS.register(this);",
                  "NeoForge.EVENT_BUS.register(this);")
-        .replace("net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);",
-                 "net.neoforged.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);")
+        .replace("net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        NeoForge.EVENT_BUS.register(this);",
+                 "NeoForge.EVENT_BUS.register(this);")
+        .replace("    public SetHomeMod() {\n        NeoForge.EVENT_BUS.register(this);\n    }",
+                 "    public SetHomeMod(net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext ctx) {\n        ctx.getModEventBus().register(this);\n        NeoForge.EVENT_BUS.register(this);\n    }")
     )
 
 SRC_120_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE)

@@ -50,7 +50,8 @@ public class SetHomeMod {
     }
 
     private static int setHome(CommandSource src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity p = src.asPlayer();
+        if (!(src.getEntity() instanceof ServerPlayerEntity)) { src.sendSuccess(new StringTextComponent("Players only."), false); return 0; }
+        ServerPlayerEntity p = (ServerPlayerEntity) src.getEntity();
         String uuid = p.getUUID().toString();
         HomeData d = HomeData.get(src.getServer());
         int max = MAX_HOMES.get();
@@ -62,19 +63,22 @@ public class SetHomeMod {
     }
     private static int home(CommandSource src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         if ("list".equalsIgnoreCase(name)) {
-            ServerPlayerEntity p = src.asPlayer();
+            if (!(src.getEntity() instanceof ServerPlayerEntity)) { src.sendSuccess(new StringTextComponent("Players only."), false); return 0; }
+            ServerPlayerEntity p = (ServerPlayerEntity) src.getEntity();
             Set<String> homes = HomeData.get(src.getServer()).getHomes(p.getUUID().toString());
             if (homes.isEmpty()) { src.sendSuccess(new StringTextComponent("You have no homes set."), false); return 1; }
             src.sendSuccess(new StringTextComponent("Your homes: " + String.join(", ", new ArrayList<>(homes))), false); return 1;
         }
-        ServerPlayerEntity p = src.asPlayer();
+        if (!(src.getEntity() instanceof ServerPlayerEntity)) { src.sendSuccess(new StringTextComponent("Players only."), false); return 0; }
+        ServerPlayerEntity p = (ServerPlayerEntity) src.getEntity();
         double[] h = HomeData.get(src.getServer()).getHome(p.getUUID().toString(), name);
         if (h == null) { src.sendSuccess(new StringTextComponent("Home '" + name + "' not found."), false); return 0; }
         p.teleportTo(h[0], h[1], h[2]);
         src.sendSuccess(new StringTextComponent("Teleported to home '" + name + "'."), false); return 1;
     }
     private static int delHome(CommandSource src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayerEntity p = src.asPlayer();
+        if (!(src.getEntity() instanceof ServerPlayerEntity)) { src.sendSuccess(new StringTextComponent("Players only."), false); return 0; }
+        ServerPlayerEntity p = (ServerPlayerEntity) src.getEntity();
         if (!HomeData.get(src.getServer()).removeHome(p.getUUID().toString(), name)) {
             src.sendSuccess(new StringTextComponent("Home '" + name + "' not found."), false); return 0;
         }
