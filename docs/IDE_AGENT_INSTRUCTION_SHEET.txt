@@ -612,6 +612,23 @@ The agent should use examples to understand:
 
 Examples should be treated as references, not as guaranteed drop-in templates for every mod.
 
+Completed real-world example
+-----------------------------
+A complete end-to-end example of the Mod Version Update workflow has been
+documented for the Sort Chest mod:
+
+  docs/examples/SORT_CHEST_ALL_VERSIONS.md
+
+This document covers:
+- The full 10-run build history with every failure and fix
+- A complete API difference table for every Forge and Fabric version
+- Lessons learned including Fabric mapping differences, protected field access,
+  event class renames, Button API changes, and the --failed-only rerun system
+- The final result: 27 versions published across Forge, Fabric, and NeoForge
+
+Read this document before starting any new multi-version port. It will save
+significant time by showing exactly which API names to use per version.
+
 Fetching a Modrinth project for local understanding
 ----------------------------------------------------
 When the user asks you to work on a mod that already exists on Modrinth, do NOT
