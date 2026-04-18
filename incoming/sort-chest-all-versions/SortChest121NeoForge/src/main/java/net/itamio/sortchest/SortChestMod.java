@@ -13,7 +13,6 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,10 +22,7 @@ import java.util.Objects;
 @Mod(SortChestMod.MOD_ID)
 public class SortChestMod {
     public static final String MOD_ID = "sortchest";
-
-    public SortChestMod() {
-        NeoForge.EVENT_BUS.register(this);
-    }
+    public SortChestMod() { NeoForge.EVENT_BUS.register(this); }
 
     @SubscribeEvent
     public void onScreenInit(ScreenEvent.Init.Post event) {
@@ -39,8 +35,7 @@ public class SortChestMod {
         int y = cs.getGuiTop() + 6;
         event.addListener(Button.builder(
                 Component.translatable("sortchest.button.sort"),
-                btn -> sortContainer(cs))
-                .pos(x, y).size(40, 14).build());
+                btn -> sortContainer(cs)).pos(x,y).size(40,14).build());
     }
 
     private static void sortContainer(AbstractContainerScreen<?> screen) {
@@ -49,35 +44,33 @@ public class SortChestMod {
         if (mc.screen != screen) return;
         AbstractContainerMenu menu = screen.getMenu();
         if (!menu.getCarried().isEmpty()) return;
-        List<Integer> slots = getContainerSlots(menu, mc.player.getInventory());
+        List<Integer> slots = getSlots(menu, mc.player.getInventory());
         if (slots.isEmpty()) return;
-        mergeStacks(menu, slots, mc);
+        merge(menu, slots, mc);
         if (!menu.getCarried().isEmpty()) return;
         List<ItemStack> layout = buildLayout(menu, slots);
         reorder(menu, slots, layout, mc);
     }
 
-    private static List<Integer> getContainerSlots(AbstractContainerMenu menu,
+    private static List<Integer> getSlots(AbstractContainerMenu menu,
             net.minecraft.world.entity.player.Inventory inv) {
-        List<Integer> result = new ArrayList<Integer>();
+        List<Integer> r = new ArrayList<Integer>();
         for (int i = 0; i < menu.slots.size(); i++) {
-            Slot s = menu.slots.get(i);
-            if (s.container != inv) result.add(Integer.valueOf(i));
+            if (menu.slots.get(i).container != inv) r.add(Integer.valueOf(i));
         }
-        return result;
+        return r;
     }
 
-    private static void mergeStacks(AbstractContainerMenu menu, List<Integer> slots, Minecraft mc) {
+    private static void merge(AbstractContainerMenu menu, List<Integer> slots, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
-            ItemStack stack = menu.slots.get(slots.get(i)).getItem();
-            if (stack.isEmpty() || stack.getCount() >= stack.getMaxStackSize()) continue;
-            for (int j = i + 1; j < slots.size(); j++) {
-                if (stack.getCount() >= stack.getMaxStackSize()) break;
-                ItemStack other = menu.slots.get(slots.get(j)).getItem();
-                if (other.isEmpty()) continue;
-                if (ItemStack.isSameItemSameComponents(stack, other)) {
-                    click(menu, slots.get(j), mc);
-                    click(menu, slots.get(i), mc);
+            ItemStack a = menu.slots.get(slots.get(i)).getItem();
+            if (a.isEmpty() || a.getCount() >= a.getMaxStackSize()) continue;
+            for (int j = i+1; j < slots.size(); j++) {
+                if (a.getCount() >= a.getMaxStackSize()) break;
+                ItemStack b = menu.slots.get(slots.get(j)).getItem();
+                if (b.isEmpty()) continue;
+                if (ItemStack.isSameItemSameComponents(a,b)) {
+                    click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
                     if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
                 }
             }
@@ -85,19 +78,19 @@ public class SortChestMod {
     }
 
     private static List<ItemStack> buildLayout(AbstractContainerMenu menu, List<Integer> slots) {
-        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+        Map<ItemKey,List<ItemStack>> groups = new LinkedHashMap<ItemKey,List<ItemStack>>();
         for (int i = 0; i < slots.size(); i++) {
             ItemStack s = menu.slots.get(slots.get(i)).getItem();
             if (s.isEmpty()) continue;
             ItemKey key = new ItemKey(s);
-            List<ItemStack> group = groups.get(key);
-            if (group == null) { group = new ArrayList<ItemStack>(); groups.put(key, group); }
-            group.add(s.copy());
+            List<ItemStack> g = groups.get(key);
+            if (g == null) { g = new ArrayList<ItemStack>(); groups.put(key,g); }
+            g.add(s.copy());
         }
-        List<ItemStack> result = new ArrayList<ItemStack>();
-        for (List<ItemStack> g : groups.values()) result.addAll(g);
-        while (result.size() < slots.size()) result.add(ItemStack.EMPTY);
-        return result;
+        List<ItemStack> r = new ArrayList<ItemStack>();
+        for (List<ItemStack> g : groups.values()) r.addAll(g);
+        while (r.size() < slots.size()) r.add(ItemStack.EMPTY);
+        return r;
     }
 
     private static void reorder(AbstractContainerMenu menu, List<Integer> slots,
@@ -105,31 +98,29 @@ public class SortChestMod {
         for (int i = 0; i < slots.size(); i++) {
             ItemStack cur = menu.slots.get(slots.get(i)).getItem();
             ItemStack des = layout.get(i);
-            if (stacksMatch(cur, des)) continue;
-            int from = findSlot(menu, slots, i + 1, des);
+            if (match(cur,des)) continue;
+            int from = find(menu, slots, i+1, des);
             if (from == -1) continue;
             swap(menu, slots.get(i), slots.get(from), mc);
         }
     }
 
-    private static int findSlot(AbstractContainerMenu menu, List<Integer> slots, int start, ItemStack target) {
-        for (int i = start; i < slots.size(); i++) {
-            if (stacksMatch(menu.slots.get(slots.get(i)).getItem(), target)) return i;
-        }
+    private static int find(AbstractContainerMenu menu, List<Integer> slots, int start, ItemStack t) {
+        for (int i = start; i < slots.size(); i++)
+            if (match(menu.slots.get(slots.get(i)).getItem(), t)) return i;
         return -1;
     }
 
-    private static boolean stacksMatch(ItemStack a, ItemStack b) {
+    private static boolean match(ItemStack a, ItemStack b) {
         if (a.isEmpty() && b.isEmpty()) return true;
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getCount() != b.getCount()) return false;
-        return ItemStack.isSameItemSameComponents(a, b);
+        return ItemStack.isSameItemSameComponents(a,b);
     }
 
-    private static void swap(AbstractContainerMenu menu, int slotA, int slotB, Minecraft mc) {
-        click(menu, slotA, mc);
-        click(menu, slotB, mc);
-        if (!menu.getCarried().isEmpty()) click(menu, slotA, mc);
+    private static void swap(AbstractContainerMenu menu, int a, int b, Minecraft mc) {
+        click(menu,a,mc); click(menu,b,mc);
+        if (!menu.getCarried().isEmpty()) click(menu,a,mc);
     }
 
     private static void click(AbstractContainerMenu menu, int slot, Minecraft mc) {
@@ -139,18 +130,16 @@ public class SortChestMod {
 
     static final class ItemKey {
         final net.minecraft.world.item.Item item;
-        final net.minecraft.core.component.DataComponentMap components;
-        final int hash;
+        final net.minecraft.core.component.DataComponentMap components; final int hash;
         ItemKey(ItemStack s) {
-            this.item = s.getItem();
-            this.components = s.getComponents();
-            this.hash = Objects.hash(item, components);
+            item = s.getItem();
+            components = s.getComponents();
+            hash = Objects.hash(item, components);
         }
         public boolean equals(Object o) {
-            if (this == o) return true;
             if (!(o instanceof ItemKey)) return false;
-            ItemKey k = (ItemKey) o;
-            return item == k.item && Objects.equals(components, k.components);
+            ItemKey k = (ItemKey)o;
+            return item==k.item && Objects.equals(components,k.components);
         }
         public int hashCode() { return hash; }
     }
