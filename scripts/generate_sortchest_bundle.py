@@ -355,8 +355,9 @@ public class SortChestMod {
 }
 """
 
-# 1.16.5 Forge — old MCP names, getDraggedStack() not getCarried()
-# isSameItem + tagMatches (not isSameItemSameTags which doesn't exist in 1.16.5)
+# 1.16.5 Forge — old MCP names
+# getCarried() DOES exist in 1.16.5 MCP (it's the correct name)
+# isSameItemSameTags DOES exist in 1.16.5 Forge (added in 1.16)
 SRC_1165_FORGE = """\
 package net.itamio.sortchest;
 import net.minecraft.client.Minecraft;
@@ -401,11 +402,11 @@ public class SortChestMod {
         if (mc.player == null || mc.gameMode == null) return;
         if (mc.screen != screen) return;
         Container menu = screen.getMenu();
-        if (!menu.getDraggedStack().isEmpty()) return;
+        if (!menu.getCarried().isEmpty()) return;
         List<Integer> slots = slots(menu, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(menu, slots, mc);
-        if (!menu.getDraggedStack().isEmpty()) return;
+        if (!menu.getCarried().isEmpty()) return;
         List<ItemStack> layout = layout(menu, slots);
         reorder(menu, slots, layout, mc);
     }
@@ -419,7 +420,7 @@ public class SortChestMod {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.isSameItem(a, b) && ItemStack.tagMatches(a, b);
+        return ItemStack.isSameItemSameTags(a, b);
     }
 
     private static void merge(Container menu, List<Integer> slots, Minecraft mc) {
@@ -432,7 +433,7 @@ public class SortChestMod {
                 if (b.isEmpty()) continue;
                 if (same(a, b)) {
                     click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
-                    if (!menu.getDraggedStack().isEmpty()) click(menu, slots.get(j), mc);
+                    if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
                 }
             }
         }
@@ -480,7 +481,7 @@ public class SortChestMod {
 
     private static void swap(Container menu, int a, int b, Minecraft mc) {
         click(menu, a, mc); click(menu, b, mc);
-        if (!menu.getDraggedStack().isEmpty()) click(menu, a, mc);
+        if (!menu.getCarried().isEmpty()) click(menu, a, mc);
     }
 
     private static void click(Container menu, int slot, Minecraft mc) {
@@ -506,7 +507,8 @@ public class SortChestMod {
 }
 """
 
-# 1.17.1 Forge — import ScreenEvent class, use ScreenEvent.InitScreenEvent.Post as type
+# 1.17.1 Forge — GuiScreenEvent.InitGuiEvent.Post (ScreenEvent didn't exist until 1.18)
+# TranslatableComponent, new Button constructor
 SRC_1171_FORGE = """\
 package net.itamio.sortchest;
 import net.minecraft.client.Minecraft;
@@ -518,7 +520,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -534,8 +536,8 @@ public class SortChestMod {
     public SortChestMod() { MinecraftForge.EVENT_BUS.register(this); }
 
     @SubscribeEvent
-    public void onScreenInit(ScreenEvent.InitScreenEvent.Post event) {
-        Screen screen = event.getScreen();
+    public void onScreenInit(GuiScreenEvent.InitGuiEvent.Post event) {
+        Screen screen = event.getGui();
         if (!(screen instanceof AbstractContainerScreen)) return;
         AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
         Minecraft mc = Minecraft.getInstance();
@@ -655,8 +657,13 @@ public class SortChestMod {
 }
 """
 
-# 1.18.x — same as 1.17.1 (InitScreenEvent.Post still, TranslatableComponent still)
-SRC_118_FORGE = SRC_1171_FORGE
+# 1.18.x — ScreenEvent.Init.Post (renamed in 1.18), TranslatableComponent, new Button
+SRC_118_FORGE = (SRC_1171_FORGE
+    .replace("import net.minecraftforge.client.event.GuiScreenEvent;",
+             "import net.minecraftforge.client.event.ScreenEvent;")
+    .replace("public void onScreenInit(GuiScreenEvent.InitGuiEvent.Post event) {\n        Screen screen = event.getGui();",
+             "public void onScreenInit(ScreenEvent.Init.Post event) {\n        Screen screen = event.getScreen();")
+)
 
 # 1.19.x — Init.Post (renamed), Component.translatable, Button.builder (added in 1.19.4)
 SRC_119_FORGE = (SRC_1171_FORGE
@@ -688,11 +695,8 @@ SRC_1205_FORGE = (SRC_120_FORGE
 # 1.21.x Forge (1.21.1, 1.21.4) — same as 1.20.5+
 SRC_121_FORGE = SRC_1205_FORGE
 
-# 1.21.11 Forge — eventbus moved to net.neoforged.bus.api in Forge 1.21.x
-SRC_12111_FORGE = (SRC_121_FORGE
-    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;",
-             "import net.neoforged.bus.api.SubscribeEvent;")
-)
+# 1.21.11 Forge — still uses net.minecraftforge.eventbus.api (NOT merged with NeoForge)
+SRC_12111_FORGE = SRC_121_FORGE
 
 def to_neoforge(src: str) -> str:
     return (src
@@ -772,11 +776,12 @@ public class SortChestMod implements ClientModInitializer {
         if (mc.player == null || mc.interactionManager == null) return;
         if (mc.currentScreen != screen) return;
         ScreenHandler handler = screen.getScreenHandler();
-        if (!handler.getStackInCursor().isEmpty()) return;
+        // In 1.16.5 cursor stack is on the player inventory
+        if (!mc.player.inventory.getCursorStack().isEmpty()) return;
         List<Integer> slots = slots(handler, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(handler, slots, mc);
-        if (!handler.getStackInCursor().isEmpty()) return;
+        if (!mc.player.inventory.getCursorStack().isEmpty()) return;
         List<ItemStack> layout = layout(handler, slots);
         reorder(handler, slots, layout, mc);
     }
@@ -804,7 +809,7 @@ public class SortChestMod implements ClientModInitializer {
                 if (b.isEmpty()) continue;
                 if (same(a, b)) {
                     click(handler, slots.get(j), mc); click(handler, slots.get(i), mc);
-                    if (!handler.getStackInCursor().isEmpty()) click(handler, slots.get(j), mc);
+                    if (!mc.player.inventory.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);
                 }
             }
         }
@@ -853,7 +858,7 @@ public class SortChestMod implements ClientModInitializer {
 
     private static void swap(ScreenHandler handler, int a, int b, MinecraftClient mc) {
         click(handler, a, mc); click(handler, b, mc);
-        if (!handler.getStackInCursor().isEmpty()) click(handler, a, mc);
+        if (!mc.player.inventory.getCursorStack().isEmpty()) click(handler, a, mc);
     }
 
     private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
@@ -881,32 +886,31 @@ public class SortChestMod implements ClientModInitializer {
 
 # Fabric 1.17.1-1.18.2 (Yarn, presplit → src/main/java)
 # getCursorStack() exists from 1.17+, getInventory() exists from 1.17+
-# areTagsEqual still works, TranslatableText still exists
-# getTag().copy() returns NbtCompound directly (no NbtElement intermediate needed)
+# canCombine() for comparison (areTagsEqual doesn't exist in 1.17+)
+# getNbt() for tag access (getTag() was renamed to getNbt() in 1.17)
 SRC_FABRIC_117_118 = (SRC_FABRIC_1165
-    .replace("if (!handler.getStackInCursor().isEmpty()) return;",
+    .replace("if (!mc.player.inventory.getCursorStack().isEmpty()) return;",
              "if (!handler.getCursorStack().isEmpty()) return;")
     .replace("List<Integer> slots = slots(handler, mc.player.inventory);",
              "List<Integer> slots = slots(handler, mc.player.getInventory());")
-    .replace("if (!handler.getStackInCursor().isEmpty()) click(handler, slots.get(j), mc);",
+    .replace("if (!mc.player.inventory.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);",
              "if (!handler.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);")
-    .replace("if (!handler.getStackInCursor().isEmpty()) click(handler, a, mc);",
+    .replace("if (!mc.player.inventory.getCursorStack().isEmpty()) click(handler, a, mc);",
              "if (!handler.getCursorStack().isEmpty()) click(handler, a, mc);")
+    .replace("return ItemStack.areItemsEqual(a, b) && ItemStack.areTagsEqual(a, b);",
+             "return ItemStack.canCombine(a, b);")
+    .replace("tag = s.getTag() != null ? s.getTag().copy() : null;",
+             "tag = s.getNbt() != null ? s.getNbt().copy() : null;")
     .replace("net.minecraft.entity.player.PlayerInventory inv",
              "net.minecraft.entity.player.PlayerInventory inv")
-    # Fix ItemKey: no NbtElement, just direct copy
-    .replace(
-        "tag = s.getTag() != null ? s.getTag().copy() : null;",
-        "tag = s.getTag() != null ? s.getTag().copy() : null;"
-    )
 )
 
-# Fabric 1.19.4 (Yarn, presplit) — Text.translatable replaces TranslatableText
+# Fabric 1.19.4 (Yarn, presplit) — Text.translatable, ButtonWidget.builder, canCombine, getNbt
 SRC_FABRIC_119 = (SRC_FABRIC_117_118
     .replace("import net.minecraft.text.TranslatableText;",
              "import net.minecraft.text.Text;")
-    .replace("new TranslatableText(\"sortchest.button.sort\")",
-             "Text.translatable(\"sortchest.button.sort\")")
+    .replace("Screens.getButtons(screen).add(new ButtonWidget(x, y, 40, 14,\n                    new TranslatableText(\"sortchest.button.sort\"),\n                    btn -> sort(hs)));",
+             "Screens.getButtons(screen).add(ButtonWidget.builder(\n                    Text.translatable(\"sortchest.button.sort\"),\n                    btn -> sort(hs)).dimensions(x, y, 40, 14).build());")
 )
 
 # Fabric 1.20.x (Yarn, fabric_split → src/client/java)
@@ -1092,7 +1096,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1115,8 +1118,8 @@ public class SortChestMod implements ClientModInitializer {
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (!(screen instanceof AbstractContainerScreen)) return;
             AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
-            int x = cs.getGuiLeft() + cs.getXSize() - 44;
-            int y = cs.getGuiTop() + 6;
+            int x = cs.leftPos + cs.imageWidth - 44;
+            int y = cs.topPos + 6;
             Screens.getButtons(screen).add(Button.builder(
                     Component.translatable("sortchest.button.sort"),
                     btn -> sort(cs)).pos(x, y).size(40, 14).build());
@@ -1269,7 +1272,110 @@ targets = [
 if BUNDLE.exists():
     shutil.rmtree(BUNDLE)
 
-for (folder, java_src, loader, mc_ver, is_fabric, is_split, fab_dep) in targets:
+# ============================================================
+# FAILED-ONLY MODE
+# Pass --failed-only to only regenerate targets that failed in
+# the most recent ModCompileRuns run. Skips already-green targets
+# to save GitHub Actions minutes.
+# ============================================================
+import argparse as _ap
+_args = _ap.ArgumentParser()
+_args.add_argument("--failed-only", action="store_true",
+    help="Only include targets that failed in the last run")
+_args.add_argument("--run-dir", default="",
+    help="Explicit run dir to read failures from (default: latest in ModCompileRuns/)")
+_parsed = _args.parse_args()
+
+active_targets = targets
+if _parsed.failed_only:
+    # Find the most recent run dir
+    runs_root = ROOT / "ModCompileRuns"
+    run_dir = Path(_parsed.run_dir) if _parsed.run_dir else (
+        sorted(runs_root.iterdir())[-1] if runs_root.exists() and any(runs_root.iterdir()) else None
+    )
+    if run_dir is None:
+        print("WARNING: --failed-only requested but no run dir found. Using all targets.")
+    else:
+        art = run_dir / "artifacts" / "all-mod-builds" / "mods"
+        if not art.exists():
+            print(f"WARNING: No mods artifact at {art}. Using all targets.")
+        else:
+            # A slug is failed if its result.json has status != "success"
+            # or if it has no result.json (never ran)
+            failed_slugs = set()
+            for mod_dir in art.iterdir():
+                if not mod_dir.is_dir(): continue
+                result_file = mod_dir / "result.json"
+                if result_file.exists():
+                    try:
+                        result = json.loads(result_file.read_text(encoding="utf-8"))
+                        if result.get("status") != "success":
+                            failed_slugs.add(mod_dir.name)
+                    except Exception:
+                        failed_slugs.add(mod_dir.name)
+                else:
+                    failed_slugs.add(mod_dir.name)
+
+            # Map folder names to build slugs
+            # The build system converts folder names to slugs like:
+            # SortChest1165Forge → sortchest-forge-1-16-5
+            # We match by checking if the slug contains the version+loader hint
+            def folder_to_slug_hint(folder: str) -> str:
+                """Extract a rough slug hint from a folder name for matching."""
+                import re
+                # e.g. SortChest1165Forge → 1165 forge → 1-16-5 forge
+                m = re.search(r'(\d+)(Forge|Fabric|NeoForge)$', folder, re.IGNORECASE)
+                if not m: return folder.lower()
+                digits, loader = m.group(1), m.group(2).lower()
+                # Insert dashes between digit groups
+                ver = "-".join(digits)  # crude but works for matching
+                return f"{loader}-{ver}"
+
+            # Build a mapping from folder → slug by reading the actual build plan
+            # from the last run's prepared inputs
+            slug_map: dict[str, str] = {}
+            prepared = run_dir.parent.parent / ".workflow_state" / "prepared" if False else None
+            # Simpler: just check which slugs contain the folder's version digits
+            def folder_matches_slug(folder: str, slug: str) -> bool:
+                import re
+                # Extract digits from folder: SortChest1165Forge → 1165
+                m = re.search(r'(\d+)(Forge|Fabric|NeoForge)$', folder, re.IGNORECASE)
+                if not m: return False
+                digits = m.group(1)
+                loader = m.group(2).lower()
+                if loader == "neoforge": loader = "neoforge"
+                # Convert digits to version parts: 1165 → 1-16-5, 121 → 1-21, 12111 → 1-21-11
+                # Insert dashes: each digit is a version component
+                ver_parts = list(digits)
+                # Heuristic: first digit is major (1), rest are minor/patch
+                if len(digits) == 3:   # e.g. 189 → 1.8.9
+                    ver = f"1-{digits[1]}-{digits[2]}"
+                elif len(digits) == 4: # e.g. 1165 → 1-16-5
+                    ver = f"1-{digits[1]}{digits[2]}-{digits[3]}"
+                elif len(digits) == 5: # e.g. 12111 → 1-21-11
+                    ver = f"1-{digits[1]}{digits[2]}-{digits[3]}{digits[4]}"
+                elif len(digits) == 2: # e.g. 12 → 1-12
+                    ver = f"1-{digits[1]}"
+                else:
+                    ver = digits
+                return loader in slug and ver in slug
+
+            failed_folders = {
+                folder for (folder, *_) in targets
+                if any(folder_matches_slug(folder, slug) for slug in failed_slugs)
+            }
+
+            if failed_folders:
+                active_targets = [t for t in targets if t[0] in failed_folders]
+                print(f"Failed-only mode: {len(active_targets)} targets to rebuild "
+                      f"(skipping {len(targets)-len(active_targets)} already-green)")
+                for t in active_targets:
+                    print(f"  → {t[0]}")
+            else:
+                print("No failed targets found — all targets already green!")
+                active_targets = []
+
+for (folder, java_src, loader, mc_ver, is_fabric, is_split, fab_dep) in active_targets:
     base = BUNDLE / folder
     write(base / "mod.txt", mod_txt())
     write(base / "version.txt", version_txt(mc_ver, loader))
@@ -1284,7 +1390,7 @@ for (folder, java_src, loader, mc_ver, is_fabric, is_split, fab_dep) in targets:
     else:
         write(base / JAVA_MAIN, java_src)
 
-print(f"Generated {len(targets)} targets")
+print(f"Generated {len(active_targets)} targets")
 
 zip_path = ROOT / "incoming" / "sort-chest-all-versions.zip"
 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:

@@ -10,7 +10,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,8 +32,8 @@ public class SortChestMod implements ClientModInitializer {
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (!(screen instanceof AbstractContainerScreen)) return;
             AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
-            int x = cs.getGuiLeft() + cs.getXSize() - 44;
-            int y = cs.getGuiTop() + 6;
+            int x = cs.leftPos + cs.imageWidth - 44;
+            int y = cs.topPos + 6;
             Screens.getButtons(screen).add(Button.builder(
                     Component.translatable("sortchest.button.sort"),
                     btn -> sort(cs)).pos(x, y).size(40, 14).build());
