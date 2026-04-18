@@ -2,6 +2,11 @@
 """
 Generates the Sort Chest all-versions bundle.
 Run: python3 scripts/generate_sortchest_bundle.py
+
+Mapping reference:
+  Fabric 1.16.5-1.20.x  → Yarn mappings  (HandledScreen, ScreenHandler, etc.)
+  Fabric 1.21.x         → Mojang mappings (AbstractContainerScreen, AbstractContainerMenu, etc.)
+  Forge/NeoForge all    → Mojang mappings always
 """
 import shutil, subprocess, zipfile, json
 from pathlib import Path
@@ -23,7 +28,7 @@ PKG = GROUP.replace('.', '/')
 JAVA_MAIN   = f"src/main/java/{PKG}/SortChestMod.java"
 JAVA_CLIENT = f"src/client/java/{PKG}/SortChestMod.java"
 LANG_MAIN   = f"src/main/resources/assets/{MOD_ID}/lang/en_us.json"
-FAB_JSON    = "src/main/resources/fabric.mod.json"   # always main/resources
+FAB_JSON    = "src/main/resources/fabric.mod.json"
 
 def write(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -50,10 +55,10 @@ def fabric_mod_json(mc_dep: str) -> str:
             f'  "depends": {{"fabricloader": ">=0.12.0","minecraft": "{mc_dep}","fabric-api": "*"}}\n}}\n')
 
 # ============================================================
-# FORGE SOURCES
+# FORGE / NEOFORGE SOURCES  (all use Mojang mappings)
 # ============================================================
 
-# 1.8.9 — ClickType doesn't exist, use raw int; no diamonds/lambdas; reflection for fields
+# 1.8.9 — no ClickType, no diamonds/lambdas, reflection for protected fields
 SRC_189_FORGE = """\
 package net.itamio.sortchest;
 import net.minecraft.client.Minecraft;
@@ -179,7 +184,6 @@ public class SortChestMod {
         if (h!=null&&h.stackSize>0) click(c,a,mc);
     }
 
-    // windowClick with raw int 0 = PICKUP (ClickType doesn't exist in 1.8.9)
     private static void click(Container c, int slot, Minecraft mc) {
         if (mc.thePlayer==null||mc.playerController==null) return;
         mc.playerController.windowClick(c.windowId, slot, 0, 0, mc.thePlayer);
@@ -351,9 +355,8 @@ public class SortChestMod {
 }
 """
 
-# 1.16.5 Forge — old MCP names, getCarried() exists, isSameItemSameTags exists
-# ContainerScreen not AbstractContainerScreen, GuiScreenEvent not ScreenEvent
-# CompoundNBT not CompoundTag
+# 1.16.5 Forge — old MCP names, getDraggedStack() not getCarried()
+# isSameItem + tagMatches (not isSameItemSameTags which doesn't exist in 1.16.5)
 SRC_1165_FORGE = """\
 package net.itamio.sortchest;
 import net.minecraft.client.Minecraft;
@@ -398,11 +401,11 @@ public class SortChestMod {
         if (mc.player == null || mc.gameMode == null) return;
         if (mc.screen != screen) return;
         Container menu = screen.getMenu();
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getDraggedStack().isEmpty()) return;
         List<Integer> slots = slots(menu, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(menu, slots, mc);
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getDraggedStack().isEmpty()) return;
         List<ItemStack> layout = layout(menu, slots);
         reorder(menu, slots, layout, mc);
     }
@@ -415,6 +418,10 @@ public class SortChestMod {
         return r;
     }
 
+    private static boolean same(ItemStack a, ItemStack b) {
+        return ItemStack.isSameItem(a, b) && ItemStack.tagMatches(a, b);
+    }
+
     private static void merge(Container menu, List<Integer> slots, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
             ItemStack a = menu.slots.get(slots.get(i)).getItem();
@@ -423,9 +430,9 @@ public class SortChestMod {
                 if (a.getCount() >= a.getMaxStackSize()) break;
                 ItemStack b = menu.slots.get(slots.get(j)).getItem();
                 if (b.isEmpty()) continue;
-                if (ItemStack.isSameItemSameTags(a, b)) {
+                if (same(a, b)) {
                     click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
-                    if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
+                    if (!menu.getDraggedStack().isEmpty()) click(menu, slots.get(j), mc);
                 }
             }
         }
@@ -468,12 +475,12 @@ public class SortChestMod {
         if (a.isEmpty() && b.isEmpty()) return true;
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getCount() != b.getCount()) return false;
-        return ItemStack.isSameItemSameTags(a, b);
+        return same(a, b);
     }
 
     private static void swap(Container menu, int a, int b, Minecraft mc) {
         click(menu, a, mc); click(menu, b, mc);
-        if (!menu.getCarried().isEmpty()) click(menu, a, mc);
+        if (!menu.getDraggedStack().isEmpty()) click(menu, a, mc);
     }
 
     private static void click(Container menu, int slot, Minecraft mc) {
@@ -499,8 +506,7 @@ public class SortChestMod {
 }
 """
 
-# 1.17.1 Forge — InitScreenEvent.Post, import the inner class directly
-# TranslatableComponent, new Button constructor
+# 1.17.1 Forge — import ScreenEvent class, use ScreenEvent.InitScreenEvent.Post as type
 SRC_1171_FORGE = """\
 package net.itamio.sortchest;
 import net.minecraft.client.Minecraft;
@@ -512,7 +518,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.event.ScreenEvent.InitScreenEvent;
+import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -528,7 +534,7 @@ public class SortChestMod {
     public SortChestMod() { MinecraftForge.EVENT_BUS.register(this); }
 
     @SubscribeEvent
-    public void onScreenInit(InitScreenEvent.Post event) {
+    public void onScreenInit(ScreenEvent.InitScreenEvent.Post event) {
         Screen screen = event.getScreen();
         if (!(screen instanceof AbstractContainerScreen)) return;
         AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
@@ -649,49 +655,45 @@ public class SortChestMod {
 }
 """
 
-# 1.18.x — InitScreenEvent.Post still (same as 1.17), TranslatableComponent
-SRC_118_FORGE = SRC_1171_FORGE  # identical API
+# 1.18.x — same as 1.17.1 (InitScreenEvent.Post still, TranslatableComponent still)
+SRC_118_FORGE = SRC_1171_FORGE
 
-# 1.19.x — Init.Post (renamed in 1.19), Component.translatable, new Button
-SRC_119_FORGE = SRC_1171_FORGE.replace(
-    "import net.minecraftforge.client.event.ScreenEvent.InitScreenEvent;",
-    "import net.minecraftforge.client.event.ScreenEvent;"
-).replace(
-    "public void onScreenInit(InitScreenEvent.Post event) {",
-    "public void onScreenInit(ScreenEvent.Init.Post event) {"
-).replace(
-    "import net.minecraft.network.chat.TranslatableComponent;",
-    "import net.minecraft.network.chat.Component;"
-).replace(
-    "new TranslatableComponent(\"sortchest.button.sort\")",
-    "Component.translatable(\"sortchest.button.sort\")"
+# 1.19.x — Init.Post (renamed), Component.translatable, Button.builder (added in 1.19.4)
+SRC_119_FORGE = (SRC_1171_FORGE
+    .replace("ScreenEvent.InitScreenEvent.Post", "ScreenEvent.Init.Post")
+    .replace("import net.minecraft.network.chat.TranslatableComponent;",
+             "import net.minecraft.network.chat.Component;")
+    .replace("new TranslatableComponent(\"sortchest.button.sort\")",
+             "Component.translatable(\"sortchest.button.sort\")")
+    .replace("event.addListener(new Button(x, y, 40, 14,\n                Component.translatable(\"sortchest.button.sort\"),\n                btn -> sort(cs)));",
+             "event.addListener(Button.builder(Component.translatable(\"sortchest.button.sort\"),\n                btn -> sort(cs)).pos(x,y).size(40,14).build());")
 )
 
 # 1.20.1-1.20.4 Forge — Button.builder, Component.translatable (already worked)
-SRC_120_FORGE = SRC_119_FORGE.replace(
-    "event.addListener(new Button(x, y, 40, 14,\n                Component.translatable(\"sortchest.button.sort\"),\n                btn -> sort(cs)));",
-    "event.addListener(Button.builder(\n                Component.translatable(\"sortchest.button.sort\"),\n                btn -> sort(cs)).pos(x,y).size(40,14).build());"
+SRC_120_FORGE = (SRC_119_FORGE
+    .replace("ScreenEvent.Init.Post", "ScreenEvent.Init.Post")  # same
 )
 
 # 1.20.5-1.20.6 Forge — isSameItemSameComponents + DataComponentMap
-SRC_1205_FORGE = SRC_120_FORGE.replace(
-    "ItemStack.isSameItemSameTags(a, b)",
-    "ItemStack.isSameItemSameComponents(a, b)"
-).replace(
-    "final net.minecraft.nbt.CompoundTag tag; final int hash;\n        ItemKey(ItemStack s) {\n            item = s.getItem();\n            tag = s.getTag() != null ? s.getTag().copy() : null;\n            hash = Objects.hash(item, tag);",
-    "final net.minecraft.core.component.DataComponentMap components; final int hash;\n        ItemKey(ItemStack s) {\n            item = s.getItem();\n            components = s.getComponents();\n            hash = Objects.hash(item, components);"
-).replace(
-    "return item == k.item && Objects.equals(tag, k.tag);",
-    "return item == k.item && Objects.equals(components, k.components);"
+SRC_1205_FORGE = (SRC_120_FORGE
+    .replace("ItemStack.isSameItemSameTags(a, b)", "ItemStack.isSameItemSameComponents(a, b)")
+    .replace(
+        "final net.minecraft.nbt.CompoundTag tag; final int hash;\n        ItemKey(ItemStack s) {\n            item = s.getItem();\n            tag = s.getTag() != null ? s.getTag().copy() : null;\n            hash = Objects.hash(item, tag);",
+        "final net.minecraft.core.component.DataComponentMap components; final int hash;\n        ItemKey(ItemStack s) {\n            item = s.getItem();\n            components = s.getComponents();\n            hash = Objects.hash(item, components);"
+    )
+    .replace("return item == k.item && Objects.equals(tag, k.tag);",
+             "return item == k.item && Objects.equals(components, k.components);")
 )
 
 # 1.21.x Forge (1.21.1, 1.21.4) — same as 1.20.5+
 SRC_121_FORGE = SRC_1205_FORGE
 
-# 1.21.11 Forge — still uses net.minecraftforge.* (NOT merged with NeoForge)
-SRC_12111_FORGE = SRC_121_FORGE  # same imports as 1.21.x
+# 1.21.11 Forge — eventbus moved to net.neoforged.bus.api in Forge 1.21.x
+SRC_12111_FORGE = (SRC_121_FORGE
+    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;",
+             "import net.neoforged.bus.api.SubscribeEvent;")
+)
 
-# NeoForge variants
 def to_neoforge(src: str) -> str:
     return (src
         .replace("import net.minecraftforge.client.event.ScreenEvent;",
@@ -713,14 +715,17 @@ SRC_121_NEOFORGE  = to_neoforge(SRC_121_FORGE)
 # ============================================================
 # FABRIC SOURCES
 # ============================================================
+# Fabric 1.16.5-1.20.x  → Yarn mappings
+# Fabric 1.21.x         → Mojang mappings (same package names as Forge)
+# ============================================================
 
-# Fabric 1.16.5-1.18.2 (presplit → src/main/java)
-# HandledScreen.x/y/backgroundWidth PROTECTED → reflection
-# new ButtonWidget(x,y,w,h,text,handler) — builder not available
-# ItemStack.areItemsEqual + areNbtEqual for comparison
-# getTag() returns NbtCompound, .copy() returns NbtElement → cast
-# TranslatableText in 1.16.5-1.18.2
-SRC_FABRIC_1165_118 = """\
+# Fabric 1.16.5 (Yarn, presplit → src/main/java)
+# getCursorStack() → getStackInCursor() in 1.16.5
+# getInventory() → inventory field
+# areNbtEqual → areTagsEqual
+# ButtonWidget.builder not available → new ButtonWidget
+# TranslatableText
+SRC_FABRIC_1165 = """\
 package net.itamio.sortchest;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
@@ -767,11 +772,11 @@ public class SortChestMod implements ClientModInitializer {
         if (mc.player == null || mc.interactionManager == null) return;
         if (mc.currentScreen != screen) return;
         ScreenHandler handler = screen.getScreenHandler();
-        if (!handler.getCursorStack().isEmpty()) return;
-        List<Integer> slots = slots(handler, mc.player.getInventory());
+        if (!handler.getStackInCursor().isEmpty()) return;
+        List<Integer> slots = slots(handler, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(handler, slots, mc);
-        if (!handler.getCursorStack().isEmpty()) return;
+        if (!handler.getStackInCursor().isEmpty()) return;
         List<ItemStack> layout = layout(handler, slots);
         reorder(handler, slots, layout, mc);
     }
@@ -786,7 +791,7 @@ public class SortChestMod implements ClientModInitializer {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.areItemsEqual(a, b) && ItemStack.areNbtEqual(a, b);
+        return ItemStack.areItemsEqual(a, b) && ItemStack.areTagsEqual(a, b);
     }
 
     private static void merge(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
@@ -799,7 +804,7 @@ public class SortChestMod implements ClientModInitializer {
                 if (b.isEmpty()) continue;
                 if (same(a, b)) {
                     click(handler, slots.get(j), mc); click(handler, slots.get(i), mc);
-                    if (!handler.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);
+                    if (!handler.getStackInCursor().isEmpty()) click(handler, slots.get(j), mc);
                 }
             }
         }
@@ -848,7 +853,7 @@ public class SortChestMod implements ClientModInitializer {
 
     private static void swap(ScreenHandler handler, int a, int b, MinecraftClient mc) {
         click(handler, a, mc); click(handler, b, mc);
-        if (!handler.getCursorStack().isEmpty()) click(handler, a, mc);
+        if (!handler.getStackInCursor().isEmpty()) click(handler, a, mc);
     }
 
     private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
@@ -861,9 +866,7 @@ public class SortChestMod implements ClientModInitializer {
         final NbtCompound tag; final int hash;
         ItemKey(ItemStack s) {
             item = s.getItem();
-            // getTag().copy() returns NbtElement in 1.17+, cast to NbtCompound
-            net.minecraft.nbt.NbtElement raw = s.getTag() != null ? s.getTag().copy() : null;
-            tag = raw instanceof NbtCompound ? (NbtCompound) raw : null;
+            tag = s.getTag() != null ? s.getTag().copy() : null;
             hash = Objects.hash(item, tag);
         }
         public boolean equals(Object o) {
@@ -876,20 +879,39 @@ public class SortChestMod implements ClientModInitializer {
 }
 """
 
-# Fabric 1.19.4 — Text.translatable replaces TranslatableText
-SRC_FABRIC_119 = SRC_FABRIC_1165_118.replace(
-    "import net.minecraft.text.TranslatableText;",
-    "import net.minecraft.text.Text;"
-).replace(
-    "new TranslatableText(\"sortchest.button.sort\")",
-    "Text.translatable(\"sortchest.button.sort\")"
+# Fabric 1.17.1-1.18.2 (Yarn, presplit → src/main/java)
+# getCursorStack() exists from 1.17+, getInventory() exists from 1.17+
+# areTagsEqual still works, TranslatableText still exists
+# getTag().copy() returns NbtCompound directly (no NbtElement intermediate needed)
+SRC_FABRIC_117_118 = (SRC_FABRIC_1165
+    .replace("if (!handler.getStackInCursor().isEmpty()) return;",
+             "if (!handler.getCursorStack().isEmpty()) return;")
+    .replace("List<Integer> slots = slots(handler, mc.player.inventory);",
+             "List<Integer> slots = slots(handler, mc.player.getInventory());")
+    .replace("if (!handler.getStackInCursor().isEmpty()) click(handler, slots.get(j), mc);",
+             "if (!handler.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);")
+    .replace("if (!handler.getStackInCursor().isEmpty()) click(handler, a, mc);",
+             "if (!handler.getCursorStack().isEmpty()) click(handler, a, mc);")
+    .replace("net.minecraft.entity.player.PlayerInventory inv",
+             "net.minecraft.entity.player.PlayerInventory inv")
+    # Fix ItemKey: no NbtElement, just direct copy
+    .replace(
+        "tag = s.getTag() != null ? s.getTag().copy() : null;",
+        "tag = s.getTag() != null ? s.getTag().copy() : null;"
+    )
 )
 
-# Fabric 1.20.x (fabric_split → src/client/java)
-# HandledScreen.x/y/backgroundWidth STILL PROTECTED in 1.20 → reflection
-# ButtonWidget.builder() available
-# ItemStack.canCombine() available in 1.20.1-1.20.4
-# getNbt() available, returns NbtCompound directly
+# Fabric 1.19.4 (Yarn, presplit) — Text.translatable replaces TranslatableText
+SRC_FABRIC_119 = (SRC_FABRIC_117_118
+    .replace("import net.minecraft.text.TranslatableText;",
+             "import net.minecraft.text.Text;")
+    .replace("new TranslatableText(\"sortchest.button.sort\")",
+             "Text.translatable(\"sortchest.button.sort\")")
+)
+
+# Fabric 1.20.x (Yarn, fabric_split → src/client/java)
+# HandledScreen.x/y/backgroundWidth still protected → reflection
+# ButtonWidget.builder() available, Text.translatable, canCombine, getNbt
 SRC_FABRIC_120 = """\
 package net.itamio.sortchest;
 import net.fabricmc.api.ClientModInitializer;
@@ -1039,37 +1061,189 @@ public class SortChestMod implements ClientModInitializer {
 }
 """
 
-# Fabric 1.20.5-1.20.6 — areItemsAndComponentsEqual + ComponentMap
-SRC_FABRIC_1205 = SRC_FABRIC_120.replace(
-    "ItemStack.canCombine(a, b)",
-    "ItemStack.areItemsAndComponentsEqual(a, b)"
-).replace(
-    "final net.minecraft.nbt.NbtCompound tag; final int hash;\n        ItemKey(ItemStack s) {\n            item = s.getItem();\n            tag = s.getNbt() != null ? s.getNbt().copy() : null;\n            hash = Objects.hash(item, tag);",
-    "final net.minecraft.component.ComponentMap components; final int hash;\n        ItemKey(ItemStack s) {\n            item = s.getItem();\n            components = s.getComponents();\n            hash = Objects.hash(item, components);"
-).replace(
-    "return item == k.item && Objects.equals(tag, k.tag);",
-    "return item == k.item && Objects.equals(components, k.components);"
+# Fabric 1.20.5-1.20.6 (Yarn, fabric_split) — areItemsAndComponentsEqual + ComponentMap
+SRC_FABRIC_1205 = (SRC_FABRIC_120
+    .replace("ItemStack.canCombine(a, b)", "ItemStack.areItemsAndComponentsEqual(a, b)")
+    .replace(
+        "final net.minecraft.nbt.NbtCompound tag; final int hash;\n        ItemKey(ItemStack s) {\n            item = s.getItem();\n            tag = s.getNbt() != null ? s.getNbt().copy() : null;\n            hash = Objects.hash(item, tag);",
+        "final net.minecraft.component.ComponentMap components; final int hash;\n        ItemKey(ItemStack s) {\n            item = s.getItem();\n            components = s.getComponents();\n            hash = Objects.hash(item, components);"
+    )
+    .replace("return item == k.item && Objects.equals(tag, k.tag);",
+             "return item == k.item && Objects.equals(components, k.components);")
 )
 
-# Fabric 1.21.x — same as 1.20.5+
-SRC_FABRIC_121 = SRC_FABRIC_1205
+# Fabric 1.21.x (Mojang mappings, fabric_split → src/client/java)
+# Uses SAME package names as Forge (AbstractContainerScreen, AbstractContainerMenu, etc.)
+# But uses Fabric API for screen events (ScreenEvents, Screens)
+# ButtonWidget → net.minecraft.client.gui.components.Button (Mojang name)
+# ScreenHandler → AbstractContainerMenu (Mojang name)
+# SlotActionType → ClickType (Mojang name)
+# PlayerInventory → Inventory (Mojang name)
+SRC_FABRIC_121 = """\
+package net.itamio.sortchest;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public class SortChestMod implements ClientModInitializer {
+    public static final String MOD_ID = "sortchest";
+
+    private static int gi(AbstractContainerScreen<?> h, String n) {
+        try { Field f=AbstractContainerScreen.class.getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
+        catch(Exception e) {
+            try { Field f=h.getClass().getSuperclass().getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
+            catch(Exception e2) { return 0; }
+        }
+    }
+
+    @Override
+    public void onInitializeClient() {
+        ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            if (!(screen instanceof AbstractContainerScreen)) return;
+            AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
+            int x = cs.getGuiLeft() + cs.getXSize() - 44;
+            int y = cs.getGuiTop() + 6;
+            Screens.getButtons(screen).add(Button.builder(
+                    Component.translatable("sortchest.button.sort"),
+                    btn -> sort(cs)).pos(x, y).size(40, 14).build());
+        });
+    }
+
+    private static void sort(AbstractContainerScreen<?> screen) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.gameMode == null) return;
+        if (mc.screen != screen) return;
+        AbstractContainerMenu menu = screen.getMenu();
+        if (!menu.getCarried().isEmpty()) return;
+        List<Integer> slots = slots(menu, mc.player.getInventory());
+        if (slots.isEmpty()) return;
+        merge(menu, slots, mc);
+        if (!menu.getCarried().isEmpty()) return;
+        List<ItemStack> layout = layout(menu, slots);
+        reorder(menu, slots, layout, mc);
+    }
+
+    private static List<Integer> slots(AbstractContainerMenu menu,
+            net.minecraft.world.entity.player.Inventory inv) {
+        List<Integer> r = new ArrayList<Integer>();
+        for (int i = 0; i < menu.slots.size(); i++) {
+            if (menu.slots.get(i).container != inv) r.add(Integer.valueOf(i));
+        }
+        return r;
+    }
+
+    private static void merge(AbstractContainerMenu menu, List<Integer> slots, Minecraft mc) {
+        for (int i = 0; i < slots.size(); i++) {
+            ItemStack a = menu.slots.get(slots.get(i)).getItem();
+            if (a.isEmpty() || a.getCount() >= a.getMaxStackSize()) continue;
+            for (int j = i+1; j < slots.size(); j++) {
+                if (a.getCount() >= a.getMaxStackSize()) break;
+                ItemStack b = menu.slots.get(slots.get(j)).getItem();
+                if (b.isEmpty()) continue;
+                if (ItemStack.isSameItemSameComponents(a, b)) {
+                    click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
+                    if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
+                }
+            }
+        }
+    }
+
+    private static List<ItemStack> layout(AbstractContainerMenu menu, List<Integer> slots) {
+        Map<ItemKey,List<ItemStack>> groups = new LinkedHashMap<ItemKey,List<ItemStack>>();
+        for (int i = 0; i < slots.size(); i++) {
+            ItemStack s = menu.slots.get(slots.get(i)).getItem();
+            if (s.isEmpty()) continue;
+            ItemKey k = new ItemKey(s);
+            List<ItemStack> g = groups.get(k);
+            if (g == null) { g = new ArrayList<ItemStack>(); groups.put(k, g); }
+            g.add(s.copy());
+        }
+        List<ItemStack> r = new ArrayList<ItemStack>();
+        for (List<ItemStack> g : groups.values()) r.addAll(g);
+        while (r.size() < slots.size()) r.add(ItemStack.EMPTY);
+        return r;
+    }
+
+    private static void reorder(AbstractContainerMenu menu, List<Integer> slots,
+            List<ItemStack> layout, Minecraft mc) {
+        for (int i = 0; i < slots.size(); i++) {
+            ItemStack cur = menu.slots.get(slots.get(i)).getItem();
+            ItemStack des = layout.get(i);
+            if (match(cur, des)) continue;
+            int from = find(menu, slots, i+1, des);
+            if (from == -1) continue;
+            swap(menu, slots.get(i), slots.get(from), mc);
+        }
+    }
+
+    private static int find(AbstractContainerMenu menu, List<Integer> slots, int start, ItemStack t) {
+        for (int i = start; i < slots.size(); i++)
+            if (match(menu.slots.get(slots.get(i)).getItem(), t)) return i;
+        return -1;
+    }
+
+    private static boolean match(ItemStack a, ItemStack b) {
+        if (a.isEmpty() && b.isEmpty()) return true;
+        if (a.isEmpty() || b.isEmpty()) return false;
+        if (a.getCount() != b.getCount()) return false;
+        return ItemStack.isSameItemSameComponents(a, b);
+    }
+
+    private static void swap(AbstractContainerMenu menu, int a, int b, Minecraft mc) {
+        click(menu, a, mc); click(menu, b, mc);
+        if (!menu.getCarried().isEmpty()) click(menu, a, mc);
+    }
+
+    private static void click(AbstractContainerMenu menu, int slot, Minecraft mc) {
+        if (mc.player == null || mc.gameMode == null) return;
+        mc.gameMode.handleInventoryMouseClick(menu.containerId, slot, 0, ClickType.PICKUP, mc.player);
+    }
+
+    static final class ItemKey {
+        final net.minecraft.world.item.Item item;
+        final net.minecraft.core.component.DataComponentMap components; final int hash;
+        ItemKey(ItemStack s) {
+            item = s.getItem();
+            components = s.getComponents();
+            hash = Objects.hash(item, components);
+        }
+        public boolean equals(Object o) {
+            if (!(o instanceof ItemKey)) return false;
+            ItemKey k = (ItemKey)o;
+            return item == k.item && Objects.equals(components, k.components);
+        }
+        public int hashCode() { return hash; }
+    }
+}
+"""
 
 # ============================================================
 # BUNDLE TARGETS
-# is_split=True → src/client/java (fabric_split, 1.20+)
-# is_split=False → src/main/java (fabric_presplit or forge)
-# fabric.mod.json ALWAYS goes in src/main/resources/
 # ============================================================
 targets = [
     # (folder, java_src, loader, mc_ver, is_fabric, is_split, fabric_mc_dep)
     ("SortChest189Forge",       SRC_189_FORGE,        "forge",    "1.8.9",    False, False, None),
     ("SortChest1122Forge",      SRC_1122_FORGE,       "forge",    "1.12.2",   False, False, None),
     ("SortChest1165Forge",      SRC_1165_FORGE,       "forge",    "1.16.5",   False, False, None),
-    ("SortChest1165Fabric",     SRC_FABRIC_1165_118,  "fabric",   "1.16.5",   True,  False, ">=1.16.5 <1.17"),
+    ("SortChest1165Fabric",     SRC_FABRIC_1165,      "fabric",   "1.16.5",   True,  False, ">=1.16.5 <1.17"),
     ("SortChest1171Forge",      SRC_1171_FORGE,       "forge",    "1.17.1",   False, False, None),
-    ("SortChest1171Fabric",     SRC_FABRIC_1165_118,  "fabric",   "1.17.1",   True,  False, ">=1.17 <1.18"),
+    ("SortChest1171Fabric",     SRC_FABRIC_117_118,   "fabric",   "1.17.1",   True,  False, ">=1.17 <1.18"),
     ("SortChest1182Forge",      SRC_118_FORGE,        "forge",    "1.18.2",   False, False, None),
-    ("SortChest1182Fabric",     SRC_FABRIC_1165_118,  "fabric",   "1.18.2",   True,  False, ">=1.18 <1.19"),
+    ("SortChest1182Fabric",     SRC_FABRIC_117_118,   "fabric",   "1.18.2",   True,  False, ">=1.18 <1.19"),
     ("SortChest1194Forge",      SRC_119_FORGE,        "forge",    "1.19.4",   False, False, None),
     ("SortChest1194Fabric",     SRC_FABRIC_119,       "fabric",   "1.19.4",   True,  False, ">=1.19 <1.20"),
     ("SortChest1201Forge",      SRC_120_FORGE,        "forge",    "1.20.1",   False, False, None),
@@ -1099,13 +1273,13 @@ for (folder, java_src, loader, mc_ver, is_fabric, is_split, fab_dep) in targets:
     base = BUNDLE / folder
     write(base / "mod.txt", mod_txt())
     write(base / "version.txt", version_txt(mc_ver, loader))
-    write(base / LANG_MAIN, lang_json())          # lang always in src/main/resources
+    write(base / LANG_MAIN, lang_json())
 
     if is_fabric and is_split:
-        write(base / JAVA_CLIENT, java_src)       # source in src/client/java
-        write(base / FAB_JSON, fabric_mod_json(fab_dep or "*"))  # json in src/main/resources
+        write(base / JAVA_CLIENT, java_src)
+        write(base / FAB_JSON, fabric_mod_json(fab_dep or "*"))
     elif is_fabric:
-        write(base / JAVA_MAIN, java_src)         # source in src/main/java
+        write(base / JAVA_MAIN, java_src)
         write(base / FAB_JSON, fabric_mod_json(fab_dep or "*"))
     else:
         write(base / JAVA_MAIN, java_src)

@@ -10,7 +10,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,8 +32,7 @@ public class SortChestMod {
         if (mc.player == null) return;
         int x = cs.getGuiLeft() + cs.getXSize() - 44;
         int y = cs.getGuiTop() + 6;
-        event.addListener(Button.builder(
-                Component.translatable("sortchest.button.sort"),
+        event.addListener(Button.builder(Component.translatable("sortchest.button.sort"),
                 btn -> sort(cs)).pos(x,y).size(40,14).build());
     }
 

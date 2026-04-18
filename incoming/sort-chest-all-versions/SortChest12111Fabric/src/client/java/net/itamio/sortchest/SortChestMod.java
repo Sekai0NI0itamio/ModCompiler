@@ -2,14 +2,14 @@ package net.itamio.sortchest;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -20,67 +20,70 @@ import java.util.Objects;
 public class SortChestMod implements ClientModInitializer {
     public static final String MOD_ID = "sortchest";
 
-    private static int gi(HandledScreen<?> h, String n) {
-        try { Field f=HandledScreen.class.getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
-        catch(Exception e) { return 0; }
+    private static int gi(AbstractContainerScreen<?> h, String n) {
+        try { Field f=AbstractContainerScreen.class.getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
+        catch(Exception e) {
+            try { Field f=h.getClass().getSuperclass().getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
+            catch(Exception e2) { return 0; }
+        }
     }
 
     @Override
     public void onInitializeClient() {
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
-            if (!(screen instanceof HandledScreen)) return;
-            HandledScreen<?> hs = (HandledScreen<?>) screen;
-            int x = gi(hs,"x") + gi(hs,"backgroundWidth") - 44;
-            int y = gi(hs,"y") + 6;
-            Screens.getButtons(screen).add(ButtonWidget.builder(
-                    Text.translatable("sortchest.button.sort"),
-                    btn -> sort(hs)).dimensions(x, y, 40, 14).build());
+            if (!(screen instanceof AbstractContainerScreen)) return;
+            AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
+            int x = cs.getGuiLeft() + cs.getXSize() - 44;
+            int y = cs.getGuiTop() + 6;
+            Screens.getButtons(screen).add(Button.builder(
+                    Component.translatable("sortchest.button.sort"),
+                    btn -> sort(cs)).pos(x, y).size(40, 14).build());
         });
     }
 
-    private static void sort(HandledScreen<?> screen) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.interactionManager == null) return;
-        if (mc.currentScreen != screen) return;
-        ScreenHandler handler = screen.getScreenHandler();
-        if (!handler.getCursorStack().isEmpty()) return;
-        List<Integer> slots = slots(handler, mc.player.getInventory());
+    private static void sort(AbstractContainerScreen<?> screen) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.gameMode == null) return;
+        if (mc.screen != screen) return;
+        AbstractContainerMenu menu = screen.getMenu();
+        if (!menu.getCarried().isEmpty()) return;
+        List<Integer> slots = slots(menu, mc.player.getInventory());
         if (slots.isEmpty()) return;
-        merge(handler, slots, mc);
-        if (!handler.getCursorStack().isEmpty()) return;
-        List<ItemStack> layout = layout(handler, slots);
-        reorder(handler, slots, layout, mc);
+        merge(menu, slots, mc);
+        if (!menu.getCarried().isEmpty()) return;
+        List<ItemStack> layout = layout(menu, slots);
+        reorder(menu, slots, layout, mc);
     }
 
-    private static List<Integer> slots(ScreenHandler handler,
-            net.minecraft.entity.player.PlayerInventory inv) {
+    private static List<Integer> slots(AbstractContainerMenu menu,
+            net.minecraft.world.entity.player.Inventory inv) {
         List<Integer> r = new ArrayList<Integer>();
-        for (int i = 0; i < handler.slots.size(); i++) {
-            if (handler.slots.get(i).inventory != inv) r.add(Integer.valueOf(i));
+        for (int i = 0; i < menu.slots.size(); i++) {
+            if (menu.slots.get(i).container != inv) r.add(Integer.valueOf(i));
         }
         return r;
     }
 
-    private static void merge(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
+    private static void merge(AbstractContainerMenu menu, List<Integer> slots, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
-            ItemStack a = handler.slots.get(slots.get(i)).getStack();
-            if (a.isEmpty() || a.getCount() >= a.getMaxCount()) continue;
+            ItemStack a = menu.slots.get(slots.get(i)).getItem();
+            if (a.isEmpty() || a.getCount() >= a.getMaxStackSize()) continue;
             for (int j = i+1; j < slots.size(); j++) {
-                if (a.getCount() >= a.getMaxCount()) break;
-                ItemStack b = handler.slots.get(slots.get(j)).getStack();
+                if (a.getCount() >= a.getMaxStackSize()) break;
+                ItemStack b = menu.slots.get(slots.get(j)).getItem();
                 if (b.isEmpty()) continue;
-                if (ItemStack.areItemsAndComponentsEqual(a, b)) {
-                    click(handler, slots.get(j), mc); click(handler, slots.get(i), mc);
-                    if (!handler.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);
+                if (ItemStack.isSameItemSameComponents(a, b)) {
+                    click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
+                    if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
                 }
             }
         }
     }
 
-    private static List<ItemStack> layout(ScreenHandler handler, List<Integer> slots) {
+    private static List<ItemStack> layout(AbstractContainerMenu menu, List<Integer> slots) {
         Map<ItemKey,List<ItemStack>> groups = new LinkedHashMap<ItemKey,List<ItemStack>>();
         for (int i = 0; i < slots.size(); i++) {
-            ItemStack s = handler.slots.get(slots.get(i)).getStack();
+            ItemStack s = menu.slots.get(slots.get(i)).getItem();
             if (s.isEmpty()) continue;
             ItemKey k = new ItemKey(s);
             List<ItemStack> g = groups.get(k);
@@ -93,21 +96,21 @@ public class SortChestMod implements ClientModInitializer {
         return r;
     }
 
-    private static void reorder(ScreenHandler handler, List<Integer> slots,
-            List<ItemStack> layout, MinecraftClient mc) {
+    private static void reorder(AbstractContainerMenu menu, List<Integer> slots,
+            List<ItemStack> layout, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
-            ItemStack cur = handler.slots.get(slots.get(i)).getStack();
+            ItemStack cur = menu.slots.get(slots.get(i)).getItem();
             ItemStack des = layout.get(i);
             if (match(cur, des)) continue;
-            int from = find(handler, slots, i+1, des);
+            int from = find(menu, slots, i+1, des);
             if (from == -1) continue;
-            swap(handler, slots.get(i), slots.get(from), mc);
+            swap(menu, slots.get(i), slots.get(from), mc);
         }
     }
 
-    private static int find(ScreenHandler handler, List<Integer> slots, int start, ItemStack t) {
+    private static int find(AbstractContainerMenu menu, List<Integer> slots, int start, ItemStack t) {
         for (int i = start; i < slots.size(); i++)
-            if (match(handler.slots.get(slots.get(i)).getStack(), t)) return i;
+            if (match(menu.slots.get(slots.get(i)).getItem(), t)) return i;
         return -1;
     }
 
@@ -115,22 +118,22 @@ public class SortChestMod implements ClientModInitializer {
         if (a.isEmpty() && b.isEmpty()) return true;
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getCount() != b.getCount()) return false;
-        return ItemStack.areItemsAndComponentsEqual(a, b);
+        return ItemStack.isSameItemSameComponents(a, b);
     }
 
-    private static void swap(ScreenHandler handler, int a, int b, MinecraftClient mc) {
-        click(handler, a, mc); click(handler, b, mc);
-        if (!handler.getCursorStack().isEmpty()) click(handler, a, mc);
+    private static void swap(AbstractContainerMenu menu, int a, int b, Minecraft mc) {
+        click(menu, a, mc); click(menu, b, mc);
+        if (!menu.getCarried().isEmpty()) click(menu, a, mc);
     }
 
-    private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
-        if (mc.player == null || mc.interactionManager == null) return;
-        mc.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, mc.player);
+    private static void click(AbstractContainerMenu menu, int slot, Minecraft mc) {
+        if (mc.player == null || mc.gameMode == null) return;
+        mc.gameMode.handleInventoryMouseClick(menu.containerId, slot, 0, ClickType.PICKUP, mc.player);
     }
 
     static final class ItemKey {
-        final net.minecraft.item.Item item;
-        final net.minecraft.component.ComponentMap components; final int hash;
+        final net.minecraft.world.item.Item item;
+        final net.minecraft.core.component.DataComponentMap components; final int hash;
         ItemKey(ItemStack s) {
             item = s.getItem();
             components = s.getComponents();

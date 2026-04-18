@@ -32,9 +32,8 @@ public class SortChestMod {
         if (mc.player == null) return;
         int x = cs.getGuiLeft() + cs.getXSize() - 44;
         int y = cs.getGuiTop() + 6;
-        event.addListener(new Button(x, y, 40, 14,
-                Component.translatable("sortchest.button.sort"),
-                btn -> sort(cs)));
+        event.addListener(Button.builder(Component.translatable("sortchest.button.sort"),
+                btn -> sort(cs)).pos(x,y).size(40,14).build());
     }
 
     private static void sort(AbstractContainerScreen<?> screen) {
