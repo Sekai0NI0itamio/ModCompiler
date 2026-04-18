@@ -55,30 +55,30 @@ public class SetHomeMod {
         HomeData d = HomeData.get(src.getServer());
         int max = MAX_HOMES.get();
         if (max > 0 && !d.hasHome(uuid, name) && d.getHomes(uuid).size() >= max) {
-            src.sendSuccess(Component.literal("You have reached the maximum number of homes (" + max + ")."), false); return 0;
+            src.sendSuccess(() -> Component.literal("You have reached the maximum number of homes (" + max + ")."), false); return 0;
         }
         d.setHome(uuid, name, p.getX(), p.getY(), p.getZ(), p.getYRot(), p.getXRot());
-        src.sendSuccess(Component.literal("Home '" + name + "' set."), false); return 1;
+        src.sendSuccess(() -> Component.literal("Home '" + name + "' set."), false); return 1;
     }
     private static int home(CommandSourceStack src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         if ("list".equalsIgnoreCase(name)) {
             ServerPlayer p = src.getPlayerOrException();
             Set<String> homes = HomeData.get(src.getServer()).getHomes(p.getUUID().toString());
-            if (homes.isEmpty()) { src.sendSuccess(Component.literal("You have no homes set."), false); return 1; }
-            src.sendSuccess(Component.literal("Your homes: " + String.join(", ", new ArrayList<>(homes))), false); return 1;
+            if (homes.isEmpty()) { src.sendSuccess(() -> Component.literal("You have no homes set."), false); return 1; }
+            src.sendSuccess(() -> Component.literal("Your homes: " + String.join(", ", new ArrayList<>(homes))), false); return 1;
         }
         ServerPlayer p = src.getPlayerOrException();
         double[] h = HomeData.get(src.getServer()).getHome(p.getUUID().toString(), name);
-        if (h == null) { src.sendSuccess(Component.literal("Home '" + name + "' not found."), false); return 0; }
+        if (h == null) { src.sendSuccess(() -> Component.literal("Home '" + name + "' not found."), false); return 0; }
         p.teleportTo(h[0], h[1], h[2]);
-        src.sendSuccess(Component.literal("Teleported to home '" + name + "'."), false); return 1;
+        src.sendSuccess(() -> Component.literal("Teleported to home '" + name + "'."), false); return 1;
     }
     private static int delHome(CommandSourceStack src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer p = src.getPlayerOrException();
         if (!HomeData.get(src.getServer()).removeHome(p.getUUID().toString(), name)) {
-            src.sendSuccess(Component.literal("Home '" + name + "' not found."), false); return 0;
+            src.sendSuccess(() -> Component.literal("Home '" + name + "' not found."), false); return 0;
         }
-        src.sendSuccess(Component.literal("Home '" + name + "' deleted."), false); return 1;
+        src.sendSuccess(() -> Component.literal("Home '" + name + "' deleted."), false); return 1;
     }
 
     public static class HomeData extends SavedData {

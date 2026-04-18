@@ -189,6 +189,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import java.util.*;
+import java.util.Collection;
 
 @Mod(modid=SetHomeMod.MODID,name="Set Home",version="1.0.1",acceptedMinecraftVersions="[1.8.9]")
 public class SetHomeMod {
@@ -256,7 +257,7 @@ public class SetHomeMod {
             }
         }
         @Override
-        public NBTTagCompound writeToNBT(NBTTagCompound tag) {
+        public void writeToNBT(NBTTagCompound tag) {
             NBTTagList players = new NBTTagList();
             for (Map.Entry<String, Map<String, double[]>> pe : data.entrySet()) {
                 NBTTagCompound pc = new NBTTagCompound();
@@ -272,7 +273,7 @@ public class SetHomeMod {
                 }
                 pc.setTag("homes", hl); players.appendTag(pc);
             }
-            tag.setTag("players", players); return tag;
+            tag.setTag("players", players);
         }
     }
 
@@ -305,7 +306,7 @@ public class SetHomeMod {
             if ("list".equalsIgnoreCase(args[0])) {
                 Set<String> homes = d.getHomes(uuid);
                 if (homes.isEmpty()) { p.addChatMessage(new ChatComponentText("You have no homes set.")); return; }
-                p.addChatMessage(new ChatComponentText("Your homes: "+join(homes)));
+                p.addChatMessage(new ChatComponentText("Your homes: "+joinSet(homes)));
                 return;
             }
             double[] h = d.getHome(uuid, args[0]);
@@ -327,7 +328,7 @@ public class SetHomeMod {
             p.addChatMessage(new ChatComponentText("Home '"+args[0]+"' deleted."));
         }
     }
-    private static String join(Set<String> s) {
+    private static String joinSet(Collection<String> s) {
         StringBuilder sb = new StringBuilder();
         for (String v : s) { if (sb.length()>0) sb.append(", "); sb.append(v); }
         return sb.toString();
@@ -790,8 +791,10 @@ public class SetHomeMod {
         public HomeData(String n) { super(n); }
 
         public static HomeData get(MinecraftServer srv) {
-            DimensionSavedDataManager mgr = srv.getLevel(net.minecraft.world.dimension.DimensionType.OVERWORLD).getDataStorage();
-            return mgr.computeIfAbsent(HomeData::new, HomeData::new, NAME);
+            net.minecraft.world.storage.DimensionSavedDataManager mgr = srv.getWorld(0).getSavedData();
+            HomeData d = mgr.get(HomeData::new, NAME);
+            if (d == null) { d = new HomeData(); mgr.set(d); }
+            return d;
         }
         private Map<String, double[]> player(String uuid) { return data.computeIfAbsent(uuid, k -> new HashMap<>()); }
         public void setHome(String uuid, String name, double x, double y, double z, float yaw, float pitch) {
@@ -1002,6 +1005,9 @@ SRC_1194 = SRC_119
 
 # 1.20.x Forge — same as 1.19.4 but sendSuccess takes Supplier<Component>
 SRC_120_FORGE = SRC_1194.replace(
+    "src.sendSuccess(Component.literal(",
+    "src.sendSuccess(() -> Component.literal("
+).replace(
     "src.sendSuccess(() -> Component.literal(",
     "src.sendSuccess(() -> Component.literal("
 ).replace(
@@ -1009,7 +1015,10 @@ SRC_120_FORGE = SRC_1194.replace(
     "), false); return 0;\n        }\n        d.setHome"
 )
 # Simpler: just replace all sendSuccess patterns
-SRC_120_FORGE = SRC_1194
+SRC_120_FORGE = SRC_1194.replace(
+    "src.sendSuccess(Component.literal(",
+    "src.sendSuccess(() -> Component.literal("
+)
 for old, new in [
     ('src.sendSuccess(() -> Component.literal("You have reached', 'src.sendSuccess(() -> Component.literal("You have reached'),
     ('src.sendSuccess(() -> Component.literal("Home \'" + name + "\' set.")', 'src.sendSuccess(() -> Component.literal("Home \'" + name + "\' set.")'),
@@ -1030,13 +1039,7 @@ SRC_121_FORGE = SRC_120_FORGE.replace(
 )
 
 # 1.21.11 Forge — addListener pattern (no @SubscribeEvent)
-SRC_12111_FORGE = (SRC_121_FORGE
-    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
-    .replace(
-        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
-        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);\n    }\n\n    public void onRegisterCommands(RegisterCommandsEvent e) {"
-    )
-)
+SRC_12111_FORGE = SRC_121_FORGE  # same as 1.21.x (MinecraftForge.EVENT_BUS works in 1.21.11)
 
 # ============================================================
 # NEOFORGE variants
@@ -1063,10 +1066,8 @@ def to_neoforge_sethome(src: str) -> str:
         .replace("ForgeConfigSpec SPEC;", "ModConfigSpec SPEC;")
         .replace("MinecraftForge.EVENT_BUS.register(this);",
                  "NeoForge.EVENT_BUS.register(this);")
-        .replace("net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        NeoForge.EVENT_BUS.register(this);",
-                 "NeoForge.EVENT_BUS.register(this);")
-        .replace("    public SetHomeMod() {\n        NeoForge.EVENT_BUS.register(this);\n    }",
-                 "    public SetHomeMod(net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext ctx) {\n        ctx.getModEventBus().register(this);\n        NeoForge.EVENT_BUS.register(this);\n    }")
+        .replace("net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);",
+                 "// config uses defaults")
     )
 
 SRC_120_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE)

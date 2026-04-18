@@ -14,6 +14,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import java.util.*;
+import java.util.Collection;
 
 @Mod(modid=SetHomeMod.MODID,name="Set Home",version="1.0.1",acceptedMinecraftVersions="[1.8.9]")
 public class SetHomeMod {
@@ -81,7 +82,7 @@ public class SetHomeMod {
             }
         }
         @Override
-        public NBTTagCompound writeToNBT(NBTTagCompound tag) {
+        public void writeToNBT(NBTTagCompound tag) {
             NBTTagList players = new NBTTagList();
             for (Map.Entry<String, Map<String, double[]>> pe : data.entrySet()) {
                 NBTTagCompound pc = new NBTTagCompound();
@@ -97,7 +98,7 @@ public class SetHomeMod {
                 }
                 pc.setTag("homes", hl); players.appendTag(pc);
             }
-            tag.setTag("players", players); return tag;
+            tag.setTag("players", players);
         }
     }
 
@@ -130,7 +131,7 @@ public class SetHomeMod {
             if ("list".equalsIgnoreCase(args[0])) {
                 Set<String> homes = d.getHomes(uuid);
                 if (homes.isEmpty()) { p.addChatMessage(new ChatComponentText("You have no homes set.")); return; }
-                p.addChatMessage(new ChatComponentText("Your homes: "+join(homes)));
+                p.addChatMessage(new ChatComponentText("Your homes: "+joinSet(homes)));
                 return;
             }
             double[] h = d.getHome(uuid, args[0]);
@@ -152,7 +153,7 @@ public class SetHomeMod {
             p.addChatMessage(new ChatComponentText("Home '"+args[0]+"' deleted."));
         }
     }
-    private static String join(Set<String> s) {
+    private static String joinSet(Collection<String> s) {
         StringBuilder sb = new StringBuilder();
         for (String v : s) { if (sb.length()>0) sb.append(", "); sb.append(v); }
         return sb.toString();
