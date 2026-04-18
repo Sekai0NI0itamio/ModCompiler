@@ -9,9 +9,9 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.event.GuiScreenEvent;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.Objects;
 @Mod(SortChestMod.MOD_ID)
 public class SortChestMod {
     public static final String MOD_ID = "sortchest";
-    public SortChestMod() { MinecraftForge.EVENT_BUS.register(this); }
+    public SortChestMod() { NeoForge.EVENT_BUS.register(this); }
 
     @SubscribeEvent
     public void onScreenInit(GuiScreenEvent.InitGuiEvent.Post event) {
@@ -32,8 +32,9 @@ public class SortChestMod {
         if (mc.player == null) return;
         int x = cs.getGuiLeft() + cs.getXSize() - 44;
         int y = cs.getGuiTop() + 6;
-        event.addListener(Button.builder(Component.translatable("sortchest.button.sort"),
-                btn -> sort(cs)).pos(x,y).size(40,14).build());
+        event.addWidget(new Button(x, y, 40, 14,
+                Component.translatable("sortchest.button.sort"),
+                btn -> sort(cs)));
     }
 
     private static void sort(AbstractContainerScreen<?> screen) {

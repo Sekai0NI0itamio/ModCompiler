@@ -20,11 +20,8 @@ public class SortChestMod implements ClientModInitializer {
     public static final String MOD_ID = "sortchest";
 
     private static int gi(AbstractContainerScreen<?> h, String n) {
-        try { Field f=AbstractContainerScreen.class.getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
-        catch(Exception e) {
-            try { Field f=h.getClass().getSuperclass().getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
-            catch(Exception e2) { return 0; }
-        }
+        try { java.lang.reflect.Field f=AbstractContainerScreen.class.getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
+        catch(Exception e) { return 0; }
     }
 
     @Override
@@ -32,8 +29,8 @@ public class SortChestMod implements ClientModInitializer {
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (!(screen instanceof AbstractContainerScreen)) return;
             AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
-            int x = cs.leftPos + cs.imageWidth - 44;
-            int y = cs.topPos + 6;
+            int x = gi(cs,"leftPos") + gi(cs,"imageWidth") - 44;
+            int y = gi(cs,"topPos") + 6;
             Screens.getButtons(screen).add(Button.builder(
                     Component.translatable("sortchest.button.sort"),
                     btn -> sort(cs)).pos(x, y).size(40, 14).build());

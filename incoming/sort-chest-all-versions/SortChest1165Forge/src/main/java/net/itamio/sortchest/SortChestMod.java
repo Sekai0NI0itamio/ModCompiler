@@ -41,11 +41,11 @@ public class SortChestMod {
         if (mc.player == null || mc.gameMode == null) return;
         if (mc.screen != screen) return;
         Container menu = screen.getMenu();
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getDraggedStack().isEmpty()) return;
         List<Integer> slots = slots(menu, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(menu, slots, mc);
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getDraggedStack().isEmpty()) return;
         List<ItemStack> layout = layout(menu, slots);
         reorder(menu, slots, layout, mc);
     }
@@ -59,7 +59,7 @@ public class SortChestMod {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.isSameItemSameTags(a, b);
+        return ItemStack.isSameItem(a, b) && ItemStack.tagMatches(a, b);
     }
 
     private static void merge(Container menu, List<Integer> slots, Minecraft mc) {
@@ -120,7 +120,7 @@ public class SortChestMod {
 
     private static void swap(Container menu, int a, int b, Minecraft mc) {
         click(menu, a, mc); click(menu, b, mc);
-        if (!menu.getCarried().isEmpty()) click(menu, a, mc);
+        if (!menu.getDraggedStack().isEmpty()) click(menu, a, mc);
     }
 
     private static void click(Container menu, int slot, Minecraft mc) {
