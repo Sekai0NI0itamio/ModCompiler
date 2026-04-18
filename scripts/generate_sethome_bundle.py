@@ -1056,16 +1056,26 @@ SRC_1215_FORGE = (SRC_121_FORGE
         "CompoundTag hc = hl.getCompound(j);",
         "CompoundTag hc = hl.getCompound(j).orElse(new CompoundTag());"
     )
+    .replace(
+        'hc.getString("name")',
+        'hc.getString("name").orElse("")'
+    )
+    .replace(
+        'hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),',
+        'hc.getDouble("x").orElse(0.0),hc.getDouble("y").orElse(0.0),hc.getDouble("z").orElse(0.0),'
+    )
+    .replace(
+        'hc.getFloat("yaw"),hc.getFloat("pitch")',
+        'hc.getFloat("yaw").orElse(0.0f),hc.getFloat("pitch").orElse(0.0f)'
+    )
+    .replace(
+        'd.data.put(pc.getString("uuid"), homes);',
+        'd.data.put(pc.getString("uuid").orElse(""), homes);'
+    )
 )
 
 # 1.21.11 Forge — addListener pattern (no @SubscribeEvent import)
-SRC_12111_FORGE = (SRC_1215_FORGE
-    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
-    .replace(
-        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
-        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);\n    }\n\n    public void onRegisterCommands(RegisterCommandsEvent e) {"
-    )
-)
+SRC_12111_FORGE = SRC_1215_FORGE  # 1.21.11 uses same API as 1.21.5+
 
 # ============================================================
 # NEOFORGE variants
