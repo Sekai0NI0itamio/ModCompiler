@@ -11,7 +11,7 @@ import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,17 +22,19 @@ import java.util.Objects;
      clientSideOnly = true, acceptedMinecraftVersions = "[1.8.9]")
 public class SortChestMod {
     public static final String MOD_ID = "sortchest";
+    public SortChestMod() { MinecraftForge.EVENT_BUS.register(this); }
 
-    public SortChestMod() {
-        MinecraftForge.EVENT_BUS.register(this);
+    private static int getInt(GuiContainer g, String name) {
+        try { Field f = GuiContainer.class.getDeclaredField(name); f.setAccessible(true); return f.getInt(g); }
+        catch (Exception e) { return 0; }
     }
 
     @SubscribeEvent
     public void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event) {
         if (!(event.gui instanceof GuiContainer)) return;
         GuiContainer gui = (GuiContainer) event.gui;
-        int x = gui.guiLeft + gui.xSize - 44;
-        int y = gui.guiTop + 6;
+        int x = getInt(gui, "guiLeft") + getInt(gui, "xSize") - 44;
+        int y = getInt(gui, "guiTop") + 6;
         event.buttonList.add(new GuiButton(9001, x, y, 40, 14, "Sort"));
     }
 
@@ -48,93 +50,85 @@ public class SortChestMod {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.thePlayer == null || mc.playerController == null) return;
         if (mc.currentScreen != gui) return;
-        Container container = gui.inventorySlots;
-        List<Integer> slots = getContainerSlots(container, mc.thePlayer.inventory);
+        Container c = gui.inventorySlots;
+        List slots = getSlots(c, mc.thePlayer.inventory);
         if (slots.isEmpty()) return;
-        mergeStacks(container, slots, mc);
-        List<ItemStack> layout = buildLayout(container, slots);
-        reorder(container, slots, layout, mc);
+        merge(c, slots, mc);
+        List layout = buildLayout(c, slots);
+        reorder(c, slots, layout, mc);
     }
 
-    private static List<Integer> getContainerSlots(Container c,
-            net.minecraft.entity.player.InventoryPlayer inv) {
-        List<Integer> result = new ArrayList<Integer>();
+    private static List getSlots(Container c, net.minecraft.entity.player.InventoryPlayer inv) {
+        List r = new ArrayList();
         for (int i = 0; i < c.inventorySlots.size(); i++) {
             Slot s = c.getSlot(i);
-            if (s.inventory != inv) result.add(Integer.valueOf(i));
+            if (s.inventory != inv) r.add(Integer.valueOf(i));
         }
-        return result;
+        return r;
     }
 
-    private static void mergeStacks(Container c, List<Integer> slots, Minecraft mc) {
+    private static void merge(Container c, List slots, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
-            ItemStack stack = c.getSlot(slots.get(i).intValue()).getStack();
-            if (stack == null || stack.stackSize >= stack.getMaxStackSize()) continue;
-            for (int j = i + 1; j < slots.size(); j++) {
-                if (stack.stackSize >= stack.getMaxStackSize()) break;
-                ItemStack other = c.getSlot(slots.get(j).intValue()).getStack();
-                if (other == null) continue;
-                if (ItemStack.areItemsEqual(stack, other) && ItemStack.areItemStackTagsEqual(stack, other)) {
-                    click(c, slots.get(j).intValue(), mc);
-                    click(c, slots.get(i).intValue(), mc);
+            ItemStack a = c.getSlot(((Integer)slots.get(i)).intValue()).getStack();
+            if (a == null || a.stackSize >= a.getMaxStackSize()) continue;
+            for (int j = i+1; j < slots.size(); j++) {
+                if (a.stackSize >= a.getMaxStackSize()) break;
+                ItemStack b = c.getSlot(((Integer)slots.get(j)).intValue()).getStack();
+                if (b == null) continue;
+                if (ItemStack.areItemsEqual(a,b) && ItemStack.areItemStackTagsEqual(a,b)) {
+                    click(c, ((Integer)slots.get(j)).intValue(), mc);
+                    click(c, ((Integer)slots.get(i)).intValue(), mc);
                     ItemStack held = mc.thePlayer.inventory.getItemStack();
-                    if (held != null && held.stackSize > 0) {
-                        click(c, slots.get(j).intValue(), mc);
-                    }
+                    if (held != null && held.stackSize > 0) click(c, ((Integer)slots.get(j)).intValue(), mc);
                 }
             }
         }
     }
 
-    private static List<ItemStack> buildLayout(Container c, List<Integer> slots) {
-        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+    private static List buildLayout(Container c, List slots) {
+        Map groups = new LinkedHashMap();
         for (int i = 0; i < slots.size(); i++) {
-            ItemStack s = c.getSlot(slots.get(i).intValue()).getStack();
+            ItemStack s = c.getSlot(((Integer)slots.get(i)).intValue()).getStack();
             if (s == null) continue;
             ItemKey key = new ItemKey(s);
-            List<ItemStack> group = groups.get(key);
-            if (group == null) {
-                group = new ArrayList<ItemStack>();
-                groups.put(key, group);
-            }
-            group.add(s.copy());
+            List g = (List) groups.get(key);
+            if (g == null) { g = new ArrayList(); groups.put(key, g); }
+            g.add(s.copy());
         }
-        List<ItemStack> result = new ArrayList<ItemStack>();
-        for (List<ItemStack> g : groups.values()) result.addAll(g);
-        while (result.size() < slots.size()) result.add(null);
-        return result;
+        List r = new ArrayList();
+        for (Object v : groups.values()) r.addAll((List)v);
+        while (r.size() < slots.size()) r.add(null);
+        return r;
     }
 
-    private static void reorder(Container c, List<Integer> slots, List<ItemStack> layout, Minecraft mc) {
+    private static void reorder(Container c, List slots, List layout, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
-            ItemStack cur = c.getSlot(slots.get(i).intValue()).getStack();
-            ItemStack des = layout.get(i);
-            if (stacksMatch(cur, des)) continue;
-            int from = findSlot(c, slots, i + 1, des);
+            ItemStack cur = c.getSlot(((Integer)slots.get(i)).intValue()).getStack();
+            ItemStack des = (ItemStack) layout.get(i);
+            if (match(cur, des)) continue;
+            int from = find(c, slots, i+1, des);
             if (from == -1) continue;
-            swap(c, slots.get(i).intValue(), slots.get(from).intValue(), mc);
+            swap(c, ((Integer)slots.get(i)).intValue(), ((Integer)slots.get(from)).intValue(), mc);
         }
     }
 
-    private static int findSlot(Container c, List<Integer> slots, int start, ItemStack target) {
-        for (int i = start; i < slots.size(); i++) {
-            if (stacksMatch(c.getSlot(slots.get(i).intValue()).getStack(), target)) return i;
-        }
+    private static int find(Container c, List slots, int start, ItemStack t) {
+        for (int i = start; i < slots.size(); i++)
+            if (match(c.getSlot(((Integer)slots.get(i)).intValue()).getStack(), t)) return i;
         return -1;
     }
 
-    private static boolean stacksMatch(ItemStack a, ItemStack b) {
+    private static boolean match(ItemStack a, ItemStack b) {
         if (a == null && b == null) return true;
         if (a == null || b == null) return false;
         if (a.stackSize != b.stackSize) return false;
-        return ItemStack.areItemsEqual(a, b) && ItemStack.areItemStackTagsEqual(a, b);
+        return ItemStack.areItemsEqual(a,b) && ItemStack.areItemStackTagsEqual(a,b);
     }
 
-    private static void swap(Container c, int slotA, int slotB, Minecraft mc) {
-        click(c, slotA, mc);
-        click(c, slotB, mc);
-        ItemStack held = mc.thePlayer.inventory.getItemStack();
-        if (held != null && held.stackSize > 0) click(c, slotA, mc);
+    private static void swap(Container c, int a, int b, Minecraft mc) {
+        click(c,a,mc); click(c,b,mc);
+        ItemStack h = mc.thePlayer.inventory.getItemStack();
+        if (h != null && h.stackSize > 0) click(c,a,mc);
     }
 
     private static void click(Container c, int slot, Minecraft mc) {
@@ -143,21 +137,18 @@ public class SortChestMod {
     }
 
     static final class ItemKey {
-        final net.minecraft.item.Item item;
-        final int meta;
-        final net.minecraft.nbt.NBTTagCompound tag;
-        final int hash;
+        final net.minecraft.item.Item item; final int meta;
+        final net.minecraft.nbt.NBTTagCompound tag; final int hash;
         ItemKey(ItemStack s) {
-            this.item = s.getItem();
-            this.meta = s.getMetadata();
-            this.tag = s.getTagCompound() != null ? s.getTagCompound().copy() : null;
-            this.hash = Objects.hash(item, Integer.valueOf(meta), tag);
+            item = s.getItem(); meta = s.getMetadata();
+            net.minecraft.nbt.NBTTagCompound raw = s.getTagCompound();
+            tag = raw != null ? (net.minecraft.nbt.NBTTagCompound) raw.copy() : null;
+            hash = Objects.hash(item, Integer.valueOf(meta), tag);
         }
         public boolean equals(Object o) {
-            if (this == o) return true;
             if (!(o instanceof ItemKey)) return false;
-            ItemKey k = (ItemKey) o;
-            return item == k.item && meta == k.meta && Objects.equals(tag, k.tag);
+            ItemKey k = (ItemKey)o;
+            return item==k.item && meta==k.meta && Objects.equals(tag,k.tag);
         }
         public int hashCode() { return hash; }
     }
