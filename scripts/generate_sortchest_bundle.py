@@ -420,7 +420,7 @@ public class SortChestMod {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.isSameItem(a, b) && ItemStack.tagMatches(a, b);
+        return ItemStack.isSameItemSameTags(a, b);
     }
 
     private static void merge(Container menu, List<Integer> slots, Minecraft mc) {
@@ -433,7 +433,7 @@ public class SortChestMod {
                 if (b.isEmpty()) continue;
                 if (same(a, b)) {
                     click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
-                    if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
+                    if (!menu.getDraggedStack().isEmpty()) click(menu, slots.get(j), mc);
                 }
             }
         }
@@ -709,8 +709,8 @@ def to_neoforge(src: str) -> str:
                  "NeoForge.EVENT_BUS.register(this);")
     )
 
-# 1.21.11 Forge — in Forge 1.21.x the event bus moved to net.neoforged.*
-SRC_12111_FORGE = to_neoforge(SRC_121_FORGE)
+# 1.21.11 Forge — same as 1.21.x, still uses net.minecraftforge.* (NOT NeoForge)
+SRC_12111_FORGE = SRC_121_FORGE
 
 SRC_120_NEOFORGE  = to_neoforge(SRC_120_FORGE)
 SRC_1205_NEOFORGE = to_neoforge(SRC_1205_FORGE)

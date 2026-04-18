@@ -59,7 +59,7 @@ public class SortChestMod {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.isSameItem(a, b) && ItemStack.tagMatches(a, b);
+        return ItemStack.isSameItemSameTags(a, b);
     }
 
     private static void merge(Container menu, List<Integer> slots, Minecraft mc) {
@@ -72,7 +72,7 @@ public class SortChestMod {
                 if (b.isEmpty()) continue;
                 if (same(a, b)) {
                     click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
-                    if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
+                    if (!menu.getDraggedStack().isEmpty()) click(menu, slots.get(j), mc);
                 }
             }
         }
