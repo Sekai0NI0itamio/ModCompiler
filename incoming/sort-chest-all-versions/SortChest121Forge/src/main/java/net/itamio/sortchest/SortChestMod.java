@@ -32,8 +32,7 @@ public class SortChestMod {
         if (mc.player == null) return;
         int x = cs.getGuiLeft() + cs.getXSize() - 44;
         int y = cs.getGuiTop() + 6;
-        event.addListener(Button.builder(
-                Component.translatable("sortchest.button.sort"),
+        event.addListener(Button.builder(Component.translatable("sortchest.button.sort"),
                 btn -> sort(cs)).pos(x,y).size(40,14).build());
     }
 

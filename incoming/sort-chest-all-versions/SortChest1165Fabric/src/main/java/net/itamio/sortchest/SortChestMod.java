@@ -44,11 +44,11 @@ public class SortChestMod implements ClientModInitializer {
         if (mc.player == null || mc.interactionManager == null) return;
         if (mc.currentScreen != screen) return;
         ScreenHandler handler = screen.getScreenHandler();
-        if (!handler.getCursorStack().isEmpty()) return;
-        List<Integer> slots = slots(handler, mc.player.getInventory());
+        if (!handler.getStackInCursor().isEmpty()) return;
+        List<Integer> slots = slots(handler, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(handler, slots, mc);
-        if (!handler.getCursorStack().isEmpty()) return;
+        if (!handler.getStackInCursor().isEmpty()) return;
         List<ItemStack> layout = layout(handler, slots);
         reorder(handler, slots, layout, mc);
     }
@@ -63,7 +63,7 @@ public class SortChestMod implements ClientModInitializer {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.areItemsEqual(a, b) && ItemStack.areNbtEqual(a, b);
+        return ItemStack.areItemsEqual(a, b) && ItemStack.areTagsEqual(a, b);
     }
 
     private static void merge(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
@@ -76,7 +76,7 @@ public class SortChestMod implements ClientModInitializer {
                 if (b.isEmpty()) continue;
                 if (same(a, b)) {
                     click(handler, slots.get(j), mc); click(handler, slots.get(i), mc);
-                    if (!handler.getCursorStack().isEmpty()) click(handler, slots.get(j), mc);
+                    if (!handler.getStackInCursor().isEmpty()) click(handler, slots.get(j), mc);
                 }
             }
         }
@@ -125,7 +125,7 @@ public class SortChestMod implements ClientModInitializer {
 
     private static void swap(ScreenHandler handler, int a, int b, MinecraftClient mc) {
         click(handler, a, mc); click(handler, b, mc);
-        if (!handler.getCursorStack().isEmpty()) click(handler, a, mc);
+        if (!handler.getStackInCursor().isEmpty()) click(handler, a, mc);
     }
 
     private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
@@ -138,9 +138,7 @@ public class SortChestMod implements ClientModInitializer {
         final NbtCompound tag; final int hash;
         ItemKey(ItemStack s) {
             item = s.getItem();
-            // getTag().copy() returns NbtElement in 1.17+, cast to NbtCompound
-            net.minecraft.nbt.NbtElement raw = s.getTag() != null ? s.getTag().copy() : null;
-            tag = raw instanceof NbtCompound ? (NbtCompound) raw : null;
+            tag = s.getTag() != null ? s.getTag().copy() : null;
             hash = Objects.hash(item, tag);
         }
         public boolean equals(Object o) {

@@ -41,11 +41,11 @@ public class SortChestMod {
         if (mc.player == null || mc.gameMode == null) return;
         if (mc.screen != screen) return;
         Container menu = screen.getMenu();
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getDraggedStack().isEmpty()) return;
         List<Integer> slots = slots(menu, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(menu, slots, mc);
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getDraggedStack().isEmpty()) return;
         List<ItemStack> layout = layout(menu, slots);
         reorder(menu, slots, layout, mc);
     }
@@ -58,6 +58,10 @@ public class SortChestMod {
         return r;
     }
 
+    private static boolean same(ItemStack a, ItemStack b) {
+        return ItemStack.isSameItem(a, b) && ItemStack.tagMatches(a, b);
+    }
+
     private static void merge(Container menu, List<Integer> slots, Minecraft mc) {
         for (int i = 0; i < slots.size(); i++) {
             ItemStack a = menu.slots.get(slots.get(i)).getItem();
@@ -66,9 +70,9 @@ public class SortChestMod {
                 if (a.getCount() >= a.getMaxStackSize()) break;
                 ItemStack b = menu.slots.get(slots.get(j)).getItem();
                 if (b.isEmpty()) continue;
-                if (ItemStack.isSameItemSameTags(a, b)) {
+                if (same(a, b)) {
                     click(menu, slots.get(j), mc); click(menu, slots.get(i), mc);
-                    if (!menu.getCarried().isEmpty()) click(menu, slots.get(j), mc);
+                    if (!menu.getDraggedStack().isEmpty()) click(menu, slots.get(j), mc);
                 }
             }
         }
@@ -111,12 +115,12 @@ public class SortChestMod {
         if (a.isEmpty() && b.isEmpty()) return true;
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getCount() != b.getCount()) return false;
-        return ItemStack.isSameItemSameTags(a, b);
+        return same(a, b);
     }
 
     private static void swap(Container menu, int a, int b, Minecraft mc) {
         click(menu, a, mc); click(menu, b, mc);
-        if (!menu.getCarried().isEmpty()) click(menu, a, mc);
+        if (!menu.getDraggedStack().isEmpty()) click(menu, a, mc);
     }
 
     private static void click(Container menu, int slot, Minecraft mc) {

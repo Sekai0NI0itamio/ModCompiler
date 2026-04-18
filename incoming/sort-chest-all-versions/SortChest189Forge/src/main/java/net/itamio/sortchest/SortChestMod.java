@@ -122,7 +122,6 @@ public class SortChestMod {
         if (h!=null&&h.stackSize>0) click(c,a,mc);
     }
 
-    // windowClick with raw int 0 = PICKUP (ClickType doesn't exist in 1.8.9)
     private static void click(Container c, int slot, Minecraft mc) {
         if (mc.thePlayer==null||mc.playerController==null) return;
         mc.playerController.windowClick(c.windowId, slot, 0, 0, mc.thePlayer);

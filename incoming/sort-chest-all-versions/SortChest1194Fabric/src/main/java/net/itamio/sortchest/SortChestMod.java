@@ -63,7 +63,7 @@ public class SortChestMod implements ClientModInitializer {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.areItemsEqual(a, b) && ItemStack.areNbtEqual(a, b);
+        return ItemStack.areItemsEqual(a, b) && ItemStack.areTagsEqual(a, b);
     }
 
     private static void merge(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
@@ -138,9 +138,7 @@ public class SortChestMod implements ClientModInitializer {
         final NbtCompound tag; final int hash;
         ItemKey(ItemStack s) {
             item = s.getItem();
-            // getTag().copy() returns NbtElement in 1.17+, cast to NbtCompound
-            net.minecraft.nbt.NbtElement raw = s.getTag() != null ? s.getTag().copy() : null;
-            tag = raw instanceof NbtCompound ? (NbtCompound) raw : null;
+            tag = s.getTag() != null ? s.getTag().copy() : null;
             hash = Objects.hash(item, tag);
         }
         public boolean equals(Object o) {
