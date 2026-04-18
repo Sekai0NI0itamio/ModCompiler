@@ -402,11 +402,11 @@ public class SortChestMod {
         if (mc.player == null || mc.gameMode == null) return;
         if (mc.screen != screen) return;
         Container menu = screen.getMenu();
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getDraggedStack().isEmpty()) return;
         List<Integer> slots = slots(menu, mc.player.inventory);
         if (slots.isEmpty()) return;
         merge(menu, slots, mc);
-        if (!menu.getCarried().isEmpty()) return;
+        if (!menu.getDraggedStack().isEmpty()) return;
         List<ItemStack> layout = layout(menu, slots);
         reorder(menu, slots, layout, mc);
     }
@@ -420,7 +420,7 @@ public class SortChestMod {
     }
 
     private static boolean same(ItemStack a, ItemStack b) {
-        return ItemStack.isSameItemSameTags(a, b);
+        return ItemStack.isSameItem(a, b) && ItemStack.tagMatches(a, b);
     }
 
     private static void merge(Container menu, List<Integer> slots, Minecraft mc) {
@@ -481,7 +481,7 @@ public class SortChestMod {
 
     private static void swap(Container menu, int a, int b, Minecraft mc) {
         click(menu, a, mc); click(menu, b, mc);
-        if (!menu.getCarried().isEmpty()) click(menu, a, mc);
+        if (!menu.getDraggedStack().isEmpty()) click(menu, a, mc);
     }
 
     private static void click(Container menu, int slot, Minecraft mc) {
@@ -544,7 +544,7 @@ public class SortChestMod {
         if (mc.player == null) return;
         int x = cs.getGuiLeft() + cs.getXSize() - 44;
         int y = cs.getGuiTop() + 6;
-        event.addListener(new Button(x, y, 40, 14,
+        event.addWidget(new Button(x, y, 40, 14,
                 new TranslatableComponent("sortchest.button.sort"),
                 btn -> sort(cs)));
     }
@@ -695,9 +695,6 @@ SRC_1205_FORGE = (SRC_120_FORGE
 # 1.21.x Forge (1.21.1, 1.21.4) — same as 1.20.5+
 SRC_121_FORGE = SRC_1205_FORGE
 
-# 1.21.11 Forge — still uses net.minecraftforge.eventbus.api (NOT merged with NeoForge)
-SRC_12111_FORGE = SRC_121_FORGE
-
 def to_neoforge(src: str) -> str:
     return (src
         .replace("import net.minecraftforge.client.event.ScreenEvent;",
@@ -711,6 +708,9 @@ def to_neoforge(src: str) -> str:
         .replace("MinecraftForge.EVENT_BUS.register(this);",
                  "NeoForge.EVENT_BUS.register(this);")
     )
+
+# 1.21.11 Forge — in Forge 1.21.x the event bus moved to net.neoforged.*
+SRC_12111_FORGE = to_neoforge(SRC_121_FORGE)
 
 SRC_120_NEOFORGE  = to_neoforge(SRC_120_FORGE)
 SRC_1205_NEOFORGE = to_neoforge(SRC_1205_FORGE)
@@ -1106,11 +1106,8 @@ public class SortChestMod implements ClientModInitializer {
     public static final String MOD_ID = "sortchest";
 
     private static int gi(AbstractContainerScreen<?> h, String n) {
-        try { Field f=AbstractContainerScreen.class.getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
-        catch(Exception e) {
-            try { Field f=h.getClass().getSuperclass().getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
-            catch(Exception e2) { return 0; }
-        }
+        try { java.lang.reflect.Field f=AbstractContainerScreen.class.getDeclaredField(n); f.setAccessible(true); return f.getInt(h); }
+        catch(Exception e) { return 0; }
     }
 
     @Override
@@ -1118,8 +1115,8 @@ public class SortChestMod implements ClientModInitializer {
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (!(screen instanceof AbstractContainerScreen)) return;
             AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
-            int x = cs.leftPos + cs.imageWidth - 44;
-            int y = cs.topPos + 6;
+            int x = gi(cs,"leftPos") + gi(cs,"imageWidth") - 44;
+            int y = gi(cs,"topPos") + 6;
             Screens.getButtons(screen).add(Button.builder(
                     Component.translatable("sortchest.button.sort"),
                     btn -> sort(cs)).pos(x, y).size(40, 14).build());
