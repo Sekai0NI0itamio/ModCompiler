@@ -92,8 +92,10 @@ public class SetHomeMod {
         public HomeData(String n) { super(n); }
 
         public static HomeData get(MinecraftServer srv) {
-            DimensionSavedDataManager mgr = srv.getLevel(net.minecraft.world.dimension.DimensionType.OVERWORLD).getDataStorage();
-            return mgr.computeIfAbsent(HomeData::new, HomeData::new, NAME);
+            net.minecraft.world.storage.DimensionSavedDataManager mgr = srv.getWorld(0).getSavedData();
+            HomeData d = mgr.get(HomeData::new, NAME);
+            if (d == null) { d = new HomeData(); mgr.set(d); }
+            return d;
         }
         private Map<String, double[]> player(String uuid) { return data.computeIfAbsent(uuid, k -> new HashMap<>()); }
         public void setHome(String uuid, String name, double x, double y, double z, float yaw, float pitch) {
