@@ -1,0 +1,54 @@
+name: Delete Modrinth Shell Versions
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_slug:
+        description: 'Modrinth project slug (e.g. set-home-anywhere)'
+        required: true
+        type: string
+      threshold_bytes:
+        description: 'Max file size in bytes to consider a shell (default: 5000)'
+        required: false
+        default: '5000'
+        type: string
+      dry_run:
+        description: 'Dry run — show what would be deleted without deleting'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  delete-shells:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Mask token
+        run: |
+          if [ -n "${{ secrets.MODRINTH_TOKEN }}" ]; then
+            echo "::add-mask::${{ secrets.MODRINTH_TOKEN }}"
+          fi
+
+      - name: Delete shell versions
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          ARGS="--project ${{ inputs.project_slug }} --threshold ${{ inputs.threshold_bytes }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python3 scripts/_delete_modrinth_shells.py $ARGS
+
+      - name: Verify result
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          python3 scripts/_check_modrinth_state.py ${{ inputs.project_slug }}
