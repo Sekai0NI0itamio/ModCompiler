@@ -1039,6 +1039,14 @@ for old, new in [
 SRC_121_FORGE = SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag) {",
     "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
+).replace(
+    # Forge 1.21.0-1.21.4 uses Factory<T>,String — not three-arg form
+    "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);",
+    "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);"
+).replace(
+    # Insert loadWithProvider helper before load()
+    "        public static HomeData load(CompoundTag tag) {",
+    "        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }\n        public static HomeData load(CompoundTag tag) {"
 )
 
 def _opt(s):
@@ -1113,7 +1121,11 @@ def _forge_1212_src(base_src: str) -> str:
     result = result.replace(
         """        public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
+            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);
+        }
+
+        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
+            return HomeData.load(tag);
         }""",
         """        private static final SavedDataType<HomeData> TYPE =
             new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null);
@@ -1131,6 +1143,18 @@ def _forge_1212_src(base_src: str) -> str:
     return result
 
 SRC_1215_FORGE = _opt(_forge_1212_src(SRC_121_FORGE))
+
+# 1.21.5-1.21.8 also has the SubscribeEvent package issue — eventbus.api moved.
+# Use the same EventBusSubscriber static class pattern as 1.21.9+.
+_SRC_1215_BASE = SRC_121_FORGE \
+    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "") \
+    .replace("import net.minecraftforge.common.MinecraftForge;\n", "") \
+    .replace(
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n    }\n\n    @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)\n    public static class ForgeEvents {\n        @net.minecraftforge.eventbus.api.SubscribeEvent\n        public static void onRegisterCommands(RegisterCommandsEvent e) {"
+    ) \
+    .replace("    }\n}\n", "    }\n    }\n}\n", 1)
+SRC_1215_FORGE = _opt(_forge_1212_src(_SRC_1215_BASE))
 
 # 1.21.9-1.21.11 Forge: Same SavedDataType API + EventBusSubscriber pattern
 _SRC_1219_BASE = SRC_121_FORGE \
@@ -1181,40 +1205,60 @@ def to_neoforge_sethome(src: str) -> str:
                  "net.neoforged.fml.common.Mod.EventBusSubscriber.Bus.FORGE")
     )
 
-SRC_120_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE)
-# NeoForge 1.20.5+ — save() takes HolderLookup.Provider
-# Also fix the Factory lambda: load() takes only CompoundTag, so use method ref
-# that matches BiFunction<CompoundTag, HolderLookup.Provider, HomeData>
-def _neo_factory_load(src: str) -> str:
-    """Add a loadWithProvider static method for NeoForge Factory lambda."""
+# ============================================================
+# NEOFORGE source variants
+#
+# API split confirmed from build errors:
+#
+#  NeoForge 1.20.2-1.20.4:  Factory<T> + save(CompoundTag)          no Provider
+#  NeoForge 1.20.5-1.20.6:  Factory<T> + save(CompoundTag, Provider)
+#  NeoForge 1.21.0-1.21.4:  Factory<T> + save(CompoundTag, Provider)
+#  NeoForge 1.21.5-1.21.8:  SavedDataType<T> + Optional getters + save(tag,Provider)
+#  NeoForge 1.21.9-1.21.11: SavedDataType<T> + Optional getters + @EventBusSubscriber
+#
+# For Factory versions the lambda (tag,provider)->load(tag) fails type inference.
+# Use a named static loadWithProvider() method instead.
+# ============================================================
+
+def _with_load_provider(src: str) -> str:
+    """Replace Factory lambda with named method ref to avoid type-inference failure."""
     return src.replace(
         "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
         "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);"
     ).replace(
-        # Insert loadWithProvider before the existing load() method
         "        public static HomeData load(CompoundTag tag) {",
         "        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }\n        public static HomeData load(CompoundTag tag) {"
     )
 
-SRC_1205_NEOFORGE = to_neoforge_sethome(_neo_factory_load(SRC_120_FORGE.replace(
+# NeoForge 1.20.2-1.20.4: Factory, save(CompoundTag) — no Provider in save
+SRC_120_NEOFORGE_FACTORY = to_neoforge_sethome(_with_load_provider(SRC_120_FORGE))
+
+# NeoForge 1.20.5-1.20.6: Factory, save(CompoundTag, Provider)
+SRC_1205_NEOFORGE = to_neoforge_sethome(_with_load_provider(SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag) {",
     "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
 )))
-# NeoForge 1.20.2-1.20.4 uses Factory but save() does NOT take Provider yet
-SRC_120_NEOFORGE_FACTORY = to_neoforge_sethome(_neo_factory_load(SRC_120_FORGE))
-SRC_121_NEOFORGE = to_neoforge_sethome(_neo_factory_load(SRC_121_FORGE))    # 1.21.0-1.21.1 (Factory exists)
-# NeoForge 1.21.2-1.21.8: Factory API, Provider save(), NO Optional getters
-SRC_1215_NEOFORGE = to_neoforge_sethome(_neo_factory_load(SRC_121_FORGE))
-# NeoForge 1.21.9+: same Factory API + EventBusSubscriber pattern, NO Optional getters
-SRC_1219_NEOFORGE = to_neoforge_sethome(_neo_factory_load(SRC_121_FORGE  # 1.21.9+ NeoForge still uses Factory API
-    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
-    .replace("import net.minecraftforge.common.MinecraftForge;\n", "")
+
+# NeoForge 1.21.0-1.21.4: Factory, save(CompoundTag, Provider)
+SRC_121_NEOFORGE = to_neoforge_sethome(_with_load_provider(SRC_121_FORGE))
+
+# NeoForge 1.21.5-1.21.8: SavedDataType + Optional getters
+# NeoForge adopted SavedDataType at 1.21.5 (same as Forge), AND Optional getters
+SRC_1215_NEOFORGE = to_neoforge_sethome(_opt(_forge_1212_src(SRC_121_FORGE)))
+
+# NeoForge 1.21.9-1.21.11: SavedDataType + Optional getters + @EventBusSubscriber
+# NeoForge does NOT use net.neoforged.fml.common.Mod.EventBusSubscriber —
+# it uses net.neoforged.bus.api.SubscribeEvent on instance methods via NeoForge.EVENT_BUS
+# The to_neoforge_sethome() already converts the Forge EventBusSubscriber annotation,
+# but NeoForge doesn't have that annotation at all. Use addListener pattern instead.
+_SRC_1219_NEO_BASE = SRC_121_FORGE \
+    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "") \
+    .replace("import net.minecraftforge.common.MinecraftForge;\n", "") \
     .replace(
         "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
-        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n    }\n\n    @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)\n    public static class ForgeEvents {\n        @net.minecraftforge.eventbus.api.SubscribeEvent\n        public static void onRegisterCommands(RegisterCommandsEvent e) {"
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(SetHomeMod::onRegisterCommands);\n    }\n\n    public static void onRegisterCommands(RegisterCommandsEvent e) {"
     )
-    .replace("    }\n}\n", "    }\n    }\n}\n", 1)
-))
+SRC_1219_NEOFORGE = to_neoforge_sethome(_opt(_forge_1212_src(_SRC_1219_NEO_BASE)))
 
 # ============================================================
 # TARGETS — only ghost shell versions

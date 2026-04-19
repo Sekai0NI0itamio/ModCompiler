@@ -878,6 +878,35 @@ multi-version build is:
 
 You have shell access. Use it. Do not wait for the user to run anything.
 
+------------------------------------------------------------------------
+RULE: Never use long inline python3 -c "..." commands
+------------------------------------------------------------------------
+
+When you need to run a Python script to inspect data, check errors, or
+process files — WRITE THE SCRIPT TO A FILE FIRST, then run it.
+
+BAD (do not do this):
+  python3 -c "
+  import json
+  from pathlib import Path
+  for mod_dir in sorted(mods_dir.iterdir()):
+      ...
+  "
+
+This breaks in the terminal when the string contains quotes, newlines,
+or special characters. It also leaves no record of what was run.
+
+GOOD (always do this instead):
+  # 1. Write the script to a file
+  # scripts/_check_errors.py  ← create this file with fsWrite
+  # 2. Run it
+  python3 scripts/_check_errors.py
+
+Keep helper scripts in scripts/ prefixed with _ (e.g. _check_errors.py,
+_list_results.py). They are reusable and debuggable. Delete them when
+done if they are truly one-off, but usually keep them — they are useful
+for the next debugging session.
+
 What the agent should not do
 ----------------------------
 1. Do not treat the broken AI auto-update workflow as the primary product flow.
