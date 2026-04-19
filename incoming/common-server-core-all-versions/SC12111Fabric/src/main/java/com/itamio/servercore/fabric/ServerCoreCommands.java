@@ -76,9 +76,9 @@ public final class ServerCoreCommands {
       dispatcher.register(
          (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("rtp")
                      .requires(source -> source.method_9228() instanceof class_3222))
-                  .then(class_2170.method_9247("overworld").executes(ctx -> handleRtp(ctx, class_1937.field_25179.method_29177().toString()))))
-               .then(class_2170.method_9247("nether").executes(ctx -> handleRtp(ctx, class_1937.field_25180.method_29177().toString()))))
-            .then(class_2170.method_9247("end").executes(ctx -> handleRtp(ctx, class_1937.field_25181.method_29177().toString())))
+                  .then(class_2170.method_9247("overworld").executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(class_1937.field_25179)))))
+               .then(class_2170.method_9247("nether").executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(class_1937.field_25180)))))
+            .then(class_2170.method_9247("end").executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(class_1937.field_25181))))
       );
    }
 

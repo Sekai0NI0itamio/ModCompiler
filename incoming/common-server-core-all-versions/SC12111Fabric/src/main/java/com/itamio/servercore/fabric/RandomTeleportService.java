@@ -144,8 +144,11 @@ public final class RandomTeleportService {
          return "the Overworld";
       } else if (level.method_27983().equals(class_1937.field_25180)) {
          return "the Nether";
+      } else if (level.method_27983().equals(class_1937.field_25181)) {
+         return "the End";
       } else {
-         return level.method_27983().equals(class_1937.field_25181) ? "the End" : level.method_27983().method_29177().toString();
+         String key = TeleportUtil.dimensionKey(level);
+         return key == null ? "unknown" : key;
       }
    }
 

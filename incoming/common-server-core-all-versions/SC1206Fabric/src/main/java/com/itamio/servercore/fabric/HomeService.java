@@ -1,5 +1,6 @@
 package com.itamio.servercore.fabric;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -26,11 +27,11 @@ public final class HomeService {
       String homeName = sanitizeHomeName(rawName);
       if (server != null && player != null && homeName != null) {
          String key = normalizeKey(homeName);
-         class_3218 level = ServerCoreAccess.getServerLevel(player);
-         if (level == null) {
+         class_3218 world = getServerWorld(player);
+         if (world == null) {
             return null;
          } else {
-            String dimension = TeleportUtil.dimensionKey(level);
+            String dimension = TeleportUtil.dimensionKey(world);
             HomeRecord record = new HomeRecord(
                key, homeName, dimension, player.method_23317(), player.method_23318(), player.method_23321(), player.method_36454(), player.method_36455()
             );
@@ -91,6 +92,22 @@ public final class HomeService {
       } else {
          String trimmed = rawName.trim();
          return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
+      }
+   }
+
+   private static class_3218 getServerWorld(class_3222 player) {
+      try {
+         Method method = player.getClass().getMethod("getServerWorld");
+         Object value = method.invoke(player);
+         return value instanceof class_3218 ? (class_3218)value : null;
+      } catch (ReflectiveOperationException var4) {
+         try {
+            Method methodx = player.getClass().getMethod("getWorld");
+            Object valuex = methodx.invoke(player);
+            return valuex instanceof class_3218 ? (class_3218)valuex : null;
+         } catch (ReflectiveOperationException var3) {
+            return null;
+         }
       }
    }
 }

@@ -15,26 +15,26 @@ public final class TeleportUtil {
    }
 
    public static String dimensionKey(ServerLevel level) {
-      return level.dimension().location().toString().toLowerCase(Locale.ROOT);
+      return level.m_46472_().m_135782_().toString().toLowerCase(Locale.ROOT);
    }
 
    public static ServerLevel resolveLevel(MinecraftServer server, String dimensionKey) {
       if (server != null && dimensionKey != null) {
          String key = dimensionKey.toLowerCase(Locale.ROOT);
-         if (Level.OVERWORLD.location().toString().equals(key)) {
-            return server.overworld();
-         } else if (Level.NETHER.location().toString().equals(key)) {
-            return server.getLevel(Level.NETHER);
-         } else if (Level.END.location().toString().equals(key)) {
-            return server.getLevel(Level.END);
+         if (Level.f_46428_.m_135782_().toString().equals(key)) {
+            return server.m_129783_();
+         } else if (Level.f_46429_.m_135782_().toString().equals(key)) {
+            return server.m_129880_(Level.f_46429_);
+         } else if (Level.f_46430_.m_135782_().toString().equals(key)) {
+            return server.m_129880_(Level.f_46430_);
          } else {
-            ResourceLocation id = ResourceLocation.tryParse(key);
+            ResourceLocation id = ResourceLocation.m_135820_(key);
             if (id == null) {
                return null;
             } else {
                try {
                   ResourceKey<Level> resourceKey = createDimensionKey(id);
-                  return server.getLevel(resourceKey);
+                  return server.m_129880_(resourceKey);
                } catch (ReflectiveOperationException var5) {
                   return null;
                }

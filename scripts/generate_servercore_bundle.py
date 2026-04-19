@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Generates the Common Server Core bundle — all 59 targets (56 shells + 3 missing).
-Source of truth: decompiled from Modrinth versions.
+Generates the Common Server Core bundle.
+Uses the exact decompiled source from each Modrinth version as the source of truth.
 Run: python3 scripts/generate_servercore_bundle.py [--failed-only]
 """
 import argparse, json, shutil, subprocess, zipfile
@@ -9,26 +9,69 @@ from pathlib import Path
 
 ROOT   = Path(__file__).resolve().parents[1]
 BUNDLE = ROOT / "incoming" / "common-server-core-all-versions"
+BUNDLE_SRC = Path("/tmp/common-server-core-bundle")
 
 MOD_ID      = "servercore"
 MOD_NAME    = "ServerCore"
 MOD_VERSION = "1.0.0"
-GROUP_FORGE  = "com.itamio.servercore.forge"
-GROUP_FABRIC = "com.itamio.servercore.fabric"
 DESCRIPTION = "Teleport requests, homes, random teleport, and first-join teleport without requiring cheats."
 AUTHORS     = "Itamio"
 LICENSE     = "All Rights Reserved"
 HOMEPAGE    = "https://modrinth.com/mod/common-server-core"
 
-ENTRYPOINT_FORGE_1122  = "asd.itamio.servercore.ServerCoreMod"
-ENTRYPOINT_FORGE_MOD   = f"{GROUP_FORGE}.ServerCoreForgeMod"
-ENTRYPOINT_FABRIC_MOD  = f"{GROUP_FABRIC}.ServerCoreFabricMod"
-
 def write(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.lstrip("\n"), encoding="utf-8")
 
-def mod_txt(entrypoint: str, group: str, runtime_side: str = "server") -> str:
+def version_txt(mc: str, loader: str) -> str:
+    return f"minecraft_version={mc}\nloader={loader}\n"
+
+def copy_src_from_bundle(version_id: str, dest_base: Path):
+    """Copy all decompiled source files from the bundle version into dest_base/src/."""
+    src_root = BUNDLE_SRC / "versions" / version_id / "decompiled" / "src" / "src" / "main" / "java"
+    if not src_root.exists():
+        raise FileNotFoundError(f"No source for version {version_id} at {src_root}")
+    dest_java = dest_base / "src" / "main" / "java"
+    if dest_java.exists():
+        shutil.rmtree(dest_java)
+    shutil.copytree(src_root, dest_java)
+
+def get_mod_txt(version_id: str, loader: str) -> str:
+    """Build mod.txt from the bundle's mod_info.txt."""
+    info_file = BUNDLE_SRC / "versions" / version_id / "decompiled" / "mod_info.txt"
+    info = {}
+    if info_file.exists():
+        for line in info_file.read_text().splitlines():
+            if "=" in line:
+                k, _, v = line.partition("=")
+                info[k.strip()] = v.strip()
+
+    # Determine group and entrypoint from the source package
+    src_root = BUNDLE_SRC / "versions" / version_id / "decompiled" / "src" / "src" / "main" / "java"
+    group = ""
+    entrypoint = ""
+    if src_root.exists():
+        # Find the main mod class
+        for java_file in src_root.rglob("*.java"):
+            name = java_file.stem
+            if "Mod" in name and ("Forge" in name or "Fabric" in name or name == "ServerCoreMod"):
+                # Build the fully qualified class name
+                rel = java_file.relative_to(src_root)
+                fqn = str(rel).replace("/", ".").replace("\\", ".").removesuffix(".java")
+                entrypoint = fqn
+                group = ".".join(fqn.split(".")[:-1])
+                break
+
+    if not entrypoint:
+        # Fallback
+        if loader == "fabric":
+            entrypoint = "com.itamio.servercore.fabric.ServerCoreFabricMod"
+            group = "com.itamio.servercore.fabric"
+        else:
+            entrypoint = "com.itamio.servercore.forge.ServerCoreForgeMod"
+            group = "com.itamio.servercore.forge"
+
+    runtime_side = "server"
     return (
         f"mod_id={MOD_ID}\nname={MOD_NAME}\nmod_version={MOD_VERSION}\n"
         f"group={group}\nentrypoint_class={entrypoint}\n"
@@ -36,218 +79,83 @@ def mod_txt(entrypoint: str, group: str, runtime_side: str = "server") -> str:
         f"homepage={HOMEPAGE}\nruntime_side={runtime_side}\n"
     )
 
-def version_txt(mc: str, loader: str) -> str:
-    return f"minecraft_version={mc}\nloader={loader}\n"
-
-
 # ============================================================
-# SOURCE FILES — copied from decompiled bundle
-# The modern source (1.16.5+) uses reflection for all API
-# differences, so the same source compiles across all versions.
+# TARGETS: (folder, mc_version, loader, bundle_version_id)
+# Each target uses the exact source from the matching bundle version.
+# For versions not in the bundle, use the closest available version.
 # ============================================================
-
-BUNDLE_SRC = Path("/tmp/common-server-core-bundle")
-
-def read_src(version_id: str, filename: str, subpkg: str) -> str:
-    """Read a decompiled source file from the bundle."""
-    base = BUNDLE_SRC / "versions" / version_id / "decompiled" / "src" / "src" / "main" / "java"
-    # Try forge path first, then fabric
-    for pkg in [f"com/itamio/servercore/{subpkg}", f"asd/itamio/servercore"]:
-        p = base / pkg / filename
-        if p.exists():
-            return p.read_text(encoding="utf-8")
-    raise FileNotFoundError(f"Cannot find {filename} in {version_id}")
-
-# Reference version IDs from the bundle
-REF_1122_FORGE  = "SBNCQth7"   # 1.12.2 Forge
-REF_MODERN_FORGE = "jUgSQFCi"  # 1.21 Forge (reflection-based, works 1.16.5+)
-REF_MODERN_FABRIC = "b4HIDtey" # 1.21 Fabric
-
-# Modern Forge files (same for all 1.16.5+ Forge versions)
-FORGE_FILES = [
-    "HomeRecord.java",
-    "HomeService.java",
-    "MessageUtil.java",
-    "RandomTeleportService.java",
-    "ServerCoreAccess.java",
-    "ServerCoreCommands.java",
-    "ServerCoreData.java",
-    "ServerCoreForgeMod.java",
-    "TeleportRequestService.java",
-    "TeleportUtil.java",
-]
-
-# Modern Fabric files (same for all 1.16.5+ Fabric versions)
-FABRIC_FILES = [
-    "HomeRecord.java",
-    "HomeService.java",
-    "MessageUtil.java",
-    "RandomTeleportService.java",
-    "ServerCoreAccess.java",
-    "ServerCoreCommands.java",
-    "ServerCoreData.java",
-    "ServerCoreFabricMod.java",
-    "TeleportRequestService.java",
-    "TeleportUtil.java",
-]
-
-# 1.12.2 Forge files (old-style, different package)
-FILES_1122 = [
-    ("ServerCoreMod.java",                  ""),
-    ("command/CommandDelHome.java",         "command"),
-    ("command/CommandHome.java",            "command"),
-    ("command/CommandRtp.java",             "command"),
-    ("command/CommandSetHome.java",         "command"),
-    ("command/CommandTpa.java",             "command"),
-    ("command/CommandTpacancel.java",       "command"),
-    ("command/CommandTpaccept.java",        "command"),
-    ("command/CommandTpacceptAll.java",     "command"),
-    ("command/CommandTpadeny.java",         "command"),
-    ("command/CommandTpadenyAll.java",      "command"),
-    ("command/CommandTpahere.java",         "command"),
-    ("command/ServerCoreCommandBase.java",  "command"),
-    ("command/TeleportRequestCommandHelper.java", "command"),
-    ("config/ServerCoreConfig.java",        "config"),
-    ("data/HomeRecord.java",                "data"),
-    ("data/ServerCoreHomesData.java",       "data"),
-    ("event/ServerCoreEvents.java",         "event"),
-    ("service/HomeService.java",            "service"),
-    ("service/RandomTeleportService.java",  "service"),
-    ("service/TeleportRequestService.java", "service"),
-    ("teleport/FixedPositionTeleporter.java", "teleport"),
-    ("util/TeleportUtil.java",              "util"),
-]
-
-PKG_FORGE_MODERN  = "com/itamio/servercore/forge"
-PKG_FABRIC_MODERN = "com/itamio/servercore/fabric"
-PKG_1122          = "asd/itamio/servercore"
-
-JAVA_MAIN_FORGE_MODERN  = f"src/main/java/{PKG_FORGE_MODERN}/ServerCoreForgeMod.java"
-JAVA_MAIN_FABRIC_MODERN = f"src/main/java/{PKG_FABRIC_MODERN}/ServerCoreFabricMod.java"
-JAVA_MAIN_1122          = f"src/main/java/{PKG_1122}/ServerCoreMod.java"
-
-def write_modern_forge(base: Path):
-    """Write all modern Forge source files."""
-    for fname in FORGE_FILES:
-        src = read_src(REF_MODERN_FORGE, fname, "forge")
-        write(base / "src" / "main" / "java" / PKG_FORGE_MODERN / fname, src)
-
-def write_modern_fabric(base: Path):
-    """Write all modern Fabric source files."""
-    for fname in FABRIC_FILES:
-        src = read_src(REF_MODERN_FABRIC, fname, "fabric")
-        write(base / "src" / "main" / "java" / PKG_FABRIC_MODERN / fname, src)
-
-def write_1122_forge(base: Path):
-    """Write all 1.12.2 Forge source files."""
-    for rel_path, subpkg in FILES_1122:
-        fname = Path(rel_path).name
-        src_base = BUNDLE_SRC / "versions" / REF_1122_FORGE / "decompiled" / "src" / "src" / "main" / "java" / "asd" / "itamio" / "servercore"
-        if subpkg:
-            src_file = src_base / subpkg / fname
-        else:
-            src_file = src_base / fname
-        if src_file.exists():
-            write(base / "src" / "main" / "java" / PKG_1122 / rel_path, src_file.read_text(encoding="utf-8"))
-
-
-# ============================================================
-# TARGETS
-# Format: (folder_name, mc_version, loader, write_fn, mod_txt_str)
-# ============================================================
-
-def make_targets():
-    targets = []
-
-    def add_forge(folder, mc, write_fn=write_modern_forge):
-        targets.append((folder, mc, "forge", write_fn,
-                         mod_txt(ENTRYPOINT_FORGE_MOD, GROUP_FORGE)))
-
-    def add_fabric(folder, mc):
-        targets.append((folder, mc, "fabric", write_modern_fabric,
-                         mod_txt(ENTRYPOINT_FABRIC_MOD, GROUP_FABRIC)))
-
-    # 1.12.2 Forge (old-style source)
-    targets.append(("SC1122Forge", "1.12.2", "forge", write_1122_forge,
-                     mod_txt(ENTRYPOINT_FORGE_1122, "asd.itamio.servercore")))
+targets = [
+    # 1.12.2 Forge
+    ("SC1122Forge",   "1.12.2", "forge",  "SBNCQth7"),
 
     # 1.16.5
-    add_forge("SC1165Forge",   "1.16.5")
-    add_fabric("SC1165Fabric", "1.16.5")
+    ("SC1165Forge",   "1.16.5", "forge",  "fwcQmXLS"),
+    ("SC1165Fabric",  "1.16.5", "fabric", "NH7zywcl"),
 
     # 1.17.1
-    add_forge("SC1171Forge",   "1.17.1")
-    add_fabric("SC1171Fabric", "1.17.1")
+    ("SC1171Forge",   "1.17.1", "forge",  "D4zAnFX7"),
+    ("SC1171Fabric",  "1.17.1", "fabric", "yiQSTnK0"),
 
     # 1.18.x
-    add_forge("SC118Forge",    "1.18")
-    add_fabric("SC118Fabric",  "1.18")
-    add_forge("SC1181Forge",   "1.18.1")
-    add_fabric("SC1181Fabric", "1.18.1")
-    add_forge("SC1182Forge",   "1.18.2")
-    add_fabric("SC1182Fabric", "1.18.2")
+    ("SC118Forge",    "1.18",   "forge",  "dTzvws1Q"),
+    ("SC118Fabric",   "1.18",   "fabric", "jDZYwa3I"),
+    ("SC1181Forge",   "1.18.1", "forge",  "Ha1f82Dk"),
+    ("SC1181Fabric",  "1.18.1", "fabric", "MwBQN4AQ"),
+    ("SC1182Forge",   "1.18.2", "forge",  "VJ47WzKo"),
+    ("SC1182Fabric",  "1.18.2", "fabric", "z2ST5IfW"),
 
     # 1.19.x
-    add_forge("SC119Forge",    "1.19")
-    add_fabric("SC119Fabric",  "1.19")
-    add_forge("SC1191Forge",   "1.19.1")
-    add_fabric("SC1191Fabric", "1.19.1")
-    add_forge("SC1192Forge",   "1.19.2")
-    add_fabric("SC1192Fabric", "1.19.2")
-    add_forge("SC1193Forge",   "1.19.3")
-    add_fabric("SC1193Fabric", "1.19.3")
-    add_forge("SC1194Forge",   "1.19.4")
-    add_fabric("SC1194Fabric", "1.19.4")
+    ("SC119Forge",    "1.19",   "forge",  "SahI4RcB"),
+    ("SC119Fabric",   "1.19",   "fabric", "nO9z3Ups"),
+    ("SC1191Forge",   "1.19.1", "forge",  "w4y7fiBu"),
+    ("SC1191Fabric",  "1.19.1", "fabric", "n10KaVaa"),
+    ("SC1192Forge",   "1.19.2", "forge",  "Qmd91R58"),
+    ("SC1192Fabric",  "1.19.2", "fabric", "s0jBqTcE"),
+    ("SC1193Forge",   "1.19.3", "forge",  "dfvB3jPO"),
+    ("SC1193Fabric",  "1.19.3", "fabric", "Z1gwfWzg"),
+    ("SC1194Forge",   "1.19.4", "forge",  "VtlCqnae"),
+    ("SC1194Fabric",  "1.19.4", "fabric", "jAT1kE4t"),
 
     # 1.20.x
-    add_forge("SC1201Forge",   "1.20.1")
-    add_fabric("SC1201Fabric", "1.20.1")
-    add_forge("SC1202Forge",   "1.20.2")
-    add_fabric("SC1202Fabric", "1.20.2")
-    add_forge("SC1203Forge",   "1.20.3")
-    add_fabric("SC1203Fabric", "1.20.3")
-    add_forge("SC1204Forge",   "1.20.4")
-    add_fabric("SC1204Fabric", "1.20.4")
-    # SC1205Forge skipped — 1.20.5 Forge not in repo manifest
-    add_fabric("SC1205Fabric", "1.20.5")
-    add_forge("SC1206Forge",   "1.20.6")
-    add_fabric("SC1206Fabric", "1.20.6")
+    ("SC1201Forge",   "1.20.1", "forge",  "HVPtsILc"),
+    ("SC1201Fabric",  "1.20.1", "fabric", "byRUAkdt"),
+    ("SC1202Forge",   "1.20.2", "forge",  "JEfQZXRt"),
+    ("SC1202Fabric",  "1.20.2", "fabric", "ggGELWan"),
+    ("SC1203Forge",   "1.20.3", "forge",  "lK7OEg1u"),
+    ("SC1203Fabric",  "1.20.3", "fabric", "8DTzGaJp"),
+    ("SC1204Forge",   "1.20.4", "forge",  "XjmRUUuK"),
+    ("SC1204Fabric",  "1.20.4", "fabric", "LWFeIlrv"),
+    # 1.20.5 Forge not in manifest — skip
+    ("SC1205Fabric",  "1.20.5", "fabric", "LUnZ4Y8r"),
+    ("SC1206Forge",   "1.20.6", "forge",  "UQrHjVMA"),
+    ("SC1206Fabric",  "1.20.6", "fabric", "WRuOzUG5"),
 
     # 1.21.x
-    add_forge("SC121Forge",    "1.21")
-    add_fabric("SC121Fabric",  "1.21")
-    add_forge("SC1211Forge",   "1.21.1")
-    add_fabric("SC1211Fabric", "1.21.1")
-    # SC1212Forge skipped — 1.21.2 Forge not in repo manifest
-    add_fabric("SC1212Fabric", "1.21.2")
-    add_forge("SC1213Forge",   "1.21.3")
-    add_fabric("SC1213Fabric", "1.21.3")
-    add_forge("SC1214Forge",   "1.21.4")
-    add_fabric("SC1214Fabric", "1.21.4")
-    add_forge("SC1215Forge",   "1.21.5")
-    add_fabric("SC1215Fabric", "1.21.5")
-    add_forge("SC1216Forge",   "1.21.6")
-    add_fabric("SC1216Fabric", "1.21.6")
-    add_forge("SC1217Forge",   "1.21.7")
-    add_fabric("SC1217Fabric", "1.21.7")
-    add_forge("SC1218Forge",   "1.21.8")
-    add_fabric("SC1218Fabric", "1.21.8")
-    add_forge("SC1219Forge",   "1.21.9")
-    add_fabric("SC1219Fabric", "1.21.9")
-    add_forge("SC12110Forge",  "1.21.10")
-    add_fabric("SC12110Fabric","1.21.10")
-    add_forge("SC12111Forge",  "1.21.11")
-    add_fabric("SC12111Fabric","1.21.11")
-
-    # 1.8.9 Forge — MISSING. The mod uses 1.12.2 old-style API.
-    # 1.8.9 uses different command/event APIs so skip for now.
-    # (CommandBase.getCommandName vs getName, different NBT API)
-    # TODO: add 1.8.9 support in a future run
-
-    return targets
-
-targets = make_targets()
-
+    ("SC121Forge",    "1.21",   "forge",  "jUgSQFCi"),
+    ("SC121Fabric",   "1.21",   "fabric", "b4HIDtey"),
+    ("SC1211Forge",   "1.21.1", "forge",  "vV4r8jmb"),
+    ("SC1211Fabric",  "1.21.1", "fabric", "s3yogR88"),
+    # 1.21.2 Forge not in manifest — skip
+    ("SC1212Fabric",  "1.21.2", "fabric", "RWUb5mgx"),
+    ("SC1213Forge",   "1.21.3", "forge",  "zZwSbodr"),
+    ("SC1213Fabric",  "1.21.3", "fabric", "YAcjTnXt"),
+    ("SC1214Forge",   "1.21.4", "forge",  "CumKxfhj"),
+    ("SC1214Fabric",  "1.21.4", "fabric", "frRQkMi4"),
+    ("SC1215Forge",   "1.21.5", "forge",  "on4r1MJ0"),
+    ("SC1215Fabric",  "1.21.5", "fabric", "NKQTKiFC"),
+    ("SC1216Forge",   "1.21.6", "forge",  "y1YjcAyb"),
+    ("SC1216Fabric",  "1.21.6", "fabric", "g5nCrPdK"),
+    ("SC1217Forge",   "1.21.7", "forge",  "hq9wnJIZ"),
+    ("SC1217Fabric",  "1.21.7", "fabric", "chypEGvk"),
+    ("SC1218Forge",   "1.21.8", "forge",  "anM6enrG"),
+    ("SC1218Fabric",  "1.21.8", "fabric", "sFwG5InH"),
+    ("SC1219Forge",   "1.21.9", "forge",  "hsUBNvfV"),
+    ("SC1219Fabric",  "1.21.9", "fabric", "aP3bh6bW"),
+    ("SC12110Forge",  "1.21.10","forge",  "QPUD7gqL"),
+    ("SC12110Fabric", "1.21.10","fabric", "qHNYyGLa"),
+    ("SC12111Forge",  "1.21.11","forge",  "CqurFhjF"),
+    ("SC12111Fabric", "1.21.11","fabric", "xyHAR2WW"),
+]
 
 # ============================================================
 # FAILED-ONLY MODE
@@ -301,16 +209,24 @@ if _parsed.failed_only:
 if BUNDLE.exists():
     shutil.rmtree(BUNDLE)
 
-for (folder, mc_ver, loader, write_fn, mod_txt_str) in active_targets:
+errors = []
+for (folder, mc_ver, loader, bundle_vid) in active_targets:
     base = BUNDLE / folder
-    write(base / "mod.txt", mod_txt_str)
-    write(base / "version.txt", version_txt(mc_ver, loader))
-    write_fn(base)
+    try:
+        write(base / "mod.txt", get_mod_txt(bundle_vid, loader))
+        write(base / "version.txt", version_txt(mc_ver, loader))
+        copy_src_from_bundle(bundle_vid, base)
+    except Exception as e:
+        errors.append(f"{folder}: {e}")
+        print(f"ERROR {folder}: {e}")
 
-print(f"Generated {len(active_targets)} targets")
+if errors:
+    print(f"\n{len(errors)} errors during generation")
+else:
+    print(f"Generated {len(active_targets)} targets")
 
 zip_path = ROOT / "incoming" / "common-server-core-all-versions.zip"
-if active_targets:
+if active_targets and not errors:
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for path in sorted(BUNDLE.rglob("*")):
             if not path.is_file(): continue
@@ -332,4 +248,4 @@ if active_targets:
     else:
         print(f"Prepare FAILED:\n{r.stderr[:500]}")
 else:
-    print("Nothing to build.")
+    print("Nothing to build or errors occurred.")

@@ -26,13 +26,20 @@ public final class HomeService {
       String homeName = sanitizeHomeName(rawName);
       if (server != null && player != null && homeName != null) {
          String key = normalizeKey(homeName);
-         class_3218 level = ServerCoreAccess.getServerLevel(player);
-         if (level == null) {
+         class_3218 world = TeleportUtil.getServerWorld(player);
+         if (world == null) {
             return null;
          } else {
-            String dimension = TeleportUtil.dimensionKey(level);
+            String dimension = TeleportUtil.dimensionKey(world);
             HomeRecord record = new HomeRecord(
-               key, homeName, dimension, player.method_23317(), player.method_23318(), player.method_23321(), player.method_36454(), player.method_36455()
+               key,
+               homeName,
+               dimension,
+               player.method_23317(),
+               player.method_23318(),
+               player.method_23321(),
+               RotationUtil.getYaw(player),
+               RotationUtil.getPitch(player)
             );
             ServerCoreData data = ServerCoreData.get(server);
             data.putHome(player.method_5667(), record);
