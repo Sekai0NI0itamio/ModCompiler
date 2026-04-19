@@ -50,7 +50,9 @@ def check_project(slug: str):
             real.append(v)
         print(f"  [{vid}] {vnum} mc={mc} loader={loaders} size={size:,}B → {status}")
 
-    print(f"\nSummary: {len(real)} real, {len(shells)} shells")
+    print(f"\nSummary: {len(real)} real, {len(shells)} shells (size < 5000B)")
+    print("NOTE: Size-only detection can false-positive on tiny recipe/data mods.")
+    print("      Always inspect jar contents before treating small jars as shells.")
     if shells:
         print("Shell IDs:", [s["id"] for s in shells])
     return shells, real
