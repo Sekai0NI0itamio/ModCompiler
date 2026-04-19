@@ -612,22 +612,33 @@ The agent should use examples to understand:
 
 Examples should be treated as references, not as guaranteed drop-in templates for every mod.
 
-Completed real-world example
------------------------------
-A complete end-to-end example of the Mod Version Update workflow has been
-documented for the Sort Chest mod:
+Completed real-world examples
+------------------------------
+Two complete end-to-end examples of the Mod Version Update workflow have been
+documented:
 
-  docs/examples/SORT_CHEST_ALL_VERSIONS.md
+1. Sort Chest mod (docs/examples/SORT_CHEST_ALL_VERSIONS.md)
+   - Full 10-run build history with every failure and fix
+   - Complete API difference table for every Forge and Fabric version
+   - Lessons: Fabric mapping differences, protected field access, event class
+     renames, Button API changes, --failed-only rerun system
+   - Result: 27 versions published across Forge, Fabric, and NeoForge
 
-This document covers:
-- The full 10-run build history with every failure and fix
-- A complete API difference table for every Forge and Fabric version
-- Lessons learned including Fabric mapping differences, protected field access,
-  event class renames, Button API changes, and the --failed-only rerun system
-- The final result: 27 versions published across Forge, Fabric, and NeoForge
+2. Set Home Anywhere mod (docs/examples/SET_HOME_ANYWHERE_ALL_VERSIONS.md)
+   - 13+ build runs tackling SavedData API evolution across versions
+   - Critical lesson: DON'T GUESS APIs - use the Minecraft Source Search workflow
+   - Documents the creation of .github/workflows/grep-minecraft-source.yml
+   - Shows how Forge and NeoForge APIs diverged in 1.21.2+
+   - Covers SavedData.Factory → three-argument computeIfAbsent transition
+   - Demonstrates Optional getter changes in 1.21.5+
+   - Result: 25/39 versions working (1.8.9 through 1.21.1)
 
-Read this document before starting any new multi-version port. It will save
-significant time by showing exactly which API names to use per version.
+Read both documents before starting any new multi-version port. They will save
+significant time by showing:
+- Exactly which API names to use per version
+- How to use the source code search workflow instead of guessing
+- Common pitfalls when APIs change between mod loaders
+- The importance of verifying APIs with actual source code
 
 Fetching a Modrinth project for local understanding
 ----------------------------------------------------
