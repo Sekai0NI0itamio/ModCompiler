@@ -1062,16 +1062,11 @@ def _opt(s):
                  'd.data.put(pc.getString("uuid").orElse(""), homes);')
     )
 
-# 1.21.2-1.21.8: old save(CompoundTag), old computeIfAbsent(load,new,NAME), Optional getters
-SRC_1215_FORGE = _opt(
-    SRC_121_FORGE
-    .replace(
-        "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {",
-        "public CompoundTag save(CompoundTag tag) {"
-    )
+# 1.21.2-1.21.8: Factory + save(CompoundTag,Provider) + Optional getters (same as 1.21.9+)
+SRC_1215_FORGE = _opt(SRC_121_FORGE
     .replace(
         "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-        "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);"
+        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (t, p) -> HomeData.load(t), null), NAME);"
     )
 )
 
@@ -1084,10 +1079,12 @@ SRC_1219_FORGE = (
         )
     )
     .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
+    .replace("import net.minecraftforge.common.MinecraftForge;\n", "")
     .replace(
         "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
-        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);\n    }\n\n    public void onRegisterCommands(RegisterCommandsEvent e) {"
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n    }\n\n    @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)\n    public static class ForgeEvents {\n        @net.minecraftforge.eventbus.api.SubscribeEvent\n        public static void onRegisterCommands(RegisterCommandsEvent e) {"
     )
+    .replace("    }\n}\n", "    }\n    }\n}\n", 1)
 )
 SRC_12111_FORGE = SRC_1219_FORGE
 
@@ -1116,8 +1113,16 @@ def to_neoforge_sethome(src: str) -> str:
         .replace("ForgeConfigSpec SPEC;", "ModConfigSpec SPEC;")
         .replace("MinecraftForge.EVENT_BUS.register(this);",
                  "NeoForge.EVENT_BUS.register(this);")
+        .replace("MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);",
+                 "NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);")
         .replace("net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);",
                  "// config uses defaults")
+        .replace("net.minecraftforge.fml.common.Mod.EventBusSubscriber",
+                 "net.neoforged.fml.common.Mod.EventBusSubscriber")
+        .replace("net.minecraftforge.eventbus.api.SubscribeEvent",
+                 "net.neoforged.bus.api.SubscribeEvent")
+        .replace("net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE",
+                 "net.neoforged.fml.common.Mod.EventBusSubscriber.Bus.FORGE")
     )
 
 SRC_120_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE)
