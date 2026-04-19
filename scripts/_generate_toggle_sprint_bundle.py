@@ -872,8 +872,8 @@ TARGETS = [
     ("TS1194Fabric",     "1.19-1.19.4",    "fabric",   EP_FABRIC,       fabric_presplit_118_files),
     # --- Missing NeoForge ---
     ("TS1204NeoForge",   "1.20.4",         "neoforge", EP_NEOFORGE,     neoforge_1204_files),
-    ("TS1205NeoForge",   "1.20.5",         "neoforge", EP_NEOFORGE,     neoforge_1204_files),
-    ("TS1206NeoForge",   "1.20.6",         "neoforge", EP_NEOFORGE,     neoforge_1204_files),
+    ("TS1205NeoForge",   "1.20.5",         "neoforge", EP_NEOFORGE,     neoforge_files),
+    ("TS1206NeoForge",   "1.20.6",         "neoforge", EP_NEOFORGE,     neoforge_files),
     ("TS121NeoForge",    "1.21-1.21.1",    "neoforge", EP_NEOFORGE,     neoforge_files),
     ("TS1214NeoForge",   "1.21.2-1.21.8",  "neoforge", EP_NEOFORGE,     neoforge_files),
     ("TS12111NeoForge",  "1.21.9-1.21.11", "neoforge", EP_NEOFORGE,     neoforge_2119_files),
