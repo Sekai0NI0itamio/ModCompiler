@@ -129,56 +129,65 @@ def publish_one_mod(
         return entry
 
     entry["jar_name"] = jar_path.name
-    existing = client.find_existing_version(
+
+    # Find any existing version for this loader+MC combination
+    existing = client.find_any_existing_version(
         project_id=project_id,
         loader=mod["loader"],
         minecraft_version=mod["minecraft_version"],
-        version_number=mod["metadata"]["mod_version"],
-        jar_name=jar_path.name,
     )
-    # Also check for any existing version (regardless of version number/jar name)
-    # so we can detect and replace shells that have a different filename
-    if existing is None:
-        existing = client.find_any_existing_version(
-            project_id=project_id,
-            loader=mod["loader"],
-            minecraft_version=mod["minecraft_version"],
-        )
+
     if existing is not None:
-        # Check if the existing version is a shell (< 5000 bytes = no real classes).
-        # If it is, delete it and re-upload the fixed jar.
         existing_size = _get_version_primary_file_size(existing)
-        # Also consider it a shell if our new jar is significantly larger
-        # (at least 10x bigger means the existing one has no real content)
         new_jar_size = jar_path.stat().st_size
+        # A shell is a version with no real classes (< 5000 bytes)
+        # or where our new jar is at least 10x larger (clearly more content)
         is_shell = existing_size < 5000 or (existing_size > 0 and new_jar_size > existing_size * 10)
-        import sys as _sys
-        print(f"  [{mod['slug']}] existing={existing.get('id')} size={existing_size}B new={new_jar_size}B shell={is_shell}", file=_sys.stderr)
-        if is_shell:
-            existing_id = existing.get("id", "")
-            try:
-                client.delete_version(version_id=existing_id)
-                entry["note"] = f"Deleted shell version {existing_id} (size={existing_size}B), re-uploading."
-            except ModCompilerError as err:
-                entry["publish_status"] = "failed"
-                entry["note"] = f"Shell version {existing_id} found but delete failed: {err}"
-                return entry
-        else:
+
+        if not is_shell:
+            # Real version already exists — skip
             entry["publish_status"] = "skipped"
             entry["note"] = f"Already exists on Modrinth as version {existing.get('id', '-')} (size={existing_size}B)"
             entry["version_id"] = existing.get("id", "")
             return entry
 
-    payload = build_modrinth_version_payload(project_id=project_id, mod=mod, jar_name=jar_path.name)
+        # Shell detected — bump the version number and upload a new version
+        # Find the highest existing version number for this project+loader+MC
+        bumped_version = _bump_version_number(
+            client=client,
+            project_id=project_id,
+            loader=mod["loader"],
+            minecraft_version=mod["minecraft_version"],
+            base_version=mod["metadata"]["mod_version"],
+        )
+        entry["note"] = (
+            f"Shell version {existing.get('id', '-')} found (size={existing_size}B). "
+            f"Uploading as v{bumped_version} instead of deleting."
+        )
+        # Override the version number in the mod metadata for this upload
+        mod = dict(mod)
+        mod["metadata"] = dict(mod["metadata"])
+        mod["metadata"]["mod_version"] = bumped_version
+        mod["shell_replacement"] = True
+        # Rename the jar to match the new version number
+        new_jar_name = jar_path.name.replace(
+            mod["metadata"].get("mod_version", ""), bumped_version
+        ) if bumped_version not in jar_path.name else jar_path.name
+        entry["jar_name"] = new_jar_name
+
+    payload = build_modrinth_version_payload(project_id=project_id, mod=mod, jar_name=entry["jar_name"])
     try:
         created = client.create_version(payload=payload, jar_path=jar_path)
     except ModCompilerError as error:
         entry["publish_status"] = "failed"
-        entry["note"] = str(error)
+        entry["note"] = (entry.get("note", "") + f" Upload failed: {error}").strip()
         return entry
 
     entry["publish_status"] = "uploaded"
-    entry["note"] = "Uploaded to Modrinth."
+    if not entry["note"]:
+        entry["note"] = "Uploaded to Modrinth."
+    else:
+        entry["note"] += f" Uploaded as version ID {created.get('id', '-')}."
     entry["version_id"] = created.get("id", "")
     return entry
 
@@ -241,21 +250,88 @@ def _get_version_primary_file_size(version: dict[str, Any]) -> int:
     return int(files[0].get("size", 0))
 
 
+def _bump_version_number(
+    *,
+    client: "ModrinthClient",
+    project_id: str,
+    loader: str,
+    minecraft_version: str,
+    base_version: str,
+) -> str:
+    """Find the highest existing version number for this project+loader+MC and return
+    the next incremented patch version.
+
+    Examples:
+      existing: 1.0.0  → returns 1.0.1
+      existing: 1.0.1  → returns 1.0.2
+      existing: 1.0.0, 1.0.1  → returns 1.0.2
+      no existing  → returns base_version (e.g. 1.0.1)
+    """
+    params = {
+        "loaders": json.dumps([loader]),
+        "game_versions": json.dumps([minecraft_version]),
+        "include_changelog": "false",
+    }
+    try:
+        versions = client.request_json(
+            "GET",
+            f"/project/{urllib.parse.quote(project_id, safe='')}/version",
+            params=params,
+        )
+    except ModCompilerError:
+        return base_version
+
+    if not isinstance(versions, list) or not versions:
+        return base_version
+
+    # Parse all version numbers and find the highest patch
+    highest = _parse_semver(base_version)
+    for v in versions:
+        parsed = _parse_semver(str(v.get("version_number", "")))
+        if parsed and (highest is None or parsed > highest):
+            highest = parsed
+
+    if highest is None:
+        return base_version
+
+    # Increment the patch component
+    major, minor, patch = highest
+    return f"{major}.{minor}.{patch + 1}"
+
+
+def _parse_semver(version: str) -> tuple[int, int, int] | None:
+    """Parse a semver string like '1.0.1' into (major, minor, patch).
+    Returns None if the string doesn't match."""
+    import re
+    m = re.match(r"^(\d+)\.(\d+)\.(\d+)", version.strip())
+    if not m:
+        return None
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+
+
 def build_modrinth_version_payload(*, project_id: str, mod: dict[str, Any], jar_name: str) -> dict[str, Any]:
     metadata = mod["metadata"]
     version_number = metadata["mod_version"]
     minecraft_version = mod["minecraft_version"]
     loader = mod["loader"]
     fix_corrupted = bool(metadata.get("fix_corrupted") or mod.get("fix_corrupted"))
+    shell_replacement = bool(mod.get("shell_replacement"))
     title = f"{metadata['name']} {version_number} ({loader} {minecraft_version})"
     if fix_corrupted:
         title = f"{title} (Fixed Corrupted Version)"
+    elif shell_replacement:
+        title = f"{title} (Fixed Empty Version)"
 
     changelog_lines = []
     if fix_corrupted:
         changelog_lines.append("Fixed Corrupted Version")
         if metadata.get("fix_source_version"):
             changelog_lines.append(f"Original version: {metadata['fix_source_version']}")
+        changelog_lines.append("")
+    elif shell_replacement:
+        changelog_lines.append("Fixed Empty/Shell Version")
+        changelog_lines.append("The previous version for this Minecraft version was an empty jar with no classes.")
+        changelog_lines.append("This version replaces it with a fully working build.")
         changelog_lines.append("")
     changelog_lines.extend(
         [
