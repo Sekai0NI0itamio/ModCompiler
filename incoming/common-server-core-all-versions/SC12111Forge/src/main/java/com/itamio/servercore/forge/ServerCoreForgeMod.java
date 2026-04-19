@@ -4,6 +4,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
@@ -16,10 +17,12 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 public final class ServerCoreForgeMod {
    public static final String MOD_ID = "servercore";
 
+   @SubscribeEvent
    public static void onRegisterCommands(RegisterCommandsEvent event) {
       ServerCoreCommands.register(event.getDispatcher());
    }
 
+   @SubscribeEvent
    public static void onPlayerLogin(PlayerLoggedInEvent event) {
       if (event.getEntity() instanceof ServerPlayer) {
          ServerPlayer player = (ServerPlayer)event.getEntity();

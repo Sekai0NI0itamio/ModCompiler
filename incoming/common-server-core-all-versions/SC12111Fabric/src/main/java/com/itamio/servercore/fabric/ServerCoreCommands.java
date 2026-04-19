@@ -74,9 +74,9 @@ public final class ServerCoreCommands {
       dispatcher.register(
          (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("rtp")
                      .requires(source -> source.getEntity() instanceof ServerPlayer))
-                  .then(Commands.literal("overworld").executes(ctx -> handleRtp(ctx, "minecraft:overworld"))))
-               .then(Commands.literal("nether").executes(ctx -> handleRtp(ctx, "minecraft:the_nether"))))
-            .then(Commands.literal("end").executes(ctx -> handleRtp(ctx, "minecraft:the_end")))
+                  .then(Commands.literal("overworld").executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(Level.OVERWORLD)))))
+               .then(Commands.literal("nether").executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(Level.NETHER)))))
+            .then(Commands.literal("end").executes(ctx -> handleRtp(ctx, TeleportUtil.dimensionKey(Level.END))))
       );
    }
 
