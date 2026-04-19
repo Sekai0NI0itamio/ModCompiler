@@ -158,10 +158,19 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--failed-only", action="store_true",
                         help="Only include mod dirs that had failures in the latest run")
+    parser.add_argument("--exclude", nargs="*", default=[],
+                        help="Folder names to exclude (e.g. AllowOfflineToJoinLan1122Forge)")
     args = parser.parse_args()
 
     all_dirs = get_all_mod_dirs()
     print(f"Found {len(all_dirs)} mod dirs in examples/")
+
+    # Apply exclusions
+    if args.exclude:
+        excluded = set(args.exclude)
+        all_dirs = [d for d in all_dirs if d.name not in excluded]
+        print(f"Excluding: {', '.join(sorted(excluded))}")
+        print(f"Remaining: {len(all_dirs)} mod dirs")
 
     if args.failed_only:
         failed_slugs = get_failed_slugs()
