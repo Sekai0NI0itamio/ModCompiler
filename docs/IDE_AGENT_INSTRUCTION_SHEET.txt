@@ -695,8 +695,18 @@ Use this bundle as your source of truth when:
 
 Decompiling a jar to view its source code
 ------------------------------------------
-IMPORTANT: Never attempt to decompile a jar locally. The repository has a
-dedicated GitHub Actions workflow for this. Always use it.
+!! CRITICAL RULE: NEVER decompile a jar locally. !!
+
+Do NOT:
+- Download Vineflower or any decompiler jar locally
+- Run `java -jar vineflower.jar` or any equivalent command locally
+- Run `javap`, `jar tf`, or any local decompiler command
+- Try to read .class files directly
+- Use curl/wget to download a decompiler tool and run it on your machine
+- Skip this step and guess the source structure from the jar filename alone
+
+ALWAYS use the dedicated GitHub Actions workflow instead. It is the ONLY
+correct way to decompile a jar in this project.
 
 Workflow: `Jar Decompile`
 Workflow file: `.github/workflows/jar-decompile.yml`
@@ -731,10 +741,10 @@ When to use this workflow:
 - You downloaded a jar from Modrinth (via the Fetch Modrinth Project workflow)
   and need to inspect its implementation before writing version-specific ports.
 
-Do NOT:
-- Run `javap`, `jar tf`, or any local decompiler command.
-- Try to read .class files directly.
-- Skip this step and guess the source structure from the jar filename alone.
+SHORTCUT: If the mod is already on Modrinth, use the Fetch Modrinth Project
+workflow instead (fetch-modrinth-project.yml). It downloads AND decompiles
+every version in one shot, so you do not need to run Jar Decompile separately.
+Only use Jar Decompile when you have a local jar that is not on Modrinth.
 
 Searching Minecraft/Forge/NeoForge API source code
 ---------------------------------------------------
