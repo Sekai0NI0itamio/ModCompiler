@@ -2,32 +2,39 @@ package com.itamio.servercore.fabric;
 
 import java.lang.reflect.Method;
 import java.util.Locale;
-import net.minecraft.class_2960;
-import net.minecraft.class_3218;
-import net.minecraft.class_3222;
+import java.util.Set;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 
 public final class TeleportUtil {
    private TeleportUtil() {
    }
 
-   public static String dimensionKey(class_3218 world) {
-      return world.method_27983().method_29177().toString().toLowerCase(Locale.ROOT);
+   public static String dimensionKey(ServerLevel level) {
+      return level.dimension().location().toString().toLowerCase(Locale.ROOT);
    }
 
-   public static class_3218 resolveWorld(MinecraftServer server, String dimensionKey) {
+   public static ServerLevel resolveLevel(MinecraftServer server, String dimensionKey) {
       if (server != null && dimensionKey != null) {
-         class_2960 id = class_2960.method_12829(dimensionKey.toLowerCase(Locale.ROOT));
-         if (id == null) {
-            return null;
+         String key = dimensionKey.toLowerCase(Locale.ROOT);
+         if (Level.OVERWORLD.location().toString().equals(key)) {
+            return server.overworld();
+         } else if (Level.NETHER.location().toString().equals(key)) {
+            return server.getLevel(Level.NETHER);
+         } else if (Level.END.location().toString().equals(key)) {
+            return server.getLevel(Level.END);
          } else {
-            Object key = createRegistryKey(id);
-            if (key == null) {
+            ResourceLocation id = ResourceLocation.tryParse(key);
+            if (id == null) {
                return null;
             } else {
                try {
-                  Method method = server.getClass().getMethod("getWorld", key.getClass());
-                  return (class_3218)method.invoke(server, key);
+                  ResourceKey<Level> resourceKey = createDimensionKey(id);
+                  return server.getLevel(resourceKey);
                } catch (ReflectiveOperationException var5) {
                   return null;
                }
@@ -38,56 +45,33 @@ public final class TeleportUtil {
       }
    }
 
-   private static Object createRegistryKey(class_2960 id) {
-      try {
-         Class<?> registryKeys = Class.forName("net.minecraft.registry.RegistryKeys");
-         Object worldKey = registryKeys.getField("WORLD").get(null);
-         Class<?> registryKeyClass = Class.forName("net.minecraft.registry.RegistryKey");
-         Method of = registryKeyClass.getMethod("of", registryKeyClass, class_2960.class);
-         return of.invoke(null, worldKey, id);
-      } catch (ReflectiveOperationException var6) {
+   public static void teleport(ServerPlayer player, ServerLevel level, double x, double y, double z, float yaw, float pitch) {
+      if (player != null && level != null) {
          try {
-            Class<?> registryClass = Class.forName("net.minecraft.util.registry.Registry");
-            Object worldKeyx = registryClass.getField("WORLD_KEY").get(null);
-            Class<?> registryKeyClassx = Class.forName("net.minecraft.util.registry.RegistryKey");
-            Method ofx = registryKeyClassx.getMethod("of", registryKeyClassx, class_2960.class);
-            return ofx.invoke(null, worldKeyx, id);
-         } catch (ReflectiveOperationException var5) {
-            return null;
-         }
-      }
-   }
-
-   public static void teleport(class_3222 player, class_3218 world, double x, double y, double z, float yaw, float pitch) {
-      if (player != null && world != null) {
-         try {
-            Method method = player.getClass().getMethod("teleport", class_3218.class, double.class, double.class, double.class, float.class, float.class);
-            method.invoke(player, world, x, y, z, yaw, pitch);
+            Method method = player.getClass().getMethod("teleportTo", ServerLevel.class, double.class, double.class, double.class, float.class, float.class);
+            method.invoke(player, level, x, y, z, yaw, pitch);
          } catch (ReflectiveOperationException var12) {
             try {
-               Method methodx = player.getClass().getMethod("teleportTo", class_3218.class, double.class, double.class, double.class, float.class, float.class);
-               methodx.invoke(player, world, x, y, z, yaw, pitch);
+               Method methodx = player.getClass()
+                  .getMethod("teleportTo", ServerLevel.class, double.class, double.class, double.class, Set.class, float.class, float.class, boolean.class);
+               methodx.invoke(player, level, x, y, z, Set.of(), yaw, pitch, false);
             } catch (ReflectiveOperationException var11) {
             }
          }
       }
    }
 
-   public static class_3218 getServerWorld(class_3222 player) {
-      if (player == null) {
-         return null;
-      } else {
-         try {
-            Method method = player.getClass().getMethod("getServerWorld");
-            Object value = method.invoke(player);
-            return value instanceof class_3218 ? (class_3218)value : null;
-         } catch (ReflectiveOperationException var4) {
-            try {
-               return player.method_14220();
-            } catch (ClassCastException var3) {
-               return null;
-            }
-         }
+   private static ResourceKey<Level> createDimensionKey(ResourceLocation id) throws ReflectiveOperationException {
+      try {
+         Class<?> registryClass = Class.forName("net.minecraft.core.registries.Registries");
+         Object dimensionRegistry = registryClass.getField("DIMENSION").get(null);
+         Method create = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
+         return (ResourceKey<Level>)create.invoke(null, dimensionRegistry, id);
+      } catch (NoSuchFieldException | ClassNotFoundException var5) {
+         Class<?> registryClassx = Class.forName("net.minecraft.core.Registry");
+         Object dimensionRegistryx = registryClassx.getField("DIMENSION_REGISTRY").get(null);
+         Method createx = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
+         return (ResourceKey<Level>)createx.invoke(null, dimensionRegistryx, id);
       }
    }
 }

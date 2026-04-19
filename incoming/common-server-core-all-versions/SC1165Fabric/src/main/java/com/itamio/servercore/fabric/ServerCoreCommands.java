@@ -6,111 +6,109 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.List;
-import net.minecraft.class_1937;
-import net.minecraft.class_2168;
-import net.minecraft.class_2170;
-import net.minecraft.class_2186;
-import net.minecraft.class_3218;
-import net.minecraft.class_3222;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 
 public final class ServerCoreCommands {
    private ServerCoreCommands() {
    }
 
-   public static void register(CommandDispatcher<class_2168> dispatcher) {
+   public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("tpa").requires(source -> source.method_9228() instanceof class_3222))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpa").requires(source -> source.getEntity() instanceof ServerPlayer))
             .then(
-               class_2170.method_9244("player", class_2186.method_9305())
-                  .executes(ctx -> handleTpa(ctx, class_2186.method_9315(ctx, "player"), TeleportRequestService.RequestType.TPA))
+               Commands.argument("player", EntityArgument.player())
+                  .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), TeleportRequestService.RequestType.TPA))
             )
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("tpahere").requires(source -> source.method_9228() instanceof class_3222))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpahere").requires(source -> source.getEntity() instanceof ServerPlayer))
             .then(
-               class_2170.method_9244("player", class_2186.method_9305())
-                  .executes(ctx -> handleTpa(ctx, class_2186.method_9315(ctx, "player"), TeleportRequestService.RequestType.TPAHERE))
+               Commands.argument("player", EntityArgument.player())
+                  .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), TeleportRequestService.RequestType.TPAHERE))
             )
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("tpaccept")
-                  .requires(source -> source.method_9228() instanceof class_3222))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpaccept")
+                  .requires(source -> source.getEntity() instanceof ServerPlayer))
                .executes(ctx -> handleTpaccept(ctx, null)))
-            .then(class_2170.method_9244("player", StringArgumentType.word()).executes(ctx -> handleTpaccept(ctx, StringArgumentType.getString(ctx, "player"))))
+            .then(Commands.argument("player", StringArgumentType.word()).executes(ctx -> handleTpaccept(ctx, StringArgumentType.getString(ctx, "player"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("tpacceptall").requires(source -> source.method_9228() instanceof class_3222))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpacceptall").requires(source -> source.getEntity() instanceof ServerPlayer))
             .executes(ServerCoreCommands::handleTpacceptAll)
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("tpadeny")
-                  .requires(source -> source.method_9228() instanceof class_3222))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpadeny")
+                  .requires(source -> source.getEntity() instanceof ServerPlayer))
                .executes(ctx -> handleTpadeny(ctx, null)))
-            .then(class_2170.method_9244("player", StringArgumentType.word()).executes(ctx -> handleTpadeny(ctx, StringArgumentType.getString(ctx, "player"))))
+            .then(Commands.argument("player", StringArgumentType.word()).executes(ctx -> handleTpadeny(ctx, StringArgumentType.getString(ctx, "player"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("tpadenyall").requires(source -> source.method_9228() instanceof class_3222))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpadenyall").requires(source -> source.getEntity() instanceof ServerPlayer))
             .executes(ServerCoreCommands::handleTpadenyAll)
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("tpacancel").requires(source -> source.method_9228() instanceof class_3222))
-            .then(
-               class_2170.method_9244("player", StringArgumentType.word()).executes(ctx -> handleTpacancel(ctx, StringArgumentType.getString(ctx, "player")))
-            )
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpacancel").requires(source -> source.getEntity() instanceof ServerPlayer))
+            .then(Commands.argument("player", StringArgumentType.word()).executes(ctx -> handleTpacancel(ctx, StringArgumentType.getString(ctx, "player"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("sethome").requires(source -> source.method_9228() instanceof class_3222))
-            .then(class_2170.method_9244("name", StringArgumentType.word()).executes(ctx -> handleSetHome(ctx, StringArgumentType.getString(ctx, "name"))))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("sethome").requires(source -> source.getEntity() instanceof ServerPlayer))
+            .then(Commands.argument("name", StringArgumentType.word()).executes(ctx -> handleSetHome(ctx, StringArgumentType.getString(ctx, "name"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("home")
-                  .requires(source -> source.method_9228() instanceof class_3222))
-               .then(class_2170.method_9247("list").executes(ServerCoreCommands::handleHomeList)))
-            .then(class_2170.method_9244("name", StringArgumentType.word()).executes(ctx -> handleHomeTeleport(ctx, StringArgumentType.getString(ctx, "name"))))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("home")
+                  .requires(source -> source.getEntity() instanceof ServerPlayer))
+               .then(Commands.literal("list").executes(ServerCoreCommands::handleHomeList)))
+            .then(Commands.argument("name", StringArgumentType.word()).executes(ctx -> handleHomeTeleport(ctx, StringArgumentType.getString(ctx, "name"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("delhome").requires(source -> source.method_9228() instanceof class_3222))
-            .then(class_2170.method_9244("name", StringArgumentType.word()).executes(ctx -> handleDelHome(ctx, StringArgumentType.getString(ctx, "name"))))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("delhome").requires(source -> source.getEntity() instanceof ServerPlayer))
+            .then(Commands.argument("name", StringArgumentType.word()).executes(ctx -> handleDelHome(ctx, StringArgumentType.getString(ctx, "name"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)class_2170.method_9247("rtp")
-                     .requires(source -> source.method_9228() instanceof class_3222))
-                  .then(class_2170.method_9247("overworld").executes(ctx -> handleRtp(ctx, class_1937.field_25179.method_29177().toString()))))
-               .then(class_2170.method_9247("nether").executes(ctx -> handleRtp(ctx, class_1937.field_25180.method_29177().toString()))))
-            .then(class_2170.method_9247("end").executes(ctx -> handleRtp(ctx, class_1937.field_25181.method_29177().toString())))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("rtp")
+                     .requires(source -> source.getEntity() instanceof ServerPlayer))
+                  .then(Commands.literal("overworld").executes(ctx -> handleRtp(ctx, Level.OVERWORLD.location().toString()))))
+               .then(Commands.literal("nether").executes(ctx -> handleRtp(ctx, Level.NETHER.location().toString()))))
+            .then(Commands.literal("end").executes(ctx -> handleRtp(ctx, Level.END.location().toString())))
       );
    }
 
-   private static int handleTpa(CommandContext<class_2168> ctx, class_3222 target, TeleportRequestService.RequestType type) {
-      class_3222 sender = requirePlayer(ctx);
+   private static int handleTpa(CommandContext<CommandSourceStack> ctx, ServerPlayer target, TeleportRequestService.RequestType type) {
+      ServerPlayer sender = requirePlayer(ctx);
       if (sender == null) {
          return 0;
-      } else if (sender.method_5667().equals(target.method_5667())) {
+      } else if (sender.getUUID().equals(target.getUUID())) {
          MessageUtil.send(sender, "You cannot teleport to yourself.");
          return 0;
       } else {
          TeleportRequestService.getInstance()
-            .upsertRequest(sender.method_5667(), sender.method_7334().getName(), target.method_5667(), target.method_7334().getName(), type);
-         MessageUtil.send(sender, "Teleport request sent to " + target.method_7334().getName() + ".");
+            .upsertRequest(sender.getUUID(), ServerCoreAccess.getPlayerName(sender), target.getUUID(), ServerCoreAccess.getPlayerName(target), type);
+         MessageUtil.send(sender, "Teleport request sent to " + ServerCoreAccess.getPlayerName(target) + ".");
          if (type == TeleportRequestService.RequestType.TPA) {
             MessageUtil.send(
                target,
-               sender.method_7334().getName()
+               ServerCoreAccess.getPlayerName(sender)
                   + " wants to teleport to you. Use /tpaccept "
-                  + sender.method_7334().getName()
+                  + ServerCoreAccess.getPlayerName(sender)
                   + " or /tpadeny "
-                  + sender.method_7334().getName()
+                  + ServerCoreAccess.getPlayerName(sender)
                   + "."
             );
          } else {
             MessageUtil.send(
                target,
-               sender.method_7334().getName()
+               ServerCoreAccess.getPlayerName(sender)
                   + " wants you to teleport to them. Use /tpaccept "
-                  + sender.method_7334().getName()
+                  + ServerCoreAccess.getPlayerName(sender)
                   + " or /tpadeny "
-                  + sender.method_7334().getName()
+                  + ServerCoreAccess.getPlayerName(sender)
                   + "."
             );
          }
@@ -119,17 +117,17 @@ public final class ServerCoreCommands {
       }
    }
 
-   private static int handleTpaccept(CommandContext<class_2168> ctx, String requesterName) {
-      class_3222 target = requirePlayer(ctx);
+   private static int handleTpaccept(CommandContext<CommandSourceStack> ctx, String requesterName) {
+      ServerPlayer target = requirePlayer(ctx);
       if (target == null) {
          return 0;
       } else {
          TeleportRequestService service = TeleportRequestService.getInstance();
          TeleportRequestService.TeleportRequest request;
          if (requesterName != null && !requesterName.isEmpty()) {
-            request = service.popIncoming(target.method_5667(), requesterName);
+            request = service.popIncoming(target.getUUID(), requesterName);
          } else {
-            request = service.popAllIncoming(target.method_5667()).stream().findFirst().orElse(null);
+            request = service.popAllIncoming(target.getUUID()).stream().findFirst().orElse(null);
          }
 
          if (request == null) {
@@ -141,14 +139,14 @@ public final class ServerCoreCommands {
       }
    }
 
-   private static int handleTpacceptAll(CommandContext<class_2168> ctx) {
-      class_3222 target = requirePlayer(ctx);
+   private static int handleTpacceptAll(CommandContext<CommandSourceStack> ctx) {
+      ServerPlayer target = requirePlayer(ctx);
       if (target == null) {
          return 0;
       } else {
          int success = 0;
 
-         for (TeleportRequestService.TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.method_5667())) {
+         for (TeleportRequestService.TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.getUUID())) {
             success += completeTeleport(target, request);
          }
 
@@ -160,17 +158,17 @@ public final class ServerCoreCommands {
       }
    }
 
-   private static int handleTpadeny(CommandContext<class_2168> ctx, String requesterName) {
-      class_3222 target = requirePlayer(ctx);
+   private static int handleTpadeny(CommandContext<CommandSourceStack> ctx, String requesterName) {
+      ServerPlayer target = requirePlayer(ctx);
       if (target == null) {
          return 0;
       } else {
          TeleportRequestService service = TeleportRequestService.getInstance();
          TeleportRequestService.TeleportRequest request;
          if (requesterName != null && !requesterName.isEmpty()) {
-            request = service.popIncoming(target.method_5667(), requesterName);
+            request = service.popIncoming(target.getUUID(), requesterName);
          } else {
-            request = service.popAllIncoming(target.method_5667()).stream().findFirst().orElse(null);
+            request = service.popAllIncoming(target.getUUID()).stream().findFirst().orElse(null);
          }
 
          if (request == null) {
@@ -183,179 +181,139 @@ public final class ServerCoreCommands {
       }
    }
 
-   private static int handleTpadenyAll(CommandContext<class_2168> ctx) {
-      class_3222 target = requirePlayer(ctx);
+   private static int handleTpadenyAll(CommandContext<CommandSourceStack> ctx) {
+      ServerPlayer target = requirePlayer(ctx);
       if (target == null) {
          return 0;
       } else {
-         int denied = TeleportRequestService.getInstance().popAllIncoming(target.method_5667()).size();
+         int denied = TeleportRequestService.getInstance().popAllIncoming(target.getUUID()).size();
          MessageUtil.send(target, denied == 0 ? "No pending teleport requests." : "Denied " + denied + " requests.");
          return denied;
       }
    }
 
-   private static int handleTpacancel(CommandContext<class_2168> ctx, String targetNameOrAll) {
-      class_3222 requester = requirePlayer(ctx);
+   private static int handleTpacancel(CommandContext<CommandSourceStack> ctx, String targetNameOrAll) {
+      ServerPlayer requester = requirePlayer(ctx);
       if (requester == null) {
          return 0;
       } else {
-         int removed = TeleportRequestService.getInstance().cancelOutgoing(requester.method_5667(), targetNameOrAll);
+         int removed = TeleportRequestService.getInstance().cancelOutgoing(requester.getUUID(), targetNameOrAll);
          MessageUtil.send(requester, removed == 0 ? "No pending outgoing requests." : "Cancelled " + removed + " request(s).");
          return removed;
       }
    }
 
-   private static int completeTeleport(class_3222 target, TeleportRequestService.TeleportRequest request) {
-      MinecraftServer server = target.method_5682();
+   private static int completeTeleport(ServerPlayer target, TeleportRequestService.TeleportRequest request) {
+      MinecraftServer server = ServerCoreAccess.getServer(target);
       if (server == null) {
          MessageUtil.send(target, "Server unavailable.");
          return 0;
       } else {
-         class_3222 requester = server.method_3760().method_14602(request.getRequesterUuid());
+         ServerPlayer requester = server.getPlayerList().getPlayer(request.getRequesterUuid());
          if (requester == null) {
             MessageUtil.send(target, "Requester is offline.");
             return 0;
          } else {
-            class_3218 targetWorld = TeleportUtil.getServerWorld(target);
-            class_3218 requesterWorld = TeleportUtil.getServerWorld(requester);
-            if (targetWorld != null && requesterWorld != null) {
+            ServerLevel targetLevel = ServerCoreAccess.getServerLevel(target);
+            ServerLevel requesterLevel = ServerCoreAccess.getServerLevel(requester);
+            if (targetLevel != null && requesterLevel != null) {
                if (request.getType() == TeleportRequestService.RequestType.TPA) {
-                  TeleportUtil.teleport(
-                     requester,
-                     targetWorld,
-                     target.method_23317(),
-                     target.method_23318(),
-                     target.method_23321(),
-                     RotationUtil.getYaw(target),
-                     RotationUtil.getPitch(target)
-                  );
-                  MessageUtil.send(requester, "Teleporting to " + target.method_7334().getName() + ".");
-                  MessageUtil.send(target, "Accepted teleport request from " + requester.method_7334().getName() + ".");
+                  TeleportUtil.teleport(requester, targetLevel, target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
+                  MessageUtil.send(requester, "Teleporting to " + ServerCoreAccess.getPlayerName(target) + ".");
+                  MessageUtil.send(target, "Accepted teleport request from " + ServerCoreAccess.getPlayerName(requester) + ".");
                } else {
-                  TeleportUtil.teleport(
-                     target,
-                     requesterWorld,
-                     requester.method_23317(),
-                     requester.method_23318(),
-                     requester.method_23321(),
-                     RotationUtil.getYaw(requester),
-                     RotationUtil.getPitch(requester)
-                  );
-                  MessageUtil.send(target, "Teleporting to " + requester.method_7334().getName() + ".");
-                  MessageUtil.send(requester, target.method_7334().getName() + " accepted your request.");
+                  TeleportUtil.teleport(target, requesterLevel, requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
+                  MessageUtil.send(target, "Teleporting to " + ServerCoreAccess.getPlayerName(requester) + ".");
+                  MessageUtil.send(requester, ServerCoreAccess.getPlayerName(target) + " accepted your request.");
                }
 
                return 1;
             } else {
-               MessageUtil.send(target, "Target world is unavailable.");
+               MessageUtil.send(target, "Target level unavailable.");
                return 0;
             }
          }
       }
    }
 
-   private static int handleSetHome(CommandContext<class_2168> ctx, String name) {
-      class_3222 player = requirePlayer(ctx);
+   private static int handleSetHome(CommandContext<CommandSourceStack> ctx, String name) {
+      ServerPlayer player = requirePlayer(ctx);
       if (player == null) {
          return 0;
       } else {
-         MinecraftServer server = player.method_5682();
-         if (server == null) {
-            MessageUtil.send(player, "Server unavailable.");
+         HomeRecord record = HomeService.getInstance().setHome(((CommandSourceStack)ctx.getSource()).getServer(), player, name);
+         if (record == null) {
+            MessageUtil.send(player, "Invalid home name.");
             return 0;
          } else {
-            HomeRecord record = HomeService.getInstance().setHome(server, player, name);
-            if (record == null) {
-               MessageUtil.send(player, "Invalid home name.");
+            MessageUtil.send(player, "Home set: " + record.getName());
+            return 1;
+         }
+      }
+   }
+
+   private static int handleHomeList(CommandContext<CommandSourceStack> ctx) {
+      ServerPlayer player = requirePlayer(ctx);
+      if (player == null) {
+         return 0;
+      } else {
+         List<HomeRecord> homes = HomeService.getInstance().listHomes(((CommandSourceStack)ctx.getSource()).getServer(), player.getUUID());
+         if (homes.isEmpty()) {
+            MessageUtil.send(player, "You have no homes.");
+            return 0;
+         } else {
+            StringBuilder builder = new StringBuilder("Homes: ");
+
+            for (int i = 0; i < homes.size(); i++) {
+               if (i > 0) {
+                  builder.append(", ");
+               }
+
+               builder.append(homes.get(i).getName());
+            }
+
+            MessageUtil.send(player, builder.toString());
+            return homes.size();
+         }
+      }
+   }
+
+   private static int handleHomeTeleport(CommandContext<CommandSourceStack> ctx, String name) {
+      ServerPlayer player = requirePlayer(ctx);
+      if (player == null) {
+         return 0;
+      } else {
+         HomeRecord record = HomeService.getInstance().getHome(((CommandSourceStack)ctx.getSource()).getServer(), player.getUUID(), name);
+         if (record == null) {
+            MessageUtil.send(player, "Home not found.");
+            return 0;
+         } else {
+            ServerLevel level = TeleportUtil.resolveLevel(((CommandSourceStack)ctx.getSource()).getServer(), record.getDimension());
+            if (level == null) {
+               MessageUtil.send(player, "Target dimension is not available.");
                return 0;
             } else {
-               MessageUtil.send(player, "Home set: " + record.getName());
+               TeleportUtil.teleport(player, level, record.getX(), record.getY(), record.getZ(), record.getYaw(), record.getPitch());
+               MessageUtil.send(player, "Teleported to home " + record.getName() + ".");
                return 1;
             }
          }
       }
    }
 
-   private static int handleHomeList(CommandContext<class_2168> ctx) {
-      class_3222 player = requirePlayer(ctx);
+   private static int handleDelHome(CommandContext<CommandSourceStack> ctx, String name) {
+      ServerPlayer player = requirePlayer(ctx);
       if (player == null) {
          return 0;
       } else {
-         MinecraftServer server = player.method_5682();
-         if (server == null) {
-            MessageUtil.send(player, "Server unavailable.");
-            return 0;
-         } else {
-            List<HomeRecord> homes = HomeService.getInstance().listHomes(server, player.method_5667());
-            if (homes.isEmpty()) {
-               MessageUtil.send(player, "You have no homes.");
-               return 0;
-            } else {
-               StringBuilder builder = new StringBuilder("Homes: ");
-
-               for (int i = 0; i < homes.size(); i++) {
-                  if (i > 0) {
-                     builder.append(", ");
-                  }
-
-                  builder.append(homes.get(i).getName());
-               }
-
-               MessageUtil.send(player, builder.toString());
-               return homes.size();
-            }
-         }
+         boolean removed = HomeService.getInstance().deleteHome(((CommandSourceStack)ctx.getSource()).getServer(), player.getUUID(), name);
+         MessageUtil.send(player, removed ? "Home deleted." : "Home not found.");
+         return removed ? 1 : 0;
       }
    }
 
-   private static int handleHomeTeleport(CommandContext<class_2168> ctx, String name) {
-      class_3222 player = requirePlayer(ctx);
-      if (player == null) {
-         return 0;
-      } else {
-         MinecraftServer server = player.method_5682();
-         if (server == null) {
-            MessageUtil.send(player, "Server unavailable.");
-            return 0;
-         } else {
-            HomeRecord record = HomeService.getInstance().getHome(server, player.method_5667(), name);
-            if (record == null) {
-               MessageUtil.send(player, "Home not found.");
-               return 0;
-            } else {
-               class_3218 world = TeleportUtil.resolveWorld(server, record.getDimension());
-               if (world == null) {
-                  MessageUtil.send(player, "Target dimension is not available.");
-                  return 0;
-               } else {
-                  TeleportUtil.teleport(player, world, record.getX(), record.getY(), record.getZ(), record.getYaw(), record.getPitch());
-                  MessageUtil.send(player, "Teleported to home " + record.getName() + ".");
-                  return 1;
-               }
-            }
-         }
-      }
-   }
-
-   private static int handleDelHome(CommandContext<class_2168> ctx, String name) {
-      class_3222 player = requirePlayer(ctx);
-      if (player == null) {
-         return 0;
-      } else {
-         MinecraftServer server = player.method_5682();
-         if (server == null) {
-            MessageUtil.send(player, "Server unavailable.");
-            return 0;
-         } else {
-            boolean removed = HomeService.getInstance().deleteHome(server, player.method_5667(), name);
-            MessageUtil.send(player, removed ? "Home deleted." : "Home not found.");
-            return removed ? 1 : 0;
-         }
-      }
-   }
-
-   private static int handleRtp(CommandContext<class_2168> ctx, String dimensionKey) {
-      class_3222 player = requirePlayer(ctx);
+   private static int handleRtp(CommandContext<CommandSourceStack> ctx, String dimensionKey) {
+      ServerPlayer player = requirePlayer(ctx);
       if (player == null) {
          return 0;
       } else {
@@ -365,9 +323,9 @@ public final class ServerCoreCommands {
       }
    }
 
-   private static class_3222 requirePlayer(CommandContext<class_2168> ctx) {
+   private static ServerPlayer requirePlayer(CommandContext<CommandSourceStack> ctx) {
       try {
-         return ((class_2168)ctx.getSource()).method_9207();
+         return ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
       } catch (CommandSyntaxException var2) {
          return null;
       }

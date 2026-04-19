@@ -1,6 +1,5 @@
 package com.itamio.servercore.fabric;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -8,9 +7,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import net.minecraft.class_3218;
-import net.minecraft.class_3222;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 public final class HomeService {
    private static final Pattern HOME_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,32}$");
@@ -23,20 +22,18 @@ public final class HomeService {
       return INSTANCE;
    }
 
-   public synchronized HomeRecord setHome(MinecraftServer server, class_3222 player, String rawName) {
+   public synchronized HomeRecord setHome(MinecraftServer server, ServerPlayer player, String rawName) {
       String homeName = sanitizeHomeName(rawName);
       if (server != null && player != null && homeName != null) {
          String key = normalizeKey(homeName);
-         class_3218 world = getServerWorld(player);
-         if (world == null) {
+         ServerLevel level = ServerCoreAccess.getServerLevel(player);
+         if (level == null) {
             return null;
          } else {
-            String dimension = TeleportUtil.dimensionKey(world);
-            HomeRecord record = new HomeRecord(
-               key, homeName, dimension, player.method_23317(), player.method_23318(), player.method_23321(), player.method_36454(), player.method_36455()
-            );
+            String dimension = TeleportUtil.dimensionKey(level);
+            HomeRecord record = new HomeRecord(key, homeName, dimension, player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
             ServerCoreData data = ServerCoreData.get(server);
-            data.putHome(player.method_5667(), record);
+            data.putHome(player.getUUID(), record);
             return record;
          }
       } else {
@@ -92,22 +89,6 @@ public final class HomeService {
       } else {
          String trimmed = rawName.trim();
          return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
-      }
-   }
-
-   private static class_3218 getServerWorld(class_3222 player) {
-      try {
-         Method method = player.getClass().getMethod("getServerWorld");
-         Object value = method.invoke(player);
-         return value instanceof class_3218 ? (class_3218)value : null;
-      } catch (ReflectiveOperationException var4) {
-         try {
-            Method methodx = player.getClass().getMethod("getWorld");
-            Object valuex = methodx.invoke(player);
-            return valuex instanceof class_3218 ? (class_3218)valuex : null;
-         } catch (ReflectiveOperationException var3) {
-            return null;
-         }
       }
    }
 }

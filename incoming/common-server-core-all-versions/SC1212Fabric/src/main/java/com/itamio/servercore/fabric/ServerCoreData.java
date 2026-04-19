@@ -12,22 +12,22 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.class_18;
-import net.minecraft.class_2487;
-import net.minecraft.class_2499;
-import net.minecraft.class_2519;
-import net.minecraft.class_3218;
-import net.minecraft.class_7225.class_7874;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.saveddata.SavedData;
 
-public final class ServerCoreData extends class_18 {
+public final class ServerCoreData extends SavedData {
    public static final String DATA_NAME = "servercore";
    private final Map<UUID, Map<String, HomeRecord>> homesByPlayer = new LinkedHashMap<>();
    private final Set<UUID> seenPlayers = new LinkedHashSet<>();
 
    public static ServerCoreData get(MinecraftServer server) {
-      class_3218 overworld = server.method_30002();
-      Object storage = overworld.method_17983();
+      ServerLevel overworld = server.overworld();
+      Object storage = overworld.getDataStorage();
 
       try {
          return getWithSavedDataType(storage);
@@ -47,13 +47,13 @@ public final class ServerCoreData extends class_18 {
       return (ServerCoreData)method.invoke(storage, savedDataType);
    }
 
-   public static ServerCoreData load(class_2487 tag) {
+   public static ServerCoreData load(CompoundTag tag) {
       ServerCoreData data = new ServerCoreData();
       data.read(tag);
       return data;
    }
 
-   public static ServerCoreData load(class_2487 tag, class_7874 provider) {
+   public static ServerCoreData load(CompoundTag tag, Provider provider) {
       return load(tag);
    }
 
@@ -77,7 +77,7 @@ public final class ServerCoreData extends class_18 {
    }
 
    private static Object tryCreateWithFunctions(Class<?> savedDataTypeClass, Object dataFixTypes) {
-      Function<class_2487, ServerCoreData> loader = ServerCoreData::load;
+      Function<CompoundTag, ServerCoreData> loader = ServerCoreData::load;
       Supplier<ServerCoreData> supplier = ServerCoreData::new;
       if (dataFixTypes != null) {
          try {
@@ -135,7 +135,7 @@ public final class ServerCoreData extends class_18 {
    private static Object createSavedDataFactory(Object dataFixTypes) {
       try {
          Class<?> factoryClass = Class.forName("net.minecraft.world.level.saveddata.SavedData$Factory");
-         Function<class_2487, ServerCoreData> loader = ServerCoreData::load;
+         Function<CompoundTag, ServerCoreData> loader = ServerCoreData::load;
          Supplier<ServerCoreData> supplier = ServerCoreData::new;
 
          for (Constructor<?> ctor : factoryClass.getConstructors()) {
@@ -181,21 +181,21 @@ public final class ServerCoreData extends class_18 {
       return Supplier.class.isAssignableFrom(type);
    }
 
-   private void read(class_2487 tag) {
+   private void read(CompoundTag tag) {
       this.homesByPlayer.clear();
       this.seenPlayers.clear();
-      class_2499 players = getListTag(tag, "players");
+      ListTag players = getListTag(tag, "players");
 
       for (int i = 0; i < players.size(); i++) {
-         class_2487 playerTag = getCompoundTag(players, i);
+         CompoundTag playerTag = getCompoundTag(players, i);
          if (playerTag != null) {
             UUID uuid = parseUuid(getStringValue(playerTag, "uuid"));
             if (uuid != null) {
-               class_2499 homesList = getListTag(playerTag, "homes");
+               ListTag homesList = getListTag(playerTag, "homes");
                Map<String, HomeRecord> homes = new LinkedHashMap<>();
 
                for (int j = 0; j < homesList.size(); j++) {
-                  class_2487 homeTag = getCompoundTag(homesList, j);
+                  CompoundTag homeTag = getCompoundTag(homesList, j);
                   if (homeTag != null) {
                      String key = getStringValue(homeTag, "key");
                      String name = getStringValue(homeTag, "name");
@@ -221,7 +221,7 @@ public final class ServerCoreData extends class_18 {
          }
       }
 
-      class_2499 seenList = getListTag(tag, "seen");
+      ListTag seenList = getListTag(tag, "seen");
 
       for (int ix = 0; ix < seenList.size(); ix++) {
          String uuidText = getStringValue(seenList, ix);
@@ -232,81 +232,81 @@ public final class ServerCoreData extends class_18 {
       }
    }
 
-   public class_2487 method_75(class_2487 tag, class_7874 provider) {
-      class_2499 players = new class_2499();
+   public CompoundTag save(CompoundTag tag, Provider provider) {
+      ListTag players = new ListTag();
 
       for (Entry<UUID, Map<String, HomeRecord>> entry : this.homesByPlayer.entrySet()) {
-         class_2487 playerTag = new class_2487();
-         playerTag.method_10582("uuid", entry.getKey().toString());
-         class_2499 homesList = new class_2499();
+         CompoundTag playerTag = new CompoundTag();
+         playerTag.putString("uuid", entry.getKey().toString());
+         ListTag homesList = new ListTag();
 
          for (HomeRecord record : entry.getValue().values()) {
-            class_2487 homeTag = new class_2487();
-            homeTag.method_10582("key", record.getKey());
-            homeTag.method_10582("name", record.getName());
-            homeTag.method_10582("dimension", record.getDimension());
-            homeTag.method_10549("x", record.getX());
-            homeTag.method_10549("y", record.getY());
-            homeTag.method_10549("z", record.getZ());
-            homeTag.method_10548("yaw", record.getYaw());
-            homeTag.method_10548("pitch", record.getPitch());
+            CompoundTag homeTag = new CompoundTag();
+            homeTag.putString("key", record.getKey());
+            homeTag.putString("name", record.getName());
+            homeTag.putString("dimension", record.getDimension());
+            homeTag.putDouble("x", record.getX());
+            homeTag.putDouble("y", record.getY());
+            homeTag.putDouble("z", record.getZ());
+            homeTag.putFloat("yaw", record.getYaw());
+            homeTag.putFloat("pitch", record.getPitch());
             homesList.add(homeTag);
          }
 
-         playerTag.method_10566("homes", homesList);
+         playerTag.put("homes", homesList);
          players.add(playerTag);
       }
 
-      tag.method_10566("players", players);
-      class_2499 seenList = new class_2499();
+      tag.put("players", players);
+      ListTag seenList = new ListTag();
 
       for (UUID uuid : this.seenPlayers) {
-         seenList.add(class_2519.method_23256(uuid.toString()));
+         seenList.add(StringTag.valueOf(uuid.toString()));
       }
 
-      tag.method_10566("seen", seenList);
+      tag.put("seen", seenList);
       return tag;
    }
 
-   public class_2487 save(class_2487 tag) {
-      return this.method_75(tag, null);
+   public CompoundTag save(CompoundTag tag) {
+      return this.save(tag, null);
    }
 
-   private static class_2499 getListTag(class_2487 tag, String key) {
+   private static ListTag getListTag(CompoundTag tag, String key) {
       Object value = invoke(tag, "getList", new Class[]{String.class, int.class}, key, 10);
       if (value == null) {
          value = invoke(tag, "getList", new Class[]{String.class}, key);
       }
 
       value = unwrapOptional(value);
-      return value instanceof class_2499 ? (class_2499)value : new class_2499();
+      return value instanceof ListTag ? (ListTag)value : new ListTag();
    }
 
-   private static class_2487 getCompoundTag(class_2499 list, int index) {
+   private static CompoundTag getCompoundTag(ListTag list, int index) {
       Object value = invoke(list, "getCompound", new Class[]{int.class}, index);
       value = unwrapOptional(value);
-      return value instanceof class_2487 ? (class_2487)value : null;
+      return value instanceof CompoundTag ? (CompoundTag)value : null;
    }
 
-   private static String getStringValue(class_2487 tag, String key) {
+   private static String getStringValue(CompoundTag tag, String key) {
       Object value = invoke(tag, "getString", new Class[]{String.class}, key);
       value = unwrapOptional(value);
       return value instanceof String ? (String)value : "";
    }
 
-   private static String getStringValue(class_2499 list, int index) {
+   private static String getStringValue(ListTag list, int index) {
       Object value = invoke(list, "getString", new Class[]{int.class}, index);
       value = unwrapOptional(value);
       return value instanceof String ? (String)value : "";
    }
 
-   private static double getDoubleValue(class_2487 tag, String key) {
+   private static double getDoubleValue(CompoundTag tag, String key) {
       Object value = invoke(tag, "getDouble", new Class[]{String.class}, key);
       value = unwrapOptional(value);
       return value instanceof Number ? ((Number)value).doubleValue() : 0.0;
    }
 
-   private static float getFloatValue(class_2487 tag, String key) {
+   private static float getFloatValue(CompoundTag tag, String key) {
       Object value = invoke(tag, "getFloat", new Class[]{String.class}, key);
       value = unwrapOptional(value);
       return value instanceof Number ? ((Number)value).floatValue() : 0.0F;
@@ -339,13 +339,13 @@ public final class ServerCoreData extends class_18 {
 
    public void putHome(UUID playerUuid, HomeRecord record) {
       this.getHomes(playerUuid).put(record.getKey(), record);
-      this.method_80();
+      this.setDirty();
    }
 
    public HomeRecord removeHome(UUID playerUuid, String key) {
       HomeRecord removed = this.getHomes(playerUuid).remove(key);
       if (removed != null) {
-         this.method_80();
+         this.setDirty();
       }
 
       return removed;
@@ -357,7 +357,7 @@ public final class ServerCoreData extends class_18 {
 
    public void markSeen(UUID uuid) {
       if (this.seenPlayers.add(uuid)) {
-         this.method_80();
+         this.setDirty();
       }
    }
 

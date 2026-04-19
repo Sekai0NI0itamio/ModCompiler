@@ -1,31 +1,36 @@
 package com.itamio.servercore.forge;
 
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 
 @Mod("servercore")
+@EventBusSubscriber(
+   modid = "servercore",
+   bus = Bus.FORGE
+)
 public final class ServerCoreForgeMod {
    public static final String MOD_ID = "servercore";
 
-   public ServerCoreForgeMod() {
-      MinecraftForge.EVENT_BUS.addListener(ServerCoreForgeMod::onRegisterCommands);
-      MinecraftForge.EVENT_BUS.addListener(ServerCoreForgeMod::onPlayerLogin);
-   }
-
-   private static void onRegisterCommands(RegisterCommandsEvent event) {
+   @SubscribeEvent
+   public static void onRegisterCommands(RegisterCommandsEvent event) {
       ServerCoreCommands.register(event.getDispatcher());
    }
 
-   private static void onPlayerLogin(PlayerLoggedInEvent event) {
-      if (event.getEntity() instanceof ServerPlayerEntity) {
-         ServerPlayerEntity player = (ServerPlayerEntity)event.getEntity();
-         if (player.func_184102_h() != null) {
-            ServerCoreData data = ServerCoreData.get(player.func_184102_h());
-            if (!data.hasSeen(PlayerUtil.getUuid(player))) {
-               data.markSeen(PlayerUtil.getUuid(player));
+   @SubscribeEvent
+   public static void onPlayerLogin(PlayerLoggedInEvent event) {
+      if (event.getEntity() instanceof ServerPlayer) {
+         ServerPlayer player = (ServerPlayer)event.getEntity();
+         MinecraftServer server = ServerCoreAccess.getServer(player);
+         if (server != null) {
+            ServerCoreData data = ServerCoreData.get(server);
+            if (!data.hasSeen(player.getUUID())) {
+               data.markSeen(player.getUUID());
                RandomTeleportService.RtpResult result = RandomTeleportService.getInstance().teleport(player, "minecraft:overworld");
                if (!result.isSuccess()) {
                   MessageUtil.send(player, "First-join teleport failed: " + result.getMessage());

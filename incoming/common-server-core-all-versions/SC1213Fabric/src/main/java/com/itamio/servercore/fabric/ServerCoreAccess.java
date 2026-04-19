@@ -1,15 +1,15 @@
 package com.itamio.servercore.fabric;
 
 import java.lang.reflect.Method;
-import net.minecraft.class_3218;
-import net.minecraft.class_3222;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 final class ServerCoreAccess {
    private ServerCoreAccess() {
    }
 
-   static MinecraftServer getServer(class_3222 player) {
+   static MinecraftServer getServer(ServerPlayer player) {
       if (player == null) {
          return null;
       } else {
@@ -21,18 +21,18 @@ final class ServerCoreAccess {
             if (server != null) {
                return server;
             } else {
-               class_3218 level = getServerLevel(player);
-               return level != null ? level.method_8503() : null;
+               ServerLevel level = getServerLevel(player);
+               return level != null ? level.getServer() : null;
             }
          }
       }
    }
 
-   static class_3218 getServerLevel(class_3222 player) {
+   static ServerLevel getServerLevel(ServerPlayer player) {
       if (player == null) {
          return null;
       } else {
-         class_3218 level = invokeLevel(player, "serverLevel");
+         ServerLevel level = invokeLevel(player, "serverLevel");
          if (level != null) {
             return level;
          } else {
@@ -42,21 +42,21 @@ final class ServerCoreAccess {
       }
    }
 
-   static String getPlayerName(class_3222 player) {
-      return player == null ? "unknown" : player.method_5477().getString();
+   static String getPlayerName(ServerPlayer player) {
+      return player == null ? "unknown" : player.getName().getString();
    }
 
-   static int getMaxBuildHeight(class_3218 level) {
+   static int getMaxBuildHeight(ServerLevel level) {
       Integer value = invokeInt(level, "getMaxBuildHeight", "getMaxY");
       return value != null ? value : 320;
    }
 
-   static int getMinBuildHeight(class_3218 level) {
+   static int getMinBuildHeight(ServerLevel level) {
       Integer value = invokeInt(level, "getMinBuildHeight", "getMinY");
       return value != null ? value : -64;
    }
 
-   private static MinecraftServer invokeServer(class_3222 player, String name) {
+   private static MinecraftServer invokeServer(ServerPlayer player, String name) {
       try {
          Method method = player.getClass().getMethod(name);
          return (MinecraftServer)method.invoke(player);
@@ -65,11 +65,11 @@ final class ServerCoreAccess {
       }
    }
 
-   private static class_3218 invokeLevel(class_3222 player, String name) {
+   private static ServerLevel invokeLevel(ServerPlayer player, String name) {
       try {
          Method method = player.getClass().getMethod(name);
          Object value = method.invoke(player);
-         return value instanceof class_3218 ? (class_3218)value : null;
+         return value instanceof ServerLevel ? (ServerLevel)value : null;
       } catch (ReflectiveOperationException var4) {
          return null;
       }
