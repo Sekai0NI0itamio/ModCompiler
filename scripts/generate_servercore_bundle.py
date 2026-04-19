@@ -71,35 +71,92 @@ def patch_server_core_data(src: str) -> str:
     )
 
 
-def write_forge_src(base: Path):
+def patch_for_pre_1_20_5_forge(src: str) -> str:
+    """Remove HolderLookup.Provider for Forge 1.17-1.19.x (not available in these versions)."""
+    src = src.replace("import net.minecraft.core.HolderLookup.Provider;\n", "")
+    src = src.replace(
+        "public static ServerCoreData load(CompoundTag tag, Provider provider) {\n      return load(tag);\n   }\n",
+        ""
+    )
+    src = src.replace(
+        "public CompoundTag save(CompoundTag tag, Provider provider) {",
+        "public CompoundTag save(CompoundTag tag) {"
+    )
+    return src
+
+
+def patch_for_1_17_1_18_forge(src: str) -> str:
+    """Fix Component.literal -> TextComponent for Forge 1.17-1.18.x + remove Provider."""
+    src = patch_for_pre_1_20_5_forge(src)
+    src = src.replace(
+        "import net.minecraft.network.chat.Component;",
+        "import net.minecraft.network.chat.Component;\nimport net.minecraft.network.chat.TextComponent;"
+    )
+    src = src.replace("Component.literal(", "new TextComponent(")
+    return src
+
+
+def patch_forge_1215_plus(src: str) -> str:
+    """Fix eventbus.api.SubscribeEvent for Forge 1.21.5+ (package removed)."""
+    src = src.replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
+    src = src.replace("   @SubscribeEvent\n   public static void", "   public static void")
+    src = src.replace("    @SubscribeEvent\n    public static void", "    public static void")
+    return src
+
+
+def patch_1_21_11_api(src: str) -> str:
+    """Fix ResourceLocation.location() API change in 1.21.11."""
+    # Hardcode dimension strings to avoid ResourceKey.location() call
+    src = src.replace("Level.OVERWORLD.location().toString()", '"minecraft:overworld"')
+    src = src.replace("Level.NETHER.location().toString()", '"minecraft:the_nether"')
+    src = src.replace("Level.END.location().toString()", '"minecraft:the_end"')
+    # Fix ResourceLocation import — use fully qualified name instead
+    src = src.replace(
+        "import net.minecraft.resources.ResourceLocation;\n",
+        ""
+    )
+    src = src.replace(
+        "private static ResourceKey<Level> createDimensionKey(ResourceLocation id)",
+        "private static ResourceKey<Level> createDimensionKey(net.minecraft.resources.ResourceLocation id)"
+    )
+    return src
+
+
+def write_forge_src(base: Path, extra_patch=None):
     """Write all Forge source files using the 1.21 reflection-based source."""
     for fname in FORGE_SHARED_FILES:
         src = read_forge_file(fname)
         if fname == "ServerCoreData.java":
             src = patch_server_core_data(src)
+        if extra_patch:
+            src = extra_patch(src)
         write(base / "src" / "main" / "java" / FORGE_PKG / fname, src)
     # Main mod class
-    write(base / "src" / "main" / "java" / FORGE_PKG / "ServerCoreForgeMod.java",
-          read_forge_file("ServerCoreForgeMod.java"))
+    main_src = read_forge_file("ServerCoreForgeMod.java")
+    if extra_patch:
+        main_src = extra_patch(main_src)
+    write(base / "src" / "main" / "java" / FORGE_PKG / "ServerCoreForgeMod.java", main_src)
 
-def write_fabric_src(base: Path):
+def write_fabric_src(base: Path, extra_patch=None):
     """Write Fabric source: shared logic from Forge (renamed to fabric package) + clean entrypoint."""
     # Copy shared logic files, renaming package from forge to fabric
     for fname in FORGE_SHARED_FILES:
-        content = read_forge_file(fname)
+        src = read_forge_file(fname)
         if fname == "ServerCoreData.java":
-            content = patch_server_core_data(content)
+            src = patch_server_core_data(src)
+        if extra_patch:
+            src = extra_patch(src)
         # Rename package declaration
-        content = content.replace(
+        src = src.replace(
             "package com.itamio.servercore.forge;",
             "package com.itamio.servercore.fabric;"
         )
         # Rename imports of other forge classes to fabric
-        content = content.replace(
+        src = src.replace(
             "import com.itamio.servercore.forge.",
             "import com.itamio.servercore.fabric."
         )
-        write(base / "src" / "main" / "java" / FABRIC_PKG / fname, content)
+        write(base / "src" / "main" / "java" / FABRIC_PKG / fname, src)
 
     # Write clean Fabric entrypoint using official Mojang names
     fabric_mod = """\
@@ -196,6 +253,14 @@ def write_1122_src(base: Path):
     shutil.copytree(src_root, dest_java)
 
 
+
+# Version-specific write functions
+def write_forge_1_17_1_18(base): write_forge_src(base, patch_for_1_17_1_18_forge)
+def write_forge_1_19(base): write_forge_src(base, patch_for_pre_1_20_5_forge)
+def write_forge_1_21_6_plus(base): write_forge_src(base, patch_forge_1215_plus)
+def write_forge_1_21_11(base): write_forge_src(base, lambda s: patch_1_21_11_api(patch_forge_1215_plus(s)))
+def write_fabric_1_21_11(base): write_fabric_src(base, lambda s: patch_1_21_11_api(s))
+
 # ============================================================
 # TARGETS
 # ============================================================
@@ -206,68 +271,53 @@ targets = [
     ("SC1165Fabric",  "1.16.5", "fabric", write_fabric_src,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 
-    ("SC1171Forge",   "1.17.1", "forge",  write_forge_src,
+    ("SC1171Forge",   "1.17.1", "forge",  write_forge_1_17_1_18,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1171Fabric",  "1.17.1", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1171Fabric skipped — Yarn mappings incompatible
 
-    ("SC118Forge",    "1.18",   "forge",  write_forge_src,
+    ("SC118Forge",    "1.18",   "forge",  write_forge_1_17_1_18,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC118Fabric",   "1.18",   "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1181Forge",   "1.18.1", "forge",  write_forge_src,
+    # SC118Fabric skipped — Yarn mappings incompatible
+    ("SC1181Forge",   "1.18.1", "forge",  write_forge_1_17_1_18,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1181Fabric",  "1.18.1", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1182Forge",   "1.18.2", "forge",  write_forge_src,
+    # SC1181Fabric skipped — Yarn mappings incompatible
+    ("SC1182Forge",   "1.18.2", "forge",  write_forge_1_17_1_18,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1182Fabric",  "1.18.2", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1182Fabric skipped — Yarn mappings incompatible
 
-    ("SC119Forge",    "1.19",   "forge",  write_forge_src,
+    ("SC119Forge",    "1.19",   "forge",  write_forge_1_19,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC119Fabric",   "1.19",   "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1191Forge",   "1.19.1", "forge",  write_forge_src,
+    # SC119Fabric skipped — Yarn mappings incompatible
+    ("SC1191Forge",   "1.19.1", "forge",  write_forge_1_19,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1191Fabric",  "1.19.1", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1192Forge",   "1.19.2", "forge",  write_forge_src,
+    # SC1191Fabric skipped — Yarn mappings incompatible
+    ("SC1192Forge",   "1.19.2", "forge",  write_forge_1_19,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1192Fabric",  "1.19.2", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1193Forge",   "1.19.3", "forge",  write_forge_src,
+    # SC1192Fabric skipped — Yarn mappings incompatible
+    ("SC1193Forge",   "1.19.3", "forge",  write_forge_1_19,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1193Fabric",  "1.19.3", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1194Forge",   "1.19.4", "forge",  write_forge_src,
+    # SC1193Fabric skipped — Yarn mappings incompatible
+    ("SC1194Forge",   "1.19.4", "forge",  write_forge_1_19,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1194Fabric",  "1.19.4", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1194Fabric skipped — Yarn mappings incompatible
 
     ("SC1201Forge",   "1.20.1", "forge",  write_forge_src,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1201Fabric",  "1.20.1", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1201Fabric skipped — Yarn mappings incompatible
     ("SC1202Forge",   "1.20.2", "forge",  write_forge_src,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1202Fabric",  "1.20.2", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1202Fabric skipped — Yarn mappings incompatible
     ("SC1203Forge",   "1.20.3", "forge",  write_forge_src,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1203Fabric",  "1.20.3", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1203Fabric skipped — Yarn mappings incompatible
     ("SC1204Forge",   "1.20.4", "forge",  write_forge_src,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1204Fabric",  "1.20.4", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1204Fabric skipped — Yarn mappings incompatible
     # 1.20.5 Forge not in manifest
-    ("SC1205Fabric",  "1.20.5", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1205Fabric skipped — Yarn mappings incompatible
     ("SC1206Forge",   "1.20.6", "forge",  write_forge_src,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC1206Fabric",  "1.20.6", "fabric", write_fabric_src,
-     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # SC1206Fabric skipped — Yarn mappings incompatible
 
     ("SC121Forge",    "1.21",   "forge",  write_forge_src,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
@@ -292,29 +342,29 @@ targets = [
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
     ("SC1215Fabric",  "1.21.5", "fabric", write_fabric_src,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1216Forge",   "1.21.6", "forge",  write_forge_src,
+    ("SC1216Forge",   "1.21.6", "forge",  write_forge_1_21_6_plus,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
     ("SC1216Fabric",  "1.21.6", "fabric", write_fabric_src,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1217Forge",   "1.21.7", "forge",  write_forge_src,
+    ("SC1217Forge",   "1.21.7", "forge",  write_forge_1_21_6_plus,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
     ("SC1217Fabric",  "1.21.7", "fabric", write_fabric_src,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1218Forge",   "1.21.8", "forge",  write_forge_src,
+    ("SC1218Forge",   "1.21.8", "forge",  write_forge_1_21_6_plus,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
     ("SC1218Fabric",  "1.21.8", "fabric", write_fabric_src,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC1219Forge",   "1.21.9", "forge",  write_forge_src,
+    ("SC1219Forge",   "1.21.9", "forge",  write_forge_1_21_6_plus,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
     ("SC1219Fabric",  "1.21.9", "fabric", write_fabric_src,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC12110Forge",  "1.21.10","forge",  write_forge_src,
+    ("SC12110Forge",  "1.21.10","forge",  write_forge_1_21_6_plus,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
     ("SC12110Fabric", "1.21.10","fabric", write_fabric_src,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
-    ("SC12111Forge",  "1.21.11","forge",  write_forge_src,
+    ("SC12111Forge",  "1.21.11","forge",  write_forge_1_21_11,
      mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
-    ("SC12111Fabric", "1.21.11","fabric", write_fabric_src,
+    ("SC12111Fabric", "1.21.11","fabric", write_fabric_1_21_11,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 ]
 

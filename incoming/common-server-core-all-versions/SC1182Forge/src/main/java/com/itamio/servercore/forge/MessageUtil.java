@@ -3,6 +3,7 @@ package com.itamio.servercore.forge;
 import java.lang.reflect.Method;
 import java.util.UUID;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class MessageUtil {
@@ -11,7 +12,7 @@ public final class MessageUtil {
 
    public static void send(ServerPlayer player, String message) {
       if (player != null) {
-         Component component = Component.literal(message);
+         Component component = new TextComponent(message);
 
          try {
             Method method = player.getClass().getMethod("sendSystemMessage", Component.class);
