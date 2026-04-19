@@ -88,8 +88,9 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
+            return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
         }
+        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
             ListTag players = tag.getList("players", 10);

@@ -942,7 +942,7 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
+            return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
@@ -1090,26 +1090,44 @@ def _opt(s):
 # ============================================================
 
 def _forge_1212_src(base_src: str) -> str:
-    """Convert a 1.21.0-1.21.1 Forge source to 1.21.2+ SavedDataType API."""
-    # Replace the Factory-based computeIfAbsent with SavedDataType
+    """Convert a 1.21.0-1.21.1 Forge source to 1.21.2+ SavedDataType API.
+
+    In Forge 1.21.2+, DimensionDataStorage.computeIfAbsent() takes a single
+    SavedDataType<T> argument.
+
+    The SavedDataType constructor requires explicit type witness because Java
+    cannot infer the type from the lambda alone:
+      new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null)
+
+    We add a static loadWithProvider(CompoundTag, HolderLookup.Provider) method
+    that matches the BiFunction signature exactly, avoiding the inference failure.
+    """
+    # Add the SavedDataType import
     result = base_src.replace(
         "import net.minecraft.world.level.saveddata.SavedData;",
         "import net.minecraft.world.level.saveddata.SavedData;\nimport net.minecraft.world.level.saveddata.SavedDataType;"
-    ).replace(
-        # Remove the old get() method body and replace with SavedDataType pattern
+    )
+    # Replace the Factory-based get() with SavedDataType pattern.
+    # Use explicit <HomeData> type witness and a named static method to avoid
+    # "cannot infer type arguments" — lambdas fail inference, method refs work.
+    result = result.replace(
         """        public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
             return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
         }""",
         """        private static final SavedDataType<HomeData> TYPE =
-            new SavedDataType<>(NAME, HomeData::new,
-                (tag, provider) -> HomeData.load(tag), null);
+            new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null);
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
             return storage.computeIfAbsent(TYPE);
+        }
+
+        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
+            return HomeData.load(tag);
         }"""
     )
+    # The save() method in 1.21.2+ still takes (CompoundTag, Provider) — already set by SRC_121_FORGE
     return result
 
 SRC_1215_FORGE = _opt(_forge_1212_src(SRC_121_FORGE))
@@ -1165,13 +1183,30 @@ def to_neoforge_sethome(src: str) -> str:
 
 SRC_120_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE)
 # NeoForge 1.20.5+ — save() takes HolderLookup.Provider
-SRC_1205_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE.replace(
+# Also fix the Factory lambda: load() takes only CompoundTag, so use method ref
+# that matches BiFunction<CompoundTag, HolderLookup.Provider, HomeData>
+def _neo_factory_load(src: str) -> str:
+    """Add a loadWithProvider static method for NeoForge Factory lambda."""
+    return src.replace(
+        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
+        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);"
+    ).replace(
+        # Insert loadWithProvider before the existing load() method
+        "        public static HomeData load(CompoundTag tag) {",
+        "        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }\n        public static HomeData load(CompoundTag tag) {"
+    )
+
+SRC_1205_NEOFORGE = to_neoforge_sethome(_neo_factory_load(SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag) {",
     "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
-))
-SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)    # 1.21.0-1.21.1 (Factory exists)
-SRC_1215_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE))  # 1.21.2-1.21.8 NeoForge uses Factory API (same as 1.21.0-1.21.1)
-SRC_1219_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE  # 1.21.9+ NeoForge still uses Factory API
+)))
+# NeoForge 1.20.2-1.20.4 uses Factory but save() does NOT take Provider yet
+SRC_120_NEOFORGE_FACTORY = to_neoforge_sethome(_neo_factory_load(SRC_120_FORGE))
+SRC_121_NEOFORGE = to_neoforge_sethome(_neo_factory_load(SRC_121_FORGE))    # 1.21.0-1.21.1 (Factory exists)
+# NeoForge 1.21.2-1.21.8: Factory API, Provider save(), NO Optional getters
+SRC_1215_NEOFORGE = to_neoforge_sethome(_neo_factory_load(SRC_121_FORGE))
+# NeoForge 1.21.9+: same Factory API + EventBusSubscriber pattern, NO Optional getters
+SRC_1219_NEOFORGE = to_neoforge_sethome(_neo_factory_load(SRC_121_FORGE  # 1.21.9+ NeoForge still uses Factory API
     .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
     .replace("import net.minecraftforge.common.MinecraftForge;\n", "")
     .replace(
@@ -1209,8 +1244,8 @@ targets = [
     ("SetHome1219Forge",      SRC_1219_FORGE,   "forge",    "1.21.9"),
     ("SetHome12110Forge",     SRC_1219_FORGE,   "forge",    "1.21.10"),
     ("SetHome12111Forge",     SRC_1219_FORGE,   "forge",    "1.21.11"),
-    ("SetHome1202NeoForge",   SRC_120_NEOFORGE, "neoforge", "1.20.2"),
-    ("SetHome1204NeoForge",   SRC_120_NEOFORGE, "neoforge", "1.20.4"),
+    ("SetHome1202NeoForge",   SRC_120_NEOFORGE_FACTORY, "neoforge", "1.20.2"),
+    ("SetHome1204NeoForge",   SRC_120_NEOFORGE_FACTORY, "neoforge", "1.20.4"),
     ("SetHome1205NeoForge",   SRC_1205_NEOFORGE,"neoforge", "1.20.5"),
     ("SetHome1206NeoForge",   SRC_1205_NEOFORGE,"neoforge", "1.20.6"),
     ("SetHome121NeoForge",    SRC_121_NEOFORGE, "neoforge", "1.21"),

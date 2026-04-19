@@ -87,13 +87,9 @@ public class SetHomeMod {
         private final Map<String, Map<String, double[]>> data = new HashMap<>();
         public HomeData() {}
 
-        private static final SavedDataType<HomeData> TYPE =
-            new SavedDataType<>(NAME, HomeData::new,
-                (tag, provider) -> HomeData.load(tag), null);
-
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(TYPE);
+            return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
