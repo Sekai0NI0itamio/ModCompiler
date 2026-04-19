@@ -31,12 +31,10 @@ public class SetHomeMod {
     }
     public SetHomeMod() {
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(SetHomeMod::onRegisterCommands);
     }
 
-    @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)
-    public static class ForgeEvents {
-        @net.minecraftforge.eventbus.api.SubscribeEvent
-        public static void onRegisterCommands(RegisterCommandsEvent e) {
+    public static void onRegisterCommands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
         d.register(Commands.literal("sethome")
             .then(Commands.argument("name", StringArgumentType.word())
@@ -89,7 +87,7 @@ public class SetHomeMod {
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
             SavedDataType<HomeData> TYPE =
-                new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null);
+                new SavedDataType<HomeData>(NAME, HomeData::new, (com.mojang.serialization.Codec<HomeData>)null, null);
             return storage.computeIfAbsent(TYPE);
         }
 
@@ -111,7 +109,6 @@ public class SetHomeMod {
             }
             return d;
         }
-        @Override
         public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
             ListTag players = new ListTag();
             for (Map.Entry<String, Map<String, double[]>> pe : data.entrySet()) {
@@ -142,4 +139,3 @@ public class SetHomeMod {
         public Set<String> getHomes(String uuid) { return player(uuid).keySet(); }
     }
 }
-    }

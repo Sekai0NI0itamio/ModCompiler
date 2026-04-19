@@ -88,7 +88,7 @@ public class SetHomeMod {
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
             SavedDataType<HomeData> TYPE =
-                new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null);
+                new SavedDataType<HomeData>(NAME, HomeData::new, (com.mojang.serialization.Codec<HomeData>)null, null);
             return storage.computeIfAbsent(TYPE);
         }
 
@@ -110,7 +110,6 @@ public class SetHomeMod {
             }
             return d;
         }
-        @Override
         public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
             ListTag players = new ListTag();
             for (Map.Entry<String, Map<String, double[]>> pe : data.entrySet()) {
