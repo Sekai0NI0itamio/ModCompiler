@@ -34,7 +34,7 @@ public final class ServerCoreData extends SavedData {
       } catch (ReflectiveOperationException var6) {
          try {
             Method method = storage.getClass().getMethod("computeIfAbsent", Function.class, Supplier.class, String.class);
-            Function<CompoundTag, ServerCoreData> loadFn = ServerCoreData::load; Supplier<ServerCoreData> newFn = ServerCoreData::new; return (ServerCoreData)method.invoke(storage, loadFn, newFn, "servercore");
+            return (ServerCoreData)method.invoke(storage, ServerCoreData::load, ServerCoreData::new, "servercore");
          } catch (ReflectiveOperationException var5) {
             return new ServerCoreData();
          }

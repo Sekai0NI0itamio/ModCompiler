@@ -269,26 +269,81 @@ def write_1122_src(base: Path):
 def write_forge_1_17_1_18(base): write_forge_src(base, patch_for_1_17_1_18_forge)
 def write_forge_1_19(base): write_forge_src(base, patch_for_pre_1_20_5_forge)
 def write_forge_1_21_6_plus(base): write_forge_src(base, patch_forge_1215_plus)
-def write_forge_1_21_11(base): write_forge_src(base, lambda s: patch_1_21_11_api(patch_forge_1215_plus(s)))
+def write_forge_1_21_11(base):
+    """For Forge 1.21.11, use the actual 1.21.11 decompiled source for all files.
+    The 1.21.11 source uses reflection to handle ResourceLocation/location() API changes."""
+    for fname in FORGE_SHARED_FILES:
+        src_path = BUNDLE_SRC / "versions" / REF_1_21_11_FORGE / "decompiled" / "src" / "src" / "main" / "java" / FORGE_PKG / fname
+        if src_path.exists():
+            src = src_path.read_text(encoding="utf-8")
+        else:
+            # Fall back to 1.21.0 source with patches
+            src = read_forge_file(fname)
+            if fname == "ServerCoreData.java":
+                src = patch_server_core_data(src)
+            src = patch_forge_1215_plus(src)
+        write(base / "src" / "main" / "java" / FORGE_PKG / fname, src)
+    # Main mod class from 1.21.11
+    main_path = BUNDLE_SRC / "versions" / REF_1_21_11_FORGE / "decompiled" / "src" / "src" / "main" / "java" / FORGE_PKG / "ServerCoreForgeMod.java"
+    if main_path.exists():
+        main_src = main_path.read_text(encoding="utf-8")
+    else:
+        main_src = read_forge_file("ServerCoreForgeMod.java")
+        main_src = patch_forge_1215_plus(main_src)
+    write(base / "src" / "main" / "java" / FORGE_PKG / "ServerCoreForgeMod.java", main_src)
 def write_fabric_1_21_11(base):
-    """For Fabric 1.21.11, use the Forge 1.21.11 TeleportUtil (renamed to fabric package).
-    The Fabric 1.21.11 TeleportUtil uses intermediary names which don't compile.
-    The Forge 1.21.11 TeleportUtil uses reflection and official names — works for Fabric too."""
-    write_fabric_src(base, patch_1_21_11_api)
-    # Override TeleportUtil with the Forge 1.21.11 version (renamed to fabric package)
-    try:
-        forge_tu = (BUNDLE_SRC / "versions" / REF_1_21_11_FORGE / "decompiled" / "src" / "src" / "main" / "java" / FORGE_PKG / "TeleportUtil.java").read_text(encoding="utf-8")
-        # Rename package
-        fabric_tu = forge_tu.replace(
+    """For Fabric 1.21.11, use the Forge 1.21.11 source for ALL shared files
+    (renamed to fabric package). The Forge 1.21.11 source uses reflection for
+    all API changes (ResourceLocation, location(), etc.) and compiles cleanly."""
+    for fname in FORGE_SHARED_FILES:
+        src_path = BUNDLE_SRC / "versions" / REF_1_21_11_FORGE / "decompiled" / "src" / "src" / "main" / "java" / FORGE_PKG / fname
+        if src_path.exists():
+            src = src_path.read_text(encoding="utf-8")
+        else:
+            src = read_forge_file(fname)
+            if fname == "ServerCoreData.java":
+                src = patch_server_core_data(src)
+        # Rename package from forge to fabric
+        src = src.replace(
             "package com.itamio.servercore.forge;",
             "package com.itamio.servercore.fabric;"
         ).replace(
             "import com.itamio.servercore.forge.",
             "import com.itamio.servercore.fabric."
         )
-        write(base / "src" / "main" / "java" / FABRIC_PKG / "TeleportUtil.java", fabric_tu)
-    except Exception as e:
-        print(f"Warning: could not load 1.21.11 Forge TeleportUtil for Fabric: {e}")
+        write(base / "src" / "main" / "java" / FABRIC_PKG / fname, src)
+    # Write clean Fabric entrypoint
+    fabric_mod = """\
+package com.itamio.servercore.fabric;
+
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.level.ServerPlayer;
+
+public final class ServerCoreFabricMod implements ModInitializer {
+    @Override
+    public void onInitialize() {
+        CommandRegistrationCallback.EVENT.register(
+            (dispatcher, registryAccess, environment) ->
+                ServerCoreCommands.register(dispatcher)
+        );
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayer player = handler.getPlayer();
+            ServerCoreData data = ServerCoreData.get(server);
+            if (!data.hasSeen(player.getUUID())) {
+                data.markSeen(player.getUUID());
+                RandomTeleportService.RtpResult result =
+                    RandomTeleportService.getInstance().teleport(player, "minecraft:overworld");
+                if (!result.isSuccess()) {
+                    MessageUtil.send(player, "First-join teleport failed: " + result.getMessage());
+                }
+            }
+        });
+    }
+}
+"""
+    write(base / "src" / "main" / "java" / FABRIC_PKG / "ServerCoreFabricMod.java", fabric_mod)
 
 # ============================================================
 # TARGETS
