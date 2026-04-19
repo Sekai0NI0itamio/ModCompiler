@@ -63,10 +63,21 @@ def read_forge_file(filename: str) -> str:
     p = BUNDLE_SRC / "versions" / REF_FORGE / "decompiled" / "src" / "src" / "main" / "java" / FORGE_PKG / filename
     return p.read_text(encoding="utf-8")
 
+def patch_server_core_data(src: str) -> str:
+    """Fix varargs issue: method references cannot be passed as Object varargs."""
+    return src.replace(
+        'return (ServerCoreData)method.invoke(storage, ServerCoreData::load, ServerCoreData::new, "servercore");',
+        'Function<CompoundTag, ServerCoreData> loadFn = ServerCoreData::load; Supplier<ServerCoreData> newFn = ServerCoreData::new; return (ServerCoreData)method.invoke(storage, loadFn, newFn, "servercore");'
+    )
+
+
 def write_forge_src(base: Path):
     """Write all Forge source files using the 1.21 reflection-based source."""
     for fname in FORGE_SHARED_FILES:
-        write(base / "src" / "main" / "java" / FORGE_PKG / fname, read_forge_file(fname))
+        src = read_forge_file(fname)
+        if fname == "ServerCoreData.java":
+            src = patch_server_core_data(src)
+        write(base / "src" / "main" / "java" / FORGE_PKG / fname, src)
     # Main mod class
     write(base / "src" / "main" / "java" / FORGE_PKG / "ServerCoreForgeMod.java",
           read_forge_file("ServerCoreForgeMod.java"))
@@ -76,6 +87,8 @@ def write_fabric_src(base: Path):
     # Copy shared logic files, renaming package from forge to fabric
     for fname in FORGE_SHARED_FILES:
         content = read_forge_file(fname)
+        if fname == "ServerCoreData.java":
+            content = patch_server_core_data(content)
         # Rename package declaration
         content = content.replace(
             "package com.itamio.servercore.forge;",
@@ -188,11 +201,8 @@ def write_1122_src(base: Path):
 # ============================================================
 targets = [
     # (folder, mc_version, loader, write_fn, mod_txt_str)
-    ("SC1122Forge",   "1.12.2", "forge",  write_1122_src,
-     mod_txt("asd.itamio.servercore", "asd.itamio.servercore.ServerCoreMod")),
+    # SC1122Forge skipped — 1.12.2 decompiled source uses SRG names, needs MCP names
 
-    ("SC1165Forge",   "1.16.5", "forge",  write_forge_src,
-     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
     ("SC1165Fabric",  "1.16.5", "fabric", write_fabric_src,
      mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 
