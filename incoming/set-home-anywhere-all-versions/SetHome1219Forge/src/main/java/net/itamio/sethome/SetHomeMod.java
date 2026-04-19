@@ -8,7 +8,6 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
@@ -32,10 +31,9 @@ public class SetHomeMod {
     }
     public SetHomeMod() {
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
-        MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
     }
 
-    @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
         d.register(Commands.literal("sethome")
@@ -88,7 +86,7 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
+            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (t, p) -> HomeData.load(t), null), NAME);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
