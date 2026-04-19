@@ -59,6 +59,18 @@ on:
           Examples: https://modrinth.com/mod/sort-chest  |  sort-chest  |  XXXXXXXX
         required: true
         type: string
+      latest_only:
+        description: >
+          Only download the latest jar per (loader + Minecraft version) pair, chosen by
+          highest version number. Recommended: keeps the bundle small and avoids
+          downloading old shells or superseded uploads.
+          Set to false to download every published version (original behaviour).
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 permissions:
   contents: read
@@ -87,6 +99,7 @@ jobs:
         shell: bash
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          LATEST_ONLY: ${{ inputs.latest_only }}
         run: |
           python3 - <<'PY'
           import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
@@ -95,6 +108,7 @@ jobs:
           API   = "https://api.modrinth.com/v2"
           TOKEN = os.environ.get("MODRINTH_TOKEN") or ""
           RAW   = "${{ inputs.modrinth_project_url }}".strip().rstrip("/")
+          LATEST_ONLY = os.environ.get("LATEST_ONLY", "true").strip().lower() not in {"false", "0", "no"}
 
           def slug_from_url(v):
               m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", v)
@@ -140,6 +154,58 @@ jobs:
                           time.sleep(2**attempt)
               return False
 
+          def parse_version_number(version_str: str):
+              """Parse a version string into a comparable tuple. Handles semver and
+              non-standard strings. Returns a tuple of ints/strings for comparison."""
+              import re as _re
+              parts = []
+              for token in _re.split(r"[.\-_]", version_str.strip()):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  elif token:
+                      parts.append(token)
+              return tuple(parts) if parts else (0,)
+
+          def select_latest_per_loader_mc(versions):
+              """For each (loader, mc_version) pair, keep only the version with the
+              highest version number (falling back to date_published if tied)."""
+              best: dict[tuple, dict] = {}
+              for v in versions:
+                  loaders = [str(l) for l in v.get("loaders", []) if str(l).strip()]
+                  game_versions = [str(g) for g in v.get("game_versions", []) if str(g).strip()]
+                  if not loaders or not game_versions:
+                      continue
+                  vnum = str(v.get("version_number") or "").strip()
+                  vkey = parse_version_number(vnum)
+                  published = v.get("date_published", "") or ""
+                  for loader in loaders:
+                      for gv in game_versions:
+                          key = (loader, gv)
+                          current = best.get(key)
+                          if current is None:
+                              best[key] = {"version": v, "vkey": vkey, "published": published}
+                              continue
+                          # prefer higher version number; break ties by date
+                          try:
+                              is_newer = vkey > current["vkey"]
+                          except TypeError:
+                              # mixed types (int vs str) — fall back to string compare
+                              is_newer = str(vkey) > str(current["vkey"])
+                          if is_newer or (vkey == current["vkey"] and published > current["published"]):
+                              best[key] = {"version": v, "vkey": vkey, "published": published}
+
+              # deduplicate: a single version object may cover multiple pairs
+              seen_ids: set[str] = set()
+              selected = []
+              for entry in best.values():
+                  vid = entry["version"]["id"]
+                  if vid not in seen_ids:
+                      seen_ids.add(vid)
+                      selected.append(entry["version"])
+              # sort newest first
+              selected.sort(key=lambda v: v.get("date_published", ""), reverse=True)
+              return selected
+
           ref = slug_from_url(RAW)
           print(f"Fetching project: {ref}")
           project = get(f"/project/{urllib.parse.quote(ref, safe='')}")
@@ -153,7 +219,25 @@ jobs:
           (out / "project.json").write_text(json.dumps(project, indent=2), encoding="utf-8")
 
           print("Fetching versions...")
-          versions = get(f"/project/{urllib.parse.quote(pid, safe='')}/version") or []
+          all_versions = get(f"/project/{urllib.parse.quote(pid, safe='')}/version") or []
+          print(f"Total versions on Modrinth: {len(all_versions)}")
+
+          if LATEST_ONLY:
+              versions = select_latest_per_loader_mc(all_versions)
+              print(f"After latest-only filter (one per loader+MC): {len(versions)} versions")
+              # record which versions were skipped so the bundle documents it
+              selected_ids = {v["id"] for v in versions}
+              skipped = [v for v in all_versions if v["id"] not in selected_ids]
+              skip_info = [
+                  {"id": v["id"], "version_number": v.get("version_number",""),
+                   "loaders": v.get("loaders",[]), "game_versions": v.get("game_versions",[])}
+                  for v in skipped
+              ]
+              (out / "skipped_versions.json").write_text(json.dumps(skip_info, indent=2), encoding="utf-8")
+              print(f"Skipped (older/superseded): {len(skipped)}")
+          else:
+              versions = all_versions
+              print("latest_only=false — downloading all versions")
 
           matrix_entries = []
           for v in versions:
@@ -175,7 +259,8 @@ jobs:
                   jar_name = primary["filename"]
                   jar_dest = vdir / jar_name
                   ok = download(primary["url"], jar_dest)
-                  print(f"  [{vid}] {jar_name} {'OK' if ok else 'FAILED'}")
+                  size = jar_dest.stat().st_size if ok and jar_dest.exists() else 0
+                  print(f"  [{vid}] {v.get('version_number','')} {v.get('loaders',[])} {v.get('game_versions',[])} → {jar_name} ({size:,}B) {'OK' if ok else 'FAILED'}")
               else:
                   print(f"  [{vid}] no primary file found")
 
@@ -325,6 +410,13 @@ jobs:
           project = json.loads((fetch_root / "project.json").read_text(encoding="utf-8"))
           shutil.copy(fetch_root / "project.json", bundle / "project.json")
 
+          # copy skipped versions list if present (latest_only mode)
+          skipped_src = fetch_root / "skipped_versions.json"
+          skipped_versions = []
+          if skipped_src.exists():
+              shutil.copy(skipped_src, bundle / "skipped_versions.json")
+              skipped_versions = json.loads(skipped_src.read_text(encoding="utf-8"))
+
           # ── per-version assembly ─────────────────────────────────────────
           versions_src = fetch_root / "versions"
           version_summaries = []
@@ -409,7 +501,8 @@ jobs:
               "Full body:",
               project.get("body", ""),
               "",
-              f"Versions ({len(version_summaries)} total):",
+              f"Versions ({len(version_summaries)} included" +
+              (f", {len(skipped_versions)} older/superseded skipped" if skipped_versions else "") + "):",
           ]
           for vs in version_summaries:
               gvs = ", ".join(vs["game_versions"])
@@ -427,7 +520,10 @@ jobs:
               "slug":          project.get("slug"),
               "title":         project.get("title"),
               "version_count": len(version_summaries),
+              "skipped_count": len(skipped_versions),
+              "latest_only":   bool(skipped_versions or (fetch_root / "skipped_versions.json").exists()),
               "versions":      version_summaries,
+              "skipped_versions": skipped_versions,
           }
           (bundle / "index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
 
@@ -465,6 +561,12 @@ jobs:
              - `decompiled/result.json`         full decompile result
              - `decompiled/src/main/java/...`   decompiled Java source tree
 
+          > **Note:** This bundle was generated with `latest_only=true` (default).
+          > Only the **latest version per loader + Minecraft version pair** is included,
+          > chosen by highest version number. Older/superseded versions are listed in
+          > `skipped_versions.json` but not downloaded or decompiled.
+          > To fetch every version, re-run the workflow with `latest_only=false`.
+
           ## Quick facts
 
           - Slug: `{slug}`
@@ -475,6 +577,7 @@ jobs:
           - Server side: {project.get('server_side', '?')}
           - Loaders: {', '.join(project.get('loaders', []))}
           - MC versions: {', '.join(project.get('game_versions', []))}
+          - Versions included: {len(version_summaries)}{f' ({len(skipped_versions)} older skipped)' if skipped_versions else ''}
 
           ## Versions
 
