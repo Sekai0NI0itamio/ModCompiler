@@ -22,10 +22,10 @@ public final class ToggleSprintController {
             return;
         }
         if (client.isPaused()) {
-            sprintKeyWasDown = client.options.keySprint.isPressed();
+            sprintKeyWasDown = client.options.sprintKey.isPressed();
             return;
         }
-        boolean sprintKeyDown = client.options.keySprint.isPressed();
+        boolean sprintKeyDown = client.options.sprintKey.isPressed();
         if (sprintKeyDown && !sprintKeyWasDown) {
             sprintLocked = !sprintLocked;
             client.player.setSprinting(false);
@@ -43,7 +43,7 @@ public final class ToggleSprintController {
         if (client.player == null) return false;
         if (client.player.isSpectator() || client.player.hasVehicle()) return false;
         if (client.player.isSneaking() || client.player.isUsingItem()) return false;
-        return client.options.keyForward.isPressed()
-            && !client.options.keyBack.isPressed();
+        return client.options.forwardKey.isPressed()
+            && !client.options.backKey.isPressed();
     }
 }
