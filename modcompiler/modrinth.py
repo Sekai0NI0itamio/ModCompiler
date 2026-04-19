@@ -130,28 +130,40 @@ def publish_one_mod(
 
     entry["jar_name"] = jar_path.name
 
-    # Find any existing version for this loader+MC combination
-    existing = client.find_any_existing_version(
+    # Find ALL existing versions for this loader+MC combination
+    all_existing = client.find_all_existing_versions(
         project_id=project_id,
         loader=mod["loader"],
         minecraft_version=mod["minecraft_version"],
     )
 
-    if existing is not None:
-        existing_size = _get_version_primary_file_size(existing)
-        new_jar_size = jar_path.stat().st_size
-        # A shell is a version with no real classes (< 5000 bytes)
-        # or where our new jar is at least 10x larger (clearly more content)
-        is_shell = existing_size < 5000 or (existing_size > 0 and new_jar_size > existing_size * 10)
+    new_jar_size = jar_path.stat().st_size
 
-        if not is_shell:
-            # Real version already exists — skip
-            entry["publish_status"] = "skipped"
-            entry["note"] = f"Already exists on Modrinth as version {existing.get('id', '-')} (size={existing_size}B)"
-            entry["version_id"] = existing.get("id", "")
-            return entry
+    # Check if ANY existing version is a shell
+    shell_versions = []
+    real_versions = []
+    for v in all_existing:
+        sz = _get_version_primary_file_size(v)
+        is_shell = sz < 5000 or (sz > 0 and new_jar_size > sz * 10)
+        if is_shell:
+            shell_versions.append(v)
+        else:
+            real_versions.append(v)
 
-        # Shell detected — bump the version number and upload a new version
+    if real_versions and not shell_versions:
+        # Only real versions exist — nothing to fix, skip
+        best = real_versions[0]
+        best_size = _get_version_primary_file_size(best)
+        entry["publish_status"] = "skipped"
+        entry["note"] = (
+            f"Real version already exists on Modrinth as {best.get('version_number', '-')} "
+            f"(id={best.get('id', '-')}, size={best_size}B). No shells found."
+        )
+        entry["version_id"] = best.get("id", "")
+        return entry
+
+    if shell_versions:
+        # Shell(s) detected — bump the version number and upload a new version
         # Find the highest existing version number for this project+loader+MC
         bumped_version = _bump_version_number(
             client=client,
@@ -160,20 +172,18 @@ def publish_one_mod(
             minecraft_version=mod["minecraft_version"],
             base_version=mod["metadata"]["mod_version"],
         )
+        shell_ids = [s.get("id", "-") for s in shell_versions]
+        shell_sizes = [_get_version_primary_file_size(s) for s in shell_versions]
         entry["note"] = (
-            f"Shell version {existing.get('id', '-')} found (size={existing_size}B). "
-            f"Uploading as v{bumped_version} instead of deleting."
+            f"Shell version(s) found: {shell_ids} (sizes={shell_sizes}B). "
+            f"Uploading as v{bumped_version} to replace."
         )
         # Override the version number in the mod metadata for this upload
         mod = dict(mod)
         mod["metadata"] = dict(mod["metadata"])
         mod["metadata"]["mod_version"] = bumped_version
         mod["shell_replacement"] = True
-        # Rename the jar to match the new version number
-        new_jar_name = jar_path.name.replace(
-            mod["metadata"].get("mod_version", ""), bumped_version
-        ) if bumped_version not in jar_path.name else jar_path.name
-        entry["jar_name"] = new_jar_name
+        entry["jar_name"] = jar_path.name  # keep original jar name
 
     payload = build_modrinth_version_payload(project_id=project_id, mod=mod, jar_name=entry["jar_name"])
     try:
@@ -502,6 +512,22 @@ class ModrinthClient:
     ) -> dict[str, Any] | None:
         """Find any existing version for the given loader+MC, regardless of version number.
         Used to detect shells that may have a different version number or jar name."""
+        versions = self.find_all_existing_versions(
+            project_id=project_id,
+            loader=loader,
+            minecraft_version=minecraft_version,
+        )
+        return versions[0] if versions else None
+
+    def find_all_existing_versions(
+        self,
+        *,
+        project_id: str,
+        loader: str,
+        minecraft_version: str,
+    ) -> list[dict[str, Any]]:
+        """Return ALL existing versions for the given loader+MC combination.
+        This is needed to detect orphaned shell versions that coexist with real versions."""
         params = {
             "loaders": json.dumps([loader]),
             "game_versions": json.dumps([minecraft_version]),
@@ -512,9 +538,9 @@ class ModrinthClient:
             f"/project/{urllib.parse.quote(project_id, safe='')}/version",
             params=params,
         )
-        if not isinstance(versions, list) or not versions:
-            return None
-        return versions[0]
+        if not isinstance(versions, list):
+            return []
+        return versions
 
     def get_project(self, *, project_ref: str) -> dict[str, Any]:
         response = self.request_json(
