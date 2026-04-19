@@ -1,0 +1,390 @@
+#!/usr/bin/env python3
+"""
+Rewrites the 1.21+ source section of generate_sethome_bundle.py with
+explicit hardcoded strings instead of fragile chained replacements.
+
+Run once: python3 scripts/_rebuild_1_21_sources.py
+"""
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+GEN = ROOT / "scripts" / "generate_sethome_bundle.py"
+
+content = GEN.read_text()
+
+# ── Marker boundaries ──────────────────────────────────────────────────────
+OLD_START = "# ============================================================\n# 1.21+ FORGE"
+OLD_END   = "SRC_1219_NEOFORGE = to_neoforge_sethome(_opt(_forge_1212_src(_SRC_1219_NEO_BASE)))"
+
+start_idx = content.index(OLD_START)
+end_idx   = content.index(OLD_END) + len(OLD_END)
+
+# ── Shared command/NBT body (used in all 1.21+ variants) ──────────────────
+# sendSuccess uses Supplier lambda (1.20+)
+_CMD_BODY = """\
+    @REGISTER_COMMANDS_DECL@
+        CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
+        d.register(Commands.literal("sethome")
+            .then(Commands.argument("name", StringArgumentType.word())
+                .executes(ctx -> setHome(ctx.getSource(), StringArgumentType.getString(ctx,"name")))));
+        d.register(Commands.literal("home")
+            .then(Commands.argument("name", StringArgumentType.word())
+                .executes(ctx -> home(ctx.getSource(), StringArgumentType.getString(ctx,"name")))));
+        d.register(Commands.literal("delhome")
+            .then(Commands.argument("name", StringArgumentType.word())
+                .executes(ctx -> delHome(ctx.getSource(), StringArgumentType.getString(ctx,"name")))));
+    }
+
+    private static int setHome(CommandSourceStack src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer p = src.getPlayerOrException();
+        String uuid = p.getUUID().toString();
+        HomeData d = HomeData.get(src.getServer());
+        int max = MAX_HOMES.get();
+        if (max > 0 && !d.hasHome(uuid, name) && d.getHomes(uuid).size() >= max) {
+            src.sendSuccess(() -> Component.literal("You have reached the maximum number of homes (" + max + ")."), false); return 0;
+        }
+        d.setHome(uuid, name, p.getX(), p.getY(), p.getZ(), p.getYRot(), p.getXRot());
+        src.sendSuccess(() -> Component.literal("Home '" + name + "' set."), false); return 1;
+    }
+    private static int home(CommandSourceStack src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        if ("list".equalsIgnoreCase(name)) {
+            ServerPlayer p = src.getPlayerOrException();
+            Set<String> homes = HomeData.get(src.getServer()).getHomes(p.getUUID().toString());
+            if (homes.isEmpty()) { src.sendSuccess(() -> Component.literal("You have no homes set."), false); return 1; }
+            src.sendSuccess(() -> Component.literal("Your homes: " + String.join(", ", new ArrayList<>(homes))), false); return 1;
+        }
+        ServerPlayer p = src.getPlayerOrException();
+        double[] h = HomeData.get(src.getServer()).getHome(p.getUUID().toString(), name);
+        if (h == null) { src.sendSuccess(() -> Component.literal("Home '" + name + "' not found."), false); return 0; }
+        p.teleportTo(h[0], h[1], h[2]);
+        src.sendSuccess(() -> Component.literal("Teleported to home '" + name + "'."), false); return 1;
+    }
+    private static int delHome(CommandSourceStack src, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer p = src.getPlayerOrException();
+        if (!HomeData.get(src.getServer()).removeHome(p.getUUID().toString(), name)) {
+            src.sendSuccess(() -> Component.literal("Home '" + name + "' not found."), false); return 0;
+        }
+        src.sendSuccess(() -> Component.literal("Home '" + name + "' deleted."), false); return 1;
+    }"""
+
+# ── NBT load/save blocks ───────────────────────────────────────────────────
+# Standard (1.17-1.21.4): getList(String,int), getCompound(int), getString(String)
+_NBT_STANDARD = """\
+        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
+        public static HomeData load(CompoundTag tag) {
+            HomeData d = new HomeData();
+            ListTag players = tag.getList("players", 10);
+            for (int i = 0; i < players.size(); i++) {
+                CompoundTag pc = players.getCompound(i);
+                Map<String, double[]> homes = new HashMap<>();
+                ListTag hl = pc.getList("homes", 10);
+                for (int j = 0; j < hl.size(); j++) {
+                    CompoundTag hc = hl.getCompound(j);
+                    homes.put(hc.getString("name"), new double[]{
+                        hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),
+                        hc.getFloat("yaw"),hc.getFloat("pitch")});
+                }
+                d.data.put(pc.getString("uuid"), homes);
+            }
+            return d;
+        }"""
+
+# Optional (1.21.5+): getList(String), getCompound(int).orElse(), getString(String).orElse("")
+_NBT_OPTIONAL = """\
+        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
+        public static HomeData load(CompoundTag tag) {
+            HomeData d = new HomeData();
+            ListTag players = tag.getList("players").orElse(new ListTag());
+            for (int i = 0; i < players.size(); i++) {
+                CompoundTag pc = players.getCompound(i).orElse(new CompoundTag());
+                Map<String, double[]> homes = new HashMap<>();
+                ListTag hl = pc.getList("homes").orElse(new ListTag());
+                for (int j = 0; j < hl.size(); j++) {
+                    CompoundTag hc = hl.getCompound(j).orElse(new CompoundTag());
+                    homes.put(hc.getString("name").orElse(""), new double[]{
+                        hc.getDouble("x").orElse(0.0),hc.getDouble("y").orElse(0.0),hc.getDouble("z").orElse(0.0),
+                        hc.getFloat("yaw").orElse(0.0f),hc.getFloat("pitch").orElse(0.0f)});
+                }
+                d.data.put(pc.getString("uuid").orElse(""), homes);
+            }
+            return d;
+        }"""
+
+_NBT_SAVE_PROVIDER = """\
+        @Override
+        public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
+            ListTag players = new ListTag();
+            for (Map.Entry<String, Map<String, double[]>> pe : data.entrySet()) {
+                CompoundTag pc = new CompoundTag();
+                pc.putString("uuid", pe.getKey());
+                ListTag hl = new ListTag();
+                for (Map.Entry<String, double[]> he : pe.getValue().entrySet()) {
+                    CompoundTag hc = new CompoundTag();
+                    hc.putString("name", he.getKey());
+                    double[] v = he.getValue();
+                    hc.putDouble("x",v[0]); hc.putDouble("y",v[1]); hc.putDouble("z",v[2]);
+                    hc.putFloat("yaw",(float)v[3]); hc.putFloat("pitch",(float)v[4]);
+                    hl.add(hc);
+                }
+                pc.put("homes", hl); players.add(pc);
+            }
+            tag.put("players", players); return tag;
+        }"""
+
+_DATA_HELPERS = """\
+        private Map<String, double[]> player(String uuid) { return data.computeIfAbsent(uuid, k -> new HashMap<>()); }
+        public void setHome(String uuid, String name, double x, double y, double z, float yaw, float pitch) {
+            player(uuid).put(name, new double[]{x,y,z,yaw,pitch}); setDirty();
+        }
+        public double[] getHome(String uuid, String name) { return player(uuid).get(name); }
+        public boolean hasHome(String uuid, String name) { return player(uuid).containsKey(name); }
+        public boolean removeHome(String uuid, String name) {
+            boolean r = player(uuid).remove(name) != null; if (r) setDirty(); return r;
+        }
+        public Set<String> getHomes(String uuid) { return player(uuid).keySet(); }
+    }
+}"""
+
+# ── Builder function ───────────────────────────────────────────────────────
+def build_forge(
+    mod_annotation,       # e.g. '@Mod(SetHomeMod.MODID)'
+    config_class,         # 'ForgeConfigSpec'
+    config_import,        # full import line
+    event_import,         # import for RegisterCommandsEvent
+    constructor_body,     # lines inside SetHomeMod()
+    register_decl,        # the @SubscribeEvent + method signature line(s)
+    get_body,             # the HomeData.get() method body
+    nbt_load,             # _NBT_STANDARD or _NBT_OPTIONAL
+    nbt_save,             # _NBT_SAVE_PROVIDER
+    extra_imports="",
+):
+    cmd = _CMD_BODY.replace("    @REGISTER_COMMANDS_DECL@", register_decl)
+    return f"""\
+package net.itamio.sethome;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.storage.DimensionDataStorage;
+{event_import}
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+{config_import}
+{extra_imports}import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import java.util.*;
+
+{mod_annotation}
+public class SetHomeMod {{
+    public static final String MODID = "sethome";
+    static {config_class}.IntValue MAX_HOMES;
+    static {config_class} SPEC;
+    static {{
+        {config_class}.Builder b = new {config_class}.Builder();
+        b.push("general");
+        MAX_HOMES = b.comment("Maximum homes per player. Use -1 for unlimited.")
+                     .defineInRange("maxHomes", -1, -1, Integer.MAX_VALUE);
+        b.pop(); SPEC = b.build();
+    }}
+    public SetHomeMod() {{
+{constructor_body}
+    }}
+
+{cmd}
+
+    public static class HomeData extends SavedData {{
+        private static final String NAME = "sethome_data";
+        private final Map<String, Map<String, double[]>> data = new HashMap<>();
+        public HomeData() {{}}
+
+        public static HomeData get(MinecraftServer srv) {{
+            DimensionDataStorage storage = srv.overworld().getDataStorage();
+            {get_body}
+        }}
+
+{nbt_load}
+{nbt_save}
+{_DATA_HELPERS}
+"""
+
+# ── Forge 1.21.0-1.21.4: Factory + standard NBT ───────────────────────────
+_FACTORY_GET = "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);"
+
+SRC_121_FORGE = build_forge(
+    mod_annotation="@Mod(SetHomeMod.MODID)",
+    config_class="ForgeConfigSpec",
+    config_import="import net.minecraftforge.common.ForgeConfigSpec;",
+    event_import="import net.minecraftforge.event.RegisterCommandsEvent;",
+    constructor_body="        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);",
+    register_decl="    @net.minecraftforge.eventbus.api.SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
+    get_body=_FACTORY_GET,
+    nbt_load=_NBT_STANDARD,
+    nbt_save=_NBT_SAVE_PROVIDER,
+)
+
+# ── Forge 1.21.5-1.21.8: SavedDataType + Optional NBT + EventBusSubscriber ─
+_SAVEDTYPE_GET = """\
+SavedDataType<HomeData> TYPE =
+                new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null);
+            return storage.computeIfAbsent(TYPE);"""
+
+SRC_1215_FORGE = build_forge(
+    mod_annotation="@Mod(SetHomeMod.MODID)",
+    config_class="ForgeConfigSpec",
+    config_import="import net.minecraftforge.common.ForgeConfigSpec;\nimport net.minecraft.world.level.saveddata.SavedDataType;",
+    event_import="import net.minecraftforge.event.RegisterCommandsEvent;",
+    constructor_body="        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);",
+    register_decl="    @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)\n    public static class ForgeEvents {\n        @net.minecraftforge.eventbus.api.SubscribeEvent\n        public static void onRegisterCommands(RegisterCommandsEvent e) {",
+    get_body=_SAVEDTYPE_GET,
+    nbt_load=_NBT_OPTIONAL,
+    nbt_save=_NBT_SAVE_PROVIDER,
+)
+# Close the extra ForgeEvents class
+SRC_1215_FORGE = SRC_1215_FORGE.rstrip("\n") + "\n    }\n"
+
+# ── Forge 1.21.9-1.21.11: same as 1.21.5 ─────────────────────────────────
+SRC_1219_FORGE = SRC_1215_FORGE
+
+# ── NeoForge builder ───────────────────────────────────────────────────────
+def to_neo(src):
+    return (src
+        .replace("import net.minecraftforge.event.RegisterCommandsEvent;",
+                 "import net.neoforged.neoforge.event.RegisterCommandsEvent;")
+        .replace("import net.minecraftforge.fml.common.Mod;",
+                 "import net.neoforged.fml.common.Mod;")
+        .replace("import net.minecraftforge.fml.config.ModConfig;",
+                 "import net.neoforged.fml.config.ModConfig;")
+        .replace("import net.minecraftforge.common.ForgeConfigSpec;",
+                 "import net.neoforged.neoforge.common.ModConfigSpec;")
+        .replace("ForgeConfigSpec.IntValue", "ModConfigSpec.IntValue")
+        .replace("ForgeConfigSpec.Builder",  "ModConfigSpec.Builder")
+        .replace("ForgeConfigSpec SPEC;",    "ModConfigSpec SPEC;")
+        .replace("net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);",
+                 "net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(this);")
+        .replace("net.minecraftforge.fml.ModLoadingContext.get().registerConfig(",
+                 "// config: ")
+        .replace("net.minecraftforge.fml.common.Mod.EventBusSubscriber",
+                 "net.neoforged.fml.common.Mod.EventBusSubscriber")
+        .replace("net.minecraftforge.eventbus.api.SubscribeEvent",
+                 "net.neoforged.bus.api.SubscribeEvent")
+        .replace("net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE",
+                 "net.neoforged.fml.common.Mod.EventBusSubscriber.Bus.FORGE")
+        .replace("import net.minecraft.world.level.saveddata.SavedDataType;",
+                 "import net.minecraft.world.level.saveddata.SavedDataType;")
+    )
+
+# NeoForge 1.20.2-1.20.4: Factory + save(CompoundTag) — no Provider in save
+_NBT_SAVE_NO_PROVIDER = """\
+        @Override
+        public CompoundTag save(CompoundTag tag) {
+            ListTag players = new ListTag();
+            for (Map.Entry<String, Map<String, double[]>> pe : data.entrySet()) {
+                CompoundTag pc = new CompoundTag();
+                pc.putString("uuid", pe.getKey());
+                ListTag hl = new ListTag();
+                for (Map.Entry<String, double[]> he : pe.getValue().entrySet()) {
+                    CompoundTag hc = new CompoundTag();
+                    hc.putString("name", he.getKey());
+                    double[] v = he.getValue();
+                    hc.putDouble("x",v[0]); hc.putDouble("y",v[1]); hc.putDouble("z",v[2]);
+                    hc.putFloat("yaw",(float)v[3]); hc.putFloat("pitch",(float)v[4]);
+                    hl.add(hc);
+                }
+                pc.put("homes", hl); players.add(pc);
+            }
+            tag.put("players", players); return tag;
+        }"""
+
+_NEO_FACTORY_GET = "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);"
+
+SRC_120_NEOFORGE_FACTORY = to_neo(build_forge(
+    mod_annotation="@Mod(SetHomeMod.MODID)",
+    config_class="ForgeConfigSpec",
+    config_import="import net.minecraftforge.common.ForgeConfigSpec;",
+    event_import="import net.minecraftforge.event.RegisterCommandsEvent;",
+    constructor_body="        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);",
+    register_decl="    @net.minecraftforge.eventbus.api.SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
+    get_body=_NEO_FACTORY_GET,
+    nbt_load=_NBT_STANDARD,
+    nbt_save=_NBT_SAVE_NO_PROVIDER,
+))
+
+SRC_1205_NEOFORGE = to_neo(build_forge(
+    mod_annotation="@Mod(SetHomeMod.MODID)",
+    config_class="ForgeConfigSpec",
+    config_import="import net.minecraftforge.common.ForgeConfigSpec;",
+    event_import="import net.minecraftforge.event.RegisterCommandsEvent;",
+    constructor_body="        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);",
+    register_decl="    @net.minecraftforge.eventbus.api.SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
+    get_body=_NEO_FACTORY_GET,
+    nbt_load=_NBT_STANDARD,
+    nbt_save=_NBT_SAVE_PROVIDER,
+))
+
+SRC_121_NEOFORGE = SRC_1205_NEOFORGE  # 1.21.0-1.21.4: same Factory + Provider save
+
+# NeoForge 1.21.2-1.21.4: Factory + standard NBT (no Optional, no SavedDataType)
+SRC_1215_NEOFORGE = SRC_121_NEOFORGE
+
+# NeoForge 1.21.5+: SavedDataType + Optional NBT
+_NEO_SAVEDTYPE_GET = """\
+SavedDataType<HomeData> TYPE =
+                new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null);
+            return storage.computeIfAbsent(TYPE);"""
+
+SRC_1215_NEOFORGE_OPT = to_neo(build_forge(
+    mod_annotation="@Mod(SetHomeMod.MODID)",
+    config_class="ForgeConfigSpec",
+    config_import="import net.minecraftforge.common.ForgeConfigSpec;\nimport net.minecraft.world.level.saveddata.SavedDataType;",
+    event_import="import net.minecraftforge.event.RegisterCommandsEvent;",
+    constructor_body="        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);",
+    register_decl="    @net.minecraftforge.eventbus.api.SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
+    get_body=_NEO_SAVEDTYPE_GET,
+    nbt_load=_NBT_OPTIONAL,
+    nbt_save=_NBT_SAVE_PROVIDER,
+))
+
+SRC_1219_NEOFORGE = SRC_1215_NEOFORGE_OPT  # 1.21.9+ same API
+
+# ── Write the replacement block ────────────────────────────────────────────
+REPLACEMENT = f'''\
+# ============================================================
+# 1.21+ sources — generated by _rebuild_1_21_sources.py
+# Each variable is an explicit hardcoded string. No chaining.
+#
+# Forge 1.21.0-1.21.4 : Factory<T> + save(tag,Provider) + standard NBT
+# Forge 1.21.5-1.21.11: SavedDataType + Optional NBT + EventBusSubscriber
+# NeoForge 1.20.2-1.20.4: Factory + save(tag) no Provider
+# NeoForge 1.20.5-1.21.4: Factory + save(tag,Provider)
+# NeoForge 1.21.5+       : SavedDataType + Optional NBT
+# ============================================================
+
+SRC_121_FORGE = {repr(SRC_121_FORGE)}
+
+SRC_1215_FORGE = {repr(SRC_1215_FORGE)}
+
+SRC_1219_FORGE = SRC_1215_FORGE  # same API for 1.21.9-1.21.11
+
+SRC_120_NEOFORGE_FACTORY = {repr(SRC_120_NEOFORGE_FACTORY)}
+
+SRC_1205_NEOFORGE = {repr(SRC_1205_NEOFORGE)}
+
+SRC_121_NEOFORGE = SRC_1205_NEOFORGE  # 1.21.0-1.21.4 same
+
+SRC_1215_NEOFORGE = SRC_121_NEOFORGE  # 1.21.2-1.21.4 same (no SavedDataType yet)
+
+SRC_1215_NEOFORGE_OPT = {repr(SRC_1215_NEOFORGE_OPT)}
+
+SRC_1219_NEOFORGE = SRC_1215_NEOFORGE_OPT  # 1.21.9+ same'''
+
+new_content = content[:start_idx] + REPLACEMENT + "\n\n" + content[end_idx+1:]
+GEN.write_text(new_content)
+print("Done. Verifying syntax...")
+
+import ast
+ast.parse(new_content)
+print("Syntax OK")

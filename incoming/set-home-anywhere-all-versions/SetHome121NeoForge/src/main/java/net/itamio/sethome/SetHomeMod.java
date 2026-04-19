@@ -6,9 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -31,11 +29,11 @@ public class SetHomeMod {
         b.pop(); SPEC = b.build();
     }
     public SetHomeMod() {
-        // config uses defaults
-        NeoForge.EVENT_BUS.register(this);
+        // config: ModConfig.Type.COMMON, SPEC);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(this);
     }
 
-    @SubscribeEvent
+    @net.neoforged.bus.api.SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
         d.register(Commands.literal("sethome")
@@ -90,7 +88,7 @@ public class SetHomeMod {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
             return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);
         }
-        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
+
         public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
