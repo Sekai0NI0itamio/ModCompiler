@@ -12,7 +12,6 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -53,10 +52,7 @@ public final class ServerCoreData extends SavedData {
       return data;
    }
 
-   public static ServerCoreData load(CompoundTag tag, Provider provider) {
-      return load(tag);
-   }
-
+   
    private static Object createSavedDataType() throws ReflectiveOperationException {
       Class<?> savedDataTypeClass = Class.forName("net.minecraft.world.level.saveddata.SavedDataType");
       Object dataFixTypes = getDataFixTypes();
@@ -232,7 +228,7 @@ public final class ServerCoreData extends SavedData {
       }
    }
 
-   public CompoundTag save(CompoundTag tag, Provider provider) {
+   public CompoundTag save(CompoundTag tag) {
       ListTag players = new ListTag();
 
       for (Entry<UUID, Map<String, HomeRecord>> entry : this.homesByPlayer.entrySet()) {

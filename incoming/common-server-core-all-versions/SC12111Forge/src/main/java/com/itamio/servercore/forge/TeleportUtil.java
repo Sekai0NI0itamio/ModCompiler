@@ -4,7 +4,6 @@ import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Set;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,11 +20,11 @@ public final class TeleportUtil {
    public static ServerLevel resolveLevel(MinecraftServer server, String dimensionKey) {
       if (server != null && dimensionKey != null) {
          String key = dimensionKey.toLowerCase(Locale.ROOT);
-         if (Level.OVERWORLD.location().toString().equals(key)) {
+         if ("minecraft:overworld".equals(key)) {
             return server.overworld();
-         } else if (Level.NETHER.location().toString().equals(key)) {
+         } else if ("minecraft:the_nether".equals(key)) {
             return server.getLevel(Level.NETHER);
-         } else if (Level.END.location().toString().equals(key)) {
+         } else if ("minecraft:the_end".equals(key)) {
             return server.getLevel(Level.END);
          } else {
             ResourceLocation id = ResourceLocation.tryParse(key);
@@ -61,7 +60,7 @@ public final class TeleportUtil {
       }
    }
 
-   private static ResourceKey<Level> createDimensionKey(ResourceLocation id) throws ReflectiveOperationException {
+   private static ResourceKey<Level> createDimensionKey(net.minecraft.resources.ResourceLocation id) throws ReflectiveOperationException {
       try {
          Class<?> registryClass = Class.forName("net.minecraft.core.registries.Registries");
          Object dimensionRegistry = registryClass.getField("DIMENSION").get(null);
