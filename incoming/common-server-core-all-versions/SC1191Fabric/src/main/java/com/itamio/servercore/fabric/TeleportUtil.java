@@ -2,39 +2,32 @@ package com.itamio.servercore.fabric;
 
 import java.lang.reflect.Method;
 import java.util.Locale;
-import java.util.Set;
-import net.minecraft.class_1937;
 import net.minecraft.class_2960;
 import net.minecraft.class_3218;
 import net.minecraft.class_3222;
-import net.minecraft.class_5321;
 import net.minecraft.server.MinecraftServer;
 
 public final class TeleportUtil {
    private TeleportUtil() {
    }
 
-   public static String dimensionKey(class_3218 level) {
-      return level.method_27983().method_29177().toString().toLowerCase(Locale.ROOT);
+   public static String dimensionKey(class_3218 world) {
+      return world.method_27983().method_29177().toString().toLowerCase(Locale.ROOT);
    }
 
-   public static class_3218 resolveLevel(MinecraftServer server, String dimensionKey) {
+   public static class_3218 resolveWorld(MinecraftServer server, String dimensionKey) {
       if (server != null && dimensionKey != null) {
-         String key = dimensionKey.toLowerCase(Locale.ROOT);
-         if (class_1937.field_25179.method_29177().toString().equals(key)) {
-            return server.method_30002();
-         } else if (class_1937.field_25180.method_29177().toString().equals(key)) {
-            return server.method_3847(class_1937.field_25180);
-         } else if (class_1937.field_25181.method_29177().toString().equals(key)) {
-            return server.method_3847(class_1937.field_25181);
+         class_2960 id = class_2960.method_12829(dimensionKey.toLowerCase(Locale.ROOT));
+         if (id == null) {
+            return null;
          } else {
-            class_2960 id = class_2960.method_12829(key);
-            if (id == null) {
+            Object key = createRegistryKey(id);
+            if (key == null) {
                return null;
             } else {
                try {
-                  class_5321<class_1937> resourceKey = createDimensionKey(id);
-                  return server.method_3847(resourceKey);
+                  Method method = server.getClass().getMethod("getWorld", key.getClass());
+                  return (class_3218)method.invoke(server, key);
                } catch (ReflectiveOperationException var5) {
                   return null;
                }
@@ -45,33 +38,56 @@ public final class TeleportUtil {
       }
    }
 
-   public static void teleport(class_3222 player, class_3218 level, double x, double y, double z, float yaw, float pitch) {
-      if (player != null && level != null) {
+   private static Object createRegistryKey(class_2960 id) {
+      try {
+         Class<?> registryKeys = Class.forName("net.minecraft.registry.RegistryKeys");
+         Object worldKey = registryKeys.getField("WORLD").get(null);
+         Class<?> registryKeyClass = Class.forName("net.minecraft.registry.RegistryKey");
+         Method of = registryKeyClass.getMethod("of", registryKeyClass, class_2960.class);
+         return of.invoke(null, worldKey, id);
+      } catch (ReflectiveOperationException var6) {
          try {
-            Method method = player.getClass().getMethod("teleportTo", class_3218.class, double.class, double.class, double.class, float.class, float.class);
-            method.invoke(player, level, x, y, z, yaw, pitch);
+            Class<?> registryClass = Class.forName("net.minecraft.util.registry.Registry");
+            Object worldKeyx = registryClass.getField("WORLD_KEY").get(null);
+            Class<?> registryKeyClassx = Class.forName("net.minecraft.util.registry.RegistryKey");
+            Method ofx = registryKeyClassx.getMethod("of", registryKeyClassx, class_2960.class);
+            return ofx.invoke(null, worldKeyx, id);
+         } catch (ReflectiveOperationException var5) {
+            return null;
+         }
+      }
+   }
+
+   public static void teleport(class_3222 player, class_3218 world, double x, double y, double z, float yaw, float pitch) {
+      if (player != null && world != null) {
+         try {
+            Method method = player.getClass().getMethod("teleport", class_3218.class, double.class, double.class, double.class, float.class, float.class);
+            method.invoke(player, world, x, y, z, yaw, pitch);
          } catch (ReflectiveOperationException var12) {
             try {
-               Method methodx = player.getClass()
-                  .getMethod("teleportTo", class_3218.class, double.class, double.class, double.class, Set.class, float.class, float.class, boolean.class);
-               methodx.invoke(player, level, x, y, z, Set.of(), yaw, pitch, false);
+               Method methodx = player.getClass().getMethod("teleportTo", class_3218.class, double.class, double.class, double.class, float.class, float.class);
+               methodx.invoke(player, world, x, y, z, yaw, pitch);
             } catch (ReflectiveOperationException var11) {
             }
          }
       }
    }
 
-   private static class_5321<class_1937> createDimensionKey(class_2960 id) throws ReflectiveOperationException {
-      try {
-         Class<?> registryClass = Class.forName("net.minecraft.core.registries.Registries");
-         Object dimensionRegistry = registryClass.getField("DIMENSION").get(null);
-         Method create = class_5321.class.getMethod("create", class_5321.class, class_2960.class);
-         return (class_5321<class_1937>)create.invoke(null, dimensionRegistry, id);
-      } catch (NoSuchFieldException | ClassNotFoundException var5) {
-         Class<?> registryClassx = Class.forName("net.minecraft.core.Registry");
-         Object dimensionRegistryx = registryClassx.getField("DIMENSION_REGISTRY").get(null);
-         Method createx = class_5321.class.getMethod("create", class_5321.class, class_2960.class);
-         return (class_5321<class_1937>)createx.invoke(null, dimensionRegistryx, id);
+   public static class_3218 getServerWorld(class_3222 player) {
+      if (player == null) {
+         return null;
+      } else {
+         try {
+            Method method = player.getClass().getMethod("getServerWorld");
+            Object value = method.invoke(player);
+            return value instanceof class_3218 ? (class_3218)value : null;
+         } catch (ReflectiveOperationException var4) {
+            try {
+               return player.method_14220();
+            } catch (ClassCastException var3) {
+               return null;
+            }
+         }
       }
    }
 }

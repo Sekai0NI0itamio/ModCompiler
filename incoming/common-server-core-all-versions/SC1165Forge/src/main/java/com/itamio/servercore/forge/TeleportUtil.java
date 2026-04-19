@@ -2,76 +2,146 @@ package com.itamio.servercore.forge;
 
 import java.lang.reflect.Method;
 import java.util.Locale;
-import java.util.Set;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.Level;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 
 public final class TeleportUtil {
+   private static final String OVERWORLD_KEY = "minecraft:overworld";
+   private static final String NETHER_KEY = "minecraft:the_nether";
+   private static final String END_KEY = "minecraft:the_end";
+
    private TeleportUtil() {
    }
 
-   public static String dimensionKey(ServerLevel level) {
-      return level.dimension().location().toString().toLowerCase(Locale.ROOT);
+   public static String dimensionKey(ServerWorld world) {
+      if (world == null) {
+         return null;
+      } else {
+         Object key = invoke(world, "getDimensionKey");
+         if (key == null) {
+            key = invoke(world, "dimension");
+         }
+
+         if (key == null) {
+            key = invoke(world, "getDimension");
+         }
+
+         if (key == null) {
+            key = invoke(world, "getDimensionType");
+         }
+
+         String keyString = keyToString(key);
+         return keyString == null ? null : keyString.toLowerCase(Locale.ROOT);
+      }
    }
 
-   public static ServerLevel resolveLevel(MinecraftServer server, String dimensionKey) {
+   public static ServerWorld resolveWorld(MinecraftServer server, String dimensionKey) {
       if (server != null && dimensionKey != null) {
          String key = dimensionKey.toLowerCase(Locale.ROOT);
-         if (Level.OVERWORLD.location().toString().equals(key)) {
-            return server.overworld();
-         } else if (Level.NETHER.location().toString().equals(key)) {
-            return server.getLevel(Level.NETHER);
-         } else if (Level.END.location().toString().equals(key)) {
-            return server.getLevel(Level.END);
-         } else {
-            ResourceLocation id = ResourceLocation.tryParse(key);
-            if (id == null) {
-               return null;
-            } else {
-               try {
-                  ResourceKey<Level> resourceKey = createDimensionKey(id);
-                  return server.getLevel(resourceKey);
-               } catch (ReflectiveOperationException var5) {
-                  return null;
-               }
-            }
-         }
+         return "minecraft:overworld".equals(key) ? getWorldByKey(server, World.field_234918_g_) : findWorldByKey(server, key);
       } else {
          return null;
       }
    }
 
-   public static void teleport(ServerPlayer player, ServerLevel level, double x, double y, double z, float yaw, float pitch) {
-      if (player != null && level != null) {
+   public static void teleport(ServerPlayerEntity player, ServerWorld world, double x, double y, double z, float yaw, float pitch) {
+      if (player != null && world != null) {
          try {
-            Method method = player.getClass().getMethod("teleportTo", ServerLevel.class, double.class, double.class, double.class, float.class, float.class);
-            method.invoke(player, level, x, y, z, yaw, pitch);
+            Method method = player.getClass().getMethod("teleport", ServerWorld.class, double.class, double.class, double.class, float.class, float.class);
+            method.invoke(player, world, x, y, z, yaw, pitch);
          } catch (ReflectiveOperationException var12) {
             try {
                Method methodx = player.getClass()
-                  .getMethod("teleportTo", ServerLevel.class, double.class, double.class, double.class, Set.class, float.class, float.class, boolean.class);
-               methodx.invoke(player, level, x, y, z, Set.of(), yaw, pitch, false);
+                  .getMethod("teleportTo", ServerWorld.class, double.class, double.class, double.class, float.class, float.class);
+               methodx.invoke(player, world, x, y, z, yaw, pitch);
             } catch (ReflectiveOperationException var11) {
             }
          }
       }
    }
 
-   private static ResourceKey<Level> createDimensionKey(ResourceLocation id) throws ReflectiveOperationException {
-      try {
-         Class<?> registryClass = Class.forName("net.minecraft.core.registries.Registries");
-         Object dimensionRegistry = registryClass.getField("DIMENSION").get(null);
-         Method create = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
-         return (ResourceKey<Level>)create.invoke(null, dimensionRegistry, id);
-      } catch (NoSuchFieldException | ClassNotFoundException var5) {
-         Class<?> registryClassx = Class.forName("net.minecraft.core.Registry");
-         Object dimensionRegistryx = registryClassx.getField("DIMENSION_REGISTRY").get(null);
-         Method createx = ResourceKey.class.getMethod("create", ResourceKey.class, ResourceLocation.class);
-         return (ResourceKey<Level>)createx.invoke(null, dimensionRegistryx, id);
+   private static ServerWorld getWorldByKey(MinecraftServer server, Object key) {
+      if (server != null && key != null) {
+         Object world = invoke(server, "getWorld", key.getClass(), key);
+         if (world == null) {
+            world = invoke(server, "getLevel", key.getClass(), key);
+         }
+
+         return world instanceof ServerWorld ? (ServerWorld)world : null;
+      } else {
+         return null;
+      }
+   }
+
+   private static ServerWorld findWorldByKey(MinecraftServer server, String key) {
+      Object worlds = invoke(server, "getWorlds");
+      if (worlds == null) {
+         worlds = invoke(server, "getAllLevels");
+      }
+
+      if (worlds instanceof Iterable) {
+         for (Object candidate : (Iterable)worlds) {
+            if (candidate instanceof ServerWorld) {
+               String candidateKey = dimensionKey((ServerWorld)candidate);
+               if (candidateKey != null && candidateKey.equalsIgnoreCase(key)) {
+                  return (ServerWorld)candidate;
+               }
+            }
+         }
+      }
+
+      return null;
+   }
+
+   private static String keyToString(Object key) {
+      if (key == null) {
+         return null;
+      } else if (key instanceof ResourceLocation) {
+         return key.toString();
+      } else {
+         Object location = invoke(key, "getLocation");
+         if (location == null) {
+            location = invoke(key, "location");
+         }
+
+         if (location == null) {
+            location = invoke(key, "getRegistryName");
+         }
+
+         if (location instanceof ResourceLocation) {
+            return location.toString();
+         } else {
+            return location instanceof String ? (String)location : key.toString();
+         }
+      }
+   }
+
+   private static Object invoke(Object target, String name, Class<?> param, Object arg) {
+      if (target == null) {
+         return null;
+      } else {
+         try {
+            Method method = target.getClass().getMethod(name, param);
+            return method.invoke(target, arg);
+         } catch (ReflectiveOperationException var5) {
+            return null;
+         }
+      }
+   }
+
+   private static Object invoke(Object target, String name) {
+      if (target == null) {
+         return null;
+      } else {
+         try {
+            Method method = target.getClass().getMethod(name);
+            return method.invoke(target);
+         } catch (ReflectiveOperationException var3) {
+            return null;
+         }
       }
    }
 }

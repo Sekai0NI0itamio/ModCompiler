@@ -232,7 +232,7 @@ public final class ServerCoreData extends class_18 {
       }
    }
 
-   public class_2487 method_75(class_2487 tag, class_7874 provider) {
+   public class_2487 save(class_2487 tag, class_7874 provider) {
       class_2499 players = new class_2499();
 
       for (Entry<UUID, Map<String, HomeRecord>> entry : this.homesByPlayer.entrySet()) {
@@ -269,7 +269,7 @@ public final class ServerCoreData extends class_18 {
    }
 
    public class_2487 save(class_2487 tag) {
-      return this.method_75(tag, null);
+      return this.save(tag, null);
    }
 
    private static class_2499 getListTag(class_2487 tag, String key) {

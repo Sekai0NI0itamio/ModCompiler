@@ -1,19 +1,19 @@
 package com.itamio.servercore.forge;
 
+import java.lang.reflect.Method;
 import java.util.Random;
-import net.minecraft.core.BlockPos;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.CactusBlock;
+import net.minecraft.block.FireBlock;
+import net.minecraft.block.MagmaBlock;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.CactusBlock;
-import net.minecraft.world.level.block.FireBlock;
-import net.minecraft.world.level.block.MagmaBlock;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.border.WorldBorder;
-import net.minecraft.world.level.levelgen.Heightmap.Types;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.border.WorldBorder;
+import net.minecraft.world.gen.Heightmap.Type;
+import net.minecraft.world.server.ServerWorld;
 
 public final class RandomTeleportService {
    public static final int SQUARE_RADIUS = 10000;
@@ -27,22 +27,30 @@ public final class RandomTeleportService {
       return INSTANCE;
    }
 
-   public RandomTeleportService.RtpResult teleport(ServerPlayer player, String dimensionKey) {
-      MinecraftServer server = ServerCoreAccess.getServer(player);
-      if (player != null && server != null) {
-         ServerLevel level = TeleportUtil.resolveLevel(server, dimensionKey);
-         if (level == null) {
+   public RandomTeleportService.RtpResult teleport(ServerPlayerEntity player, String dimensionKey) {
+      if (player != null && player.func_184102_h() != null) {
+         MinecraftServer server = player.func_184102_h();
+         ServerWorld world = TeleportUtil.resolveWorld(server, dimensionKey);
+         if (world == null) {
             return RandomTeleportService.RtpResult.failure("Target dimension is not loaded.");
          } else {
             int attempts = 30;
 
             for (int i = 0; i < attempts; i++) {
-               BlockPos candidate = this.generateCandidate(level);
+               BlockPos candidate = this.generateCandidate(world);
                if (candidate != null) {
-                  BlockPos safe = this.findSafePosition(level, candidate.getX(), candidate.getZ());
+                  BlockPos safe = this.findSafePosition(world, candidate.func_177958_n(), candidate.func_177952_p());
                   if (safe != null) {
-                     TeleportUtil.teleport(player, level, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, player.getYRot(), player.getXRot());
-                     return RandomTeleportService.RtpResult.success(safe, "Teleported to random location in " + this.dimensionName(level) + ".");
+                     TeleportUtil.teleport(
+                        player,
+                        world,
+                        safe.func_177958_n() + 0.5,
+                        safe.func_177956_o(),
+                        safe.func_177952_p() + 0.5,
+                        RotationUtil.getYaw(player),
+                        RotationUtil.getPitch(player)
+                     );
+                     return RandomTeleportService.RtpResult.success(safe, "Teleported to random location in " + this.dimensionName(world) + ".");
                   }
                }
             }
@@ -54,16 +62,16 @@ public final class RandomTeleportService {
       }
    }
 
-   private BlockPos generateCandidate(ServerLevel level) {
-      WorldBorder border = level.getWorldBorder();
+   private BlockPos generateCandidate(ServerWorld world) {
+      WorldBorder border = world.func_175723_af();
       int minX = -10000;
       int maxX = 10000;
       int minZ = -10000;
       int maxZ = 10000;
-      int borderMinX = (int)Math.ceil(border.getMinX());
-      int borderMaxX = (int)Math.floor(border.getMaxX());
-      int borderMinZ = (int)Math.ceil(border.getMinZ());
-      int borderMaxZ = (int)Math.floor(border.getMaxZ());
+      int borderMinX = (int)Math.ceil(border.func_177726_b());
+      int borderMaxX = (int)Math.floor(border.func_177728_d());
+      int borderMinZ = (int)Math.ceil(border.func_177736_c());
+      int borderMaxZ = (int)Math.floor(border.func_177733_e());
       if (borderMinX > minX) {
          minX = borderMinX;
       }
@@ -83,7 +91,7 @@ public final class RandomTeleportService {
       if (minX <= maxX && minZ <= maxZ) {
          int x = this.randomBetween(minX, maxX);
          int z = this.randomBetween(minZ, maxZ);
-         return new BlockPos(x, level.getSeaLevel(), z);
+         return new BlockPos(x, world.func_181545_F(), z);
       } else {
          return null;
       }
@@ -93,14 +101,14 @@ public final class RandomTeleportService {
       return max <= min ? min : min + this.random.nextInt(max - min + 1);
    }
 
-   private BlockPos findSafePosition(ServerLevel level, int x, int z) {
-      int top = level.getHeight(Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-      int maxY = Math.min(top, ServerCoreAccess.getMaxBuildHeight(level) - 2);
-      int minY = ServerCoreAccess.getMinBuildHeight(level) + 1;
+   private BlockPos findSafePosition(ServerWorld world, int x, int z) {
+      int top = world.func_201676_a(Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+      int maxY = Math.min(top, this.getMaxHeight(world) - 2);
+      int minY = 2;
 
       for (int y = maxY; y >= minY; y--) {
          BlockPos feet = new BlockPos(x, y, z);
-         if (this.isSafeStandPosition(level, feet)) {
+         if (this.isSafeStandPosition(world, feet)) {
             return feet;
          }
       }
@@ -108,38 +116,68 @@ public final class RandomTeleportService {
       return null;
    }
 
-   private boolean isSafeStandPosition(ServerLevel level, BlockPos feet) {
-      BlockPos head = feet.above();
-      BlockPos ground = feet.below();
-      BlockState feetState = level.getBlockState(feet);
-      BlockState headState = level.getBlockState(head);
-      BlockState groundState = level.getBlockState(ground);
+   private boolean isSafeStandPosition(ServerWorld world, BlockPos feet) {
+      BlockPos head = feet.func_177984_a();
+      BlockPos ground = feet.func_177977_b();
+      BlockState feetState = world.func_180495_p(feet);
+      BlockState headState = world.func_180495_p(head);
+      BlockState groundState = world.func_180495_p(ground);
       return this.isPassable(feetState) && this.isPassable(headState) && this.isSolidGround(groundState);
    }
 
    private boolean isPassable(BlockState state) {
-      return !state.getFluidState().isEmpty() ? false : state.isAir();
+      return !state.func_204520_s().func_206888_e() ? false : state.func_196958_f();
    }
 
    private boolean isSolidGround(BlockState state) {
-      if (!state.getFluidState().isEmpty()) {
+      if (!state.func_204520_s().func_206888_e()) {
          return false;
       } else {
-         return state.isAir() ? false : !this.isDangerous(state.getBlock());
+         return state.func_196958_f() ? false : !this.isDangerous(state.func_177230_c());
       }
    }
 
    private boolean isDangerous(Block block) {
-      return block == Blocks.LAVA || block == Blocks.FIRE || block instanceof FireBlock || block instanceof CactusBlock || block instanceof MagmaBlock;
+      return block == Blocks.field_150353_l
+         || block == Blocks.field_150480_ab
+         || block instanceof FireBlock
+         || block instanceof CactusBlock
+         || block instanceof MagmaBlock;
    }
 
-   private String dimensionName(ServerLevel level) {
-      if (level.dimension().equals(Level.OVERWORLD)) {
+   private String dimensionName(ServerWorld world) {
+      String dimensionKey = TeleportUtil.dimensionKey(world);
+      if ("minecraft:overworld".equals(dimensionKey)) {
          return "the Overworld";
-      } else if (level.dimension().equals(Level.NETHER)) {
+      } else if ("minecraft:the_nether".equals(dimensionKey)) {
          return "the Nether";
+      } else if ("minecraft:the_end".equals(dimensionKey)) {
+         return "the End";
       } else {
-         return level.dimension().equals(Level.END) ? "the End" : level.dimension().location().toString();
+         return dimensionKey == null ? "unknown dimension" : dimensionKey;
+      }
+   }
+
+   private int getMaxHeight(ServerWorld world) {
+      Integer value = this.getInt(world, "getMaxBuildHeight");
+      if (value == null) {
+         value = this.getInt(world, "getMaxHeight");
+      }
+
+      return value == null ? 256 : value;
+   }
+
+   private Integer getInt(Object target, String methodName) {
+      if (target == null) {
+         return null;
+      } else {
+         try {
+            Method method = target.getClass().getMethod(methodName);
+            Object result = method.invoke(target);
+            return result instanceof Number ? ((Number)result).intValue() : null;
+         } catch (ReflectiveOperationException var5) {
+            return null;
+         }
       }
    }
 

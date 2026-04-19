@@ -91,26 +91,26 @@ public final class ServerCoreCommands {
          return 0;
       } else {
          TeleportRequestService.getInstance()
-            .upsertRequest(sender.method_5667(), ServerCoreAccess.getPlayerName(sender), target.method_5667(), ServerCoreAccess.getPlayerName(target), type);
-         MessageUtil.send(sender, "Teleport request sent to " + ServerCoreAccess.getPlayerName(target) + ".");
+            .upsertRequest(sender.method_5667(), sender.method_7334().getName(), target.method_5667(), target.method_7334().getName(), type);
+         MessageUtil.send(sender, "Teleport request sent to " + target.method_7334().getName() + ".");
          if (type == TeleportRequestService.RequestType.TPA) {
             MessageUtil.send(
                target,
-               ServerCoreAccess.getPlayerName(sender)
+               sender.method_7334().getName()
                   + " wants to teleport to you. Use /tpaccept "
-                  + ServerCoreAccess.getPlayerName(sender)
+                  + sender.method_7334().getName()
                   + " or /tpadeny "
-                  + ServerCoreAccess.getPlayerName(sender)
+                  + sender.method_7334().getName()
                   + "."
             );
          } else {
             MessageUtil.send(
                target,
-               ServerCoreAccess.getPlayerName(sender)
+               sender.method_7334().getName()
                   + " wants you to teleport to them. Use /tpaccept "
-                  + ServerCoreAccess.getPlayerName(sender)
+                  + sender.method_7334().getName()
                   + " or /tpadeny "
-                  + ServerCoreAccess.getPlayerName(sender)
+                  + sender.method_7334().getName()
                   + "."
             );
          }
@@ -206,7 +206,7 @@ public final class ServerCoreCommands {
    }
 
    private static int completeTeleport(class_3222 target, TeleportRequestService.TeleportRequest request) {
-      MinecraftServer server = ServerCoreAccess.getServer(target);
+      MinecraftServer server = target.method_5682();
       if (server == null) {
          MessageUtil.send(target, "Server unavailable.");
          return 0;
@@ -216,32 +216,38 @@ public final class ServerCoreCommands {
             MessageUtil.send(target, "Requester is offline.");
             return 0;
          } else {
-            class_3218 targetLevel = ServerCoreAccess.getServerLevel(target);
-            class_3218 requesterLevel = ServerCoreAccess.getServerLevel(requester);
-            if (targetLevel != null && requesterLevel != null) {
+            class_3218 targetWorld = TeleportUtil.getServerWorld(target);
+            class_3218 requesterWorld = TeleportUtil.getServerWorld(requester);
+            if (targetWorld != null && requesterWorld != null) {
                if (request.getType() == TeleportRequestService.RequestType.TPA) {
                   TeleportUtil.teleport(
-                     requester, targetLevel, target.method_23317(), target.method_23318(), target.method_23321(), target.method_36454(), target.method_36455()
+                     requester,
+                     targetWorld,
+                     target.method_23317(),
+                     target.method_23318(),
+                     target.method_23321(),
+                     RotationUtil.getYaw(target),
+                     RotationUtil.getPitch(target)
                   );
-                  MessageUtil.send(requester, "Teleporting to " + ServerCoreAccess.getPlayerName(target) + ".");
-                  MessageUtil.send(target, "Accepted teleport request from " + ServerCoreAccess.getPlayerName(requester) + ".");
+                  MessageUtil.send(requester, "Teleporting to " + target.method_7334().getName() + ".");
+                  MessageUtil.send(target, "Accepted teleport request from " + requester.method_7334().getName() + ".");
                } else {
                   TeleportUtil.teleport(
                      target,
-                     requesterLevel,
+                     requesterWorld,
                      requester.method_23317(),
                      requester.method_23318(),
                      requester.method_23321(),
-                     requester.method_36454(),
-                     requester.method_36455()
+                     RotationUtil.getYaw(requester),
+                     RotationUtil.getPitch(requester)
                   );
-                  MessageUtil.send(target, "Teleporting to " + ServerCoreAccess.getPlayerName(requester) + ".");
-                  MessageUtil.send(requester, ServerCoreAccess.getPlayerName(target) + " accepted your request.");
+                  MessageUtil.send(target, "Teleporting to " + requester.method_7334().getName() + ".");
+                  MessageUtil.send(requester, target.method_7334().getName() + " accepted your request.");
                }
 
                return 1;
             } else {
-               MessageUtil.send(target, "Target level unavailable.");
+               MessageUtil.send(target, "Target world is unavailable.");
                return 0;
             }
          }
@@ -253,13 +259,19 @@ public final class ServerCoreCommands {
       if (player == null) {
          return 0;
       } else {
-         HomeRecord record = HomeService.getInstance().setHome(((class_2168)ctx.getSource()).method_9211(), player, name);
-         if (record == null) {
-            MessageUtil.send(player, "Invalid home name.");
+         MinecraftServer server = player.method_5682();
+         if (server == null) {
+            MessageUtil.send(player, "Server unavailable.");
             return 0;
          } else {
-            MessageUtil.send(player, "Home set: " + record.getName());
-            return 1;
+            HomeRecord record = HomeService.getInstance().setHome(server, player, name);
+            if (record == null) {
+               MessageUtil.send(player, "Invalid home name.");
+               return 0;
+            } else {
+               MessageUtil.send(player, "Home set: " + record.getName());
+               return 1;
+            }
          }
       }
    }
@@ -269,23 +281,29 @@ public final class ServerCoreCommands {
       if (player == null) {
          return 0;
       } else {
-         List<HomeRecord> homes = HomeService.getInstance().listHomes(((class_2168)ctx.getSource()).method_9211(), player.method_5667());
-         if (homes.isEmpty()) {
-            MessageUtil.send(player, "You have no homes.");
+         MinecraftServer server = player.method_5682();
+         if (server == null) {
+            MessageUtil.send(player, "Server unavailable.");
             return 0;
          } else {
-            StringBuilder builder = new StringBuilder("Homes: ");
+            List<HomeRecord> homes = HomeService.getInstance().listHomes(server, player.method_5667());
+            if (homes.isEmpty()) {
+               MessageUtil.send(player, "You have no homes.");
+               return 0;
+            } else {
+               StringBuilder builder = new StringBuilder("Homes: ");
 
-            for (int i = 0; i < homes.size(); i++) {
-               if (i > 0) {
-                  builder.append(", ");
+               for (int i = 0; i < homes.size(); i++) {
+                  if (i > 0) {
+                     builder.append(", ");
+                  }
+
+                  builder.append(homes.get(i).getName());
                }
 
-               builder.append(homes.get(i).getName());
+               MessageUtil.send(player, builder.toString());
+               return homes.size();
             }
-
-            MessageUtil.send(player, builder.toString());
-            return homes.size();
          }
       }
    }
@@ -295,19 +313,25 @@ public final class ServerCoreCommands {
       if (player == null) {
          return 0;
       } else {
-         HomeRecord record = HomeService.getInstance().getHome(((class_2168)ctx.getSource()).method_9211(), player.method_5667(), name);
-         if (record == null) {
-            MessageUtil.send(player, "Home not found.");
+         MinecraftServer server = player.method_5682();
+         if (server == null) {
+            MessageUtil.send(player, "Server unavailable.");
             return 0;
          } else {
-            class_3218 level = TeleportUtil.resolveLevel(((class_2168)ctx.getSource()).method_9211(), record.getDimension());
-            if (level == null) {
-               MessageUtil.send(player, "Target dimension is not available.");
+            HomeRecord record = HomeService.getInstance().getHome(server, player.method_5667(), name);
+            if (record == null) {
+               MessageUtil.send(player, "Home not found.");
                return 0;
             } else {
-               TeleportUtil.teleport(player, level, record.getX(), record.getY(), record.getZ(), record.getYaw(), record.getPitch());
-               MessageUtil.send(player, "Teleported to home " + record.getName() + ".");
-               return 1;
+               class_3218 world = TeleportUtil.resolveWorld(server, record.getDimension());
+               if (world == null) {
+                  MessageUtil.send(player, "Target dimension is not available.");
+                  return 0;
+               } else {
+                  TeleportUtil.teleport(player, world, record.getX(), record.getY(), record.getZ(), record.getYaw(), record.getPitch());
+                  MessageUtil.send(player, "Teleported to home " + record.getName() + ".");
+                  return 1;
+               }
             }
          }
       }
@@ -318,9 +342,15 @@ public final class ServerCoreCommands {
       if (player == null) {
          return 0;
       } else {
-         boolean removed = HomeService.getInstance().deleteHome(((class_2168)ctx.getSource()).method_9211(), player.method_5667(), name);
-         MessageUtil.send(player, removed ? "Home deleted." : "Home not found.");
-         return removed ? 1 : 0;
+         MinecraftServer server = player.method_5682();
+         if (server == null) {
+            MessageUtil.send(player, "Server unavailable.");
+            return 0;
+         } else {
+            boolean removed = HomeService.getInstance().deleteHome(server, player.method_5667(), name);
+            MessageUtil.send(player, removed ? "Home deleted." : "Home not found.");
+            return removed ? 1 : 0;
+         }
       }
    }
 
