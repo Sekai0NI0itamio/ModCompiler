@@ -136,11 +136,32 @@ def publish_one_mod(
         version_number=mod["metadata"]["mod_version"],
         jar_name=jar_path.name,
     )
+    # Also check for any existing version (regardless of version number/jar name)
+    # so we can detect and replace shells that have a different filename
+    if existing is None:
+        existing = client.find_any_existing_version(
+            project_id=project_id,
+            loader=mod["loader"],
+            minecraft_version=mod["minecraft_version"],
+        )
     if existing is not None:
-        entry["publish_status"] = "skipped"
-        entry["note"] = f"Already exists on Modrinth as version {existing.get('id', '-')}"
-        entry["version_id"] = existing.get("id", "")
-        return entry
+        # Check if the existing version is a shell (< 5000 bytes = no real classes).
+        # If it is, delete it and re-upload the fixed jar.
+        existing_size = _get_version_primary_file_size(existing)
+        if existing_size < 5000:
+            existing_id = existing.get("id", "")
+            try:
+                client.delete_version(version_id=existing_id)
+                entry["note"] = f"Deleted shell version {existing_id} (size={existing_size}B), re-uploading."
+            except ModCompilerError as err:
+                entry["publish_status"] = "failed"
+                entry["note"] = f"Shell version {existing_id} found but delete failed: {err}"
+                return entry
+        else:
+            entry["publish_status"] = "skipped"
+            entry["note"] = f"Already exists on Modrinth as version {existing.get('id', '-')}"
+            entry["version_id"] = existing.get("id", "")
+            return entry
 
     payload = build_modrinth_version_payload(project_id=project_id, mod=mod, jar_name=jar_path.name)
     try:
@@ -198,6 +219,20 @@ def select_primary_jar(jar_root: Path) -> Path | None:
         if not any(marker in path.stem.lower() for marker in PRIMARY_JAR_EXCLUDE_MARKERS)
     ]
     return preferred[0] if preferred else jars[0]
+
+
+def _get_version_primary_file_size(version: dict[str, Any]) -> int:
+    """Return the size in bytes of the primary file in a Modrinth version object.
+    Returns 0 if no file info is available."""
+    files = version.get("files", [])
+    if not files:
+        return 0
+    # Prefer the file marked primary
+    for f in files:
+        if f.get("primary", False):
+            return int(f.get("size", 0))
+    # Fall back to first file
+    return int(files[0].get("size", 0))
 
 
 def build_modrinth_version_payload(*, project_id: str, mod: dict[str, Any], jar_name: str) -> dict[str, Any]:
@@ -368,6 +403,36 @@ class ModrinthClient:
             body=body,
             extra_headers={"Content-Type": content_type},
         )
+
+    def delete_version(self, *, version_id: str) -> None:
+        """Delete a version from Modrinth (used to replace shell versions)."""
+        self.request_json(
+            "DELETE",
+            f"/version/{urllib.parse.quote(version_id, safe='')}",
+        )
+
+    def find_any_existing_version(
+        self,
+        *,
+        project_id: str,
+        loader: str,
+        minecraft_version: str,
+    ) -> dict[str, Any] | None:
+        """Find any existing version for the given loader+MC, regardless of version number.
+        Used to detect shells that may have a different version number or jar name."""
+        params = {
+            "loaders": json.dumps([loader]),
+            "game_versions": json.dumps([minecraft_version]),
+            "include_changelog": "false",
+        }
+        versions = self.request_json(
+            "GET",
+            f"/project/{urllib.parse.quote(project_id, safe='')}/version",
+            params=params,
+        )
+        if not isinstance(versions, list) or not versions:
+            return None
+        return versions[0]
 
     def get_project(self, *, project_ref: str) -> dict[str, Any]:
         response = self.request_json(
