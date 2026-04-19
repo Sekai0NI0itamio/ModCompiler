@@ -1062,38 +1062,21 @@ def _opt(s):
                  'd.data.put(pc.getString("uuid").orElse(""), homes);')
     )
 
-# 1.21.2-1.21.8: SavedDataType API - identifier moved into TYPE constructor
-# SavedDataType(identifier, constructor, codec) and computeIfAbsent(TYPE) with single arg
-# We'll use a simple codec that delegates to our NBT methods
+# 1.21.2-1.21.8: Forge uses THREE-argument computeIfAbsent (loadFunction, createSupplier, name)
+# NOT SavedDataType - that doesn't exist in Forge 1.21.2+
 SRC_1215_FORGE = _opt(SRC_121_FORGE
     .replace(
-        "import net.minecraft.world.level.saveddata.SavedData;",
-        "import net.minecraft.world.level.saveddata.SavedData;\nimport net.minecraft.world.level.saveddata.SavedData.SavedDataType;\nimport com.mojang.serialization.Codec;"
-    )
-    .replace(
-        "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";",
-        "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";\n        private static final SavedDataType<HomeData> TYPE = new SavedDataType<>(NAME, HomeData::new, (tag, provider) -> HomeData.load(tag));"
-    )
-    .replace(
         "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-        "return storage.computeIfAbsent(TYPE);"
+        "return storage.computeIfAbsent((tag) -> HomeData.load(tag), HomeData::new, NAME);"
     )
 )
 
-# 1.21.9-1.21.11 Forge: SavedDataType API + EventBusSubscriber pattern
+# 1.21.9-1.21.11 Forge: Same THREE-argument API + EventBusSubscriber pattern
 SRC_1219_FORGE = (
     _opt(SRC_121_FORGE
         .replace(
-            "import net.minecraft.world.level.saveddata.SavedData;",
-            "import net.minecraft.world.level.saveddata.SavedData;\nimport net.minecraft.world.level.saveddata.SavedData.SavedDataType;\nimport com.mojang.serialization.Codec;"
-        )
-        .replace(
-            "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";",
-            "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";\n        private static final SavedDataType<HomeData> TYPE = new SavedDataType<>(NAME, HomeData::new, (tag, provider) -> HomeData.load(tag));"
-        )
-        .replace(
             "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-            "return storage.computeIfAbsent(TYPE);"
+            "return storage.computeIfAbsent((tag) -> HomeData.load(tag), HomeData::new, NAME);"
         )
     )
     .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
@@ -1150,8 +1133,16 @@ SRC_1205_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
 ))
 SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)    # 1.21.0-1.21.1 (Factory exists)
-SRC_1215_NEOFORGE = to_neoforge_sethome(SRC_1215_FORGE)  # 1.21.2-1.21.8 (NO Factory, old API)
-SRC_1219_NEOFORGE = to_neoforge_sethome(SRC_1219_FORGE)  # 1.21.9+ (Factory exists)
+SRC_1215_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE))  # 1.21.2-1.21.8 NeoForge uses Factory API
+SRC_1219_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE  # 1.21.9+ NeoForge uses Factory API
+    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
+    .replace("import net.minecraftforge.common.MinecraftForge;\n", "")
+    .replace(
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
+        "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n    }\n\n    @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)\n    public static class ForgeEvents {\n        @net.minecraftforge.eventbus.api.SubscribeEvent\n        public static void onRegisterCommands(RegisterCommandsEvent e) {"
+    )
+    .replace("    }\n}\n", "    }\n    }\n}\n", 1)
+))
 
 # ============================================================
 # TARGETS — only ghost shell versions
