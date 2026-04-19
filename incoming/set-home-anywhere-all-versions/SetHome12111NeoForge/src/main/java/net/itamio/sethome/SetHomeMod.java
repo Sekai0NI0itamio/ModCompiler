@@ -5,12 +5,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
@@ -30,11 +30,12 @@ public class SetHomeMod {
         b.pop(); SPEC = b.build();
     }
     public SetHomeMod() {
-        // config uses defaults
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(SetHomeMod::onRegisterCommands);
+        // config: ModConfig.Type.COMMON, SPEC);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(this);
     }
 
-    public static void onRegisterCommands(RegisterCommandsEvent e) {
+    @net.neoforged.bus.api.SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
         d.register(Commands.literal("sethome")
             .then(Commands.argument("name", StringArgumentType.word())
@@ -86,8 +87,11 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);
+            SavedDataType<HomeData> TYPE =
+                new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null);
+            return storage.computeIfAbsent(TYPE);
         }
+
         public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();

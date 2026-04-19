@@ -882,6 +882,34 @@ You have shell access. Use it. Do not wait for the user to run anything.
 RULE: Never use long inline python3 -c "..." commands
 ------------------------------------------------------------------------
 
+------------------------------------------------------------------------
+RULE: Never run build/wait scripts as background processes
+------------------------------------------------------------------------
+
+run_build.py waits for GitHub Actions to finish and prints results when
+done. Run it as a normal blocking command so you receive the output the
+moment it completes. Do NOT use controlBashProcess / background terminals
+for this — you will have to blindly guess how long to sleep and then poll
+for output, which is unreliable and wastes time.
+
+BAD (do not do this):
+  # Start as background process, then guess how long to wait
+  controlBashProcess start: python3 scripts/run_build.py ...
+  sleep 300
+  getProcessOutput ...
+
+GOOD (always do this):
+  # Run blocking — output arrives the instant the build finishes
+  executeBash: python3 scripts/run_build.py incoming/<bundle>.zip \
+      --modrinth https://modrinth.com/mod/<slug>
+
+run_build.py already handles all waiting internally. It polls GitHub
+Actions every 15 seconds and exits with the full result the moment the
+workflow completes. You get everything in one shot with no guessing.
+
+The same rule applies to any other long-running script that polls and
+waits: run it blocking, not in the background.
+
 When you need to run a Python script to inspect data, check errors, or
 process files — WRITE THE SCRIPT TO A FILE FIRST, then run it.
 

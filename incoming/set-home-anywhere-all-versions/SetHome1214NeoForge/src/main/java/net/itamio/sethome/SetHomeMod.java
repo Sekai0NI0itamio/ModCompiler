@@ -5,11 +5,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.DimensionDataStorage;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -32,11 +29,11 @@ public class SetHomeMod {
         b.pop(); SPEC = b.build();
     }
     public SetHomeMod() {
-        // config uses defaults
-        NeoForge.EVENT_BUS.register(this);
+        // config: ModConfig.Type.COMMON, SPEC);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(this);
     }
 
-    @SubscribeEvent
+    @net.neoforged.bus.api.SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
         d.register(Commands.literal("sethome")
@@ -91,21 +88,22 @@ public class SetHomeMod {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
             return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);
         }
+
         public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
-            ListTag players = tag.getList("players").orElse(new ListTag());
+            ListTag players = tag.getList("players", 10);
             for (int i = 0; i < players.size(); i++) {
-                CompoundTag pc = players.getCompound(i).orElse(new CompoundTag());
+                CompoundTag pc = players.getCompound(i);
                 Map<String, double[]> homes = new HashMap<>();
-                ListTag hl = pc.getList("homes").orElse(new ListTag());
+                ListTag hl = pc.getList("homes", 10);
                 for (int j = 0; j < hl.size(); j++) {
-                    CompoundTag hc = hl.getCompound(j).orElse(new CompoundTag());
-                    homes.put(hc.getString("name").orElse(""), new double[]{
-                        hc.getDouble("x").orElse(0.0),hc.getDouble("y").orElse(0.0),hc.getDouble("z").orElse(0.0),
-                        hc.getFloat("yaw").orElse(0.0f),hc.getFloat("pitch").orElse(0.0f)});
+                    CompoundTag hc = hl.getCompound(j);
+                    homes.put(hc.getString("name"), new double[]{
+                        hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),
+                        hc.getFloat("yaw"),hc.getFloat("pitch")});
                 }
-                d.data.put(pc.getString("uuid").orElse(""), homes);
+                d.data.put(pc.getString("uuid"), homes);
             }
             return d;
         }

@@ -5,12 +5,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
@@ -88,8 +88,11 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);
+            SavedDataType<HomeData> TYPE =
+                new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null);
+            return storage.computeIfAbsent(TYPE);
         }
+
         public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
@@ -138,5 +141,5 @@ public class SetHomeMod {
         }
         public Set<String> getHomes(String uuid) { return player(uuid).keySet(); }
     }
-    }
 }
+    }
