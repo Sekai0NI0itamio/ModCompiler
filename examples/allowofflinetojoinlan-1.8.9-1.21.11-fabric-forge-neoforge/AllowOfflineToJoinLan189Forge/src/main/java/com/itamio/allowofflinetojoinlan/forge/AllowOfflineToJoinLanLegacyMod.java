@@ -1,5 +1,6 @@
 package com.itamio.allowofflinetojoinlan.forge;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
@@ -22,7 +23,10 @@ public class AllowOfflineToJoinLanLegacyMod {
 
     @EventHandler
     public void onServerStarting(FMLServerStartingEvent event) {
+        // In 1.8.9 Forge, FMLServerStartingEvent does not expose getServer().
+        // Use MinecraftServer.getServer() to obtain the running server instance.
+        MinecraftServer server = MinecraftServer.getServer();
         AllowOfflineToJoinLanConfig.load(LOGGER);
-        OnlineModeHelper.apply(event.getServer(), AllowOfflineToJoinLanConfig.requireMojangAuthentication, LOGGER);
+        OnlineModeHelper.apply(server, AllowOfflineToJoinLanConfig.requireMojangAuthentication, LOGGER);
     }
 }

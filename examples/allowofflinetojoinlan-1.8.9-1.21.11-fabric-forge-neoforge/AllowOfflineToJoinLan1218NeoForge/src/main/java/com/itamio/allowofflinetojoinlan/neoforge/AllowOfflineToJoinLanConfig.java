@@ -1,4 +1,4 @@
-package com.itamio.allowofflinetojoinlan.fabric;
+package com.itamio.allowofflinetojoinlan.neoforge;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
