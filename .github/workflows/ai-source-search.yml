@@ -1,0 +1,409 @@
+name: AI Source Search — Fetch Minecraft API for IDE Agent
+
+# This workflow is designed to be triggered by an AI coding IDE (like Kiro)
+# when it needs to look up actual Minecraft/Forge/NeoForge API signatures
+# before writing or fixing mod code.
+#
+# USAGE (from IDE agent):
+#   python3 scripts/ai_source_search.py \
+#       --version 1.21.5 \
+#       --loader forge \
+#       --queries "computeIfAbsent" "SavedDataType" "DimensionDataStorage" \
+#       --files "*DimensionDataStorage*.java" "*SavedData*.java"
+#
+# The workflow:
+#   1. Sets up the Gradle template for the requested version+loader
+#   2. Runs the Gradle task that downloads and decompiles Minecraft sources
+#   3. Searches for each query across the decompiled source
+#   4. Dumps the full class list so the AI can browse the API tree
+#   5. Uploads everything as a single artifact the AI can download and read
+
+on:
+  workflow_dispatch:
+    inputs:
+      minecraft_version:
+        description: 'Minecraft version (e.g., 1.21.5, 1.21.9)'
+        required: true
+        type: string
+      loader:
+        description: 'Mod loader'
+        required: true
+        type: choice
+        options:
+          - forge
+          - neoforge
+          - fabric
+      queries:
+        description: |
+          Newline- or comma-separated search queries (regex).
+          Example: computeIfAbsent,SavedDataType,DimensionDataStorage
+        required: true
+        type: string
+      file_patterns:
+        description: |
+          Newline- or comma-separated file patterns to restrict search.
+          Leave blank to search all .java files.
+          Example: *DimensionDataStorage*.java,*SavedData*.java
+        required: false
+        default: '*.java'
+        type: string
+      context_lines:
+        description: 'Lines of context around each match'
+        required: false
+        default: '15'
+        type: string
+      dump_full_class:
+        description: 'Dump the full content of matching class files (yes/no)'
+        required: false
+        default: 'yes'
+        type: choice
+        options:
+          - 'yes'
+          - 'no'
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # -------------------------------------------------------
+      # Map version → repo folder
+      # -------------------------------------------------------
+      - name: Resolve version folder
+        id: resolve
+        run: |
+          VERSION="${{ inputs.minecraft_version }}"
+          LOADER="${{ inputs.loader }}"
+
+          if   [[ "$VERSION" == "1.8.9" ]];                          then FOLDER="1.8.9"
+          elif [[ "$VERSION" =~ ^1\.12 ]];                           then FOLDER="1.12-1.12.2"
+          elif [[ "$VERSION" == "1.16.5" ]];                         then FOLDER="1.16.5"
+          elif [[ "$VERSION" =~ ^1\.17 ]];                           then FOLDER="1.17-1.17.1"
+          elif [[ "$VERSION" =~ ^1\.18 ]];                           then FOLDER="1.18-1.18.2"
+          elif [[ "$VERSION" =~ ^1\.19 ]];                           then FOLDER="1.19-1.19.4"
+          elif [[ "$VERSION" =~ ^1\.20\.[0-6]$ ]] || [[ "$VERSION" == "1.20" ]]; then FOLDER="1.20-1.20.6"
+          elif [[ "$VERSION" == "1.21" ]] || [[ "$VERSION" == "1.21.1" ]]; then FOLDER="1.21-1.21.1"
+          elif [[ "$VERSION" =~ ^1\.21\.[2-8]$ ]];                  then FOLDER="1.21.2-1.21.8"
+          elif [[ "$VERSION" =~ ^1\.21\.(9|10|11)$ ]];              then FOLDER="1.21.9-1.21.11"
+          else
+            echo "ERROR: Unsupported version: $VERSION"
+            exit 1
+          fi
+
+          TEMPLATE_DIR="${FOLDER}/${LOADER}/template"
+          if [ ! -d "$TEMPLATE_DIR" ]; then
+            echo "ERROR: No template at $TEMPLATE_DIR"
+            echo "Available loaders for $FOLDER:"
+            ls -d ${FOLDER}/*/template 2>/dev/null || echo "  (none)"
+            exit 1
+          fi
+
+          echo "folder=$FOLDER"           >> $GITHUB_OUTPUT
+          echo "template_dir=$TEMPLATE_DIR" >> $GITHUB_OUTPUT
+          echo "Resolved: $FOLDER / $LOADER  →  $TEMPLATE_DIR"
+
+      # -------------------------------------------------------
+      # Gradle cache — keyed on template files
+      # -------------------------------------------------------
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ai-src-${{ runner.os }}-${{ inputs.loader }}-${{ hashFiles(format('{0}/build.gradle', steps.resolve.outputs.template_dir), format('{0}/gradle.properties', steps.resolve.outputs.template_dir)) }}
+          restore-keys: |
+            ai-src-${{ runner.os }}-${{ inputs.loader }}-
+
+      # -------------------------------------------------------
+      # Copy template to isolated workspace
+      # -------------------------------------------------------
+      - name: Prepare workspace
+        run: |
+          TEMPLATE_DIR="${{ steps.resolve.outputs.template_dir }}"
+          WORKSPACE="/tmp/ai-src-ws"
+          rm -rf "$WORKSPACE"
+          cp -r "$TEMPLATE_DIR" "$WORKSPACE"
+          chmod +x "$WORKSPACE/gradlew"
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+
+      # -------------------------------------------------------
+      # Run Gradle to download + decompile Minecraft sources
+      # -------------------------------------------------------
+      - name: Download and decompile Minecraft sources
+        run: |
+          cd "$WORKSPACE"
+          LOADER="${{ inputs.loader }}"
+
+          # Disable configuration cache for first-run source gen
+          export GRADLE_OPTS="-Dorg.gradle.configuration-cache=false"
+
+          echo "=== Downloading Minecraft sources for $LOADER ==="
+
+          if [[ "$LOADER" == "forge" ]]; then
+            # ForgeGradle: genSources downloads + decompiles Minecraft with Vineflower
+            ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle.log || {
+              echo "genSources failed — trying compileJava to force dependency resolution..."
+              # Create a minimal stub so compileJava doesn't fail on missing source
+              mkdir -p src/main/java/com/stub
+              echo 'package com.stub; public class Stub {}' > src/main/java/com/stub/Stub.java
+              ./gradlew --no-daemon --stacktrace compileJava 2>&1 | tee -a /tmp/gradle.log || true
+            }
+          elif [[ "$LOADER" == "neoforge" ]]; then
+            # NeoForge UserDev Gradle: sources come via dependency resolution
+            ./gradlew --no-daemon --stacktrace dependencies 2>&1 | tee /tmp/gradle.log || true
+            # Also try genSources
+            ./gradlew --no-daemon genSources 2>&1 | tee -a /tmp/gradle.log || true
+          elif [[ "$LOADER" == "fabric" ]]; then
+            # Fabric Loom: genSources decompiles Minecraft
+            ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle.log || {
+              echo "genSources failed — trying dependencies..."
+              ./gradlew --no-daemon --stacktrace dependencies 2>&1 | tee -a /tmp/gradle.log || true
+            }
+          fi
+
+          echo "=== Gradle done ==="
+
+      # -------------------------------------------------------
+      # Find decompiled .java files
+      # -------------------------------------------------------
+      - name: Locate decompiled sources
+        id: locate
+        run: |
+          SEARCH_ROOTS=(
+            "$HOME/.gradle/caches/forge_gradle"
+            "$HOME/.gradle/caches/net.minecraftforge"
+            "$HOME/.gradle/caches/minecraft"
+            "$HOME/.gradle/caches/fabric-loom"
+            "$HOME/.gradle/caches/neoforge"
+            "$HOME/.gradle/caches/modules-2"
+            "$HOME/.gradle/caches"
+            "$WORKSPACE/.gradle"
+          )
+
+          BEST_ROOT=""
+          BEST_COUNT=0
+
+          for ROOT in "${SEARCH_ROOTS[@]}"; do
+            if [ -d "$ROOT" ]; then
+              COUNT=$(find "$ROOT" -name "*.java" -type f 2>/dev/null | wc -l)
+              if [ "$COUNT" -gt "$BEST_COUNT" ]; then
+                BEST_COUNT=$COUNT
+                BEST_ROOT="$ROOT"
+              fi
+            fi
+          done
+
+          if [ "$BEST_COUNT" -eq 0 ]; then
+            BEST_ROOT="$HOME/.gradle"
+            BEST_COUNT=$(find "$HOME/.gradle" -name "*.java" -type f 2>/dev/null | wc -l)
+          fi
+
+          echo "source_root=$BEST_ROOT" >> $GITHUB_OUTPUT
+          echo "java_count=$BEST_COUNT" >> $GITHUB_OUTPUT
+          echo "Found $BEST_COUNT .java files in $BEST_ROOT"
+
+      # -------------------------------------------------------
+      # Run all queries and collect results
+      # -------------------------------------------------------
+      - name: Run searches
+        run: |
+          SOURCE_ROOT="${{ steps.locate.outputs.source_root }}"
+          JAVA_COUNT="${{ steps.locate.outputs.java_count }}"
+          CONTEXT="${{ inputs.context_lines }}"
+          DUMP_FULL="${{ inputs.dump_full_class }}"
+
+          mkdir -p search-results/queries
+          mkdir -p search-results/full-classes
+
+          # Write metadata
+          cat > search-results/README.md << 'READMEEOF'
+          # Minecraft Source Search Results
+
+          This artifact was produced by the `AI Source Search` GitHub Actions workflow.
+          It contains decompiled Minecraft source code search results for use by an AI
+          coding IDE (Kiro, Copilot, etc.) when fixing mod compilation errors.
+
+          ## Files
+
+          - `search-info.txt`      — search parameters and statistics
+          - `all-java-files.txt`   — full list of every .java file found
+          - `queries/`             — one result file per search query
+          - `full-classes/`        — full content of files that matched queries
+          - `gradle-output.log`    — Gradle output (useful if sources are missing)
+
+          ## How to use
+
+          1. Read `search-info.txt` to confirm sources were found.
+          2. Read `queries/<query>.txt` to see matches for each query.
+          3. Read `full-classes/<ClassName>.java` for the complete class definition.
+          4. Use the API signatures you find to fix the mod source code.
+          READMEEOF
+
+          {
+            echo "Version  : ${{ inputs.minecraft_version }}"
+            echo "Loader   : ${{ inputs.loader }}"
+            echo "Queries  : ${{ inputs.queries }}"
+            echo "Patterns : ${{ inputs.file_patterns }}"
+            echo "Context  : $CONTEXT lines"
+            echo "Src root : $SOURCE_ROOT"
+            echo "Java files: $JAVA_COUNT"
+            echo "Timestamp: $(date -u)"
+          } > search-results/search-info.txt
+
+          if [ "$JAVA_COUNT" -eq 0 ]; then
+            echo "" >> search-results/search-info.txt
+            echo "ERROR: No .java files found. Source decompilation failed." >> search-results/search-info.txt
+            echo "Check gradle-output.log for details." >> search-results/search-info.txt
+            cp /tmp/gradle.log search-results/gradle-output.log 2>/dev/null || true
+            exit 1
+          fi
+
+          # Build list of file patterns
+          IFS=',' read -ra PATTERNS <<< "${{ inputs.file_patterns }}"
+          # Trim whitespace from each pattern
+          CLEAN_PATTERNS=()
+          for P in "${PATTERNS[@]}"; do
+            P="${P#"${P%%[![:space:]]*}"}"
+            P="${P%"${P##*[![:space:]]}"}"
+            [ -n "$P" ] && CLEAN_PATTERNS+=("$P")
+          done
+          [ ${#CLEAN_PATTERNS[@]} -eq 0 ] && CLEAN_PATTERNS=("*.java")
+
+          # Build list of queries
+          IFS=',' read -ra QUERIES <<< "${{ inputs.queries }}"
+
+          TOTAL_MATCHES=0
+          MATCHED_FILES=()
+
+          for QUERY in "${QUERIES[@]}"; do
+            QUERY="${QUERY#"${QUERY%%[![:space:]]*}"}"
+            QUERY="${QUERY%"${QUERY##*[![:space:]]}"}"
+            [ -z "$QUERY" ] && continue
+
+            # Safe filename for the query
+            SAFE_Q=$(echo "$QUERY" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]/_/g' | cut -c1-60)
+            OUT="search-results/queries/${SAFE_Q}.txt"
+
+            echo "Searching: $QUERY"
+            {
+              echo "Query: $QUERY"
+              echo "Patterns: ${CLEAN_PATTERNS[*]}"
+              echo "---"
+            } > "$OUT"
+
+            # Build glob args for rg
+            GLOB_ARGS=()
+            for P in "${CLEAN_PATTERNS[@]}"; do
+              GLOB_ARGS+=(--glob "$P")
+            done
+
+            rg \
+              --type java \
+              --context "$CONTEXT" \
+              --heading \
+              --line-number \
+              --color never \
+              "${GLOB_ARGS[@]}" \
+              "$QUERY" \
+              "$SOURCE_ROOT" \
+              >> "$OUT" 2>&1 || true
+
+            MATCH_COUNT=$(grep -c "^[0-9]" "$OUT" 2>/dev/null || echo "0")
+            echo "  → $MATCH_COUNT matches"
+            TOTAL_MATCHES=$((TOTAL_MATCHES + MATCH_COUNT))
+
+            # Collect matched file paths for full-class dump
+            if [[ "$DUMP_FULL" == "yes" ]]; then
+              while IFS= read -r FPATH; do
+                MATCHED_FILES+=("$FPATH")
+              done < <(rg \
+                --type java \
+                --files-with-matches \
+                "${GLOB_ARGS[@]}" \
+                "$QUERY" \
+                "$SOURCE_ROOT" 2>/dev/null || true)
+            fi
+          done
+
+          # Dump full content of matched class files
+          if [[ "$DUMP_FULL" == "yes" ]] && [ ${#MATCHED_FILES[@]} -gt 0 ]; then
+            # Deduplicate
+            mapfile -t UNIQUE_FILES < <(printf '%s\n' "${MATCHED_FILES[@]}" | sort -u)
+            echo "Dumping ${#UNIQUE_FILES[@]} matched class files..."
+            for FPATH in "${UNIQUE_FILES[@]}"; do
+              BASENAME=$(basename "$FPATH")
+              # Avoid overwriting if two files have the same name
+              DEST="search-results/full-classes/$BASENAME"
+              if [ -f "$DEST" ]; then
+                DEST="search-results/full-classes/$(echo "$FPATH" | md5sum | cut -c1-8)_$BASENAME"
+              fi
+              cp "$FPATH" "$DEST" 2>/dev/null || true
+            done
+          fi
+
+          # Full class list
+          find "$SOURCE_ROOT" -name "*.java" -type f 2>/dev/null \
+            | sed "s|$SOURCE_ROOT/||" \
+            | sort \
+            > search-results/all-java-files.txt || true
+
+          # Append stats to search-info
+          {
+            echo ""
+            echo "Total matches across all queries: $TOTAL_MATCHES"
+            echo "Full class files dumped: $(ls search-results/full-classes/ 2>/dev/null | wc -l)"
+          } >> search-results/search-info.txt
+
+          # Save gradle log
+          cp /tmp/gradle.log search-results/gradle-output.log 2>/dev/null || true
+
+          echo ""
+          echo "=== SEARCH COMPLETE ==="
+          cat search-results/search-info.txt
+
+      # -------------------------------------------------------
+      # Upload everything as one artifact
+      # -------------------------------------------------------
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-source-search-${{ inputs.minecraft_version }}-${{ inputs.loader }}
+          path: search-results/
+          retention-days: 14
+
+      - name: Job summary
+        run: |
+          echo "## AI Source Search Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ inputs.minecraft_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Loader | ${{ inputs.loader }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Queries | \`${{ inputs.queries }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Java files found | ${{ steps.locate.outputs.java_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifact: \`ai-source-search-${{ inputs.minecraft_version }}-${{ inputs.loader }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Query Results" >> $GITHUB_STEP_SUMMARY
+          for F in search-results/queries/*.txt; do
+            [ -f "$F" ] || continue
+            QNAME=$(basename "$F" .txt)
+            MATCHES=$(grep -c "^[0-9]" "$F" 2>/dev/null || echo "0")
+            echo "- \`$QNAME\`: $MATCHES matches" >> $GITHUB_STEP_SUMMARY
+          done
