@@ -5,6 +5,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedData.SavedDataType;
+import com.mojang.serialization.Codec;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
@@ -83,12 +85,13 @@ public class SetHomeMod {
 
     public static class HomeData extends SavedData {
         private static final String NAME = "sethome_data";
+        private static final SavedDataType<HomeData> TYPE = new SavedDataType<>(NAME, HomeData::new, (tag, provider) -> HomeData.load(tag));
         private final Map<String, Map<String, double[]>> data = new HashMap<>();
         public HomeData() {}
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
+            return storage.computeIfAbsent(TYPE);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
