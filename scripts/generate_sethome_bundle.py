@@ -1062,37 +1062,20 @@ def _opt(s):
                  'd.data.put(pc.getString("uuid").orElse(""), homes);')
     )
 
-# 1.21.2-1.21.8: Forge uses SavedDataType as a TOP-LEVEL class (not nested in SavedData)
-# Import from net.minecraft.world.level.saveddata.SavedDataType (not SavedData.SavedDataType)
+# 1.21.2-1.21.8: Forge changed API - try direct function references
 SRC_1215_FORGE = _opt(SRC_121_FORGE
     .replace(
-        "import net.minecraft.world.level.saveddata.SavedData;",
-        "import net.minecraft.world.level.saveddata.SavedData;\nimport net.minecraft.world.level.saveddata.SavedDataType;"
-    )
-    .replace(
-        "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";",
-        "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";\n        private static final SavedDataType<HomeData> TYPE = new SavedDataType<>(HomeData::new, (tag, provider) -> HomeData.load(tag), null);"
-    )
-    .replace(
         "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-        "return storage.computeIfAbsent(TYPE, NAME);"
+        "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);"
     )
 )
 
-# 1.21.9-1.21.11 Forge: Same SavedDataType API + EventBusSubscriber pattern
+# 1.21.9-1.21.11 Forge: Same three-argument API + EventBusSubscriber pattern
 SRC_1219_FORGE = (
     _opt(SRC_121_FORGE
         .replace(
-            "import net.minecraft.world.level.saveddata.SavedData;",
-            "import net.minecraft.world.level.saveddata.SavedData;\nimport net.minecraft.world.level.saveddata.SavedDataType;"
-        )
-        .replace(
-            "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";",
-            "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";\n        private static final SavedDataType<HomeData> TYPE = new SavedDataType<>(HomeData::new, (tag, provider) -> HomeData.load(tag), null);"
-        )
-        .replace(
             "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-            "return storage.computeIfAbsent(TYPE, NAME);"
+            "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);"
         )
     )
     .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
@@ -1149,7 +1132,7 @@ SRC_1205_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
 ))
 SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)    # 1.21.0-1.21.1 (Factory exists)
-SRC_1215_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE))  # 1.21.2-1.21.8 NeoForge uses Factory API
+SRC_1215_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE))  # 1.21.2-1.21.8 NeoForge uses Factory API (same as 1.21.0-1.21.1)
 SRC_1219_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE  # 1.21.9+ NeoForge uses Factory API
     .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
     .replace("import net.minecraftforge.common.MinecraftForge;\n", "")
