@@ -26,14 +26,13 @@ public class AccountSwitcherMod {
     public void onRenderScreen(GuiScreenEvent.DrawScreenEvent.Post event) {
         try {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            if (!(mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
-            net.minecraft.client.gui.Font font = mc.font;
-            com.mojang.blaze3d.vertex.PoseStack ps = event.getPoseStack();
+            if (!(mc.currentScreen instanceof net.minecraft.client.gui.screen.TitleScreen)) return;
+            net.minecraft.client.gui.FontRenderer font = mc.fontRenderer;
+            com.mojang.blaze3d.matrix.MatrixStack ms = event.getMatrixStack();
             String prefix = "Account: ";
             String account = currentAccount;
-            net.minecraft.client.gui.GuiComponent.drawString(ps, font, prefix, 10, 10, 0xFFFFFF);
-            net.minecraft.client.gui.GuiComponent.drawString(ps, font, account,
-                10 + font.width(prefix), 10, 0x00FF00);
+            font.drawStringWithShadow(ms, prefix, 10, 10, 0xFFFFFF);
+            font.drawStringWithShadow(ms, account, 10 + font.getStringWidth(prefix), 10, 0x00FF00);
         } catch (Exception e) { LOGGER.error("Render error", e); }
     }
 

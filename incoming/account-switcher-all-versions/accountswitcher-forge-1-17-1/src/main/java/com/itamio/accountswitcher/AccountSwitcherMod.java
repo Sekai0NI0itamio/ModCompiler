@@ -3,7 +3,7 @@ package com.itamio.accountswitcher;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.client.event.GuiScreenEvent;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,14 +23,14 @@ public class AccountSwitcherMod {
     }
 
     @SubscribeEvent
-    public void onRenderScreen(ScreenEvent.DrawScreenEvent.Post event) {
+    public void onRenderScreen(GuiScreenEvent.DrawScreenEvent.Post event) {
         try {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
             if (!(mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
             net.minecraft.client.gui.Font font = mc.font;
+            com.mojang.blaze3d.vertex.PoseStack ps = event.getPoseStack();
             String prefix = "Account: ";
             String account = currentAccount;
-            com.mojang.blaze3d.vertex.PoseStack ps = event.getPoseStack();
             net.minecraft.client.gui.GuiComponent.drawString(ps, font, prefix, 10, 10, 0xFFFFFF);
             net.minecraft.client.gui.GuiComponent.drawString(ps, font, account,
                 10 + font.width(prefix), 10, 0x00FF00);
