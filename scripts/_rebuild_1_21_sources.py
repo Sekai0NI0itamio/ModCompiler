@@ -261,9 +261,10 @@ SRC_1215_FORGE = build_forge(
     mod_annotation="@Mod(SetHomeMod.MODID)",
     config_class="ForgeConfigSpec",
     config_import="import net.minecraftforge.common.ForgeConfigSpec;\nimport net.minecraft.world.level.saveddata.SavedDataType;",
-    event_import="import net.minecraftforge.event.RegisterCommandsEvent;",
-    constructor_body="        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(SetHomeMod::onRegisterCommands);",
-    register_decl="    public static void onRegisterCommands(RegisterCommandsEvent e) {",
+    event_import="import net.minecraftforge.event.RegisterCommandsEvent;\nimport net.minecraftforge.eventbus.api.IEventBus;\nimport net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;",
+    # Forge 1.21.5+: get the Forge event bus via FMLJavaModLoadingContext and addListener
+    constructor_body="        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);",
+    register_decl="    @net.minecraftforge.eventbus.api.SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
     get_body=_SAVEDTYPE_GET,
     nbt_load=_NBT_OPTIONAL,
     nbt_save=_NBT_SAVE_SAVEDTYPE,

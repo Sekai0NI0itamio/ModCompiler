@@ -849,34 +849,58 @@ You are the one building. Do not ask the user to run commands. Run them
 yourself using your terminal/shell tools. The full sequence for a
 multi-version build is:
 
-  # Step 1: Regenerate the bundle (failed-only if retrying)
-  python3 scripts/generate_sethome_bundle.py --failed-only
+  # Step 1: First run — regenerate ALL targets
+  python3 scripts/generate_sethome_bundle.py
 
-  # Step 2: Stage all changed files
-  git add .github/workflows/ scripts/ docs/ incoming/
-
-  # Step 3: Commit with a clear message describing what you fixed
-  git commit -m "Fix <describe what you changed>"
-
-  # Step 4: Push to GitHub (the workflow runs there, not locally)
+  # Step 2: Stage, commit, push
+  git add scripts/ incoming/
+  git commit -m "Initial bundle"
   git push
 
-  # Step 5: Trigger the build and wait for results
+  # Step 3: Trigger the build and wait (BLOCKING — do not use background process)
   python3 scripts/run_build.py incoming/set-home-anywhere-all-versions.zip \
       --modrinth https://modrinth.com/mod/set-home-anywhere
 
-  # Step 6: Read the results
-  cat ModCompileRuns/run-<latest>/SUMMARY.md
+  # Step 4: Read errors immediately when it finishes
+  python3 scripts/_check_errors.py
 
-  # Step 7: If builds failed, search the actual Minecraft source
-  python3 scripts/ai_source_search.py \
-      --version <failing-version> --loader <loader> \
-      --queries "the class or method that failed" \
-      --files "*TheClass*.java"
+  # Step 5: Fix the generator for the failing targets only
 
-  # Step 8: Fix the generator, go back to Step 1
+  # Step 6: !! IMPORTANT !! Regenerate ONLY the failing targets
+  python3 scripts/generate_sethome_bundle.py --failed-only
 
-You have shell access. Use it. Do not wait for the user to run anything.
+  # Step 7: Stage, commit, push
+  git add scripts/ incoming/
+  git commit -m "Fix <what you changed>"
+  git push
+
+  # Step 8: Trigger build again (BLOCKING)
+  python3 scripts/run_build.py incoming/set-home-anywhere-all-versions.zip \
+      --modrinth https://modrinth.com/mod/set-home-anywhere
+
+  # Repeat steps 4-8 until all targets pass
+
+------------------------------------------------------------------------
+!! IMPORTANT: ALWAYS use --failed-only on every retry after the first run
+------------------------------------------------------------------------
+
+NEVER resubmit already-green targets. Use --failed-only on every retry.
+
+BAD (wastes GitHub Actions minutes, rebuilds 33 already-passing targets):
+  python3 scripts/generate_sethome_bundle.py
+  python3 scripts/run_build.py incoming/set-home-anywhere-all-versions.zip
+
+GOOD (only rebuilds the 6 that actually failed):
+  python3 scripts/generate_sethome_bundle.py --failed-only
+  python3 scripts/run_build.py incoming/set-home-anywhere-all-versions.zip
+
+The --failed-only flag reads the most recent ModCompileRuns/ folder,
+finds which targets had status != success, and generates a zip containing
+ONLY those targets. The already-green targets are skipped entirely.
+
+This saves significant GitHub Actions time on large multi-version builds.
+On a 39-target build where 33 pass and 6 fail, --failed-only cuts the
+next build from 39 jobs down to 6 jobs.
 
 ------------------------------------------------------------------------
 RULE: Never use long inline python3 -c "..." commands
