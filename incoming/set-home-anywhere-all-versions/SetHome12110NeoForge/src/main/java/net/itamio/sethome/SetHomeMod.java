@@ -87,22 +87,23 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
+            return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
         }
+        public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
-            ListTag players = tag.getList("players").orElse(new ListTag());
+            ListTag players = tag.getList("players", 10);
             for (int i = 0; i < players.size(); i++) {
-                CompoundTag pc = players.getCompound(i).orElse(new CompoundTag());
+                CompoundTag pc = players.getCompound(i);
                 Map<String, double[]> homes = new HashMap<>();
-                ListTag hl = pc.getList("homes").orElse(new ListTag());
+                ListTag hl = pc.getList("homes", 10);
                 for (int j = 0; j < hl.size(); j++) {
-                    CompoundTag hc = hl.getCompound(j).orElse(new CompoundTag());
-                    homes.put(hc.getString("name").orElse(""), new double[]{
-                        hc.getDouble("x").orElse(0.0),hc.getDouble("y").orElse(0.0),hc.getDouble("z").orElse(0.0),
-                        hc.getFloat("yaw").orElse(0.0f),hc.getFloat("pitch").orElse(0.0f)});
+                    CompoundTag hc = hl.getCompound(j);
+                    homes.put(hc.getString("name"), new double[]{
+                        hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),
+                        hc.getFloat("yaw"),hc.getFloat("pitch")});
                 }
-                d.data.put(pc.getString("uuid").orElse(""), homes);
+                d.data.put(pc.getString("uuid"), homes);
             }
             return d;
         }
