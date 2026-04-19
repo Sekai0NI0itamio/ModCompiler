@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.fml.common.Mod;
@@ -30,12 +31,10 @@ public class SetHomeMod {
     }
     public SetHomeMod() {
         // config uses defaults
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(SetHomeMod::onRegisterCommands);
     }
 
-    @net.neoforged.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.neoforged.fml.common.Mod.EventBusSubscriber.Bus.FORGE)
-    public static class ForgeEvents {
-        @net.neoforged.bus.api.SubscribeEvent
-        public static void onRegisterCommands(RegisterCommandsEvent e) {
+    public static void onRegisterCommands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
         d.register(Commands.literal("sethome")
             .then(Commands.argument("name", StringArgumentType.word())
@@ -87,23 +86,23 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
+            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);
         }
         public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { return HomeData.load(tag); }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
-            ListTag players = tag.getList("players", 10);
+            ListTag players = tag.getList("players").orElse(new ListTag());
             for (int i = 0; i < players.size(); i++) {
-                CompoundTag pc = players.getCompound(i);
+                CompoundTag pc = players.getCompound(i).orElse(new CompoundTag());
                 Map<String, double[]> homes = new HashMap<>();
-                ListTag hl = pc.getList("homes", 10);
+                ListTag hl = pc.getList("homes").orElse(new ListTag());
                 for (int j = 0; j < hl.size(); j++) {
-                    CompoundTag hc = hl.getCompound(j);
-                    homes.put(hc.getString("name"), new double[]{
-                        hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),
-                        hc.getFloat("yaw"),hc.getFloat("pitch")});
+                    CompoundTag hc = hl.getCompound(j).orElse(new CompoundTag());
+                    homes.put(hc.getString("name").orElse(""), new double[]{
+                        hc.getDouble("x").orElse(0.0),hc.getDouble("y").orElse(0.0),hc.getDouble("z").orElse(0.0),
+                        hc.getFloat("yaw").orElse(0.0f),hc.getFloat("pitch").orElse(0.0f)});
                 }
-                d.data.put(pc.getString("uuid"), homes);
+                d.data.put(pc.getString("uuid").orElse(""), homes);
             }
             return d;
         }
@@ -136,6 +135,5 @@ public class SetHomeMod {
             boolean r = player(uuid).remove(name) != null; if (r) setDirty(); return r;
         }
         public Set<String> getHomes(String uuid) { return player(uuid).keySet(); }
-    }
     }
 }
