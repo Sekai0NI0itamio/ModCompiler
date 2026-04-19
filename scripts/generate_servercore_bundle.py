@@ -259,7 +259,20 @@ def write_forge_1_17_1_18(base): write_forge_src(base, patch_for_1_17_1_18_forge
 def write_forge_1_19(base): write_forge_src(base, patch_for_pre_1_20_5_forge)
 def write_forge_1_21_6_plus(base): write_forge_src(base, patch_forge_1215_plus)
 def write_forge_1_21_11(base): write_forge_src(base, lambda s: patch_1_21_11_api(patch_forge_1215_plus(s)))
-def write_fabric_1_21_11(base): write_fabric_src(base, lambda s: patch_1_21_11_api(s))
+def write_fabric_1_21_11(base):
+    """For Fabric 1.21.11, use the actual 1.21.11 Fabric TeleportUtil."""
+    REF_1_21_11_FABRIC = "xyHAR2WW"  # 1.21.11 Fabric
+    def fabric_1_21_11_patch(src):
+        src = patch_1_21_11_api(src)
+        # Also rename package for fabric
+        return src
+    write_fabric_src(base, fabric_1_21_11_patch)
+    # Override TeleportUtil with the actual 1.21.11 Fabric version
+    try:
+        actual_tu = (BUNDLE_SRC / "versions" / REF_1_21_11_FABRIC / "decompiled" / "src" / "src" / "main" / "java" / FABRIC_PKG / "TeleportUtil.java").read_text(encoding="utf-8")
+        write(base / "src" / "main" / "java" / FABRIC_PKG / "TeleportUtil.java", actual_tu)
+    except Exception as e:
+        print(f"Warning: could not load 1.21.11 Fabric TeleportUtil: {e}")
 
 # ============================================================
 # TARGETS
@@ -403,7 +416,30 @@ if _parsed.failed_only:
                     failed_slugs.add(mod_dir.name)
 
             def slug_matches(folder, slug):
-                return folder.lower() in slug.lower() or slug.lower() in folder.lower()
+                # folder: SC1171Forge, SC121Fabric, etc.
+                # slug: servercore-forge-1-17-1, servercore-fabric-1-21, etc.
+                f = folder.lower()
+                s = slug.lower()
+                # Direct substring match
+                if f in s or s in f:
+                    return True
+                # Extract version and loader from folder name
+                import re
+                m = re.match(r"sc(\d+)(forge|fabric)", f)
+                if m:
+                    digits, loader = m.group(1), m.group(2)
+                    # Convert digits to version string
+                    # SC118 -> 1-18, SC1181 -> 1-18-1, SC12110 -> 1-21-10
+                    # Pattern: first digit is always 1, rest form the version
+                    rest = digits[1:]  # strip leading 1
+                    if len(rest) == 1:    ver = f"1-{rest}"           # 1.X
+                    elif len(rest) == 2:  ver = f"1-{rest}"           # 1.XX (e.g. 18, 19, 21)
+                    elif len(rest) == 3:  ver = f"1-{rest[:2]}-{rest[2]}"  # 1.XX.Y
+                    elif len(rest) == 4:  ver = f"1-{rest[:2]}-{rest[2:]}".rstrip("-")  # 1.XX.YY
+                    else: ver = digits
+                    expected = f"servercore-{loader}-{ver}"
+                    return expected == s
+                return False
 
             failed_folders = {t[0] for t in targets if any(slug_matches(t[0], s) for s in failed_slugs)}
             if failed_folders:
