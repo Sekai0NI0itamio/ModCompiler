@@ -1,0 +1,75 @@
+We need to output JSON with shape as described. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must match composition language from approved examples but adapt words to this mod. Must not mention draft etc. Must describe actual mod behavior.
+
+We have mod title "Full Brightness". It's about making everything bright all the time, removing darkness. So we need to craft JSON accordingly.
+
+We need to choose background_image from options. The mod is about brightness, maybe "ocean.jpg" or "purple flowers and sun set or sun rise.png" or "sunset in grassfield.jpg". The recommended options: ocean.jpg, purple flowers..., sunset in grassfield.jpg. Which best fits bright? Maybe "ocean.jpg" (bright ocean). Or "purple flowers and sun set or sun rise.png" (sunrise). The mod is about brightness, maybe sunrise. I'd pick "purple flowers and sun set or sun rise.png". That filename is "purple flowers and sun set or sun rise.png". Use that exact string.
+
+Accent color: choose a hex color, maybe #ff7f2f (orange) as example. Could use #ffeb3b (yellow) but must be single hex. Use #ff7f2f as example? It's okay. Let's use #ffeb3b? But must be valid hex. Use #ff7f2f is fine.
+
+Logo: eyebrow: short phrase maybe "Brightness". Or "Full Brightness"? Should be short label. In examples they used "Automation Class". So we can use "Brightness". Mark: short monogram maybe "FB". Title: "Full Brightness". Subtitle: a short tagline describing behavior: "Maximum gamma for endless visibility". rail_left: something like "No Torches". rail_right: "Infinite Visibility". Must describe actual behavior.
+
+Description: kicker: maybe "Utility Mod". Title: "Full Brightness". Tagline: a concise description: "Sets gamma to maximum, eliminating darkness without manual adjustments." chips: 2-4 short labels: maybe "Maximum Gamma", "Always On", "No Torches". Must be 2-4 items; can be 3. stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats could be:
+
+- value: "15.0", label: "Gamma Level", note: "Far exceeds vanilla max of 1.0."
+- value: "0", label: "Torches Needed", note: "Never required for visibility."
+
+But value should be a string; could be "15.0". That's fine.
+
+Make sure stats array has exactly 2 objects.
+
+Now ensure JSON shape matches exactly.
+
+Structure:
+
+{
+  "accent_color": "#ff7f2f",
+ "background_image": "purple flowers and sun set or sun rise.png",
+  "logo": {
+    "eyebrow": "Brightness",
+    "mark": "FB",
+    "title": "Full Brightness",
+    "subtitle": "Maximum gamma for endless visibility",
+    "rail_left": "No Torches",
+    "rail_right": "Infinite Visibility"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Full Brightness",
+    "tagline": "Sets gamma to maximum, eliminating darkness without manual adjustments.",
+    "chips": [
+      "Maximum Gamma",
+      "Always On",
+      "No Torches"
+    ],
+    "stats": [
+     {
+        "value": "15.0",
+        "label": "Gamma Level",
+       "note": "Far exceeds vanilla max of 1.0."
+      },
+      {
+        "value": "0",
+        "label": "Torches Needed",
+        "note": "Never required for visibility."
+      }
+    ]
+ }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename from options, we used "purple flowers and sun set or sun rise.png". That's one of the options. Good.
+
+logo.mark is 2 characters "FB". Good.
+
+description.chips has 3 items, allowed 2-4. Good.
+
+description.stats has exactly 2 items, each with value, label, note. Good.
+
+All strings concise and polished. No mention of draft etc. All labels about actual behavior.
+
+Make sure no extra fields. Provide only JSON.
+
+Check that "subtitle" is a short phrase, okay.
+
+Now output JSON only.

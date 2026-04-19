@@ -1,0 +1,322 @@
+build (sortchest-forge-1-19-2)	Set up job	﻿2026-04-18T06:08:02.0084849Z Current runner version: '2.333.1'
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0121151Z ##[group]Runner Image Provisioner
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0122276Z Hosted Compute Agent
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0123117Z Version: 20260213.493
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0124065Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0125157Z Build Date: 2026-02-13T00:28:41Z
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0126442Z Worker ID: {463bacee-c9ed-445c-97d2-e74813f2c6f1}
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0127423Z Azure Region: eastus
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0128213Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0130406Z ##[group]Operating System
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0131305Z Ubuntu
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0132040Z 24.04.4
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0132630Z LTS
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0133483Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0134219Z ##[group]Runner Image
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0135029Z Image: ubuntu-24.04
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0136047Z Version: 20260413.86.1
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0137666Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0140427Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0141879Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0143653Z ##[group]GITHUB_TOKEN Permissions
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0146728Z Contents: read
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0147548Z Metadata: read
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0148452Z Packages: read
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0149151Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0152207Z Secret source: Actions
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0153565Z Prepare workflow directory
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0612260Z Prepare all required actions
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.0667240Z Getting action download info
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.4335113Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.5774989Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.6633999Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:02.9514630Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:03.0493022Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:03.2708435Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build (sortchest-forge-1-19-2)	Set up job	2026-04-18T06:08:03.5299477Z Complete job name: build (sortchest-forge-1-19-2)
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	﻿2026-04-18T06:08:03.6187798Z ##[group]Run actions/checkout@v4
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6189305Z with:
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6190163Z   repository: Sekai0NI0itamio/ModCompiler
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6191725Z   token: ***
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6192584Z   ssh-strict: true
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6193413Z   ssh-user: git
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6194272Z   persist-credentials: true
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6195154Z   clean: true
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6196285Z   sparse-checkout-cone-mode: true
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6197265Z   fetch-depth: 1
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6198100Z   fetch-tags: false
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6199018Z   show-progress: true
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6199890Z   lfs: false
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6200702Z   submodules: false
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6201599Z   set-safe-directory: true
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.6202819Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7338957Z Syncing repository: Sekai0NI0itamio/ModCompiler
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7342095Z ##[group]Getting Git version info
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7343518Z Working directory is '/home/runner/work/ModCompiler/ModCompiler'
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7346145Z [command]/usr/bin/git version
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7371896Z git version 2.53.0
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7398594Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7413942Z Temporarily overriding HOME='/home/runner/work/_temp/817691ab-9909-4135-b2a1-414f713d0245' before making global git config changes
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7416896Z Adding repository directory to the temporary git global config as a safe directory
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7428394Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7464437Z Deleting the contents of '/home/runner/work/ModCompiler/ModCompiler'
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7468761Z ##[group]Initializing the repository
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7473281Z [command]/usr/bin/git init /home/runner/work/ModCompiler/ModCompiler
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7537105Z hint: Using 'master' as the name for the initial branch. This default branch name
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7539685Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7541732Z hint: to use in all of your new repositories, which will suppress this warning,
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7543616Z hint: call:
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7544369Z hint:
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7545405Z hint: 	git config --global init.defaultBranch <name>
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7546869Z hint:
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7548031Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7550266Z hint: 'development'. The just-created branch can be renamed via this command:
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7551809Z hint:
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7552647Z hint: 	git branch -m <name>
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7553510Z hint:
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7555009Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7557295Z Initialized empty Git repository in /home/runner/work/ModCompiler/ModCompiler/.git/
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7560795Z [command]/usr/bin/git remote add origin https://github.com/Sekai0NI0itamio/ModCompiler
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7586531Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7588093Z ##[group]Disabling automatic garbage collection
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7590502Z [command]/usr/bin/git config --local gc.auto 0
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7625464Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7627349Z ##[group]Setting up auth
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7632859Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7669724Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.7966419Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.8001459Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.8240129Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.8276315Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.8531164Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.8569665Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.8578924Z ##[group]Fetching the repository
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:03.8583036Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +73153f3a868eb9fd689d251657de314c3aef68eb:refs/remotes/origin/main
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.0948941Z From https://github.com/Sekai0NI0itamio/ModCompiler
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.0951984Z  * [new ref]         73153f3a868eb9fd689d251657de314c3aef68eb -> origin/main
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.0983007Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.0984029Z ##[group]Determining the checkout info
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.0985137Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.0991177Z [command]/usr/bin/git sparse-checkout disable
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.1033173Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.1063127Z ##[group]Checking out the ref
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.1068107Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.5848869Z Switched to a new branch 'main'
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.5850280Z branch 'main' set up to track 'origin/main'.
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.5879676Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.5927478Z [command]/usr/bin/git log -1 --format=%H
+build (sortchest-forge-1-19-2)	Run actions/checkout@v4	2026-04-18T06:08:05.5954330Z 73153f3a868eb9fd689d251657de314c3aef68eb
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	﻿2026-04-18T06:08:05.6221327Z ##[group]Run actions/setup-python@v5
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.6221735Z with:
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.6221989Z   python-version: 3.12
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.6222293Z   check-latest: false
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.6222804Z   token: ***
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.6223073Z   update-environment: true
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.6223395Z   allow-prereleases: false
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.6223688Z   freethreaded: false
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.6223965Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.7912005Z ##[group]Installed versions
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.8014612Z Successfully set up CPython (3.12.13)
+build (sortchest-forge-1-19-2)	Run actions/setup-python@v5	2026-04-18T06:08:05.8015823Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	﻿2026-04-18T06:08:05.8196829Z ##[group]Run actions/setup-java@v4
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8197225Z with:
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8197469Z   distribution: temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8197759Z   java-version: 8
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	16
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	17
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	21
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8198051Z   java-package: jdk
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8198315Z   check-latest: false
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8198585Z   server-id: github
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8198879Z   server-username: GITHUB_ACTOR
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8199202Z   server-password: GITHUB_TOKEN
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8199505Z   overwrite-settings: true
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8199794Z   job-status: success
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8200262Z   token: ***
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8200512Z env:
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8200837Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8201384Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8201910Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8202358Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8202857Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8203316Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:05.8203692Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0264317Z ##[group]Installed distributions
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0568982Z Resolved Java 8.0.482+8 from tool-cache
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0569828Z Setting Java 8.0.482+8 as the default
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0583788Z Creating toolchains.xml for JDK version 8 from temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0657386Z Writing to /home/runner/.m2/toolchains.xml
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0658267Z 
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0658503Z Java configuration:
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0661958Z   Distribution: temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0662610Z   Version: 8.0.482+8
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0664659Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0665392Z 
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.0678129Z Trying to resolve the latest version from remote
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.2617938Z Resolved latest version as 16.0.2+7
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.2618562Z Trying to download...
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:06.2619915Z Downloading Java 16.0.2+7 (Temurin-Hotspot) from https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_linux_hotspot_16.0.2_7.tar.gz ...
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:07.3959364Z Extracting Java archive...
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:07.4073003Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/fd168c47-3c5a-405c-91fb-28bcdde7ea8c -f /home/runner/work/_temp/2786d206-ef4a-49fe-b361-8122bdee0689
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3670676Z Java 16.0.2+7 was downloaded
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3671196Z Setting Java 16.0.2+7 as the default
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3673666Z Creating toolchains.xml for JDK version 16 from temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3713844Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3714554Z 
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3714860Z Java configuration:
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3715410Z   Distribution: temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3716117Z   Version: 16.0.2+7
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3716836Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3717661Z 
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3724857Z Resolved Java 17.0.18+8 from tool-cache
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3725549Z Setting Java 17.0.18+8 as the default
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3729119Z Creating toolchains.xml for JDK version 17 from temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3752001Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3798202Z 
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3798641Z Java configuration:
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3799201Z   Distribution: temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3799676Z   Version: 17.0.18+8
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3800357Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3800938Z 
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3808761Z Resolved Java 21.0.10+7 from tool-cache
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3809576Z Setting Java 21.0.10+7 as the default
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3810336Z Creating toolchains.xml for JDK version 21 from temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.3828245Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4292939Z 
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4293473Z Java configuration:
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4293879Z   Distribution: temurin
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4294339Z   Version: 21.0.10+7
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4294835Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4295287Z 
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4296883Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4311858Z Creating settings.xml with server-id: github
+build (sortchest-forge-1-19-2)	Run actions/setup-java@v4	2026-04-18T06:08:10.4312414Z Writing to /home/runner/.m2/settings.xml
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	﻿2026-04-18T06:08:11.0289413Z ##[group]Run actions/cache@v4
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0289681Z with:
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0289906Z   path: ~/.gradle/caches
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	~/.gradle/wrapper
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0290361Z   key: gradle-Linux-ad4ad21509ab93061346e035af8ce481c885f45c5e0d2c5ca8fd87d9a2a3530b
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0290795Z   restore-keys: gradle-Linux-
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0291046Z   enableCrossOsArchive: false
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0291290Z   fail-on-cache-miss: false
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0291519Z   lookup-only: false
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0291719Z   save-always: false
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0291923Z env:
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0292165Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0292577Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0292976Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0293365Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0293722Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0294125Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0294541Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0294991Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0295459Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0296185Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0296644Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.0296993Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/cache@v4	2026-04-18T06:08:11.2524526Z Cache not found for input keys: gradle-Linux-ad4ad21509ab93061346e035af8ce481c885f45c5e0d2c5ca8fd87d9a2a3530b, gradle-Linux-
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	﻿2026-04-18T06:08:11.2675211Z ##[group]Run actions/download-artifact@v4
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2675536Z with:
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2676851Z   name: prepared-inputs
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2677108Z   path: .workflow_state/prepared
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2677365Z   merge-multiple: false
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2677996Z   repository: Sekai0NI0itamio/ModCompiler
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2678394Z   run-id: 24598519402
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2678596Z env:
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2679260Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2679901Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2680324Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2681088Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2681473Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2682296Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2682911Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2684072Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2684657Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2685937Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2686816Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.2687394Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.4976393Z Downloading single artifact
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.5915110Z Preparing to download the following artifacts:
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.5916292Z - prepared-inputs (ID: 6509142336, Size: 249743, Expected Digest: sha256:e06b3f50f1315f7a2f89f5f8d0362b62287a3efd9eb9c8e20d6dff1a6ff0e83f)
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.6533220Z Redirecting to blob download url: https://productionresultssa13.blob.core.windows.net/actions-results/8ebae52c-8ab0-44ab-9c83-d5487a4e5324/workflow-job-run-0aa9bca0-219c-5b61-a412-ae6ae5b5c56e/artifacts/cf3e420318736ca90418bfbff1860f5e9bbdd565b9909d72c83a81eabeb90983.zip
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.6535410Z Starting download of artifact to: /home/runner/work/ModCompiler/ModCompiler/.workflow_state/prepared
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.6816290Z (node:2329) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.6817268Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.9042809Z SHA256 digest of downloaded artifact is e06b3f50f1315f7a2f89f5f8d0362b62287a3efd9eb9c8e20d6dff1a6ff0e83f
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.9043756Z Artifact download completed successfully.
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.9044207Z Total of 1 artifact(s) downloaded
+build (sortchest-forge-1-19-2)	Run actions/download-artifact@v4	2026-04-18T06:08:11.9050131Z Download artifact has finished successfully
+build (sortchest-forge-1-19-2)	Build one mod	﻿2026-04-18T06:08:11.9201374Z ##[group]Run python build_mods.py build-one \
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9201805Z [36;1mpython build_mods.py build-one \[0m
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9202238Z [36;1m  --plan .workflow_state/prepared/build-plan.json \[0m
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9202618Z [36;1m  --manifest version-manifest.json \[0m
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9202940Z [36;1m  --prepared-dir .workflow_state/prepared \[0m
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9203269Z [36;1m  --slug "sortchest-forge-1-19-2" \[0m
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9203668Z [36;1m  --artifact-dir ".workflow_artifacts/per-mod/sortchest-forge-1-19-2"[0m
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9297139Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9297520Z env:
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9297792Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9298227Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9298650Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9299014Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9299447Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9299831Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9300257Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9300729Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9301199Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9301662Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9302115Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:08:11.9302466Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Build one mod	2026-04-18T06:09:39.5911263Z ##[error]Process completed with exit code 1.
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	﻿2026-04-18T06:09:39.5997851Z ##[group]Run actions/upload-artifact@v4
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.5998288Z with:
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.5998598Z   name: mod-sortchest-forge-1-19-2
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.5999104Z   path: .workflow_artifacts/per-mod/sortchest-forge-1-19-2
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.5999858Z   if-no-files-found: warn
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6000200Z   compression-level: 6
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6000526Z   overwrite: false
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6000842Z   include-hidden-files: false
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6001176Z env:
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6001550Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6002198Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6002838Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6003423Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6004002Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6004583Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6005306Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6006209Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6006965Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6007731Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6008490Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.6009049Z ##[endgroup]
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.8208165Z With the provided path, there will be 3 files uploaded
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.8212285Z Artifact name is valid!
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.8214613Z Root directory input is valid!
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:39.9375202Z Beginning upload of artifact content to blob storage
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:40.0011383Z Uploaded bytes 4921
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:40.0155800Z Finished uploading artifact content to blob storage!
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:40.0159064Z SHA256 digest of uploaded artifact zip is 3423a133b474e7e6b2072a6f03279fb17a8216a7e981c6d06c57e3d1eedde635
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:40.0160996Z Finalizing artifact upload
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:40.1298977Z Artifact mod-sortchest-forge-1-19-2.zip successfully finalized. Artifact ID 6509150941
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:40.1300242Z Artifact mod-sortchest-forge-1-19-2 has been successfully uploaded! Final size is 4921 bytes. Artifact ID is 6509150941
+build (sortchest-forge-1-19-2)	Run actions/upload-artifact@v4	2026-04-18T06:09:40.1307177Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/24598519402/artifacts/6509150941
+build (sortchest-forge-1-19-2)	Post Run actions/setup-java@v4	﻿2026-04-18T06:09:40.1457663Z Post job cleanup.
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	﻿2026-04-18T06:09:40.3294798Z Post job cleanup.
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4285217Z [command]/usr/bin/git version
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4322849Z git version 2.53.0
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4365459Z Temporarily overriding HOME='/home/runner/work/_temp/727af4eb-d102-4466-8659-74b03f33a25b' before making global git config changes
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4367079Z Adding repository directory to the temporary git global config as a safe directory
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4371763Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4411218Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4446564Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4699642Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4723115Z http.https://github.com/.extraheader
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4736725Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.4769953Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.5019536Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build (sortchest-forge-1-19-2)	Post Run actions/checkout@v4	2026-04-18T06:09:40.5052496Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build (sortchest-forge-1-19-2)	Complete job	﻿2026-04-18T06:09:40.5419003Z Cleaning up orphan processes
+build (sortchest-forge-1-19-2)	Complete job	2026-04-18T06:09:40.5701177Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v4, actions/download-artifact@v4, actions/setup-java@v4, actions/setup-python@v5, actions/upload-artifact@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

@@ -1,0 +1,68 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must match composition language from approved examples but adapt to this mod "Infinite Water Bucket". Must not mention draft etc. Must describe actual mod behavior.
+
+We need to choose background_image filename from options that best fits. The mod is about infinite water bucket, maybe "fire burning.jpg" or "ocean.jpg" or "mountain breeze with spring forest.png". Probably "ocean.jpg" fits water theme. Let's pick "ocean.jpg". Must be exact filename.
+
+Accent color: choose a hex, maybe "#1e90ff" (dodger blue) or something. Must be single hex. Let's pick "#4a90e2". Or maybe "#00bfff". Let's pick "#00bfff". Ensure format #xxxxxx.
+
+Logo: eyebrow: short phrase like "Infinite Resource". mark: maybe "IWB" or "IWB"? Should be 2-4 characters. Let's use "IWB". title: "Infinite Water Bucket". subtitle: a short description about duplication, automation, etc. Must be concise, modern, premium. Something like "Never run out of water – automatic refill keeps your bucket full for endless flow." rail_left: "Endless Flow". rail_right: "Zero Waste". Those describe behavior.
+
+description.kicker: maybe "Utility Mod". description.title: "Infinite Water Bucket". description.tagline: a short tagline about launching water? Actually tagline similar to example: "Launch primed TNT..." but for water bucket: "Never run out of water – automatic refill keeps your bucket full for endless flow." Must be concise.
+
+description.chips: 2-4 short labels. Could be ["Infinite Water", "Automatic Refill", "Survival Friendly"] maybe 3 items. Must be short labels.
+
+description.stats: exactly 2 items. Each has value (string), label, note (short sentence). Must describe actual behavior. For example:
+
+- value "Never", label "Bucket Loss", note "Buckets retain their contents after placement."
+- value "100%", label "Reliability", note "Works every tick without fail."
+
+But need to be concise. Let's craft:
+
+stats[0]: value "0", label "Buckets Lost", note "Buckets keep their fill after each use."
+stats[1]: value "∞", label "Uptime", note "Endless water flow for any build."
+
+But value must be a string; can be "0" or "∞". Use "∞" maybe okay. But note must be one short sentence.
+
+Make sure each stats.note is one short sentence.
+
+Now ensure JSON shape exactly matches. Provide only JSON, no extra text.
+
+Let's construct JSON:
+
+{
+  "accent_color": "#00bfff",
+  "background_image": "ocean.jpg",
+  "logo": {
+    "eyebrow": "Infinite Resource",
+    "mark": "IWB",
+    "title": "Infinite Water Bucket",
+    "subtitle": "Automatic refill keeps your bucket full for endless flow.",
+    "rail_left": "Endless Flow",
+    "rail_right": "Zero Waste"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Infinite Water Bucket",
+    "tagline": "Never run out of water – automatic refill keeps your bucket full for endless flow.",
+    "chips": [
+      "Infinite Water",
+      "Automatic Refill",
+      "Survival Friendly"
+    ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Buckets Lost",
+        "note": "Buckets retain their fill after each placement."
+      },
+      {
+        "value": "∞",
+        "label": "Uptime",
+        "note": "Works continuously without interruption."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename "ocean.jpg". logo.mark is "IWB" (3 chars). subtitle is concise. rail_left and rail_right describe behavior. description.kicker "Utility Mod". description.title "Infinite Water Bucket". tagline concise. chips list has 3 items, each short. stats has exactly 2 items, each with value, label, note. notes are short sentences. All strings concise and polished. No mention of draft etc. Looks good.
+
+Make sure JSON is valid: no trailing commas. Provide only JSON.

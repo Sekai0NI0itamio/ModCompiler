@@ -1,0 +1,76 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must not mention draft etc. Must describe actual mod behavior.
+
+We need to choose background_image filename from options that best fits mod. The mod is about protecting farmland from mob trampling. Which background image fits? Probably "winter forest with sunset.jpg" or "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png". The mod is about protecting crops, maybe a serene nature vibe. Could pick "winter forest with sunset.jpg". That seems fitting. Let's choose that.
+
+Accent color: maybe #ff7f2f (orange) as example. Could use same? Must be a single hex color. Use #ff7f2f.
+
+Logo: eyebrow: short phrase like "Crop Guardian". mark: maybe "SP". title: "Seed Protect". subtitle: a short phrase describing mod: "Preserves farmland integrity, safeguarding crops from trampling." rail_left: maybe "Trample‑Proof". rail_right: "Crop‑Safe". Must describe actual behavior.
+
+description: kicker: maybe "Utility Mod". title: "Seed Protect". tagline: "Prevents mob and player trampling, keeping farmland intact and crops thriving." chips: array of 2-4 short labels: maybe ["Trample Immunity","Crop Preservation","Vanilla Compatible"]. stats: exactly 2 items. Each with value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats could be:
+- value: "100%" label: "Farmland Preservation" note: "Farmland never converts to dirt when stepped on."
+- value: "All Mobs" label: "Universal Protection" note: "All hostile and passive mobs are blocked from trampling."
+
+But note must be one short sentence. Ensure each note is short.
+
+Make sure chips length 2-4. Let's use 3 chips: ["Trample Immunity","Crop Preservation","Vanilla Compatible"].
+
+Stats array with exactly 2 items. Provide value as string maybe "100%" and "All Mobs". Provide label and note.
+
+Make sure JSON structure matches exactly.
+
+Let's craft JSON:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "Crop Guardian",
+    "mark": "SP",
+    "title": "Seed Protect",
+    "subtitle": "Preserves farmland integrity, safeguarding crops from trampling.",
+    "rail_left": "Trample‑Proof",
+    "rail_right": "Crop‑Safe"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Seed Protect",
+    "tagline": "Prevents mob and player trampling, keeping farmland intact and crops thriving.",
+    "chips": [
+      "Trample Immunity",
+      "Crop Preservation",
+      "Vanilla Compatible"
+    ],
+    "stats": [
+      {
+        "value": "100%",
+        "label": "Farmland Preservation",
+        "note": "Farmland never converts to dirt when stepped on."
+      },
+      {
+        "value": "All Mobs",
+        "label": "Universal Protection",
+        "note": "All hostile and passive mobs are blocked from trampling."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, background_image exact filename from options: "winter forest with sunset.jpg" is in list. Good.
+
+logo.mark is "SP" (2 chars). eyebrow is "Crop Guardian". subtitle is a short phrase, okay.
+
+rail_left "Trample‑Proof" includes hyphen, okay. rail_right "Crop‑Safe". They must describe actual behavior, they do.
+
+description.chips length 3, okay.
+
+stats exactly 2 items, each with value, label, note. Note is short sentence.
+
+All strings concise and polished.
+
+No mention of draft etc.
+
+Return only JSON. Ensure no extra whitespace? It's okay.
+
+Let's output exactly that JSON.

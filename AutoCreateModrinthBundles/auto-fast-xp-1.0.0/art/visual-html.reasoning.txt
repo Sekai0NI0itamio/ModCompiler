@@ -1,0 +1,61 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must not mention draft status etc. Must describe actual mod behavior.
+
+We need to pick background image filename from options that matches mood. The mod is about XP bottles thrown rapidly. Mood maybe "fire burning.jpg"? Or "mountain breeze with spring forest.png"? Probably something more energetic. Could choose "fire burning.jpg". That seems fitting for rapid action. Or "ocean.jpg"? Not as relevant. "purple flowers and sun set or sun rise.png"? Not. "winter forest with sunset.jpg"? Not. I'd choose "fire burning.jpg". It's in options.
+
+Accent color: choose a hex like #ff7f2f (orange) as example. Could use #ff6b6b or #ff7f2f. Use same as example? It's okay. Use #ff7f2f.
+
+Logo: eyebrow: short phrase maybe "XP Surge". mark: maybe "AF". title: "Auto Fast XP". subtitle: a short phrase describing behavior: "Rapid XP bottle discharge on hold". rail_left: "Instant Leveling". rail_right: "Unlimited Throwing". Must be concise.
+
+Description: kicker: maybe "Utility Mod". title: "Auto Fast XP". tagline: short phrase describing core behavior: "Rapidly throws XP bottles while right‑click is held, preserving your stock." chips: 2-4 short labels: maybe ["Instant Throw", "Hold‑to‑Launch", "Creative Safe"]. stats: exactly 2 items. Each stats.value is a string, label, note. Provide value maybe "∞" or "20/s". Use "20/s". label maybe "Bottles per Second". note: "Maximum rate with default settings." Second stat: value "0" maybe "Bottles Consumed". label "Stock Impact". note: "Never reduces your inventory while holding." Must be exactly 2 stats.
+
+Make sure JSON fields are exactly as shape: "accent_color", "background_image", "logo": { "eyebrow": "...", "mark": "...", "title": "...", "subtitle": "...", "rail_left": "...", "rail_right": "..." }, "description": { "kicker": "...", "title": "...", "tagline": "...", "chips": [ "...", "...", ... ], "stats": [ { "value": "...", "label": "...", "note": "..." }, { "value": "...", "label": "...", "note": "..." } ] }.
+
+All strings concise and polished. No extra fields.
+
+Make sure chips array length 2-4. Provide maybe 3 chips.
+
+Make sure stats array length exactly 2.
+
+Make sure each stats.note is one short sentence.
+
+Make sure no mention of draft etc.
+
+Now produce JSON only.
+
+Let's craft:
+
+accent_color: "#ff7f2f"
+
+background_image: "fire burning.jpg"
+
+logo: 
+eyebrow: "XP Surge"
+mark: "AF"
+title: "Auto Fast XP"
+subtitle: "Rapid discharge of XP bottles on hold"
+rail_left: "Instant Leveling"
+rail_right: "Unlimited Throwing"
+
+description:
+kicker: "Utility Mod"
+title: "Auto Fast XP"
+tagline: "Throws XP bottles at high speed while right‑click is held, preserving your stock."
+chips: ["Instant Throw", "Hold‑to‑Launch", "Creative Safe"]
+stats: [
+  {
+    "value": "20/s",
+    "label": "Bottles per Second",
+    "note": "Maximum rate under default settings."
+  },
+ {
+    "value": "0",
+    "label": "Stock Impact",
+    "note": "Never consumes bottles while holding."
+  }
+]
+
+Check constraints: chips length 3 (allowed 2-4). stats length 2. Each note is one short sentence. Good.
+
+Make sure no extra punctuation? It's fine.
+
+Now output JSON only.

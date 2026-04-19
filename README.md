@@ -170,6 +170,42 @@ This repo also includes a larger batch example at `incoming/togglesprint-1.20.1-
 - Forge `1.21.3-1.21.5`
 - Forge `1.21.6-1.21.11`
 
+## Local Mod Compile Script
+
+If you want one local command that uploads a zip bundle, runs the existing GitHub compile workflow, then downloads the finished artifacts back to your computer, use:
+
+```bash
+python3 scripts/mod_compile.py /absolute/or/relative/path/to/your-bundle.zip
+```
+
+Optional Modrinth auto-publish uses the same workflow input the manual GitHub run already supports:
+
+```bash
+python3 scripts/mod_compile.py /path/to/your-bundle.zip \
+  --modrinth-project-url https://modrinth.com/mod/your-project
+```
+
+What this script does:
+
+- Creates a temporary GitHub branch from the current committed `HEAD`
+- Copies your zip into `incoming/mod-compile/<session>/...`
+- Dispatches `.github/workflows/build.yml`
+- Waits for the run to finish
+- Downloads `all-mod-builds` into `ModCompileRuns/<session>/`
+- Also downloads `modrinth-publish` when `--modrinth-project-url` is provided
+- Writes `request.json`, `result.json`, and `SUMMARY.md` alongside the downloaded artifacts
+
+Requirements:
+
+- `git`
+- `gh`
+- A GitHub token in `GH_TOKEN` or `GITHUB_TOKEN` with repo write access and workflow dispatch access
+
+Notes:
+
+- The script uploads only the committed repo state plus the selected zip bundle. Uncommitted local repo changes are not included in the temporary branch.
+- `--max-parallel` accepts either `all` or a positive integer and is passed straight through to the workflow input.
+
 ## Jar Decompile Workflow
 
 The repo also includes a second manual workflow named `Jar Decompile`.
@@ -197,3 +233,79 @@ The `jar-decompile-output` artifact contains:
 - `result.json`
 
 If the workflow input is wrong or decompilation fails, the run still writes `decompile.log`, `SUMMARY.md`, and `result.json` so the failure is inspectable from the artifact.
+
+## Auto Create Modrinth Drafts
+
+Use the local draft helper when you want to decompile jars, generate listing copy and art, optionally create public GitHub source/docs repos, then upload the verified bundle to Modrinth:
+
+```bash
+python3 scripts/auto_create_modrinth_draft_projects.py generate
+python3 scripts/auto_create_modrinth_draft_projects.py create-drafts --verified
+```
+
+`generate` now expects `ToBeUploaded/` to contain one folder per mod bundle, and each bundle folder must contain:
+
+- exactly one top-level mod `.jar`
+- exactly one top-level source-code folder
+
+Example layout:
+
+```text
+ToBeUploaded/
+  1/
+    All-Mobs-Hate-The-SUN.jar
+    All-Most-Hate-The-SUN/
+      src/...
+  2/
+    Instant-Hoppers-1.0.jar
+    Instant-Hoppers-Src/
+      instanthoppers/Main.java
+```
+
+The AI prompt now uses the provided source folder for `projectinfo.txt`, while the remote decompile workflow is still used to collect jar-derived metadata and validation details.
+
+Useful flags:
+
+- `--github-owner <user-or-org>`: owner for generated public per-mod GitHub repos. If omitted, the script uses the owner from the current `origin` remote.
+- `--nolinks`: disables GitHub repo/wiki/issues link generation during `generate`, and strips all external links from the Modrinth draft payload during `create-drafts`.
+
+Examples:
+
+```bash
+python3 scripts/auto_create_modrinth_draft_projects.py generate --github-owner Sekai0NI0itamio
+python3 scripts/auto_create_modrinth_draft_projects.py generate --nolinks
+python3 scripts/auto_create_modrinth_draft_projects.py create-drafts --verified --nolinks
+```
+
+When link generation is enabled, `generate` now creates one public GitHub repo per mod slug and keeps it safe to rerun:
+
+- Enables GitHub Issues and GitHub Wiki on the repo
+- Pushes the provided source tree plus `mod_info.txt` when available
+- Writes a generated `README.md`
+- Adds GitHub issue templates under `.github/ISSUE_TEMPLATE`
+- Pushes a small GitHub Wiki with `Home`, `Installation`, and `Troubleshooting`
+- Stores the generated link state in `external_links.json` inside the bundle
+
+Safety note:
+
+- If the target repo or wiki already exists and is not marked as ModCompiler-managed, the script reuses the URLs but does not overwrite its content.
+
+### GitHub Token Permissions
+
+Recommended classic PAT scopes:
+
+- `repo`
+- `workflow`
+
+Recommended fine-grained PAT permissions:
+
+- Repository access: `All repositories` under the target owner, or at minimum the current `ModCompiler` repo plus the generated per-mod repos
+- `Administration`: `Read and write`
+- `Contents`: `Read and write`
+- `Actions`: `Read and write`
+
+Why those are needed:
+
+- `Administration` is used to create public repositories and ensure issues/wiki are enabled
+- `Contents` is used to push the decompiled source snapshot, README, and issue templates
+- `Actions` is used by the existing ModCompiler workflow dispatch and wait/download flow

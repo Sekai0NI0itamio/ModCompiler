@@ -1,0 +1,45 @@
+{
+  "com/loadmyworldproperly/LoadMyWorldProperlyMod": {
+    "name": "com/loadmyworldproperly/LoadMyWorldProperlyMod",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "com/loadmyworldproperly/LoadMyWorldProperlyMod",
+        "values": {
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "clientSideOnly": {
+            "type": "BOOL",
+            "value": "true"
+          },
+          "modid": {
+            "value": "loadmyworldproperly"
+          },
+          "name": {
+            "value": "Load My World PROPERLY"
+          },
+          "version": {
+            "value": "1.0.0"
+          }
+        }
+      },
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventBusSubscriber;",
+        "target": "com/loadmyworldproperly/LoadMyWorldProperlyMod",
+        "values": {
+          "modid": {
+            "value": "loadmyworldproperly"
+          }
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onClientTick(Lnet/minecraftforge/fml/common/gameevent/TickEvent$ClientTickEvent;)V"
+      }
+    ]
+  }
+}

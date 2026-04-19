@@ -1,0 +1,64 @@
+We need to output JSON with exact shape. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must use approved example composition language but adapt words.
+
+We need to choose background_image from options. The mod is about TNT duplication, industrial identity. Probably "fire burning.jpg" or "winter forest with sunset.jpg" or "mountain breeze with spring forest.png". The recommended strong preferences: fire burning.jpg, winter forest with sunset.jpg, mountain breeze with spring forest.png. Which fits? Fire burning maybe fits explosive theme. Winter forest with sunset maybe less. Mountain breeze with spring forest maybe not. I'd choose "fire burning.jpg". That filename is exactly "fire burning.jpg". Must match exactly.
+
+Accent color: need a single hex like "#ff7f2f". Could use "#ff7a18" or "#ff7f2f". Use "#ff7f2f" as example. Provide that.
+
+Logo: eyebrow: short phrase maybe "Industrial Duplication". mark: maybe "TD". title: "TNT Duper". subtitle: a short phrase describing sharper industrial identity built around duplication, ignition, and redstone-scale impact. Must be concise. rail_left: "Redstone Ready". rail_right: "Infinite Payload". Those are from example but must describe actual behavior. They are okay as they describe behavior. Keep them.
+
+Description: kicker: maybe "Utility Mod". title: "TNT Duper". tagline: short phrase describing launching primed TNT from dispensers without draining stock, wrapped in sharper industrial presentation built for automated chaos. Must be concise. chips: 2-4 short labels, e.g., ["Infinite TNT", "Dispenser‑Friendly", "Forge 1.12.2"] but must be short labels, 2-4 items. Provide maybe 3 items. stats: exactly 2 items. Each with value (string), label, note (short sentence). Must describe actual behavior. For example:
+
+- value "0", label "Blocks Lost", note "Dispensers keep firing primed TNT while the source stack stays untouched."
+- value "24/7", label "Automation", note "Fits looping redstone systems, testing rigs, and high‑volume explosive contraptions."
+
+But note must be one short sentence. The example uses "Dispensers keep firing primed TNT while the source stack stays untouched." That's okay. For second: "Fits looping redstone systems, testing rigs, and high‑volume explosive contraptions." That's a sentence but maybe too long? It's okay as short sentence. Must be exactly 2 stats.
+
+Make sure JSON keys exactly as specified: "accent_color", "background_image", "logo": { "eyebrow": "...", "mark": "...", "title": "...", "subtitle": "...", "rail_left": "...", "rail_right": "..." }, "description": { "kicker": "...", "title": "...", "tagline": "...", "chips": [ "...", "...", ... ], "stats": [ { "value": "...", "label": "...", "note": "..." }, { "value": "...", "label": "...", "note": "..." } ] }.
+
+All strings concise and polished. No extra fields.
+
+Make sure no trailing commas. Provide valid JSON.
+
+Let's craft:
+
+accent_color: "#ff7f2f"
+
+background_image: "fire burning.jpg"
+
+logo:
+eyebrow: "Industrial Duplication"
+mark: "TD"
+title: "TNT Duper"
+subtitle: "A sharper industrial identity built around duplication, ignition, and redstone-scale impact."
+rail_left: "Redstone Ready"
+rail_right: "Infinite Payload"
+
+description:
+kicker: "Utility Mod"
+title: "TNT Duper"
+tagline: "Launch primed TNT from dispensers without draining your stock, wrapped in a sharper industrial presentation built for automated chaos."
+chips: ["Infinite TNT", "Redstone Driven", "Forge 1.12.2"]
+stats: [
+  {
+    "value": "0",
+    "label": "Blocks Lost",
+    "note": "Dispensers keep firing primed TNT while the source stack stays untouched."
+  },
+  {
+    "value": "24/7",
+    "label": "Automation",
+    "note": "Fits looping redstone systems, testing rigs, and high‑volume explosive contraptions."
+  }
+]
+
+Check constraints: chips 2-4 items, we have 3. stats exactly 2 items, we have 2. Each note is one short sentence. Yes.
+
+Make sure no extra fields. Provide only JSON.
+
+Check that background_image filename matches exactly one of the options: "fire burning.jpg". Yes.
+
+Make sure accent_color is a single hex color like "#ff7f2f". Yes.
+
+Make sure all strings concise and polished. Looks good.
+
+Now output JSON only.

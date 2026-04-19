@@ -1,0 +1,25 @@
+# Auto Create Modrinth Draft Bundle
+
+- Status: `draft_created`
+- Bundle slug: `keep-inventory-1.0.0`
+- Jar: `Keep-Inventory-1.0.0.jar`
+- Loader: `forge`
+- Detected game versions: `1.12.2`
+
+## Listing Preview
+
+- Name: `Keep Inventory`
+- Summary: `Enforces keepInventory gamerule to always be true. Never lose your items on death!`
+
+## Next Step
+
+Draft created on Modrinth project `keep-inventory` (`KhzJrsXJ`), version `1G4vGqYx`. Review it on Modrinth and submit it manually when ready.
+Project link: https://modrinth.com/mod/keep-inventory
+Version link: https://modrinth.com/mod/keep-inventory/version/1G4vGqYx
+
+## Warnings
+
+GitHub wiki sync failed: ModCompilerError: Command failed: git -c http.https://github.com/.extraheader=AUTHORIZATION: basic <redacted> push origin HEAD:refs/heads/master
+remote: Repository not found.
+fatal: repository 'https://github.com/Sekai0NI0itamio/keep-inventory.wiki.git/' not found
+Falling back to repository docs page for wiki link: https://github.com/Sekai0NI0itamio/keep-inventory/blob/main/docs/Home.md

@@ -1,0 +1,137 @@
+We need to output JSON with shape as described. Must include accent_color, background_image, logo object with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. Also description object with kicker, title, tagline, chips (array 2-4 items), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior, not project status. Must not mention draft etc. Must match style of examples.
+
+We need to generate compact visual content data for one mod page: "Instant Leaf Decay". Provide accent_color hex, background_image filename from options list. Choose best fit. Probably "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png" or "winter forest with sunset.jpg". The mod is about leaf decay, maybe nature vibe. Could choose "mountain breeze with spring forest.png". That seems appropriate.
+
+Now fill fields.
+
+accent_color: choose a hex, maybe #ff7f2f (orange) as example, but can choose any. Must be single hex.
+
+background_image: exact filename, e.g., "mountain breeze with spring forest.png".
+
+logo: 
+- eyebrow: short phrase, maybe "Nature Cleanup"
+- mark: short monogram, maybe "IL" (Instant Leaf) or "ILD"? Must be 2-4 characters. Let's use "IL". 
+- title: "Instant Leaf Decay"
+- subtitle: a short phrase describing mod's behavior: "Instant leaf removal, zero particles, preserved drops"
+- rail_left: something like "Zero Lag"
+- rail_right: "Full Compatibility"
+
+But must describe actual mod behavior, not project status. So "Zero Lag" is okay as behavior? It describes performance. "Full Compatibility" maybe okay but could be considered status? It's about compatibility with all tree types, which is behavior. Could be "All Tree Types". That's behavior. So rail_left: "Zero Particles", rail_right: "All Tree Types". Or "Instant Decay" and "No Particles"? Let's pick "Instant Decay" and "All Trees". But need short phrases.
+
+logo.eyebrow: maybe "Utility". Or "Automation". But must be concise. Let's use "Nature Cleanup". That's okay.
+
+logo.mark: "IL" (2 chars). Good.
+
+logo.title: "Instant Leaf Decay"
+
+logo.subtitle: "Instant leaf removal, zero particles, preserved drops"
+
+logo.rail_left: "Zero Particles"
+
+logo.rail_right: "All Tree Types"
+
+Now description:
+
+kicker: maybe "Utility Mod" (like example). Could be "Utility Mod". Title: "Instant Leaf Decay". Tagline: short phrase describing behavior: "Leaves vanish instantly, no particles, drops preserved". Must be concise.
+
+chips: 2-4 short labels. Could be ["Instant Decay","No Particles","All Trees","Vanilla Drops"] but must be 2-4 items. Let's include 3 items: "Instant Decay", "Zero Particles", "All Trees". Or maybe "Vanilla Drops" also. Let's do 3 items: "Instant Decay", "Zero Particles", "All Trees". That's 3, okay.
+
+stats: exactly 2 items. Each has value (string), label, note (short sentence). Must describe actual mod behavior.
+
+Stat 1: value "0" maybe "Particles Removed"? Actually value is a string, maybe "0" as placeholder? In example they used "0" for Blocks Lost. We can use "0" for something like "Lag Eliminated". But value should be a short string, maybe "0%"? But they used "0" exactly. Let's follow example: value "0". Provide label like "Particles". Note: "No leaf particles are emitted". That's a short sentence.
+
+Stat 2: value "24/7" maybe "Automation"? But we need to describe behavior. Could be "Full Tree Coverage". Value maybe "100%"? But example used "24/7". Let's use "100%"? But they used "24/7". Could use "Always On". But maybe better to use "Always Active". But value must be a string; can be "Always". Let's use "Always". But example used "24/7". Let's use "Always". Might be okay. But maybe better to use "Full Coverage". Let's use "100%". But they used "24/7" as value. Let's use "Always". Provide label "Performance". Note: "No frame‑rate impact from leaf decay". That's short.
+
+But we need exactly 2 stats items.
+
+Let's craft:
+
+stats: [
+  {
+    "value": "0",
+    "label": "Particles",
+    "note": "No leaf particles are emitted."
+  },
+  {
+    "value": "Always",
+    "label": "Decay",
+    "note": "Leaves disappear the moment a log is broken."
+  }
+]
+
+But note must be one short sentence. That's okay.
+
+Now ensure description.chips array length 2-4. We'll have 3 items.
+
+Now ensure description.title is "Instant Leaf Decay". description.kicker maybe "Utility Mod". description.tagline maybe "Leaves vanish instantly, no particles, drops preserved." That's concise.
+
+Now ensure all strings concise and polished.
+
+Now produce JSON exactly as shape.
+
+Check required fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "mountain breeze with spring forest.png",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+    "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      { "value": "...", "label": "...", "note": "..." },
+      { "value": "...", "label": "...", "note": "..." }
+    ]
+  }
+}
+
+Make sure no extra fields.
+
+Now choose accent_color maybe #ff7f2f (orange) as example, but could choose something else. Use #ff7f2f.
+
+Now fill values:
+
+accent_color: "#ff7f2f"
+
+background_image: "mountain breeze with spring forest.png"
+
+logo:
+eyebrow: "Nature Cleanup"
+mark: "IL"
+title: "Instant Leaf Decay"
+subtitle: "Instant leaf removal, zero particles, preserved drops"
+rail_left: "Zero Particles"
+rail_right: "All Tree Types"
+
+description:
+kicker: "Utility Mod"
+title: "Instant Leaf Decay"
+tagline: "Leaves vanish instantly, no particles, drops preserved."
+chips: ["Instant Decay","Zero Particles","All Trees"]
+stats: [
+  {
+    "value": "0",
+    "label": "Particles",
+    "note": "No leaf particles are emitted."
+  },
+  {
+    "value": "Always",
+    "label": "Decay",
+    "note": "Leaves disappear the moment a log is broken."
+  }
+]
+
+Check constraints: chips length 3 (2-4). stats exactly 2 items. Each note is one short sentence. Good.
+
+Now ensure no mention of draft, etc. All good.
+
+Now output JSON only.

@@ -1,0 +1,110 @@
+{
+  "com/hostilemobs/HostileMobsMod": {
+    "name": "com/hostilemobs/HostileMobsMod",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "com/hostilemobs/HostileMobsMod",
+        "values": {
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "modid": {
+            "value": "hostilemobs"
+          },
+          "name": {
+            "value": "Hostile Mobs"
+          },
+          "version": {
+            "value": "1.0.0"
+          }
+        }
+      },
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventBusSubscriber;",
+        "target": "com/hostilemobs/HostileMobsMod",
+        "values": {
+          "modid": {
+            "value": "hostilemobs"
+          }
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "preInit(Lnet/minecraftforge/fml/common/event/FMLPreInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "serverStopping(Lnet/minecraftforge/fml/common/event/FMLServerStoppingEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onPlayerLogin(Lnet/minecraftforge/fml/common/gameevent/PlayerEvent$PlayerLoggedInEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onEntityJoin(Lnet/minecraftforge/event/entity/EntityJoinWorldEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onWorldTick(Lnet/minecraftforge/fml/common/gameevent/TickEvent$WorldTickEvent;)V"
+      }
+    ]
+  },
+  "com/nohostilemobs/MobSpawnHandler": {
+    "name": "com/nohostilemobs/MobSpawnHandler",
+    "annotations": [
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onMobSpawn(Lnet/minecraftforge/event/entity/living/LivingSpawnEvent$CheckSpawn;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onWorldTick(Lnet/minecraftforge/fml/common/gameevent/TickEvent$WorldTickEvent;)V"
+      }
+    ]
+  },
+  "com/nohostilemobs/NoHostileMobsMod": {
+    "name": "com/nohostilemobs/NoHostileMobsMod",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "com/nohostilemobs/NoHostileMobsMod",
+        "values": {
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "modid": {
+            "value": "nohostilemobs"
+          },
+          "name": {
+            "value": "No Hostile Mobs"
+          },
+          "version": {
+            "value": "1.0.0"
+          }
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "preInit(Lnet/minecraftforge/fml/common/event/FMLPreInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "init(Lnet/minecraftforge/fml/common/event/FMLInitializationEvent;)V"
+      }
+    ]
+  }
+}

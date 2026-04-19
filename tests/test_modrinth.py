@@ -8,9 +8,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from modcompiler.modrinth import (
+    build_modrinth_auth_failure_message,
     build_modrinth_version_payload,
     command_publish_modrinth,
     normalize_modrinth_project_ref,
+    required_modrinth_scope_for_request,
     select_primary_jar,
 )
 
@@ -57,6 +59,25 @@ class ModrinthTests(unittest.TestCase):
         self.assertEqual(payload["game_versions"], ["1.21.11"])
         self.assertEqual(payload["loaders"], ["fabric"])
         self.assertEqual(payload["file_parts"], ["file"])
+        self.assertEqual(payload["primary_file"], "file")
+
+    def test_required_modrinth_scope_for_request_matches_publish_endpoints(self) -> None:
+        self.assertEqual(required_modrinth_scope_for_request("POST", "/project"), "PROJECT_CREATE")
+        self.assertEqual(required_modrinth_scope_for_request("POST", "/version"), "VERSION_CREATE")
+        self.assertEqual(required_modrinth_scope_for_request("PATCH", "/project/demo"), "PROJECT_WRITE")
+        self.assertEqual(required_modrinth_scope_for_request("PATCH", "/version/demo"), "VERSION_WRITE")
+        self.assertEqual(required_modrinth_scope_for_request("GET", "/project/demo"), "")
+
+    def test_build_modrinth_auth_failure_message_includes_scope_hint(self) -> None:
+        message = build_modrinth_auth_failure_message(
+            method="POST",
+            path="/project",
+            payload_text='{"error":"unauthorized","description":"Authentication Error: Invalid Authentication Credentials"}',
+        )
+
+        self.assertIn("invalid or expired", message)
+        self.assertIn("PROJECT_CREATE", message)
+        self.assertIn("MODRINTH_TOKEN", message)
 
     def test_command_publish_modrinth_writes_failure_artifacts_when_token_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

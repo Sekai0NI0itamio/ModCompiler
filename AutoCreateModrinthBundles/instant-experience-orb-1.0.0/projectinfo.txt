@@ -1,0 +1,220 @@
+# Project Info
+
+generated_at=2026-04-10T14:12:39+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/30/Instant-Experience-Orb-1.0.0.jar
+jar_size_bytes=6726
+jar_sha1=db6532fb6837f0c078158dda7bb409189366843c
+
+## Detected Metadata
+
+jar_name=Instant-Experience-Orb-1.0.0.jar
+jar_display_name=Instant Experience Orb
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=instantxp
+name=Instant Experience Orb
+mod_version=1.0.0
+description=Instantly absorb XP orbs, clump them together to reduce lag, and use simplified 1 orb = 1 level system!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-experience-orb-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-experience-orb-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.instantxp
+
+## Source Tree
+
+asd/itamio/instantxp/InstantXPConfig.java
+asd/itamio/instantxp/InstantXPHandler.java
+asd/itamio/instantxp/InstantXPMod.java
+
+## Key Source Excerpts
+
+### asd/itamio/instantxp/InstantXPHandler.java
+```
+package asd.itamio.instantxp;
+
+import net.minecraft.entity.item.EntityXPOrb;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.player.PlayerPickupXpEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+import java.util.List;
+
+public class InstantXPHandler {
+    
+    // Instant XP absorption - give XP immediately without delay
+    @SubscribeEvent
+    public void onXPPickup(PlayerPickupXpEvent event) {
+        if (!InstantXPConfig.enabled) return;
+        if (!InstantXPConfig.instantAbsorption && !InstantXPConfig.simplifiedLeveling) return;
+        
+        EntityPlayer player = event.getEntityPlayer();
+        EntityXPOrb orb = event.getOrb();
+        
+        if (player != null && orb != null) {
+            int xpValue = orb.xpValue;
+            
+            if (InstantXPConfig.simplifiedLeveling) {
+                // Simplified: 1 XP orb = 1 level
+                player.addExperienceLevel(xpValue);
+            } else if (InstantXPConfig.instantAbsorption) {
+                // Instant absorption with vanilla leveling
+                player.addExperience(xpValue);
+            }
+            
+            // Remove the orb
+            orb.setDead();
+            
+            // Cancel the event to prevent vanilla XP handling
+            event.setCanceled(true);
+        }
+    }
+    
+    // Clump nearby XP orbs together to reduce lag
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (!InstantXPConfig.enabled) return;
+        if (!InstantXPConfig.clumpOrbs) return;
+        if (event.phase != TickEvent.Phase.END) return;
+        if (event.world.isRemote) return; // Only run on server
+        
+        // Only check every 20 ticks (1 second) to reduce performance impact
+        if (event.world.getTotalWorldTime() % 20 != 0) return;
+        
+        List<EntityXPOrb> orbs = event.world.getEntities(EntityXPOrb.class, orb -> orb != null && !orb.isDead);
+        
+        for (int i = 0; i < orbs.size(); i++) {
+            EntityXPOrb mainOrb = orbs.get(i);
+            if (mainOrb.isDead) continue;
+            
+            // Find nearby orbs within clump radius
+            AxisAlignedBB searchBox = new AxisAlignedBB(
+                mainOrb.posX - InstantXPConfig.clumpRadius,
+                mainOrb.posY - InstantXPConfig.clumpRadius,
+                mainOrb.posZ - InstantXPConfig.clumpRadius,
+                mainOrb.posX + InstantXPConfig.clumpRadius,
+                mainOrb.posY + InstantXPConfig.clumpRadius,
+                mainOrb.posZ + InstantXPConfig.clumpRadius
+            );
+            
+            List<EntityXPOrb> nearbyOrbs = event.world.getEntitiesWithinAABB(
+                EntityXPOrb.class,
+                searchBox,
+                orb -> orb != null && !orb.isDead && orb != mainOrb
+            );
+            
+            // Merge nearby orbs into the main orb
+            for (EntityXPOrb nearbyOrb : nearbyOrbs) {
+                if (nearbyOrb.isDead) continue;
+                
+                // Add the XP value to the main orb
+                mainOrb.xpValue += nearbyOrb.xpValue;
+                
+                // Remove the nearby orb
+                nearbyOrb.setDead();
+            }
+        }
+    }
+}
+```
+
+### asd/itamio/instantxp/InstantXPMod.java
+```
+package asd.itamio.instantxp;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
+import org.apache.logging.log4j.Logger;
+import java.io.File;
+
+@Mod(modid = InstantXPMod.MODID, name = InstantXPMod.NAME, version = InstantXPMod.VERSION)
+public class InstantXPMod {
+    public static final String MODID = "instantxp";
+    public static final String NAME = "Instant Experience Orb";
+    public static final String VERSION = "1.0.0";
+    
+    public static Logger logger;
+    public static InstantXPConfig config;
+    
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new InstantXPConfig(new File(event.getModConfigurationDirectory(), "instantxp.cfg"));
+    }
+    
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new InstantXPHandler());
+        logger.info("Instant Experience Orb mod initialized!");
+    }
+}
+```
+
+### asd/itamio/instantxp/InstantXPConfig.java
+```
+package asd.itamio.instantxp;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+
+public class InstantXPConfig {
+    private Configuration config;
+    
+    public static boolean enabled = true;
+    public static boolean instantAbsorption = true;
+    public static boolean clumpOrbs = true;
+    public static boolean simplifiedLeveling = true;
+    public static double clumpRadius = 3.0;
+    
+    public InstantXPConfig(File configFile) {
+        config = new Configuration(configFile);
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enabled = config.getBoolean("enabled", "general", true, 
+            "Enable instant experience orb features");
+        
+        instantAbsorption = config.getBoolean("instantAbsorption", "general", true,
+            "Instantly absorb XP orbs without delay");
+        
+        clumpOrbs = config.getBoolean("clumpOrbs", "general", true,
+            "Clump nearby XP orbs together to reduce lag");
+        
+        simplifiedLeveling = config.getBoolean("simplifiedLeveling", "general", true,
+            "Use simplified leveling: 1 XP orb = 1 level");
+        
+        clumpRadius = config.getFloat("clumpRadius", "general", 3.0f, 1.0f, 10.0f,
+            "Radius in blocks for clumping XP orbs together");
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void save() {
+        config.get("general", "enabled", true).set(enabled);
+        config.get("general", "instantAbsorption", true).set(instantAbsorption);
+        config.get("general", "clumpOrbs", true).set(clumpOrbs);
+        config.get("general", "simplifiedLeveling", true).set(simplifiedLeveling);
+        config.get("general", "clumpRadius", 3.0f).set(clumpRadius);
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+```

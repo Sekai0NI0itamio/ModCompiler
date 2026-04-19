@@ -1,0 +1,322 @@
+build (sortchest-fabric-1-18-1)	Set up job	﻿2026-04-18T06:08:02.6728944Z Current runner version: '2.333.1'
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6755907Z ##[group]Runner Image Provisioner
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6756714Z Hosted Compute Agent
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6757221Z Version: 20260213.493
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6757875Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6758600Z Build Date: 2026-02-13T00:28:41Z
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6759216Z Worker ID: {66ad70d1-a76b-40e2-8ee9-6fd5f94a47f8}
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6759957Z Azure Region: westus3
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6760492Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6761895Z ##[group]Operating System
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6762571Z Ubuntu
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6763026Z 24.04.4
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6763472Z LTS
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6763915Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6764413Z ##[group]Runner Image
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6764911Z Image: ubuntu-24.04
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6765743Z Version: 20260413.86.1
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6766818Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6768503Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6769354Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6770391Z ##[group]GITHUB_TOKEN Permissions
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6772381Z Contents: read
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6772938Z Metadata: read
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6773384Z Packages: read
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6773979Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6776475Z Secret source: Actions
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.6777280Z Prepare workflow directory
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.7126128Z Prepare all required actions
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:02.7168553Z Getting action download info
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:03.2205209Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:03.3728009Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:03.4944224Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:04.7043140Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:04.9020430Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:05.8531641Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build (sortchest-fabric-1-18-1)	Set up job	2026-04-18T06:08:06.1764152Z Complete job name: build (sortchest-fabric-1-18-1)
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	﻿2026-04-18T06:08:06.2476678Z ##[group]Run actions/checkout@v4
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2477570Z with:
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2477964Z   repository: Sekai0NI0itamio/ModCompiler
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2478706Z   token: ***
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2479004Z   ssh-strict: true
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2479302Z   ssh-user: git
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2479614Z   persist-credentials: true
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2479909Z   clean: true
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2480262Z   sparse-checkout-cone-mode: true
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2480623Z   fetch-depth: 1
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2480909Z   fetch-tags: false
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2481274Z   show-progress: true
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2481549Z   lfs: false
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2481821Z   submodules: false
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2482066Z   set-safe-directory: true
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.2482748Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.3626725Z Syncing repository: Sekai0NI0itamio/ModCompiler
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.3628873Z ##[group]Getting Git version info
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.3629538Z Working directory is '/home/runner/work/ModCompiler/ModCompiler'
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.3630508Z [command]/usr/bin/git version
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4235707Z git version 2.53.0
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4265671Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4283344Z Temporarily overriding HOME='/home/runner/work/_temp/ecd13620-316a-4324-a73b-28660029fb9f' before making global git config changes
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4284408Z Adding repository directory to the temporary git global config as a safe directory
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4298852Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4336463Z Deleting the contents of '/home/runner/work/ModCompiler/ModCompiler'
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4340973Z ##[group]Initializing the repository
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4345972Z [command]/usr/bin/git init /home/runner/work/ModCompiler/ModCompiler
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4565624Z hint: Using 'master' as the name for the initial branch. This default branch name
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4570516Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4572032Z hint: to use in all of your new repositories, which will suppress this warning,
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4572963Z hint: call:
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4573430Z hint:
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4574566Z hint: 	git config --global init.defaultBranch <name>
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4575252Z hint:
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4576288Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4577442Z hint: 'development'. The just-created branch can be renamed via this command:
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4578201Z hint:
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4578763Z hint: 	git branch -m <name>
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4579308Z hint:
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4580014Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4581132Z Initialized empty Git repository in /home/runner/work/ModCompiler/ModCompiler/.git/
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4583686Z [command]/usr/bin/git remote add origin https://github.com/Sekai0NI0itamio/ModCompiler
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4617737Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4618359Z ##[group]Disabling automatic garbage collection
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4623891Z [command]/usr/bin/git config --local gc.auto 0
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4654627Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4655946Z ##[group]Setting up auth
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4663159Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.4696820Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.5904705Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.5937337Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.6160641Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.6191488Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.6429571Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.6477174Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.6478365Z ##[group]Fetching the repository
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:06.6487926Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +73153f3a868eb9fd689d251657de314c3aef68eb:refs/remotes/origin/main
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8254150Z From https://github.com/Sekai0NI0itamio/ModCompiler
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8254871Z  * [new ref]         73153f3a868eb9fd689d251657de314c3aef68eb -> origin/main
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8282183Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8282946Z ##[group]Determining the checkout info
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8284949Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8290644Z [command]/usr/bin/git sparse-checkout disable
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8328224Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8354273Z ##[group]Checking out the ref
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:08.8359116Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:09.2856687Z Switched to a new branch 'main'
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:09.2857696Z branch 'main' set up to track 'origin/main'.
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:09.2887868Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:09.2923061Z [command]/usr/bin/git log -1 --format=%H
+build (sortchest-fabric-1-18-1)	Run actions/checkout@v4	2026-04-18T06:08:09.2946058Z 73153f3a868eb9fd689d251657de314c3aef68eb
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	﻿2026-04-18T06:08:09.3259285Z ##[group]Run actions/setup-python@v5
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.3259672Z with:
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.3259886Z   python-version: 3.12
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.3260117Z   check-latest: false
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.3260523Z   token: ***
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.3260749Z   update-environment: true
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.3261003Z   allow-prereleases: false
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.3261250Z   freethreaded: false
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.3261464Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.4967407Z ##[group]Installed versions
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.5447520Z Successfully set up CPython (3.12.13)
+build (sortchest-fabric-1-18-1)	Run actions/setup-python@v5	2026-04-18T06:08:09.5448300Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	﻿2026-04-18T06:08:09.5605831Z ##[group]Run actions/setup-java@v4
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5606219Z with:
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5606408Z   distribution: temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5606672Z   java-version: 8
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	16
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	17
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	21
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5606940Z   java-package: jdk
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5607152Z   check-latest: false
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5607355Z   server-id: github
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5607584Z   server-username: GITHUB_ACTOR
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5607839Z   server-password: GITHUB_TOKEN
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5608083Z   overwrite-settings: true
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5608322Z   job-status: success
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5608708Z   token: ***
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5608906Z env:
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5609153Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5609621Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5610061Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5610436Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5610860Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5611233Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.5611546Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.7705834Z ##[group]Installed distributions
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.7971575Z Resolved Java 8.0.482+8 from tool-cache
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.7972308Z Setting Java 8.0.482+8 as the default
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.7988302Z Creating toolchains.xml for JDK version 8 from temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.8068437Z Writing to /home/runner/.m2/toolchains.xml
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.8069048Z 
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.8069425Z Java configuration:
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.8070253Z   Distribution: temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.8070726Z   Version: 8.0.482+8
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.8071759Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.8072286Z 
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:09.8091060Z Trying to resolve the latest version from remote
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:10.2070430Z Resolved latest version as 16.0.2+7
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:10.2071087Z Trying to download...
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:10.2072548Z Downloading Java 16.0.2+7 (Temurin-Hotspot) from https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_linux_hotspot_16.0.2_7.tar.gz ...
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:11.5267374Z Extracting Java archive...
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:11.5388762Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/725e845d-0d28-469f-a051-d6dc6a4e55d6 -f /home/runner/work/_temp/d5000eb7-050f-4e6a-b348-25caa18a0e06
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2107038Z Java 16.0.2+7 was downloaded
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2107739Z Setting Java 16.0.2+7 as the default
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2111177Z Creating toolchains.xml for JDK version 16 from temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2150807Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2151523Z 
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2151680Z Java configuration:
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2152053Z   Distribution: temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2156220Z   Version: 16.0.2+7
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2156828Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2157328Z 
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2161863Z Resolved Java 17.0.18+8 from tool-cache
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2162389Z Setting Java 17.0.18+8 as the default
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2166757Z Creating toolchains.xml for JDK version 17 from temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2186948Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2721737Z 
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2722466Z Java configuration:
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2722890Z   Distribution: temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2723262Z   Version: 17.0.18+8
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2723787Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2724259Z 
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2737874Z Resolved Java 21.0.10+7 from tool-cache
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2738484Z Setting Java 21.0.10+7 as the default
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2739021Z Creating toolchains.xml for JDK version 21 from temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.2767373Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3664707Z 
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3665528Z Java configuration:
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3666009Z   Distribution: temurin
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3666318Z   Version: 21.0.10+7
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3666968Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3667564Z 
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3669073Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3680817Z Creating settings.xml with server-id: github
+build (sortchest-fabric-1-18-1)	Run actions/setup-java@v4	2026-04-18T06:08:14.3687492Z Writing to /home/runner/.m2/settings.xml
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	﻿2026-04-18T06:08:15.0091911Z ##[group]Run actions/cache@v4
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0092184Z with:
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0092382Z   path: ~/.gradle/caches
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	~/.gradle/wrapper
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0092826Z   key: gradle-Linux-ad4ad21509ab93061346e035af8ce481c885f45c5e0d2c5ca8fd87d9a2a3530b
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0093272Z   restore-keys: gradle-Linux-
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0093520Z   enableCrossOsArchive: false
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0093757Z   fail-on-cache-miss: false
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0093977Z   lookup-only: false
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0094177Z   save-always: false
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0094366Z env:
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0094607Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0095027Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0095748Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0096135Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0096494Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0096912Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0097335Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0097795Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0098268Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0098730Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0099190Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.0099554Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/cache@v4	2026-04-18T06:08:15.4000914Z Cache not found for input keys: gradle-Linux-ad4ad21509ab93061346e035af8ce481c885f45c5e0d2c5ca8fd87d9a2a3530b, gradle-Linux-
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	﻿2026-04-18T06:08:15.4091525Z ##[group]Run actions/download-artifact@v4
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4091835Z with:
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4092023Z   name: prepared-inputs
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4092261Z   path: .workflow_state/prepared
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4092508Z   merge-multiple: false
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4092742Z   repository: Sekai0NI0itamio/ModCompiler
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4093004Z   run-id: 24598519402
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4093187Z env:
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4093429Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4093841Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4094257Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4094616Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4094979Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4095606Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4096022Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4096694Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4097169Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4097629Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4098084Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.4098436Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.6218251Z Downloading single artifact
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.8898496Z Preparing to download the following artifacts:
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:15.8899694Z - prepared-inputs (ID: 6509142336, Size: 249743, Expected Digest: sha256:e06b3f50f1315f7a2f89f5f8d0362b62287a3efd9eb9c8e20d6dff1a6ff0e83f)
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:16.0656724Z Redirecting to blob download url: https://productionresultssa13.blob.core.windows.net/actions-results/8ebae52c-8ab0-44ab-9c83-d5487a4e5324/workflow-job-run-0aa9bca0-219c-5b61-a412-ae6ae5b5c56e/artifacts/cf3e420318736ca90418bfbff1860f5e9bbdd565b9909d72c83a81eabeb90983.zip
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:16.0659219Z Starting download of artifact to: /home/runner/work/ModCompiler/ModCompiler/.workflow_state/prepared
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:16.3298814Z (node:2316) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:16.3299942Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:16.6220778Z SHA256 digest of downloaded artifact is e06b3f50f1315f7a2f89f5f8d0362b62287a3efd9eb9c8e20d6dff1a6ff0e83f
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:16.6221450Z Artifact download completed successfully.
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:16.6221772Z Total of 1 artifact(s) downloaded
+build (sortchest-fabric-1-18-1)	Run actions/download-artifact@v4	2026-04-18T06:08:16.6229062Z Download artifact has finished successfully
+build (sortchest-fabric-1-18-1)	Build one mod	﻿2026-04-18T06:08:16.6357824Z ##[group]Run python build_mods.py build-one \
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6358252Z [36;1mpython build_mods.py build-one \[0m
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6358659Z [36;1m  --plan .workflow_state/prepared/build-plan.json \[0m
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6359037Z [36;1m  --manifest version-manifest.json \[0m
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6359365Z [36;1m  --prepared-dir .workflow_state/prepared \[0m
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6359729Z [36;1m  --slug "sortchest-fabric-1-18-1" \[0m
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6360146Z [36;1m  --artifact-dir ".workflow_artifacts/per-mod/sortchest-fabric-1-18-1"[0m
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6429995Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6430387Z env:
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6430651Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6431108Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6431545Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6431920Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6432352Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6432752Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6433180Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6433652Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6434125Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6434603Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6435076Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:08:16.6435767Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Build one mod	2026-04-18T06:09:36.2207190Z ##[error]Process completed with exit code 1.
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	﻿2026-04-18T06:09:36.2270864Z ##[group]Run actions/upload-artifact@v4
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2271156Z with:
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2271358Z   name: mod-sortchest-fabric-1-18-1
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2271694Z   path: .workflow_artifacts/per-mod/sortchest-fabric-1-18-1
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2272198Z   if-no-files-found: warn
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2272426Z   compression-level: 6
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2272643Z   overwrite: false
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2272855Z   include-hidden-files: false
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2273076Z env:
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2273316Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2273736Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2274139Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2274505Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2274875Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2275472Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2275996Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2276458Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2276930Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2277427Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2277912Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.2278275Z ##[endgroup]
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.4432588Z With the provided path, there will be 4 files uploaded
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.4438351Z Artifact name is valid!
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.4439732Z Root directory input is valid!
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:36.7670512Z Beginning upload of artifact content to blob storage
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:37.0304431Z Uploaded bytes 6093
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:37.0970930Z Finished uploading artifact content to blob storage!
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:37.0974687Z SHA256 digest of uploaded artifact zip is 82234916bdc3646295497254f567f8350aee6c835635b63e858c37dbff28fe76
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:37.0976117Z Finalizing artifact upload
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:37.2674723Z Artifact mod-sortchest-fabric-1-18-1.zip successfully finalized. Artifact ID 6509150705
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:37.2676609Z Artifact mod-sortchest-fabric-1-18-1 has been successfully uploaded! Final size is 6093 bytes. Artifact ID is 6509150705
+build (sortchest-fabric-1-18-1)	Run actions/upload-artifact@v4	2026-04-18T06:09:37.2683206Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/24598519402/artifacts/6509150705
+build (sortchest-fabric-1-18-1)	Post Run actions/setup-java@v4	﻿2026-04-18T06:09:37.2827088Z Post job cleanup.
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	﻿2026-04-18T06:09:37.4541012Z Post job cleanup.
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5485690Z [command]/usr/bin/git version
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5522065Z git version 2.53.0
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5566306Z Temporarily overriding HOME='/home/runner/work/_temp/6ea359c2-5ebb-46bc-aa71-0ed2e92be281' before making global git config changes
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5567727Z Adding repository directory to the temporary git global config as a safe directory
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5572442Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5609130Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5643927Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5875089Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5894840Z http.https://github.com/.extraheader
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5907080Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.5936106Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.6156701Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build (sortchest-fabric-1-18-1)	Post Run actions/checkout@v4	2026-04-18T06:09:37.6185557Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build (sortchest-fabric-1-18-1)	Complete job	﻿2026-04-18T06:09:37.6512209Z Cleaning up orphan processes
+build (sortchest-fabric-1-18-1)	Complete job	2026-04-18T06:09:37.6873409Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v4, actions/download-artifact@v4, actions/setup-java@v4, actions/setup-python@v5, actions/upload-artifact@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

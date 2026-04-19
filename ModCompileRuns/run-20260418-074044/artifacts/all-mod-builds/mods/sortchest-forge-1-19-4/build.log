@@ -1,0 +1,36 @@
+
+Welcome to Gradle 8.8!
+
+Here are the highlights of this release:
+ - Running Gradle on Java 22
+ - Configurable Gradle daemon JVM
+ - Improved IDE performance for large projects
+
+For more details see https://docs.gradle.org/8.8/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.8/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Java: 17.0.18, JVM: 17.0.18+8 (Eclipse Adoptium), Arch: amd64
+
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :jar
+> Task :downloadMcpConfig
+> Task :extractSrg
+> Task :createMcpToSrg
+> Task :reobfJar
+> Task :jarJar SKIPPED
+> Task :reobfJarJar SKIPPED
+> Task :assemble
+> Task :build
+
+BUILD SUCCESSFUL in 18s
+7 actionable tasks: 7 executed
+$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.19-1.19.4/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-sortchest-forge-1-19-4-fvw6df0y/metadata.json --source-dir .workflow_state/prepared/mods/sortchest-forge-1-19-4/src --template-workspace /tmp/modcompiler-sortchest-forge-1-19-4-fvw6df0y/workspace --minecraft-version 1.19.4 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+
+
+$ ./modcompiler-build.sh
+

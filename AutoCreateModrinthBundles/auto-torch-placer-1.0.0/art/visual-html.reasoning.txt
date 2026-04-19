@@ -1,0 +1,93 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior, not project status. Must not mention draft status etc. Must reuse approved example composition language but adapt words to this mod. Must keep strings concise and polished.
+
+We need to choose background_image from options. The mod is Auto Torch Placer. Mood? Perhaps "ocean.jpg" or "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png". The mod is about mining, torches, darkness. Maybe "ocean.jpg" fits? Or "mountain breeze with spring forest.png"? The recommended options: ocean.jpg, mountain breeze with spring forest.png, purple flowers and sun set or sun rise.png. Choose one that matches mood. I'd pick "mountain breeze with spring forest.png" maybe because it's about exploration? Or "ocean.jpg"? The mod is about mining underground, not ocean. Maybe "mountain breeze with spring forest.png" is more about exploration. Let's choose "mountain breeze with spring forest.png". That filename is exactly as listed: "mountain breeze with spring forest.png". Use that.
+
+Accent color: need a single hex like #ff7f2f (orange). Could use #ff7f2f as example, but we can choose any. Must be a single hex color. Use #ff7f2f (same as example). That's okay.
+
+Logo: eyebrow: short phrase maybe "Utility Mod"? In example they used "Automation Class". For this mod, maybe "Torch Automation". Keep concise. mark: short monogram, maybe "AT". title: "Auto Torch Placer". subtitle: a short phrase describing behavior: "Automated illumination for uninterrupted excavation". rail_left: "Wall Priority". rail_right: "Smart Light Detection". Must describe actual mod behavior.
+
+Description: kicker: maybe "Utility Mod". title: same as mod title? In example they used "TNT Duper". So use "Auto Torch Placer". tagline: short tagline describing core: "Places torches automatically when darkness threatens your progress, preserving inventory and momentum." chips: 2-4 short labels. Could be ["Auto Placement","Light Sensing","Wall Preference","Keybind Toggle"]. Must be 2-4 items. Let's do 3 items: ["Auto Placement","Wall Priority","Keybind Control"]. stats: exactly 2 items. Each with value (string), label, note (short sentence). Must describe actual behavior. For example:
+
+- value: "0", label: "Torches Used", note: "No depletion; torches are sourced from inventory without consumption."
+- value: "0.1s", label: "Check Interval", note: "Frequent checks while moving, conserving performance."
+
+But value should be a string, maybe "0" for something like "Torches Used"? Could be "Never". But value must be a string; could be "∞" but maybe "0"? In example they used "0" for Blocks Lost. So we can use "0" for "Torches Used". Another stat: "24/7" for "Automation". So we can use "24/7" for "Operation". Let's craft:
+
+stats item 1:
+{
+  "value": "0",
+  "label": "Torches Used",
+  "note": "No depletion; torches are sourced from inventory without consumption."
+}
+
+stats item 2:
+{
+  "value": "24/7",
+  "label": "Operation",
+  "note": "Runs continuously while enabled, adapting to light changes."
+}
+
+But note must be one short sentence. That's okay.
+
+Make sure description.chips is array of strings, 2-4 items. Let's do 3 items: ["Auto Placement","Wall Priority","Keybind Toggle"].
+
+Now ensure JSON shape exactly matches. Provide only JSON. No extra text.
+
+Check fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "mountain breeze with spring forest.png",
+  "logo": {
+    "eyebrow": "Torch Automation",
+    "mark": "AT",
+    "title": "Auto Torch Placer",
+    "subtitle": "Automated illumination for uninterrupted excavation",
+    "rail_left": "Wall Priority",
+    "rail_right": "Smart Light Detection"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Auto Torch Placer",
+    "tagline": "Places torches automatically when darkness threatens your progress, preserving inventory and momentum.",
+    "chips": [
+      "Auto Placement",
+      "Wall Priority",
+      "Keybind Toggle"
+    ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Torches Used",
+        "note": "No depletion; torches are sourced from inventory without consumption."
+      },
+      {
+        "value": "24/7",
+        "label": "Operation",
+        "note": "Runs continuously while enabled, adapting to light changes."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename, matches option list: "mountain breeze with spring forest.png" is exactly one of the options. Good.
+
+logo.mark is "AT" (2 chars). Good.
+
+logo.rail_left and rail_right describe actual behavior: "Wall Priority" and "Smart Light Detection" are actual features.
+
+description.chips: 3 items, each short label, okay.
+
+description.stats: exactly 2 items, each with value, label, note. Good.
+
+All strings concise and polished. No mention of draft etc.
+
+Make sure no extra fields. Provide only JSON.
+
+Check that description.kicker is "Utility Mod" (matches example). Good.
+
+Tagline: "Places torches automatically when darkness threatens your progress, preserving inventory and momentum." That's concise.
+
+All good.
+
+Now output JSON.

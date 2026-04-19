@@ -1,0 +1,18 @@
+{
+  "body": "# Keep Inventory\n\n![Keep Inventory cover image](https://raw.githubusercontent.com/Sekai0NI0itamio/keep-inventory/main/.modcompiler-art/description-image.webp)\n\nNever lose your items on death again! This mod automatically enforces the `keepInventory` gamerule to always be `true`, preventing any manual changes.\n\n## Features\n\n- \u2705 **Auto-Enable** - Sets `keepInventory=true` when any world loads\n- \u2705 **Constant Enforcement** - Checks every second to ensure it stays enabled\n- \u2705 **Auto-Correction** - If changed to false, automatically sets it back to true\n\n## How It Works\n\nThe mod uses two mechanisms to ensure `keepInventory` is always enabled:.\n\n**Periodic Check**: Every second (20 ticks), verifies the gamerule is still `true`.\n**Auto-Fix**: If it detects the gamerule was changed to `false`, it automatically corrects it back to `true`.\n\nThis means even if a player or admin tries to run `/gamerule keepInventory false`, the mod will change it back within 1 second!\n",
+  "categories": [
+    "utility",
+    "game-mechanics"
+  ],
+  "client_side": "optional",
+  "description": "Enforces keepInventory gamerule to always be true. Never lose your items on death!",
+  "issues_url": "https://github.com/Sekai0NI0itamio/keep-inventory/issues",
+  "license_id": "MIT",
+  "project_type": "mod",
+  "server_side": "required",
+  "slug": "keep-inventory",
+  "source_url": "https://github.com/Sekai0NI0itamio/keep-inventory",
+  "status": "draft",
+  "title": "Keep Inventory",
+  "wiki_url": "https://github.com/Sekai0NI0itamio/keep-inventory/blob/main/docs/Home.md"
+}

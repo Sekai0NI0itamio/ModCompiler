@@ -1,0 +1,330 @@
+build (sethome-forge-1-21-6)	Set up job	﻿2026-04-18T12:39:26.9373143Z Current runner version: '2.333.1'
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9402303Z ##[group]Runner Image Provisioner
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9403543Z Hosted Compute Agent
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9404207Z Version: 20260213.493
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9404770Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9405442Z Build Date: 2026-02-13T00:28:41Z
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9406128Z Worker ID: {b13b2b62-f75d-4f36-9e2b-afe8da963ac1}
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9406814Z Azure Region: northcentralus
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9407378Z ##[endgroup]
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9409105Z ##[group]Operating System
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9409726Z Ubuntu
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9410155Z 24.04.4
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9410680Z LTS
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9411160Z ##[endgroup]
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9411671Z ##[group]Runner Image
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9412209Z Image: ubuntu-24.04
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9413121Z Version: 20260413.86.1
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9414092Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9415808Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9416716Z ##[endgroup]
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9417808Z ##[group]GITHUB_TOKEN Permissions
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9420389Z Contents: read
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9421054Z Metadata: read
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9421555Z Packages: read
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9422082Z ##[endgroup]
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9424864Z Secret source: Actions
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9425980Z Prepare workflow directory
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9788565Z Prepare all required actions
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:26.9831202Z Getting action download info
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:27.3800772Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:27.5090482Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:27.5876323Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:28.1855049Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:28.2836491Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:28.7631113Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build (sethome-forge-1-21-6)	Set up job	2026-04-18T12:39:29.0244925Z Complete job name: build (sethome-forge-1-21-6)
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	﻿2026-04-18T12:39:29.1137773Z ##[group]Run actions/checkout@v4
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1139395Z with:
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1140309Z   repository: Sekai0NI0itamio/ModCompiler
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1141801Z   token: ***
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1142923Z   ssh-strict: true
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1143754Z   ssh-user: git
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1144653Z   persist-credentials: true
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1145609Z   clean: true
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1146482Z   sparse-checkout-cone-mode: true
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1147524Z   fetch-depth: 1
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1148320Z   fetch-tags: false
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1149225Z   show-progress: true
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1150035Z   lfs: false
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1150910Z   submodules: false
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1151728Z   set-safe-directory: true
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.1153146Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2296904Z Syncing repository: Sekai0NI0itamio/ModCompiler
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2300115Z ##[group]Getting Git version info
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2301662Z Working directory is '/home/runner/work/ModCompiler/ModCompiler'
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2304142Z [command]/usr/bin/git version
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2324936Z git version 2.53.0
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2353115Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2369195Z Temporarily overriding HOME='/home/runner/work/_temp/3a86a6c1-880f-492c-bfbf-d8950c7958a9' before making global git config changes
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2375936Z Adding repository directory to the temporary git global config as a safe directory
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2378196Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2415081Z Deleting the contents of '/home/runner/work/ModCompiler/ModCompiler'
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2419309Z ##[group]Initializing the repository
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2423739Z [command]/usr/bin/git init /home/runner/work/ModCompiler/ModCompiler
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2507438Z hint: Using 'master' as the name for the initial branch. This default branch name
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2509571Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2512140Z hint: to use in all of your new repositories, which will suppress this warning,
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2514042Z hint: call:
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2515268Z hint:
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2516296Z hint: 	git config --global init.defaultBranch <name>
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2517486Z hint:
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2518795Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2520809Z hint: 'development'. The just-created branch can be renamed via this command:
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2522907Z hint:
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2523728Z hint: 	git branch -m <name>
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2524745Z hint:
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2525942Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2528211Z Initialized empty Git repository in /home/runner/work/ModCompiler/ModCompiler/.git/
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2531629Z [command]/usr/bin/git remote add origin https://github.com/Sekai0NI0itamio/ModCompiler
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2558038Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2559502Z ##[group]Disabling automatic garbage collection
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2561926Z [command]/usr/bin/git config --local gc.auto 0
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2593831Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2595217Z ##[group]Setting up auth
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2600467Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2634499Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2941742Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.2974140Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.3205353Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.3238522Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.3474858Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.3515247Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.3517948Z ##[group]Fetching the repository
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:29.3527744Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +05220119afe82546e11976df57ab5008cfe71383:refs/remotes/origin/main
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6525864Z From https://github.com/Sekai0NI0itamio/ModCompiler
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6527461Z  * [new ref]         05220119afe82546e11976df57ab5008cfe71383 -> origin/main
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6558866Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6559553Z ##[group]Determining the checkout info
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6560884Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6566620Z [command]/usr/bin/git sparse-checkout disable
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6607242Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6635156Z ##[group]Checking out the ref
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:30.6640340Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:31.1504392Z Switched to a new branch 'main'
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:31.1506077Z branch 'main' set up to track 'origin/main'.
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:31.1533771Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:31.1575940Z [command]/usr/bin/git log -1 --format=%H
+build (sethome-forge-1-21-6)	Run actions/checkout@v4	2026-04-18T12:39:31.1600286Z 05220119afe82546e11976df57ab5008cfe71383
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	﻿2026-04-18T12:39:31.1918164Z ##[group]Run actions/setup-python@v5
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.1918522Z with:
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.1918747Z   python-version: 3.12
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.1919000Z   check-latest: false
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.1919431Z   token: ***
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.1919677Z   update-environment: true
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.1919955Z   allow-prereleases: false
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.1920214Z   freethreaded: false
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.1920456Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.3669524Z ##[group]Installed versions
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.3765687Z Successfully set up CPython (3.12.13)
+build (sethome-forge-1-21-6)	Run actions/setup-python@v5	2026-04-18T12:39:31.3766738Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	﻿2026-04-18T12:39:31.3942127Z ##[group]Run actions/setup-java@v4
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3942677Z with:
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3942917Z   distribution: temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3943190Z   java-version: 8
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	16
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	17
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	21
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3943444Z   java-package: jdk
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3943678Z   check-latest: false
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3943914Z   server-id: github
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3944192Z   server-username: GITHUB_ACTOR
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3944474Z   server-password: GITHUB_TOKEN
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3944751Z   overwrite-settings: true
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3945000Z   job-status: success
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3945438Z   token: ***
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3945686Z env:
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3946003Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3946490Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3946947Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3947359Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3947802Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3948212Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.3948545Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6088775Z ##[group]Installed distributions
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6149891Z Resolved Java 8.0.482+8 from tool-cache
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6150726Z Setting Java 8.0.482+8 as the default
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6165514Z Creating toolchains.xml for JDK version 8 from temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6246806Z Writing to /home/runner/.m2/toolchains.xml
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6247630Z 
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6248081Z Java configuration:
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6248691Z   Distribution: temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6249153Z   Version: 8.0.482+8
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6250238Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6250806Z 
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.6270143Z Trying to resolve the latest version from remote
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.8135289Z Resolved latest version as 16.0.2+7
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.8136264Z Trying to download...
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:31.8137645Z Downloading Java 16.0.2+7 (Temurin-Hotspot) from https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_linux_hotspot_16.0.2_7.tar.gz ...
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:33.0515441Z Extracting Java archive...
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:33.0639102Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/fd6d152c-c7d3-4bb6-9973-033150d9252c -f /home/runner/work/_temp/524f5143-6c2f-44f0-8ab4-2d8031b77c5c
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8334278Z Java 16.0.2+7 was downloaded
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8334733Z Setting Java 16.0.2+7 as the default
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8339454Z Creating toolchains.xml for JDK version 16 from temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8380331Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8380875Z 
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8381019Z Java configuration:
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8381389Z   Distribution: temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8381731Z   Version: 16.0.2+7
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8382286Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8383156Z 
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8392379Z Resolved Java 17.0.18+8 from tool-cache
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8393174Z Setting Java 17.0.18+8 as the default
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8397095Z Creating toolchains.xml for JDK version 17 from temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.8417220Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9389214Z 
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9389677Z Java configuration:
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9390093Z   Distribution: temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9390343Z   Version: 17.0.18+8
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9390673Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9390955Z 
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9399377Z Resolved Java 21.0.10+7 from tool-cache
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9399871Z Setting Java 21.0.10+7 as the default
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9402701Z Creating toolchains.xml for JDK version 21 from temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:35.9421449Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0311623Z 
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0312127Z Java configuration:
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0312911Z   Distribution: temurin
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0313392Z   Version: 21.0.10+7
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0314024Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0314416Z 
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0314897Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0328356Z Creating settings.xml with server-id: github
+build (sethome-forge-1-21-6)	Run actions/setup-java@v4	2026-04-18T12:39:36.0329658Z Writing to /home/runner/.m2/settings.xml
+build (sethome-forge-1-21-6)	Run actions/cache@v4	﻿2026-04-18T12:39:36.7752407Z ##[group]Run actions/cache@v4
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7753009Z with:
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7753238Z   path: ~/.gradle/caches
+build (sethome-forge-1-21-6)	Run actions/cache@v4	~/.gradle/wrapper
+build (sethome-forge-1-21-6)	Run actions/cache@v4	
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7753782Z   key: gradle-Linux-ad4ad21509ab93061346e035af8ce481c885f45c5e0d2c5ca8fd87d9a2a3530b
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7754351Z   restore-keys: gradle-Linux-
+build (sethome-forge-1-21-6)	Run actions/cache@v4	
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7754614Z   enableCrossOsArchive: false
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7754873Z   fail-on-cache-miss: false
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7755107Z   lookup-only: false
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7755308Z   save-always: false
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7755497Z env:
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7755746Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7756183Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7756602Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7757013Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7757411Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7757831Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7758265Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7758740Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7759230Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7759722Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7760227Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:36.7760604Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:37.0254573Z Cache hit for: gradle-Linux-ad4ad21509ab93061346e035af8ce481c885f45c5e0d2c5ca8fd87d9a2a3530b
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:38.1561368Z Received 125829120 of 578347108 (21.8%), 120.1 MBs/sec
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:39.1640316Z Received 339738624 of 578347108 (58.7%), 161.8 MBs/sec
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:40.1595860Z Received 536870912 of 578347108 (92.8%), 170.5 MBs/sec
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:40.4235167Z Received 578347108 of 578347108 (100.0%), 168.8 MBs/sec
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:40.4238151Z Cache Size: ~552 MB (578347108 B)
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:40.4355039Z [command]/usr/bin/tar -xf /home/runner/work/_temp/d29ee08d-e7ce-4d97-844b-3fbe46838d6d/cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --use-compress-program unzstd
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:41.5455338Z Cache restored successfully
+build (sethome-forge-1-21-6)	Run actions/cache@v4	2026-04-18T12:39:41.7923250Z Cache restored from key: gradle-Linux-ad4ad21509ab93061346e035af8ce481c885f45c5e0d2c5ca8fd87d9a2a3530b
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	﻿2026-04-18T12:39:41.8060766Z ##[group]Run actions/download-artifact@v4
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8061063Z with:
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8061259Z   name: prepared-inputs
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8061493Z   path: .workflow_state/prepared
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8061733Z   merge-multiple: false
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8062142Z   repository: Sekai0NI0itamio/ModCompiler
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8062402Z   run-id: 24604869113
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8062884Z env:
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8063141Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8063553Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8063978Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8064342Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8064707Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8065079Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8065482Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8065974Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8066428Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8066901Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8067372Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:41.8067727Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.0105626Z Downloading single artifact
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.1605393Z Preparing to download the following artifacts:
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.1606582Z - prepared-inputs (ID: 6511019890, Size: 79391, Expected Digest: sha256:268e50e80a017dab897ec961195a42fb6b7f5401b99cf5586bb9c42cf18544c4)
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.2533695Z Redirecting to blob download url: https://productionresultssa6.blob.core.windows.net/actions-results/8e04d92d-d3bc-4603-b92f-e8cda5d3ae8f/workflow-job-run-d98392eb-1204-53f4-8d82-2b6bbc45e0a7/artifacts/cf3e420318736ca90418bfbff1860f5e9bbdd565b9909d72c83a81eabeb90983.zip
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.2536241Z Starting download of artifact to: /home/runner/work/ModCompiler/ModCompiler/.workflow_state/prepared
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.3918899Z (node:2446) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.3920628Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.4728163Z SHA256 digest of downloaded artifact is 268e50e80a017dab897ec961195a42fb6b7f5401b99cf5586bb9c42cf18544c4
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.4729244Z Artifact download completed successfully.
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.4729777Z Total of 1 artifact(s) downloaded
+build (sethome-forge-1-21-6)	Run actions/download-artifact@v4	2026-04-18T12:39:42.4736487Z Download artifact has finished successfully
+build (sethome-forge-1-21-6)	Build one mod	﻿2026-04-18T12:39:42.4852116Z ##[group]Run python build_mods.py build-one \
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4852864Z [36;1mpython build_mods.py build-one \[0m
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4853255Z [36;1m  --plan .workflow_state/prepared/build-plan.json \[0m
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4853623Z [36;1m  --manifest version-manifest.json \[0m
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4853953Z [36;1m  --prepared-dir .workflow_state/prepared \[0m
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4854293Z [36;1m  --slug "sethome-forge-1-21-6" \[0m
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4854666Z [36;1m  --artifact-dir ".workflow_artifacts/per-mod/sethome-forge-1-21-6"[0m
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4887328Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4887688Z env:
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4887959Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4888396Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4888827Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4889210Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4910527Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4911023Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4911477Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4911966Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4912947Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4913420Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4913886Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:39:42.4914247Z ##[endgroup]
+build (sethome-forge-1-21-6)	Build one mod	2026-04-18T12:43:59.2584600Z ##[error]Process completed with exit code 1.
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	﻿2026-04-18T12:43:59.2651007Z ##[group]Run actions/upload-artifact@v4
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2651309Z with:
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2651513Z   name: mod-sethome-forge-1-21-6
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2651826Z   path: .workflow_artifacts/per-mod/sethome-forge-1-21-6
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2652148Z   if-no-files-found: warn
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2652373Z   compression-level: 6
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2653223Z   overwrite: false
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2653445Z   include-hidden-files: false
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2653682Z env:
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2653924Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2654358Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2654769Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2655130Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2655515Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2655889Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2656341Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2656804Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2657271Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2657734Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2658194Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.2658547Z ##[endgroup]
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.4934794Z With the provided path, there will be 3 files uploaded
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.4939974Z Artifact name is valid!
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.4943120Z Root directory input is valid!
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.6526782Z Beginning upload of artifact content to blob storage
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.8194912Z Uploaded bytes 6449
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.8654146Z Finished uploading artifact content to blob storage!
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.8657832Z SHA256 digest of uploaded artifact zip is 503d35ecee3418c9a6d614fa7fe5c753dff862a69e54f0e41a4030219e1c3411
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.8659682Z Finalizing artifact upload
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.9843631Z Artifact mod-sethome-forge-1-21-6.zip successfully finalized. Artifact ID 6511040713
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.9845179Z Artifact mod-sethome-forge-1-21-6 has been successfully uploaded! Final size is 6449 bytes. Artifact ID is 6511040713
+build (sethome-forge-1-21-6)	Run actions/upload-artifact@v4	2026-04-18T12:43:59.9852000Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/24604869113/artifacts/6511040713
+build (sethome-forge-1-21-6)	Post Run actions/setup-java@v4	﻿2026-04-18T12:44:00.0011056Z Post job cleanup.
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	﻿2026-04-18T12:44:00.1892081Z Post job cleanup.
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.2889971Z [command]/usr/bin/git version
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.2928430Z git version 2.53.0
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.2975985Z Temporarily overriding HOME='/home/runner/work/_temp/87b16632-f755-4f30-b57b-39e47b227a2a' before making global git config changes
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.2977329Z Adding repository directory to the temporary git global config as a safe directory
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.2983782Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.3039804Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.3085789Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.3370345Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.3400498Z http.https://github.com/.extraheader
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.3419576Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.3462772Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.3743264Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build (sethome-forge-1-21-6)	Post Run actions/checkout@v4	2026-04-18T12:44:00.3788840Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build (sethome-forge-1-21-6)	Complete job	﻿2026-04-18T12:44:00.4193900Z Cleaning up orphan processes
+build (sethome-forge-1-21-6)	Complete job	2026-04-18T12:44:00.4519115Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v4, actions/download-artifact@v4, actions/setup-java@v4, actions/setup-python@v5, actions/upload-artifact@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

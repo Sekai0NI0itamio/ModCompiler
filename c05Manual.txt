@@ -1,0 +1,1480 @@
+# C05 Local AI Proxy Manual
+
+Version: 2.4
+Last Updated: 2026-03-29
+
+## 1. Overview
+
+C05 Local AI Proxy is a FastAPI-based multi-provider chat and provider-API gateway that:
+
+- Accepts a unified `/chat` request format.
+- Routes requests to one of several hosters (providers).
+- Streams responses back as NDJSON events.
+- Proxies provider-native API requests for non-chat services.
+- Manages API keys and key exhaustion.
+- Persists optional conversation history to local JSON files.
+- Exposes hoster, model, and provider-operation discovery endpoints for client apps.
+
+Current supported hosters:
+
+- `poe` (default)
+- `openrouter`
+- `googlegemini`
+- `nvidia`
+- `huggingface`
+- `groq`
+- `scitely`
+- `aihorde`
+- `piapi`
+- `pexels`
+- `newsapi`
+- `unsplash`
+- `pixabay`
+
+## 2. What This App Provides
+
+### Core capabilities
+
+- Multi-hoster chat via one endpoint: `POST /chat`
+- Provider-native API requests via `POST /hosters/{hoster_name}/api/request`
+- Media download proxying via `POST /hosters/{hoster_name}/api/download`
+- Server-side session persistence (opt-in per request via `include_history`)
+- Request cancellation for in-flight streams via `POST /stop`
+- Recent request introspection via `GET /requests/most_recent`
+- Recent conversation listing via `GET /api/conversations/recent`
+- Hoster discovery via `GET /hosters`
+- Provider operation discovery via `GET /hosters/{hoster_name}/operations`
+- Model discovery via:
+  - `GET /hosters/{hoster_name}/models`
+  - `GET /models`
+- Model detail lookup via:
+  - `GET /hosters/{hoster_name}/models/{model_id}`
+
+### Key management
+
+- Loads keys from `keys/{hoster}.txt`.
+- Tracks exhausted keys in `KeysUsedUp.txt`.
+- Auto-refreshes exhausted-key tracking daily at 08:00 Beijing time.
+- Tag systems:
+  - `stress_based` (all hosters) — each request is assigned to the key with the fewest requests in the last 60 seconds.
+  - Per-hoster limits can still apply on top of the stress distributor. Current built-in override: `nvidia` uses a 40 requests/minute cap per key.
+  - Exhausted-key tracking rules remain hoster-specific just as before.
+
+### Streaming interface
+
+- Returns NDJSON (`application/x-ndjson`) with event lines such as:
+  - stream start metadata
+  - content chunks
+  - tool call chunks (when present)
+  - end status
+
+## 3. Project Layout
+
+```text
+.
+├── main.py                     # entrypoint wrapper
+├── app/main.py                 # FastAPI app + CLI startup
+├── app/api/routes.py           # all API routes
+├── app/api/models.py           # request models
+├── app/hosters/                # provider implementations
+├── app/core/keyring.py         # key rotation and usage tracking
+├── app/storage/sessions.py     # local session persistence
+├── keys/
+│   ├── poe.txt
+│   ├── openrouter.txt
+│   ├── googlegemini.txt
+│   ├── nvidia.txt
+│   ├── huggingface.txt
+│   ├── groq.txt
+│   ├── scitely.txt
+│   ├── aihorde.txt
+│   ├── piapi.txt
+│   ├── pexels.txt
+│   ├── newsapi.txt
+│   ├── unsplash.txt
+│   └── pixabay.txt
+├── KeysUsedUp.txt              # exhausted key records
+└── sessions/                   # persisted conversation data
+```
+
+## 4. Requirements and Setup
+
+### Runtime prerequisites
+
+- Python 3.9+
+- Network access to provider APIs
+- Valid provider API keys in `keys/*.txt`
+
+### Required packages
+
+At minimum, this project requires FastAPI and provider SDKs used by your hosters.
+Gemini hoster specifically requires:
+
+```bash
+pip install -U google-genai
+```
+
+If Gemini SDK is missing and `googlegemini` is used, requests will fail with a runtime error.
+
+### Key files
+
+Create one key per line.
+
+Example `keys/poe.txt`:
+
+```text
+pk-xxxx
+pk-yyyy
+```
+
+Comments and empty lines are allowed (`# comment`).
+
+## 5. Running the Server
+
+### Start normally
+
+```bash
+python main.py
+```
+
+### Useful CLI flags
+
+```bash
+python main.py --host 0.0.0.0 --port 8129 --debug
+```
+
+- `--debug`: enables debug logs (`C04POE_DEBUG=1` behavior)
+- `--reset`: clears `KeysUsedUp.txt` before startup
+- `--no-reload`: disables auto-reload
+- `--ekau`: currently a no-op (kept for CLI compatibility)
+
+Default bind:
+
+- host: `0.0.0.0`
+- port: `8129`
+
+## 6. API Summary
+
+### Endpoints
+
+- `GET /hosters`
+- `GET /hosters/{hoster_name}/operations`
+- `GET /hosters/{hoster_name}/models`
+- `GET /hosters/{hoster_name}/models/{model_id}`
+- `GET /models`
+- `POST /hosters/{hoster_name}/api/request`
+- `POST /hosters/{hoster_name}/api/download`
+- `POST /chat`
+- `POST /stop`
+- `GET /requests/most_recent`
+- `POST /session/history`
+- `GET /session/history/latest`
+- `GET /api/conversations/recent`
+
+## 7. Streaming Protocol (`POST /chat`)
+
+`POST /chat` returns newline-delimited JSON objects.
+Clients should read line-by-line and parse each non-empty line as JSON.
+
+### Typical event sequence
+
+1. Start line:
+
+```json
+{"status":"start","session_id":"...","app_id":"...","created_new":true,"request_id":"..."}
+```
+
+2. Zero or more text content lines:
+
+```json
+{"event":"content","content":"Hello"}
+```
+
+3. Optional structured content-part lines for non-text or mixed-media outputs:
+
+```json
+{"event":"content_part","content_type":"image","content":{"type":"image_url","image_url":{"url":"https://..."}},"request_id":"..."}
+```
+
+and/or:
+
+```json
+{"event":"content_parts","content":[{"type":"text","text":"Caption"},{"type":"image_url","image_url":{"url":"https://..."}}],"request_id":"..."}
+```
+
+4. Zero or more reasoning lines (triggered when the provider returns reasoning traces, typically when `reasoning_effort` is supplied):
+
+```json
+{"event":"reasoning_text","content":"What's the chain-of-thought so far..."}
+```
+
+5. Optional tool call lines:
+
+```json
+{"event":"tool_calls","tool_calls":[...],"request_id":"..."}
+```
+
+6. End line (includes `reasoning_text` when reasoning output was generated):
+
+```json
+{"status":"end","session_id":"...","app_id":"...","request_id":"...","finish_reason":"stop","reasoning_text":"..." }
+```
+
+The `reasoning_text` field in the final `status:"end"` line mirrors the reasoning stream above so clients can capture a complete summary even when they stopped mid-stream.
+
+Notes:
+
+- `content` remains the easiest event for plain text clients.
+- `content_part` and `content_parts` preserve raw structured output from the provider. This is where image, video, audio, file, and mixed-media payloads are surfaced.
+- When a structured part also contains text, the server emits both a `content` line for easy rendering and the raw `content_part` / `content_parts` payload for full fidelity.
+
+### Error lines inside stream
+
+Some failures are emitted in-band as NDJSON while HTTP status is still 200:
+
+```json
+{"error":"All keys failed or were exhausted.","last_error":"..."}
+```
+
+or
+
+```json
+{"status":"cancelled","request_id":"..."}
+```
+
+### Immediate HTTP errors
+
+Invalid request shape or routing issues return direct HTTP errors (4xx/5xx), for example:
+
+- Unknown hoster
+- Missing `model`
+- Chat requested against a non-chat hoster such as `pexels`
+- No configured or usable API keys
+
+## 8. `/chat` Request Contract
+
+### Request body fields
+
+```json
+{
+  "user_prompt": "Hello",
+  "model": "claude-3-5-sonnet",
+  "hoster": "poe",
+  "system_prompt": "You are concise.",
+  "system_notes": ["Use bullet points."],
+  "session_id": "my-session",
+  "app_id": "my-app",
+  "include_history": true,
+  "max_history": 40,
+  "history": [
+    {"role": "user", "content": "Earlier message"},
+    {"role": "assistant", "content": "Earlier response"}
+  ],
+  "extra_body": {
+    "temperature": 0.7,
+    "max_tokens": 512
+  },
+  "reasoning_effort": "low",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get weather",
+        "parameters": {
+          "type": "object",
+          "properties": {"city": {"type": "string"}},
+          "required": ["city"]
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+```
+
+### Notes on behavior
+
+- `model` is required and must be non-empty.
+- `hoster` defaults to `poe` if omitted.
+- If `session_id` is omitted, server generates one.
+- If `include_history` is true, prior session history is loaded and appended.
+- `max_history` only limits how much prior history is loaded for the request.
+- Session files are trimmed to max 40 messages when persisted.
+
+## 9. Hoster-Specific Behavior
+
+## 9.1 Poe (`hoster: "poe"`)
+
+- Base URL: `https://api.poe.com/v1`
+- OpenAI-compatible chat endpoint used internally.
+- `extra_body` transformations:
+  - `max_completion_tokens` -> `max_tokens`
+  - drops unsupported params: `parallel_tool_calls`, `seed`
+- The Poe API documents `choices[].message.content` as `string | object[]`. This proxy preserves those structured objects instead of flattening them, so `/chat` can return images, video, audio/file-like payloads, and other mixed-media responses through `content_part` / `content_parts`.
+- For Poe models whose metadata advertises non-text output modalities, the server automatically uses Poe's recommended non-stream upstream mode and then re-emits the result through this app's NDJSON stream. Text-first Poe models still use streaming upstream responses.
+- Poe authentication failures such as `401 invalid_api_key` are treated as bad-key events, not transport failures: the current key is marked used-up and the request automatically advances to the next usable Poe key.
+- Certain broken upstream stream failures such as `peer closed connection without sending complete message body` / `incomplete chunked read` are treated as retryable transport errors. The proxy retries them and does not mark the Poe key as used-up.
+- Reasoning-capable Poe models respect the `reasoning_effort` value from `/chat`, so you will receive the new `{"event":"reasoning_text",…}` lines and the `reasoning_text` field in the final `status:"end"` line when the model emits traces.
+
+## 9.2 OpenRouter (`hoster: "openrouter"`)
+
+- Base URL: `https://openrouter.ai/api/v1`
+- OpenAI-compatible passthrough.
+- `extra_body` forwarded as-is.
+- OpenRouter reasoning models also honor `reasoning_effort`; those traces arrive on the `reasoning_text` stream events and in the final `reasoning_text` field so you can capture the entire chain of thought.
+
+## 9.3 NVIDIA (`hoster: "nvidia"`)
+
+- Base URL: `https://integrate.api.nvidia.com/v1`
+- Uses stress-based key scheduling.
+- Default stress config in registry:
+  - `max_requests_per_minute = 40`
+  - `time_window_seconds = 60`
+- `reasoning_effort` currently mapped to:
+
+```json
+"chat_template_kwargs": {
+  "enable_thinking": true,
+  "clear_thinking": false
+}
+```
+
+(Any non-empty `reasoning_effort` enables thinking in current implementation.)
+
+## 9.4 Google Gemini (`hoster: "googlegemini"`)
+
+- Uses `google-genai` SDK (`from google import genai`).
+- Streams via `client.models.generate_content_stream(...)`.
+- System messages are collapsed into `system_instruction`.
+- `reasoning_effort` mapping:
+  - `low|medium|high` -> `thinking_config.thinking_level`
+  - numeric -> `thinking_config.thinking_budget`
+  - `none|off|false|0` -> `thinking_budget = 0`
+- Token aliases accepted through `extra_body`:
+  - `max_output_tokens`
+  - `max_tokens`
+  - `max_completion_tokens`
+
+Gemini bridge limitations in current implementation:
+
+- Tool/function calling params are accepted at `/chat` level but not forwarded by Gemini hoster yet.
+- Content bridge is text-first (it supports text and text-part structures, not full multimodal payload bridging).
+
+## 9.5 Groq (`hoster: "groq"`)
+
+- Base URL: `https://api.groq.com/openai/v1`.
+- OpenAI-compatible proxy with reasoning effort normalization; the proxy translates `reasoning_effort` to whatever format Groq expects and reasoning outputs are surfaced through the `reasoning_text` events and the final `status:"end"` line.
+- `extra_body` is otherwise passed through as-is.
+
+## 9.6 HuggingFace (`hoster: "huggingface"`)
+
+- Base URL: `https://router.huggingface.co/v1`.
+- The router is OpenAI-compatible, so `reasoning_effort` is forwarded directly and reasoning responses—if emitted—appear via `reasoning_text` streaming events and the final summary field.
+- HuggingFace uses the shared stress distributor, choosing the key with the fewest last-minute requests. There is no exhausted-key tracking, and reasoning payloads ride along with all other chat parameters.
+
+## 9.7 Scitely (`hoster: "scitely"`)
+
+- Base URL: `https://api.scitely.com/v1` (OpenAI-compatible chat completions).
+- Exposes DeepSeek (V3/V3.2/R1) and Qwen3 models; all of them can emit reasoning traces when `reasoning_effort` is supplied.
+- The proxy forwards the `reasoning_effort` value directly to Scitely (e.g., `low`, `medium`, `high`) so the provider can enable its built-in reasoning mode. When reasoning output is generated, the NDJSON stream emits `{"event":"reasoning_text",...}` entries and the final `{"status":"end",...,"reasoning_text":"..."}` line contains the aggregated reasoning text.
+- Scitely does not support `tools`/`tool_choice`, so they are dropped before each request and tool call streams are never produced.
+
+## 9.8 PiAPI (`hoster: "piapi"`)
+
+- Overview docs: PiAPI describes itself as a unified AI API platform with broad model coverage across image, video, audio, and LLM APIs.
+- Official overview and quickstart state that the unified task API is centered on two endpoints:
+  - `POST https://api.piapi.ai/api/v1/task`
+  - `GET https://api.piapi.ai/api/v1/task/{task_id}`
+- C05 exposes PiAPI in two ways:
+  - `/chat` for PiAPI's OpenAI-compatible LLM endpoint at `https://api.piapi.ai/v1/chat/completions`
+  - `/hosters/piapi/api/request` for PiAPI's unified task/account/upload APIs
+- Chat completions:
+  - OpenAI-compatible request shape
+  - Auth uses `Authorization: Bearer <PIAPI_KEY>`
+  - Official PiAPI docs note Cloudflare timeouts for long non-streaming completions and recommend `stream: true` or the alternative `proxy.piapi.ai` domain; C05 streams chat requests by default
+- Model discovery is not exposed by this hoster implementation because PiAPI's public docs are organized around per-model/per-task documentation rather than a unified `/models` catalog.
+- Provider-native PiAPI operations exposed by C05:
+  - `create_task`
+  - `get_task`
+  - `account_info`
+  - `active_tasks`
+  - `user_task_history`
+  - `upload_ephemeral_resource`
+- Unified task request shape:
+  - required: `model`, `task_type`, `input`
+  - optional: `config`
+- Common PiAPI mode families you can drive through C05:
+  - `text -> text` through `/chat` using PiAPI's OpenAI-compatible chat-completions API
+  - `text -> image` with task models such as `Qubico/qwen-image` and task types such as `txt2img`
+  - `image -> image` / image edit with task shapes such as Flux `img2img` or Qwen Image `image-edit`
+  - `text -> video` with task APIs such as Veo3.1 text-to-video
+  - `image -> video` with task APIs such as Veo3 image-to-video
+  - `text -> audio` with task APIs such as Ace Step `txt2audio`
+  - `audio -> audio` with task APIs such as Ace Step `audio2audio`
+  - `text -> speech` with PiAPI TTS / F5-TTS `zero-shot`
+- PiAPI also documents more specialized families beyond the examples below, including faceswap, captioning, text/image-to-3D, background removal, super-resolution, and other toolkit-style endpoints.
+- PiAPI's official overview distinguishes two account modes:
+  - `Pay-as-you-go` / pay-per-use: jobs run on PiAPI-operated account pools and consume PiAPI credits
+  - `Host-your-account` / BYOA: jobs run on your connected account/seat instead of PiAPI credits
+- Task examples in PiAPI docs commonly include `config.service_mode` plus `config.webhook_config`.
+  - Many public pay-as-you-go examples show `service_mode: "public"`
+  - Exact accepted values and availability depend on the specific PiAPI model/API and your workspace setup
+- `account_info` and `active_tasks` use PiAPI account-management endpoints:
+  - `GET https://api.piapi.ai/account/info`
+  - `GET https://api.piapi.ai/account/active_tasks`
+- `user_task_history` uses:
+  - `GET https://api.piapi.ai/api/open/tasks/histories`
+  - supported filters in PiAPI docs include `page`, `page_size`, `model`, `start_time`, `end_time`
+- `upload_ephemeral_resource` uses PiAPI's upload service:
+  - `POST https://upload.theapi.app/api/ephemeral_resource`
+  - auth uses `x-api-key`
+  - PiAPI docs say files are temporary, auto-deleted after 24 hours, and this endpoint requires Creator plan or higher
+- Task result/output URL retention is controlled by PiAPI's own storage/retention policy and model-specific docs.
+
+## 9.9 Pexels (`hoster: "pexels"`)
+
+- Base URL: `https://api.pexels.com`
+- Chat completions are not supported.
+- Model discovery is not supported.
+- Provider-native media operations are exposed instead:
+  - `search_photos`
+  - `curated_photos`
+  - `get_photo`
+  - `search_videos`
+  - `popular_videos`
+  - `get_video`
+- Downloadable asset URLs returned by Pexels can be proxied through:
+  - `POST /hosters/pexels/api/download`
+- Returned media objects include creator and attribution fields so clients can link back to Pexels and the original creator.
+
+## 9.10 NewsAPI (`hoster: "newsapi"`)
+
+- Base URL: `https://newsapi.org`
+- Chat completions are not supported.
+- Model discovery is not supported.
+- Provider-native news operations:
+  - `top_headlines`
+  - `everything`
+  - `sources`
+- Returns normalized article/source metadata and preserves raw provider payloads when `include_raw=true`.
+
+## 9.11 Unsplash (`hoster: "unsplash"`)
+
+- Base URL: `https://api.unsplash.com`
+- Chat completions are not supported.
+- Model discovery is not supported.
+- `unsplash.txt` is parsed as 3-line account bundles:
+  - `Application ID <value>`
+  - `Access Key <value>` or `Access ID <value>`
+  - `Secret Key <value>` or `Secret ID <value>`
+- C05 rotates Unsplash accounts by the access credential value, because public API requests use that credential.
+- Provider-native photo operations:
+  - `list_photos`
+  - `search_photos`
+  - `get_photo`
+  - `random_photo`
+  - `track_photo_download`
+- Unsplash images should be used via the returned `urls.*` and `links.download_location` fields rather than proxied downloads.
+
+## 9.12 Pixabay (`hoster: "pixabay"`)
+
+- Base URL: `https://pixabay.com`
+- Chat completions are not supported.
+- Model discovery is not supported.
+- Provider-native media operations:
+  - `search_images`
+  - `get_image`
+  - `search_videos`
+  - `get_video`
+- Downloadable asset URLs returned by Pixabay can be proxied through:
+  - `POST /hosters/pixabay/api/download`
+
+## 9.13 AI Horde (`hoster: "aihorde"`)
+
+- Overview docs: AI Horde is an async REST API for distributed image generation, text generation, and image alchemy/interrogation workflows.
+- The official integration guide describes the baseline workflow as:
+  - submit a generation request
+  - store the returned request `id`
+  - poll the request until it completes
+  - for image jobs, prefer `/api/v2/generate/check/{id}` for progress and `/api/v2/generate/status/{id}` for final results
+  - for text jobs, submit to `/api/v2/generate/text/async` and read results from `/api/v2/generate/text/status/{id}`
+- C05 exposes AI Horde through provider-native endpoints only:
+  - `POST /hosters/aihorde/api/request`
+- C05 handles the AI Horde-specific transport quirks internally, so clients calling C05 do not need to send `apikey`, `Client-Agent`, or custom `User-Agent` headers themselves.
+- Chat completions are not supported for this hoster.
+- Model discovery is not exposed by this hoster implementation because AI Horde's practical usage is endpoint- and worker-driven, and the official integration docs focus on async job flows rather than a stable OpenAI-style `/models` catalog.
+- Provider-native AI Horde operations exposed by C05:
+  - `generate_image_async`
+  - `check_image_generation`
+  - `get_image_generation_status`
+  - `cancel_image_generation`
+  - `wait_for_image_generation`
+  - `generate_image_and_wait`
+  - `generate_text_async`
+  - `get_text_generation_status`
+  - `cancel_text_generation`
+  - `wait_for_text_generation`
+  - `generate_text_and_wait`
+- Authentication:
+  - AI Horde expects `apikey: <AIHORDE_KEY>`
+  - the public anonymous key shown in AI Horde examples is `0000000000`
+  - AI Horde's website says anonymous usage works, but it receives lower priority than a real account key
+- Reliability behavior in C05:
+  - `wait_for_image_generation` polls AI Horde's image `check` endpoint, then fetches the full `status` payload only once the job is done
+  - `generate_image_and_wait` wraps submit + wait in one call
+  - `wait_for_text_generation` polls the text `status` endpoint directly
+  - default polling cadence is `4` seconds, which matches the official AI Horde SDK helper loop
+  - AI Horde's integration docs note the status endpoint has a `1` second cache, so polling much faster does not buy much
+  - default wait timeout in C05 is `300` seconds and can be raised up to `1170` seconds; that upper bound follows the AI Horde SDK's documented `GENERATION_MAX_LIFE` constant (`20 minutes - 30 seconds`)
+  - live testing on this machine showed AI Horde/Cloudflare blocking or stalling standard Python HTTP client signatures, so this hoster uses the local `curl` binary with `Client-Agent` plus a browser-like `User-Agent`
+- Payload behavior:
+  - C05 intentionally validates only the core fields (`prompt`, `job_id`, wait options) and passes most provider-specific AI Horde fields through unchanged so new Horde-side parameters do not immediately break the bridge
+  - this means fields such as `models`, `trusted_workers`, `worker_blacklist`, `dry_run`, `source_image`, `webhook`, or text-generation knobs can be forwarded directly inside `params`
+  - AI Horde expects `models` as an array of AI Horde-native model names; a foreign provider id such as `Qubico/qwen-image` should not be sent to the `aihorde` hoster
+  - the safest correct request shape is: `operation` + `params.prompt` + optional `params.params`; model selection can be omitted entirely
+  - if you do want to force a model, use `params.models` as an array, not `params.model`
+- Result behavior:
+  - AI Horde's integration guide describes image results as downloadable URLs, while the SDK docs describe `img` as base64-encoded `.webp`; C05 therefore normalizes returned image fields into `image_url` or `image_base64` heuristically and preserves raw payloads when `include_raw=true`
+  - text generations are returned from the `generations` list and normalized into `text` entries
+- Error behavior:
+  - official AI Horde error responses include HTTP status plus JSON `message` and `rc`
+  - official return-code docs include examples such as `InvalidAPIKey`, `RequestNotFound`, `TooManyPrompts`, `KudosUpfront`, and `NoValidWorkers`
+
+## 10. Hoster Discovery, Models, and Provider APIs
+
+### `GET /hosters`
+
+Returns hosters known by this server and key status summary.
+
+Example response:
+
+```json
+{
+  "default_hoster": "poe",
+  "hosters": [
+    {
+      "hoster": "poe",
+      "is_default": true,
+      "configured_keys": 2,
+      "usable_keys": 2,
+      "tag_system": "stress_based",
+      "has_configured_keys": true,
+      "capabilities": {
+        "chat": true,
+        "models": true,
+        "api_requests": false,
+        "downloads": false
+      },
+      "operation_count": 0
+    },
+    {
+      "hoster": "pexels",
+      "is_default": false,
+      "configured_keys": 1,
+      "usable_keys": 1,
+      "tag_system": "stress_based",
+      "has_configured_keys": true,
+      "capabilities": {
+        "chat": false,
+        "models": false,
+        "api_requests": true,
+        "downloads": true
+      },
+      "operation_count": 6
+    }
+  ]
+}
+```
+
+### `GET /hosters/{hoster_name}/models?include_raw=false`
+
+Returns normalized model metadata for one hoster.
+Non-model hosters such as `aihorde`, `piapi`, `pexels`, `newsapi`, `unsplash`, and `pixabay` return `400` here and should use `GET /hosters/{hoster_name}/operations` instead.
+
+Example:
+
+```bash
+curl "http://localhost:8129/hosters/openrouter/models"
+```
+
+### `GET /models?hoster=...&include_raw=false`
+
+- Without `hoster`: returns model lists for all hosters.
+- With `hoster`: same as per-hoster endpoint.
+- Hosters that do not expose models return an error payload in the aggregated response.
+
+### `GET /hosters/{hoster_name}/operations`
+
+Returns provider-native operations for hosters that are not purely chat/model based.
+
+Example:
+
+```bash
+curl "http://localhost:8129/hosters/pexels/operations"
+```
+
+Example response (trimmed):
+
+```json
+{
+  "hoster": "pexels",
+  "count": 6,
+  "operations": [
+    {
+      "operation": "search_photos",
+      "category": "photos",
+      "required_params": ["query"],
+      "optional_params": ["orientation", "size", "color", "locale", "page", "per_page"]
+    },
+    {
+      "operation": "search_videos",
+      "category": "videos",
+      "required_params": ["query"],
+      "optional_params": ["orientation", "size", "locale", "page", "per_page"]
+    }
+  ]
+}
+```
+
+### `POST /hosters/{hoster_name}/api/request`
+
+Executes a provider-native operation using the selected hoster key.
+
+Example request:
+
+```json
+{
+  "operation": "search_photos",
+  "params": {
+    "query": "aurora",
+    "per_page": 2
+  },
+  "include_raw": false
+}
+```
+
+Example response shape:
+
+```json
+{
+  "hoster": "pexels",
+  "operation": "search_photos",
+  "result": {
+    "media_type": "photo",
+    "count": 2,
+    "items": [
+      {
+        "id": 123,
+        "download_options": [
+          {
+            "variant": "original",
+            "asset_url": "https://images.pexels.com/..."
+          }
+        ],
+        "default_download": {
+          "variant": "original",
+          "asset_url": "https://images.pexels.com/..."
+        }
+      }
+    ],
+    "rate_limit": {
+      "limit": 20000,
+      "remaining": 19995,
+      "reset_unix": 1770000000
+    }
+  }
+}
+```
+
+### `POST /hosters/{hoster_name}/api/download`
+
+Streams a downloadable asset URL returned by the provider back through C05.
+
+Request:
+
+```json
+{
+  "asset_url": "https://images.pexels.com/photos/3573351/pexels-photo-3573351.png"
+}
+```
+
+### Model metadata normalization
+
+For OpenAI-style providers (Poe/OpenRouter/NVIDIA), normalized fields can include:
+
+- `id`, `name`, `object`, `created`, `owned_by`
+- `description`, `context_length`, `max_completion_tokens`
+- `pricing`, `input_modalities`, `output_modalities`, `supported_parameters`
+
+For Gemini, fields can include:
+
+- `id`, `name`, `display_name`, `description`
+- `input_token_limit`, `output_token_limit`
+- `supported_actions`, `supported_generation_methods`, `version`
+
+When `include_raw=true`, raw provider payload is added under `raw`.
+
+## 11. Session APIs
+
+### `POST /session/history`
+
+Request:
+
+```json
+{"app_id":"my-app","session_id":"my-session"}
+```
+
+Response:
+
+```json
+{"session_id":"my-session","messages":[...]}
+```
+
+Returns 404 if session file is missing/empty.
+
+### `GET /session/history/latest`
+
+Query params:
+
+- `app_id` (optional)
+- `include_full` (optional bool)
+
+Returns metadata about most recently modified session.
+
+## 12. Recent Requests and Conversation Listing
+
+### `GET /requests/most_recent`
+
+Returns latest in-memory request record:
+
+- `request_id`, `session_id`, `app_id`
+- `start_time`, `last_update_time`, `finished_time`
+- `user_prompt`, `assistant_preview`
+- `status` (`running`, `finished`, `failed`, `cancelled`)
+
+### `GET /api/conversations/recent`
+
+Query params:
+
+- `count` (default `10`)
+- `single` (optional bool, only sessions with one completed turn)
+
+Response includes:
+
+- `sessionId`, `createdAt`, `lastMessageAt`, `messageCount`
+
+## 13. Stop API
+
+### `POST /stop`
+
+Request:
+
+```json
+{"request_id":"<from chat start event>"}
+```
+
+Response when successful:
+
+```json
+{"status":"stopping","request_id":"..."}
+```
+
+If request ID is unknown or already finished, returns 404.
+
+## 14. Key Management and Limits
+
+## 14.1 Key files
+
+- `keys/poe.txt`
+- `keys/openrouter.txt`
+- `keys/googlegemini.txt`
+- `keys/nvidia.txt`
+- `keys/huggingface.txt`
+- `keys/groq.txt`
+- `keys/scitely.txt`
+- `keys/aihorde.txt`
+- `keys/piapi.txt`
+- `keys/pexels.txt`
+- `keys/newsapi.txt`
+- `keys/unsplash.txt`
+- `keys/pixabay.txt`
+
+Each line is one key. Lines starting with `#` are ignored.
+
+## 14.2 Exhausted key tracking
+
+File: `KeysUsedUp.txt`
+
+Format:
+
+```text
+hoster:key
+```
+
+When a request error indicates rate/quota limit, key is marked used-up and persisted.
+
+## 14.3 Daily refresh
+
+- Exhausted key state resets daily at 08:00 Beijing time.
+- Refresh is checked at startup, then during requests (throttled to about once per minute per keyring).
+
+## 14.4 Retry behavior
+
+- Max retries per key: `3`
+- All hosters use the stress distributor and prefer the key with the fewest last-minute requests.
+- NVIDIA currently enforces a per-key 40 rpm capacity ceiling on top of that distributor.
+- Empty provider responses are treated as retryable and will advance to the next least-stressed key instead of repeatedly burning the same key.
+
+## 15. Session Persistence Details
+
+- Stored under: `sessions/{sanitized_app_id}/{sanitized_session_id}.json`
+- IDs are sanitized to `[A-Za-z0-9_-]` (others become `_`).
+- Writes are atomic (`.tmp` then replace).
+- `MAX_HISTORY_MESSAGES = 40`
+- Overlap dedup logic prevents duplicate append blocks.
+
+## 16. Concrete Usage Examples
+
+### 16.1 Minimal chat (default hoster = Poe)
+
+```bash
+curl -N -X POST http://localhost:8129/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-3-5-sonnet-20241022",
+    "user_prompt": "Explain recursion in one paragraph"
+  }'
+```
+
+### 16.2 Chat using OpenRouter
+
+```bash
+curl -N -X POST http://localhost:8129/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hoster": "openrouter",
+    "model": "openai/gpt-4o-mini",
+    "user_prompt": "Write 3 bullet points about TCP",
+    "extra_body": {"temperature": 0.7, "max_tokens": 180}
+  }'
+```
+
+### 16.3 Chat using NVIDIA with reasoning
+
+```bash
+curl -N -X POST http://localhost:8129/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hoster": "nvidia",
+    "model": "nvidia/llama-3.1-nemotron-70b-instruct",
+    "reasoning_effort": "high",
+    "user_prompt": "Solve: 17*19 with steps"
+  }'
+```
+
+### 16.4 Chat using Google Gemini
+
+```bash
+curl -N -X POST http://localhost:8129/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hoster": "googlegemini",
+    "model": "gemini-3-flash-preview",
+    "reasoning_effort": "low",
+    "user_prompt": "Give a short explanation of transformers",
+    "extra_body": {"max_tokens": 200}
+  }'
+```
+
+### 16.5 Continue an existing session
+
+```bash
+curl -N -X POST http://localhost:8129/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "app_id": "assistant-web",
+    "session_id": "user-42",
+    "include_history": true,
+    "hoster": "poe",
+    "model": "claude-3-5-sonnet-20241022",
+    "user_prompt": "Continue from where we left off"
+  }'
+```
+
+### 16.6 Fetch models for all hosters
+
+```bash
+curl "http://localhost:8129/models"
+```
+
+### 16.7 Fetch models for one hoster with raw payloads
+
+```bash
+curl "http://localhost:8129/hosters/googlegemini/models?include_raw=true"
+```
+
+### 16.8 Stop a running request
+
+Step 1: start a chat and capture `request_id` from the first `status:start` line.
+
+Step 2:
+
+```bash
+curl -X POST http://localhost:8129/stop \
+  -H "Content-Type: application/json" \
+  -d '{"request_id":"<request_id_here>"}'
+```
+
+### 16.9 Python streaming client example
+
+```python
+import json
+import requests
+
+payload = {
+    "hoster": "openrouter",
+    "model": "openai/gpt-4o-mini",
+    "user_prompt": "Tell me a short story",
+}
+
+with requests.post("http://localhost:8129/chat", json=payload, stream=True, timeout=120) as r:
+    r.raise_for_status()
+    for line in r.iter_lines(decode_unicode=True):
+        if not line:
+            continue
+        evt = json.loads(line)
+        if evt.get("event") == "content":
+            print(evt["content"], end="", flush=True)
+        elif evt.get("event") == "content_part":
+            print(f"\n[content_part:{evt.get('content_type')}]", evt["content"])
+        elif evt.get("event") == "content_parts":
+            print("\n[content_parts]", evt["content"])
+        elif evt.get("event") == "tool_calls":
+            print("\n[tool_calls]", evt["tool_calls"])
+        elif evt.get("status") == "start":
+            print("\nrequest_id:", evt["request_id"])
+        elif evt.get("status") in ("end", "cancelled"):
+            print("\nstatus:", evt["status"])
+            break
+        elif evt.get("error"):
+            print("\nerror:", evt["error"])
+            break
+```
+
+### 16.10 Search Pexels photos through C05
+
+```bash
+curl -X POST http://localhost:8129/hosters/pexels/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "search_photos",
+    "params": {
+      "query": "northern lights",
+      "orientation": "landscape",
+      "per_page": 3
+    }
+  }'
+```
+
+### 16.11 Download a Pexels asset through C05
+
+Use an `asset_url` returned in `download_options` or `default_download`.
+
+```bash
+curl -L -X POST http://localhost:8129/hosters/pexels/api/download \
+  -H "Content-Type: application/json" \
+  -d '{
+    "asset_url": "https://images.pexels.com/photos/3573351/pexels-photo-3573351.png"
+  }' \
+  -o pexels-photo.png
+```
+
+### 16.12 Search NewsAPI headlines through C05
+
+```bash
+curl -X POST http://localhost:8129/hosters/newsapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "top_headlines",
+    "params": {
+      "country": "us",
+      "category": "technology",
+      "pageSize": 5
+    }
+  }'
+```
+
+### 16.13 Search Unsplash photos through C05
+
+```bash
+curl -X POST http://localhost:8129/hosters/unsplash/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "search_photos",
+    "params": {
+      "query": "city skyline",
+      "per_page": 3
+    }
+  }'
+```
+
+### 16.14 Search Pixabay images through C05
+
+```bash
+curl -X POST http://localhost:8129/hosters/pixabay/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "search_images",
+    "params": {
+      "q": "forest trail",
+      "per_page": 3,
+      "safesearch": true
+    }
+  }'
+```
+
+### 16.15 PiAPI text-to-image through C05
+
+Example based on PiAPI's official Qwen Image `txt2img` request shape:
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "create_task",
+    "params": {
+      "model": "Qubico/qwen-image",
+      "task_type": "txt2img",
+      "input": {
+        "prompt": "Friendly robot in a cinematic studio portrait",
+        "seed": -1,
+        "steps": 16,
+        "width": 1024,
+        "height": 1024,
+        "flow_shift": 3
+      },
+      "config": {
+        "service_mode": "public"
+      }
+    }
+  }'
+```
+
+### 16.16 PiAPI image-to-image / edit through C05
+
+Example based on PiAPI's official Flux `img2img` request shape:
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "create_task",
+    "params": {
+      "model": "Qubico/flux1-schnell",
+      "task_type": "img2img",
+      "input": {
+        "prompt": "Turn this product shot into a clean studio ad with soft rim lighting",
+        "image": "https://example.com/reference-product.jpg"
+      },
+      "config": {
+        "service_mode": "public"
+      }
+    }
+  }'
+```
+
+If you specifically want Qwen Image editing instead of Flux-style `img2img`, swap to `model: "Qubico/qwen-image"` and `task_type: "image-edit"` with the `image1` / `image2` / `image3` fields from PiAPI's image-edit docs.
+
+### 16.17 PiAPI text-to-video through C05
+
+Example based on PiAPI's official Veo3.1 text-to-video request shape:
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "create_task",
+    "params": {
+      "model": "veo3.1",
+      "task_type": "veo3.1-video-fast",
+      "input": {
+        "prompt": "A cinematic drone shot flying over a snowy mountain village at sunrise",
+        "negative_prompt": "static camera, low detail",
+        "aspect_ratio": "16:9",
+        "duration": "8s",
+        "resolution": "720p",
+        "generate_audio": false
+      },
+      "config": {
+        "service_mode": "public"
+      }
+    }
+  }'
+```
+
+### 16.18 PiAPI image-to-video through C05
+
+Example based on PiAPI's official Veo3 image-to-video request shape:
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "create_task",
+    "params": {
+      "model": "veo3",
+      "task_type": "veo3-video-fast",
+      "input": {
+        "image_url": "https://example.com/reference-scene.png",
+        "prompt": "Animate the scene with slow camera motion, drifting fog, and subtle environmental movement",
+        "aspect_ratio": "auto",
+        "duration": "8s",
+        "resolution": "720p",
+        "generate_audio": true
+      },
+      "config": {
+        "service_mode": "public"
+      }
+    }
+  }'
+```
+
+### 16.19 PiAPI text-to-audio / music through C05
+
+Example based on PiAPI's official Ace Step `txt2audio` request shape:
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "create_task",
+    "params": {
+      "model": "Qubico/ace-step",
+      "task_type": "txt2audio",
+      "input": {
+        "style_prompt": "warm indie folk with acoustic guitar and light piano",
+        "negative_prompt": "harsh noise",
+        "lyrics": "[inst]",
+        "duration": 10
+      },
+      "config": {
+        "service_mode": "public"
+      }
+    }
+  }'
+```
+
+### 16.20 PiAPI audio-to-audio through C05
+
+Example based on PiAPI's official Ace Step `audio2audio` request shape:
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "create_task",
+    "params": {
+      "model": "Qubico/ace-step",
+      "task_type": "audio2audio",
+      "input": {
+        "style_audio": "https://example.com/reference-style.mp3",
+        "style_prompt": "rock",
+        "negative_prompt": "noise",
+        "lyrics": "[inst]"
+      },
+      "config": {
+        "service_mode": "public"
+      }
+    }
+  }'
+```
+
+### 16.21 PiAPI text-to-speech through C05
+
+Example based on PiAPI's official F5-TTS `zero-shot` request shape:
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "create_task",
+    "params": {
+      "model": "Qubico/tts",
+      "task_type": "zero-shot",
+      "input": {
+        "gen_text": "Welcome back. Your overnight batch jobs completed successfully.",
+        "ref_audio": "https://example.com/reference-voice.wav",
+        "ref_text": "Welcome back to the dashboard."
+      },
+      "config": {
+        "service_mode": "public"
+      }
+    }
+  }'
+```
+
+### 16.22 Fetch a PiAPI task result through C05
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "get_task",
+    "params": {
+      "task_id": "your-task-id-here"
+    }
+  }'
+```
+
+### 16.23 Fetch PiAPI account info through C05
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "account_info"
+  }'
+```
+
+### 16.24 Upload a temporary PiAPI resource through C05
+
+`file_data` must be base64 data accepted by PiAPI's ephemeral upload API.
+
+```bash
+curl -X POST http://localhost:8129/hosters/piapi/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "upload_ephemeral_resource",
+    "params": {
+      "file_name": "reference.png",
+      "file_data": "data:image/png;base64,REPLACE_WITH_BASE64"
+    }
+  }'
+```
+
+### 16.25 PiAPI text-to-text through `/chat`
+
+PiAPI's LLM API is OpenAI-compatible. Through C05 you can call it like any other chat hoster:
+
+```bash
+curl -N -X POST http://localhost:8129/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hoster": "piapi",
+    "model": "gpt-4o",
+    "user_prompt": "Give me 3 crisp bullet points about diffusion models",
+    "extra_body": {
+      "stream": true,
+      "temperature": 0.4
+    }
+  }'
+```
+
+### 16.26 Submit an AI Horde image job through C05
+
+Correct request shape for AI Horde through C05:
+
+- Always send `prompt`
+- Put generation settings inside `params`
+- Omit model selection unless you know a valid AI Horde-native model
+- If you do select a model, use `models: [...]`, not `model: "..."`
+
+Working example with no explicit model selection:
+
+```bash
+curl -X POST http://localhost:8129/hosters/aihorde/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "generate_image_async",
+    "params": {
+      "prompt": "a futuristic city skyline at dusk",
+      "params": {
+        "steps": 25,
+        "n": 1
+      },
+      "r2": true
+    }
+  }'
+```
+
+If you want to force a specific AI Horde model, the correct shape looks like this:
+
+```bash
+curl -X POST http://localhost:8129/hosters/aihorde/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "generate_image_async",
+    "params": {
+      "prompt": "a futuristic city skyline at dusk",
+      "models": ["REPLACE_WITH_AI_HORDE_MODEL_NAME"],
+      "params": {
+        "steps": 25,
+        "n": 1
+      },
+      "r2": true
+    }
+  }'
+```
+
+### 16.27 Wait for an AI Horde image job through C05
+
+This uses C05's built-in polling helper, which follows the official AI Horde pattern of checking image progress first and then fetching final status:
+
+```bash
+curl -X POST http://localhost:8129/hosters/aihorde/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "wait_for_image_generation",
+    "params": {
+      "job_id": "your-image-job-id",
+      "poll_interval_seconds": 4,
+      "timeout_seconds": 300
+    }
+  }'
+```
+
+### 16.28 Submit and wait for an AI Horde image job in one call
+
+This exact request shape was live-tested through C05 and successfully produced a PNG during verification.
+
+```bash
+curl -X POST http://localhost:8129/hosters/aihorde/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "generate_image_and_wait",
+    "params": {
+      "prompt": "A small friendly robot waving in a bright futuristic city square, high detail",
+      "params": {
+        "steps": 15,
+        "width": 512,
+        "height": 512,
+        "n": 1
+      },
+      "r2": true,
+      "timeout_seconds": 600,
+      "poll_interval_seconds": 4
+    }
+  }'
+```
+
+### 16.29 Submit an AI Horde text job through C05
+
+```bash
+curl -X POST http://localhost:8129/hosters/aihorde/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "generate_text_async",
+    "params": {
+      "prompt": "Write a concise product description for a solar-powered backpack.",
+      "params": {
+        "max_length": 120,
+        "max_context_length": 2048,
+        "temperature": 0.7
+      }
+    }
+  }'
+```
+
+### 16.30 Submit and wait for an AI Horde text job in one call
+
+```bash
+curl -X POST http://localhost:8129/hosters/aihorde/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "generate_text_and_wait",
+    "params": {
+      "prompt": "Summarize why async job polling matters in one short paragraph.",
+      "params": {
+        "max_length": 120,
+        "temperature": 0.4
+      },
+      "timeout_seconds": 120,
+      "poll_interval_seconds": 4
+    }
+  }'
+```
+
+### 16.31 Cancel an AI Horde image job through C05
+
+```bash
+curl -X POST http://localhost:8129/hosters/aihorde/api/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "cancel_image_generation",
+    "params": {
+      "job_id": "your-image-job-id"
+    }
+  }'
+```
+
+## 17. Limitations and Caveats
+
+- No built-in authentication/authorization layer on API endpoints.
+- Recent request records (`/requests/most_recent`) are in-memory only (lost on restart).
+- Session files are local JSON files; no DB backend.
+- `--ekau` flag is currently a no-op.
+- Gemini hoster currently does not forward tool definitions/tool_choice.
+- Gemini bridge is text-oriented; not a full multimodal bridge yet.
+- `aihorde` is async/provider-native only; it does not participate in `/chat`.
+- AI Horde queue time depends heavily on worker availability, model availability, kudos/account state, and whether you are using the anonymous key.
+- AI Horde payload details evolve over time; this bridge intentionally forwards most provider-specific fields with light validation rather than freezing a strict schema.
+- `aihorde` currently depends on a working `curl` binary on the host machine because that transport proved reliable against AI Horde's Cloudflare layer while standard Python HTTP clients did not.
+- `pexels` is exposed as a curated provider bridge, not a general arbitrary HTTP proxy.
+- `newsapi`, `unsplash`, and `pixabay` are also exposed as curated provider bridges, not arbitrary HTTP proxies.
+- PiAPI model/task names are doc-driven and change over time; this hoster intentionally does not expose a `/models` catalog for PiAPI.
+- PiAPI task outputs, availability, and `service_mode` options vary by PiAPI model/API family and workspace/account mode.
+- PiAPI ephemeral upload URLs are temporary and PiAPI docs state they are deleted after 24 hours.
+- Pexels API usage still requires client-side attribution/linking that complies with Pexels terms.
+- Unsplash image usage should preserve Unsplash attribution and reporting requirements, including using the returned Unsplash image URLs and download-tracking links.
+- Model catalog responses depend on external provider APIs and key permissions.
+- `/models` can return mixed results if some providers fail (errors are returned per hoster).
+
+## 18. Error Behavior Reference
+
+Common patterns:
+
+- `400 Unknown hoster 'x'`
+- `400 Field 'model' must be provided and non-empty.`
+- `400 Hoster '<provider>' does not support chat completions.`
+- `500 No usable <hoster> API keys configured.`
+- Streamed model errors:
+  - `Model '<name>' appears invalid or not found: ...`
+- Streamed exhaustion errors:
+  - `All keys failed or were exhausted.`
+
+## 19. Observability and Debugging
+
+Enable debug logs:
+
+```bash
+python main.py --debug
+```
+
+Equivalent env variable:
+
+```bash
+export C04POE_DEBUG=1
+```
+
+Debug mode logs include keyring state transitions and cleanup behavior.
+
+## 20. Security and Operational Recommendations
+
+- Keep API keys only in local key files or environment-managed secrets.
+- Restrict server exposure behind your own gateway/auth if used beyond localhost.
+- Rotate keys periodically and monitor `KeysUsedUp.txt` growth.
+- For high-throughput usage, consider:
+  - external cache for model lists
+  - DB-backed session storage
+  - request authentication and rate limiting at ingress
+
+## 21. Quick Checklist
+
+- Keys configured in `keys/*.txt`
+- Required SDKs installed (`google-genai` for Gemini)
+- Server running on expected port
+- Client parses NDJSON line-by-line
+- Provider-native clients use `/hosters/{hoster}/operations` and `/hosters/{hoster}/api/request` when the hoster is not chat-based
+- `request_id` captured for cancellation support
+- `include_history` configured to match your persistence intent

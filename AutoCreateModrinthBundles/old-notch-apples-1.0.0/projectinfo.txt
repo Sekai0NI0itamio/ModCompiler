@@ -1,0 +1,188 @@
+# Project Info
+
+generated_at=2026-04-10T23:51:50+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/31/Old-Notch-Apples-1.0.0.jar
+jar_size_bytes=5981
+jar_sha1=c8ea036432f7406e4f6878a1bb22d5c573ff99a1
+
+## Detected Metadata
+
+jar_name=Old-Notch-Apples-1.0.0.jar
+jar_display_name=Old Notch Apples
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=oldnotchapples
+name=Old Notch Apples
+mod_version=1.0.0
+description=Makes Enchanted Golden Apples craftable with 8 gold blocks + 1 apple, with 1.8.9 effects (Regeneration V, Absorption IV, Resistance, Fire Resistance)!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/old-notch-apples-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/old-notch-apples-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.oldnotchapples
+
+## Source Tree
+
+asd/itamio/oldnotchapples/OldNotchApplesConfig.java
+asd/itamio/oldnotchapples/OldNotchApplesHandler.java
+asd/itamio/oldnotchapples/OldNotchApplesMod.java
+
+## Key Source Excerpts
+
+### asd/itamio/oldnotchapples/OldNotchApplesHandler.java
+```
+package asd.itamio.oldnotchapples;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.init.MobEffects;
+import net.minecraft.item.ItemStack;
+import net.minecraft.potion.PotionEffect;
+import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+public class OldNotchApplesHandler {
+    
+    @SubscribeEvent
+    public void onItemUseFinish(LivingEntityUseItemEvent.Finish event) {
+        if (!OldNotchApplesConfig.enabled) return;
+        if (!OldNotchApplesConfig.use189Effects) return;
+        
+        if (!(event.getEntityLiving() instanceof EntityPlayer)) return;
+        
+        EntityPlayer player = (EntityPlayer) event.getEntityLiving();
+        ItemStack stack = event.getItem();
+        
+        // Check if it's an Enchanted Golden Apple (meta 1)
+        if (stack.getItem() == Items.GOLDEN_APPLE && stack.getMetadata() == 1) {
+            // Remove vanilla effects first
+            player.removePotionEffect(MobEffects.REGENERATION);
+            player.removePotionEffect(MobEffects.ABSORPTION);
+            player.removePotionEffect(MobEffects.RESISTANCE);
+            player.removePotionEffect(MobEffects.FIRE_RESISTANCE);
+            
+            // Apply 1.8.9 effects
+            // Regeneration V for 30 seconds (600 ticks)
+            player.addPotionEffect(new PotionEffect(MobEffects.REGENERATION, 600, 4)); // Level 4 = Regeneration V
+            
+            // Absorption IV for 2 minutes (2400 ticks)
+            player.addPotionEffect(new PotionEffect(MobEffects.ABSORPTION, 2400, 3)); // Level 3 = Absorption IV
+            
+            // Resistance for 5 minutes (6000 ticks)
+            player.addPotionEffect(new PotionEffect(MobEffects.RESISTANCE, 6000, 0)); // Level 0 = Resistance I
+            
+            // Fire Resistance for 5 minutes (6000 ticks)
+            player.addPotionEffect(new PotionEffect(MobEffects.FIRE_RESISTANCE, 6000, 0)); // Level 0 = Fire Resistance I
+        }
+    }
+}
+```
+
+### asd/itamio/oldnotchapples/OldNotchApplesMod.java
+```
+package asd.itamio.oldnotchapples;
+
+import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.registry.GameRegistry;
+import org.apache.logging.log4j.Logger;
+import java.io.File;
+
+@Mod(modid = OldNotchApplesMod.MODID, name = OldNotchApplesMod.NAME, version = OldNotchApplesMod.VERSION)
+public class OldNotchApplesMod {
+    public static final String MODID = "oldnotchapples";
+    public static final String NAME = "Old Notch Apples";
+    public static final String VERSION = "1.0.0";
+    
+    public static Logger logger;
+    public static OldNotchApplesConfig config;
+    
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new OldNotchApplesConfig(new File(event.getModConfigurationDirectory(), "oldnotchapples.cfg"));
+    }
+    
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        // Register the crafting recipe for Enchanted Golden Apple
+        // 8 gold blocks + 1 apple = 1 Enchanted Golden Apple
+        ItemStack enchantedApple = new ItemStack(Items.GOLDEN_APPLE, 1, 1); // meta 1 = Enchanted Golden Apple
+        
+        GameRegistry.addShapedRecipe(
+            enchantedApple.getItem().getRegistryName(),
+            null, // resource group
+            enchantedApple,
+            "GGG",
+            "GAG",
+            "GGG",
+            'G', Blocks.GOLD_BLOCK,
+            'A', Items.APPLE
+        );
+        
+        // Register event handler for custom effects
+        MinecraftForge.EVENT_BUS.register(new OldNotchApplesHandler());
+        
+        logger.info("Old Notch Apples mod initialized - Enchanted Golden Apples are now craftable!");
+    }
+}
+```
+
+### asd/itamio/oldnotchapples/OldNotchApplesConfig.java
+```
+package asd.itamio.oldnotchapples;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+
+public class OldNotchApplesConfig {
+    private Configuration config;
+    
+    public static boolean enabled = true;
+    public static boolean enableCrafting = true;
+    public static boolean use189Effects = true;
+    
+    public OldNotchApplesConfig(File configFile) {
+        config = new Configuration(configFile);
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enabled = config.getBoolean("enabled", "general", true, 
+            "Enable Old Notch Apples features");
+        
+        enableCrafting = config.getBoolean("enableCrafting", "general", true,
+            "Enable crafting recipe for Enchanted Golden Apples (8 gold blocks + 1 apple)");
+        
+        use189Effects = config.getBoolean("use189Effects", "general", true,
+            "Use 1.8.9 effects: Regeneration V (30s), Absorption IV (2m), Resistance (5m), Fire Resistance (5m)");
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void save() {
+        config.get("general", "enabled", true).set(enabled);
+        config.get("general", "enableCrafting", true).set(enableCrafting);
+        config.get("general", "use189Effects", true).set(use189Effects);
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+```

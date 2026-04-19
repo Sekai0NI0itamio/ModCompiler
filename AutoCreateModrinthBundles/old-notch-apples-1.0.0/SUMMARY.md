@@ -1,0 +1,25 @@
+# Auto Create Modrinth Draft Bundle
+
+- Status: `draft_created`
+- Bundle slug: `old-notch-apples-1.0.0`
+- Jar: `Old-Notch-Apples-1.0.0.jar`
+- Loader: `forge`
+- Detected game versions: `1.12.2`
+
+## Listing Preview
+
+- Name: `Old Notch Apples`
+- Summary: `Craft Enchanted Golden Apples with 8 gold blocks + 1 apple. Restores 1.8.9 effects: Regen V, Absorption IV, Resistance I, Fire Resistance I.`
+
+## Next Step
+
+Draft created on Modrinth project `old-notch-apples` (`hb1QGHss`), version `lIJtxVlH`. Review it on Modrinth and submit it manually when ready.
+Project link: https://modrinth.com/mod/old-notch-apples
+Version link: https://modrinth.com/mod/old-notch-apples/version/lIJtxVlH
+
+## Warnings
+
+GitHub wiki sync failed: ModCompilerError: Command failed: git -c http.https://github.com/.extraheader=AUTHORIZATION: basic <redacted> push origin HEAD:refs/heads/master
+remote: Repository not found.
+fatal: repository 'https://github.com/Sekai0NI0itamio/old-notch-apples.wiki.git/' not found
+Falling back to repository docs page for wiki link: https://github.com/Sekai0NI0itamio/old-notch-apples/blob/main/docs/Home.md
