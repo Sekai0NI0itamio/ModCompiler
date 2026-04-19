@@ -1,0 +1,232 @@
+name: Grep Minecraft Source Code
+
+on:
+  workflow_dispatch:
+    inputs:
+      minecraft_version:
+        description: 'Minecraft version (e.g., 1.21.5)'
+        required: true
+        type: string
+      loader:
+        description: 'Mod loader (forge, fabric, or neoforge)'
+        required: true
+        type: choice
+        options:
+          - forge
+          - fabric
+          - neoforge
+      query:
+        description: 'Search query (regex pattern)'
+        required: true
+        type: string
+      file_pattern:
+        description: 'File pattern to search (e.g., *.java, *SavedData*.java)'
+        required: false
+        default: '*.java'
+        type: string
+      context_lines:
+        description: 'Lines of context around matches'
+        required: false
+        default: '5'
+        type: string
+
+jobs:
+  grep-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      
+      - name: Determine version folder
+        id: version-folder
+        run: |
+          VERSION="${{ inputs.minecraft_version }}"
+          
+          # Map version to folder
+          if [[ "$VERSION" == "1.8.9" ]]; then
+            FOLDER="1.8.9"
+          elif [[ "$VERSION" =~ ^1\.12 ]]; then
+            FOLDER="1.12-1.12.2"
+          elif [[ "$VERSION" == "1.16.5" ]]; then
+            FOLDER="1.16.5"
+          elif [[ "$VERSION" =~ ^1\.17 ]]; then
+            FOLDER="1.17-1.17.1"
+          elif [[ "$VERSION" =~ ^1\.18 ]]; then
+            FOLDER="1.18-1.18.2"
+          elif [[ "$VERSION" =~ ^1\.19 ]]; then
+            FOLDER="1.19-1.19.4"
+          elif [[ "$VERSION" =~ ^1\.20\.[0-6] ]]; then
+            FOLDER="1.20-1.20.6"
+          elif [[ "$VERSION" =~ ^1\.21\.[0-1]$ ]]; then
+            FOLDER="1.21-1.21.1"
+          elif [[ "$VERSION" =~ ^1\.21\.[2-8]$ ]]; then
+            FOLDER="1.21.2-1.21.8"
+          elif [[ "$VERSION" =~ ^1\.21\.(9|10|11)$ ]]; then
+            FOLDER="1.21.9-1.21.11"
+          else
+            echo "Unknown version: $VERSION"
+            exit 1
+          fi
+          
+          echo "folder=$FOLDER" >> $GITHUB_OUTPUT
+          echo "Using folder: $FOLDER"
+      
+      - name: Setup template workspace
+        run: |
+          FOLDER="${{ steps.version-folder.outputs.folder }}"
+          LOADER="${{ inputs.loader }}"
+          TEMPLATE_DIR="${FOLDER}/${LOADER}/template"
+          
+          if [ ! -d "$TEMPLATE_DIR" ]; then
+            echo "Template not found: $TEMPLATE_DIR"
+            exit 1
+          fi
+          
+          echo "Template directory: $TEMPLATE_DIR"
+          
+          # Create a temporary workspace
+          WORKSPACE="/tmp/minecraft-source-workspace"
+          mkdir -p "$WORKSPACE"
+          cp -r "$TEMPLATE_DIR"/* "$WORKSPACE/"
+          
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          echo "TEMPLATE_DIR=$TEMPLATE_DIR" >> $GITHUB_ENV
+      
+      - name: Run Gradle to download and decompile sources
+        run: |
+          cd "$WORKSPACE"
+          
+          # Run a simple task that triggers source download
+          ./gradlew --no-daemon --info tasks 2>&1 | tee /tmp/gradle-output.log || true
+          
+          # The sources are typically in .gradle cache
+          echo "Gradle cache location:"
+          find ~/.gradle/caches -name "*.jar" -path "*/sources/*" 2>/dev/null | head -20 || true
+      
+      - name: Find decompiled source location
+        id: find-sources
+        run: |
+          # Look for decompiled sources in common locations
+          POSSIBLE_LOCATIONS=(
+            "$WORKSPACE/.gradle/loom-cache"
+            "$WORKSPACE/.gradle/caches"
+            "$HOME/.gradle/caches/forge_gradle"
+            "$HOME/.gradle/caches/fabric-loom"
+            "$HOME/.gradle/caches/minecraft"
+            "$HOME/.gradle/caches/neoforge"
+          )
+          
+          SOURCE_DIR=""
+          for LOC in "${POSSIBLE_LOCATIONS[@]}"; do
+            if [ -d "$LOC" ]; then
+              # Find directories with .java files
+              FOUND=$(find "$LOC" -name "*.java" -type f 2>/dev/null | head -1)
+              if [ -n "$FOUND" ]; then
+                SOURCE_DIR=$(dirname "$FOUND")
+                while [ "$(basename "$SOURCE_DIR")" != "sources" ] && [ "$(basename "$SOURCE_DIR")" != "src" ] && [ "$SOURCE_DIR" != "/" ]; do
+                  SOURCE_DIR=$(dirname "$SOURCE_DIR")
+                done
+                if [ "$SOURCE_DIR" != "/" ]; then
+                  break
+                fi
+              fi
+            fi
+          done
+          
+          if [ -z "$SOURCE_DIR" ] || [ "$SOURCE_DIR" == "/" ]; then
+            echo "Could not find decompiled sources. Searching entire .gradle cache..."
+            SOURCE_DIR="$HOME/.gradle/caches"
+          fi
+          
+          echo "source_dir=$SOURCE_DIR" >> $GITHUB_OUTPUT
+          echo "Using source directory: $SOURCE_DIR"
+      
+      - name: Search source code
+        run: |
+          SOURCE_DIR="${{ steps.find-sources.outputs.source_dir }}"
+          QUERY="${{ inputs.query }}"
+          FILE_PATTERN="${{ inputs.file_pattern }}"
+          CONTEXT="${{ inputs.context_lines }}"
+          
+          echo "==================================="
+          echo "Minecraft Source Code Search"
+          echo "==================================="
+          echo "Version: ${{ inputs.minecraft_version }}"
+          echo "Loader: ${{ inputs.loader }}"
+          echo "Query: $QUERY"
+          echo "File Pattern: $FILE_PATTERN"
+          echo "Context Lines: $CONTEXT"
+          echo "Source Directory: $SOURCE_DIR"
+          echo "==================================="
+          echo ""
+          
+          # Create output directory
+          mkdir -p search-results
+          
+          # Search with ripgrep if available, otherwise use grep
+          if command -v rg &> /dev/null; then
+            echo "Using ripgrep for search..."
+            rg --type java \
+               --context "$CONTEXT" \
+               --heading \
+               --line-number \
+               --color never \
+               --glob "$FILE_PATTERN" \
+               "$QUERY" \
+               "$SOURCE_DIR" \
+               > search-results/results.txt 2>&1 || true
+          else
+            echo "Using grep for search..."
+            find "$SOURCE_DIR" -name "$FILE_PATTERN" -type f -exec \
+              grep -H -n -C "$CONTEXT" -E "$QUERY" {} \; \
+              > search-results/results.txt 2>&1 || true
+          fi
+          
+          # Check if we found anything
+          if [ ! -s search-results/results.txt ]; then
+            echo "No matches found for query: $QUERY"
+            echo "Searched in: $SOURCE_DIR"
+            echo ""
+            echo "Available .java files (sample):"
+            find "$SOURCE_DIR" -name "*.java" -type f 2>/dev/null | head -20 || echo "No .java files found"
+            exit 1
+          fi
+          
+          echo "Search complete! Results:"
+          echo ""
+          cat search-results/results.txt
+          
+          # Also save a summary
+          echo "Total matches: $(grep -c "^[0-9]" search-results/results.txt || echo "0")" > search-results/summary.txt
+          echo "Files matched: $(grep -o "^[^:]*" search-results/results.txt | sort -u | wc -l)" >> search-results/summary.txt
+      
+      - name: Upload search results
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-source-search-results
+          path: search-results/
+          retention-days: 7
+      
+      - name: Display summary
+        run: |
+          echo "==================================="
+          echo "Search Summary"
+          echo "==================================="
+          cat search-results/summary.txt
+          echo "==================================="
+          echo ""
+          echo "Full results have been uploaded as an artifact."
+          echo "Download the artifact to see complete search results."
