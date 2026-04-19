@@ -148,7 +148,13 @@ def publish_one_mod(
         # Check if the existing version is a shell (< 5000 bytes = no real classes).
         # If it is, delete it and re-upload the fixed jar.
         existing_size = _get_version_primary_file_size(existing)
-        if existing_size < 5000:
+        # Also consider it a shell if our new jar is significantly larger
+        # (at least 10x bigger means the existing one has no real content)
+        new_jar_size = jar_path.stat().st_size
+        is_shell = existing_size < 5000 or (existing_size > 0 and new_jar_size > existing_size * 10)
+        import sys as _sys
+        print(f"  [{mod['slug']}] existing={existing.get('id')} size={existing_size}B new={new_jar_size}B shell={is_shell}", file=_sys.stderr)
+        if is_shell:
             existing_id = existing.get("id", "")
             try:
                 client.delete_version(version_id=existing_id)
@@ -159,7 +165,7 @@ def publish_one_mod(
                 return entry
         else:
             entry["publish_status"] = "skipped"
-            entry["note"] = f"Already exists on Modrinth as version {existing.get('id', '-')}"
+            entry["note"] = f"Already exists on Modrinth as version {existing.get('id', '-')} (size={existing_size}B)"
             entry["version_id"] = existing.get("id", "")
             return entry
 
