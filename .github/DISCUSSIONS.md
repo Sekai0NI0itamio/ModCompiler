@@ -1,0 +1,1 @@
+GitHub Discussions could not be enabled programmatically in this environment, so please enable it in **Settings → Features → Discussions** for this repository to provide a place for community support and development conversation.
