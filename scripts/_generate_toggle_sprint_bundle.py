@@ -424,10 +424,10 @@ public final class ToggleSprintController {
             return;
         }
         if (client.isPaused()) {
-            sprintKeyWasDown = client.options.sprintKey.isPressed();
+            sprintKeyWasDown = client.options.keySprint.isPressed();
             return;
         }
-        boolean sprintKeyDown = client.options.sprintKey.isPressed();
+        boolean sprintKeyDown = client.options.keySprint.isPressed();
         if (sprintKeyDown && !sprintKeyWasDown) {
             sprintLocked = !sprintLocked;
             client.player.setSprinting(false);
@@ -445,8 +445,8 @@ public final class ToggleSprintController {
         if (client.player == null) return false;
         if (client.player.isSpectator() || client.player.hasVehicle()) return false;
         if (client.player.isSneaking() || client.player.isUsingItem()) return false;
-        return client.options.forwardKey.isPressed()
-            && !client.options.backKey.isPressed();
+        return client.options.keyForward.isPressed()
+            && !client.options.keyBack.isPressed();
     }
 }
 """
@@ -554,17 +554,15 @@ NEOFORGE_1204_CLIENT = """\
 package asd.itamio.togglesprint;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.event.TickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 public final class ToggleSprintNeoForgeClient {
     private static final ToggleSprintController CONTROLLER = new ToggleSprintController();
 
     private ToggleSprintNeoForgeClient() {}
 
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            CONTROLLER.onClientTick(Minecraft.getInstance());
-        }
+    public static void onClientTick(ClientTickEvent.Post event) {
+        CONTROLLER.onClientTick(Minecraft.getInstance());
     }
 }
 """
@@ -638,18 +636,13 @@ NEOFORGE_2119_CLIENT = """\
 package asd.itamio.togglesprint;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 
-@EventBusSubscriber(modid = "togglesprint", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
 public final class ToggleSprintNeoForgeClient {
     private static final ToggleSprintController CONTROLLER = new ToggleSprintController();
 
     private ToggleSprintNeoForgeClient() {}
 
-    @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         CONTROLLER.onClientTick(Minecraft.getInstance());
     }
@@ -659,11 +652,21 @@ public final class ToggleSprintNeoForgeClient {
 NEOFORGE_2119_MOD = """\
 package asd.itamio.togglesprint;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.common.NeoForge;
 
 @Mod("togglesprint")
 public final class ToggleSprintNeoForgeMod {
     public static final String MOD_ID = "togglesprint";
+
+    public ToggleSprintNeoForgeMod(IEventBus modEventBus) {
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            NeoForge.EVENT_BUS.addListener(ToggleSprintNeoForgeClient::onClientTick);
+        }
+    }
 }
 """
 
@@ -753,7 +756,7 @@ def fabric_files():
 
 
 def neoforge_1204_files():
-    """NeoForge 1.20.4-1.20.6: TickEvent.ClientTickEvent in neoforge.event"""
+    """NeoForge 1.20.4-1.20.6: ClientTickEvent in neoforge.client.event"""
     return {
         f"src/main/java/{PKG}/ToggleSprintNeoForgeMod.java": NEOFORGE_1204_MOD,
         f"src/main/java/{PKG}/ToggleSprintNeoForgeClient.java": NEOFORGE_1204_CLIENT,
@@ -771,7 +774,7 @@ def neoforge_files():
 
 
 def neoforge_2119_files():
-    """NeoForge 1.21.9+: @EventBusSubscriber pattern"""
+    """NeoForge 1.21.9+: same ClientTickEvent, but FMLEnvironment.dist still works"""
     return {
         f"src/main/java/{PKG}/ToggleSprintNeoForgeMod.java": NEOFORGE_2119_MOD,
         f"src/main/java/{PKG}/ToggleSprintNeoForgeClient.java": NEOFORGE_2119_CLIENT,
