@@ -472,6 +472,61 @@ public final class ToggleSprintFabricMod implements ClientModInitializer {
 """
 
 # ---------------------------------------------------------------------------
+# Fabric presplit 1.18.x - 1.19.x: sprintKey, forwardKey, backKey (renamed in 1.18)
+# ---------------------------------------------------------------------------
+FABRIC_PRESPLIT_118_CONTROLLER = """\
+package asd.itamio.togglesprint;
+
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
+
+@Environment(EnvType.CLIENT)
+public final class ToggleSprintController {
+    private boolean sprintLocked;
+    private boolean sprintKeyWasDown;
+
+    public void onClientTick(MinecraftClient client) {
+        if (client == null || client.options == null) {
+            sprintLocked = false;
+            sprintKeyWasDown = false;
+            return;
+        }
+        if (client.player == null) {
+            sprintLocked = false;
+            sprintKeyWasDown = false;
+            return;
+        }
+        if (client.isPaused()) {
+            sprintKeyWasDown = client.options.sprintKey.isPressed();
+            return;
+        }
+        boolean sprintKeyDown = client.options.sprintKey.isPressed();
+        if (sprintKeyDown && !sprintKeyWasDown) {
+            sprintLocked = !sprintLocked;
+            client.player.setSprinting(false);
+            client.player.sendMessage(
+                Text.of("Toggle Sprint: " + (sprintLocked ? "ON" : "OFF")), true);
+        }
+        sprintKeyWasDown = sprintKeyDown;
+        if (sprintLocked) {
+            client.player.setSprinting(shouldKeepSprinting(client));
+        }
+    }
+
+    private boolean shouldKeepSprinting(MinecraftClient client) {
+        if (client.currentScreen != null) return false;
+        if (client.player == null) return false;
+        if (client.player.isSpectator() || client.player.hasVehicle()) return false;
+        if (client.player.isSneaking() || client.player.isUsingItem()) return false;
+        return client.options.forwardKey.isPressed()
+            && !client.options.backKey.isPressed();
+    }
+}
+"""
+
+# ---------------------------------------------------------------------------
 # Fabric split (1.20+): uses Yarn intermediary class_XXX names
 # These are the names that the fabric_split adapter uses at source level.
 # ---------------------------------------------------------------------------
@@ -554,15 +609,17 @@ NEOFORGE_1204_CLIENT = """\
 package asd.itamio.togglesprint;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.TickEvent;
 
 public final class ToggleSprintNeoForgeClient {
     private static final ToggleSprintController CONTROLLER = new ToggleSprintController();
 
     private ToggleSprintNeoForgeClient() {}
 
-    public static void onClientTick(ClientTickEvent.Post event) {
-        CONTROLLER.onClientTick(Minecraft.getInstance());
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            CONTROLLER.onClientTick(Minecraft.getInstance());
+        }
     }
 }
 """
@@ -652,10 +709,8 @@ public final class ToggleSprintNeoForgeClient {
 NEOFORGE_2119_MOD = """\
 package asd.itamio.togglesprint;
 
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 
 @Mod("togglesprint")
@@ -663,9 +718,8 @@ public final class ToggleSprintNeoForgeMod {
     public static final String MOD_ID = "togglesprint";
 
     public ToggleSprintNeoForgeMod(IEventBus modEventBus) {
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            NeoForge.EVENT_BUS.addListener(ToggleSprintNeoForgeClient::onClientTick);
-        }
+        // runtime_side=client in mod.txt ensures this only loads on client
+        NeoForge.EVENT_BUS.addListener(ToggleSprintNeoForgeClient::onClientTick);
     }
 }
 """
@@ -740,10 +794,18 @@ def forge_files_2119():
 
 
 def fabric_presplit_files():
-    """Fabric 1.16.5 - 1.19.4: fabric_presplit adapter, Yarn deobf names"""
+    """Fabric 1.16.5 - 1.17.1: keySprint, keyForward, keyBack"""
     return {
         f"src/main/java/{PKG}/ToggleSprintFabricMod.java": FABRIC_PRESPLIT_MOD,
         f"src/main/java/{PKG}/ToggleSprintController.java": FABRIC_PRESPLIT_CONTROLLER,
+    }
+
+
+def fabric_presplit_118_files():
+    """Fabric 1.18.x - 1.19.x: sprintKey, forwardKey, backKey (renamed in 1.18)"""
+    return {
+        f"src/main/java/{PKG}/ToggleSprintFabricMod.java": FABRIC_PRESPLIT_MOD,
+        f"src/main/java/{PKG}/ToggleSprintController.java": FABRIC_PRESPLIT_118_CONTROLLER,
     }
 
 
@@ -806,8 +868,8 @@ TARGETS = [
     # --- Missing Fabric ---
     ("TS1165Fabric",     "1.16.5",         "fabric",   EP_FABRIC,       fabric_presplit_files),
     ("TS1171Fabric",     "1.17.1",         "fabric",   EP_FABRIC,       fabric_presplit_files),
-    ("TS1182Fabric",     "1.18-1.18.2",    "fabric",   EP_FABRIC,       fabric_presplit_files),
-    ("TS1194Fabric",     "1.19-1.19.4",    "fabric",   EP_FABRIC,       fabric_presplit_files),
+    ("TS1182Fabric",     "1.18-1.18.2",    "fabric",   EP_FABRIC,       fabric_presplit_118_files),
+    ("TS1194Fabric",     "1.19-1.19.4",    "fabric",   EP_FABRIC,       fabric_presplit_118_files),
     # --- Missing NeoForge ---
     ("TS1204NeoForge",   "1.20.4",         "neoforge", EP_NEOFORGE,     neoforge_1204_files),
     ("TS1205NeoForge",   "1.20.5",         "neoforge", EP_NEOFORGE,     neoforge_1204_files),
