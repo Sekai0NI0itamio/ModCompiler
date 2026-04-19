@@ -1031,52 +1031,58 @@ for old, new in [
     SRC_120_FORGE = SRC_120_FORGE.replace(old, new)
 
 # ============================================================
-# 1.21+ FORGE — save() takes HolderLookup.Provider
+# 1.21+ FORGE
+# 1.21.1-1.21.4: save(CompoundTag, Provider), Factory — already in SRC_121_FORGE
+# 1.21.2-1.21.8: revert to save(CompoundTag) + old computeIfAbsent, add Optional getters
+# 1.21.9-1.21.11: save(CompoundTag, Provider) + Factory + Optional getters + no SubscribeEvent
 # ============================================================
 SRC_121_FORGE = SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag) {",
     "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
 )
 
-# 1.21.5+ Forge — getList(String, int) removed, getCompound(int) returns Optional
-SRC_1215_FORGE = (SRC_121_FORGE
+def _opt(s):
+    """Apply Optional getter fixes for 1.21.5+ API."""
+    return (s
+        .replace('ListTag players = tag.getList("players", 10);',
+                 'ListTag players = tag.getList("players").orElse(new ListTag());')
+        .replace("CompoundTag pc = players.getCompound(i);",
+                 "CompoundTag pc = players.getCompound(i).orElse(new CompoundTag());")
+        .replace('ListTag hl = pc.getList("homes", 10);',
+                 'ListTag hl = pc.getList("homes").orElse(new ListTag());')
+        .replace("CompoundTag hc = hl.getCompound(j);",
+                 "CompoundTag hc = hl.getCompound(j).orElse(new CompoundTag());")
+        .replace('hc.getString("name")',
+                 'hc.getString("name").orElse("")')
+        .replace('hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),',
+                 'hc.getDouble("x").orElse(0.0),hc.getDouble("y").orElse(0.0),hc.getDouble("z").orElse(0.0),')
+        .replace('hc.getFloat("yaw"),hc.getFloat("pitch")',
+                 'hc.getFloat("yaw").orElse(0.0f),hc.getFloat("pitch").orElse(0.0f)')
+        .replace('d.data.put(pc.getString("uuid"), homes);',
+                 'd.data.put(pc.getString("uuid").orElse(""), homes);')
+    )
+
+# 1.21.2-1.21.8: old save(CompoundTag), old computeIfAbsent(load,new,NAME), Optional getters
+SRC_1215_FORGE = _opt(
+    SRC_121_FORGE
     .replace(
-        'ListTag players = tag.getList("players", 10);',
-        'ListTag players = tag.getList("players").orElse(new ListTag());'
+        "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {",
+        "public CompoundTag save(CompoundTag tag) {"
     )
     .replace(
-        "CompoundTag pc = players.getCompound(i);",
-        "CompoundTag pc = players.getCompound(i).orElse(new CompoundTag());"
-    )
-    .replace(
-        'ListTag hl = pc.getList("homes", 10);',
-        'ListTag hl = pc.getList("homes").orElse(new ListTag());'
-    )
-    .replace(
-        "CompoundTag hc = hl.getCompound(j);",
-        "CompoundTag hc = hl.getCompound(j).orElse(new CompoundTag());"
-    )
-    .replace(
-        'hc.getString("name")',
-        'hc.getString("name").orElse("")'
-    )
-    .replace(
-        'hc.getDouble("x"),hc.getDouble("y"),hc.getDouble("z"),',
-        'hc.getDouble("x").orElse(0.0),hc.getDouble("y").orElse(0.0),hc.getDouble("z").orElse(0.0),'
-    )
-    .replace(
-        'hc.getFloat("yaw"),hc.getFloat("pitch")',
-        'hc.getFloat("yaw").orElse(0.0f),hc.getFloat("pitch").orElse(0.0f)'
-    )
-    .replace(
-        'd.data.put(pc.getString("uuid"), homes);',
-        'd.data.put(pc.getString("uuid").orElse(""), homes);'
+        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
+        "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);"
     )
 )
 
-# 1.21.11 Forge — addListener pattern (no @SubscribeEvent import)
-# 1.21.9+ Forge — net.minecraftforge.eventbus.api doesn't exist
-SRC_1219_FORGE = (SRC_1215_FORGE
+# 1.21.9-1.21.11 Forge: new save(Provider), Factory, Optional getters, no SubscribeEvent
+SRC_1219_FORGE = (
+    _opt(SRC_121_FORGE
+        .replace(
+            "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
+            "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (t, p) -> HomeData.load(t), null), NAME);"
+        )
+    )
     .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
     .replace(
         "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
@@ -1120,54 +1126,54 @@ SRC_1205_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag) {",
     "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
 ))
-SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)  # 1.21.1-1.21.4
-SRC_1215_NEOFORGE = to_neoforge_sethome(SRC_1215_FORGE)  # 1.21.5+
+SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)    # 1.21.1-1.21.4
+SRC_1215_NEOFORGE = to_neoforge_sethome(SRC_1215_FORGE)  # 1.21.2-1.21.8
+SRC_1219_NEOFORGE = to_neoforge_sethome(SRC_1219_FORGE)  # 1.21.9+
 
 # ============================================================
 # TARGETS — only ghost shell versions
 # ============================================================
-SRC_1215_NEOFORGE = to_neoforge_sethome(SRC_1215_FORGE)  # 1.21.5+
 targets = [
     # (folder, src, loader, mc_ver)
-    ("SetHome189Forge",       SRC_189,         "forge",    "1.8.9"),
-    ("SetHome1122Forge",      SRC_1122,        "forge",    "1.12.2"),
-    ("SetHome1165Forge",      SRC_1165,        "forge",    "1.16.5"),
-    ("SetHome1171Forge",      SRC_1171_118,    "forge",    "1.17.1"),
-    ("SetHome118Forge",       SRC_1171_118,    "forge",    "1.18"),
-    ("SetHome1181Forge",      SRC_1171_118,    "forge",    "1.18.1"),
-    ("SetHome1182Forge",      SRC_1171_118,    "forge",    "1.18.2"),
-    ("SetHome119Forge",       SRC_119,         "forge",    "1.19"),
-    ("SetHome1191Forge",      SRC_119,         "forge",    "1.19.1"),
-    ("SetHome1192Forge",      SRC_119,         "forge",    "1.19.2"),
-    ("SetHome1193Forge",      SRC_119,         "forge",    "1.19.3"),
-    ("SetHome1194Forge",      SRC_1194,        "forge",    "1.19.4"),
-    ("SetHome121Forge",       SRC_121_FORGE,   "forge",    "1.21"),
-    ("SetHome1211Forge",      SRC_121_FORGE,   "forge",    "1.21.1"),
-    ("SetHome1213Forge",      SRC_121_FORGE,   "forge",    "1.21.3"),
-    ("SetHome1214Forge",      SRC_121_FORGE,   "forge",    "1.21.4"),
+    ("SetHome189Forge",       SRC_189,          "forge",    "1.8.9"),
+    ("SetHome1122Forge",      SRC_1122,         "forge",    "1.12.2"),
+    ("SetHome1165Forge",      SRC_1165,         "forge",    "1.16.5"),
+    ("SetHome1171Forge",      SRC_1171_118,     "forge",    "1.17.1"),
+    ("SetHome118Forge",       SRC_1171_118,     "forge",    "1.18"),
+    ("SetHome1181Forge",      SRC_1171_118,     "forge",    "1.18.1"),
+    ("SetHome1182Forge",      SRC_1171_118,     "forge",    "1.18.2"),
+    ("SetHome119Forge",       SRC_119,          "forge",    "1.19"),
+    ("SetHome1191Forge",      SRC_119,          "forge",    "1.19.1"),
+    ("SetHome1192Forge",      SRC_119,          "forge",    "1.19.2"),
+    ("SetHome1193Forge",      SRC_119,          "forge",    "1.19.3"),
+    ("SetHome1194Forge",      SRC_1194,         "forge",    "1.19.4"),
+    ("SetHome121Forge",       SRC_121_FORGE,    "forge",    "1.21"),
+    ("SetHome1211Forge",      SRC_121_FORGE,    "forge",    "1.21.1"),
+    ("SetHome1213Forge",      SRC_121_FORGE,    "forge",    "1.21.3"),
+    ("SetHome1214Forge",      SRC_121_FORGE,    "forge",    "1.21.4"),
     ("SetHome1215Forge",      SRC_1215_FORGE,   "forge",    "1.21.5"),
     ("SetHome1216Forge",      SRC_1215_FORGE,   "forge",    "1.21.6"),
     ("SetHome1217Forge",      SRC_1215_FORGE,   "forge",    "1.21.7"),
     ("SetHome1218Forge",      SRC_1215_FORGE,   "forge",    "1.21.8"),
-    ("SetHome1219Forge",      SRC_1215_FORGE,   "forge",    "1.21.9"),
-    ("SetHome12110Forge",     SRC_1219_FORGE,  "forge",    "1.21.10"),
-    ("SetHome12111Forge",     SRC_12111_FORGE, "forge",    "1.21.11"),
-    ("SetHome1202NeoForge",   SRC_120_NEOFORGE,"neoforge", "1.20.2"),
-    ("SetHome1204NeoForge",   SRC_120_NEOFORGE,"neoforge", "1.20.4"),
+    ("SetHome1219Forge",      SRC_1219_FORGE,   "forge",    "1.21.9"),
+    ("SetHome12110Forge",     SRC_1219_FORGE,   "forge",    "1.21.10"),
+    ("SetHome12111Forge",     SRC_1219_FORGE,   "forge",    "1.21.11"),
+    ("SetHome1202NeoForge",   SRC_120_NEOFORGE, "neoforge", "1.20.2"),
+    ("SetHome1204NeoForge",   SRC_120_NEOFORGE, "neoforge", "1.20.4"),
     ("SetHome1205NeoForge",   SRC_1205_NEOFORGE,"neoforge", "1.20.5"),
     ("SetHome1206NeoForge",   SRC_1205_NEOFORGE,"neoforge", "1.20.6"),
-    ("SetHome121NeoForge",    SRC_121_NEOFORGE,"neoforge", "1.21"),
-    ("SetHome1211NeoForge",   SRC_121_NEOFORGE,"neoforge", "1.21.1"),
-    ("SetHome1212NeoForge",   SRC_121_NEOFORGE,"neoforge", "1.21.2"),
-    ("SetHome1213NeoForge",   SRC_121_NEOFORGE,"neoforge", "1.21.3"),
-    ("SetHome1214NeoForge",   SRC_121_NEOFORGE,"neoforge", "1.21.4"),
+    ("SetHome121NeoForge",    SRC_121_NEOFORGE, "neoforge", "1.21"),
+    ("SetHome1211NeoForge",   SRC_121_NEOFORGE, "neoforge", "1.21.1"),
+    ("SetHome1212NeoForge",   SRC_1215_NEOFORGE,"neoforge", "1.21.2"),
+    ("SetHome1213NeoForge",   SRC_1215_NEOFORGE,"neoforge", "1.21.3"),
+    ("SetHome1214NeoForge",   SRC_1215_NEOFORGE,"neoforge", "1.21.4"),
     ("SetHome1215NeoForge",   SRC_1215_NEOFORGE,"neoforge", "1.21.5"),
     ("SetHome1216NeoForge",   SRC_1215_NEOFORGE,"neoforge", "1.21.6"),
     ("SetHome1217NeoForge",   SRC_1215_NEOFORGE,"neoforge", "1.21.7"),
     ("SetHome1218NeoForge",   SRC_1215_NEOFORGE,"neoforge", "1.21.8"),
-    ("SetHome1219NeoForge",   SRC_1215_NEOFORGE,"neoforge", "1.21.9"),
-    ("SetHome12110NeoForge",  SRC_1215_NEOFORGE,"neoforge", "1.21.10"),
-    ("SetHome12111NeoForge",  SRC_121_NEOFORGE,"neoforge", "1.21.11"),
+    ("SetHome1219NeoForge",   SRC_1219_NEOFORGE,"neoforge", "1.21.9"),
+    ("SetHome12110NeoForge",  SRC_1219_NEOFORGE,"neoforge", "1.21.10"),
+    ("SetHome12111NeoForge",  SRC_1219_NEOFORGE,"neoforge", "1.21.11"),
 ]
 
 # ============================================================

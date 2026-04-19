@@ -86,7 +86,7 @@ public class SetHomeMod {
 
         public static HomeData get(MinecraftServer srv) {
             DimensionDataStorage storage = srv.overworld().getDataStorage();
-            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
+            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (t, p) -> HomeData.load(t), null), NAME);
         }
         public static HomeData load(CompoundTag tag) {
             HomeData d = new HomeData();
