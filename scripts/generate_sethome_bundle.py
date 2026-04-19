@@ -1062,21 +1062,37 @@ def _opt(s):
                  'd.data.put(pc.getString("uuid").orElse(""), homes);')
     )
 
-# 1.21.2-1.21.8: Forge uses THREE-argument computeIfAbsent (loadFunction, createSupplier, name)
-# NOT SavedDataType - that doesn't exist in Forge 1.21.2+
+# 1.21.2-1.21.8: Forge uses SavedDataType as a TOP-LEVEL class (not nested in SavedData)
+# Import from net.minecraft.world.level.saveddata.SavedDataType (not SavedData.SavedDataType)
 SRC_1215_FORGE = _opt(SRC_121_FORGE
     .replace(
-        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-        "return storage.computeIfAbsent((tag) -> HomeData.load(tag), HomeData::new, NAME);"
+        "import net.minecraft.world.level.saveddata.SavedData;",
+        "import net.minecraft.world.level.saveddata.SavedData;\nimport net.minecraft.world.level.saveddata.SavedDataType;"
+    )
+    .replace(
+        "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";",
+        "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";\n        private static final SavedDataType<HomeData> TYPE = new SavedDataType<>(HomeData::new, (tag, provider) -> HomeData.load(tag), null);"
+    )
+    .replace(
+        "return storage.computeIfAbsent((tag) -> HomeData.load(tag), HomeData::new, NAME);",
+        "return storage.computeIfAbsent(TYPE, NAME);"
     )
 )
 
-# 1.21.9-1.21.11 Forge: Same THREE-argument API + EventBusSubscriber pattern
+# 1.21.9-1.21.11 Forge: Same SavedDataType API + EventBusSubscriber pattern
 SRC_1219_FORGE = (
     _opt(SRC_121_FORGE
         .replace(
+            "import net.minecraft.world.level.saveddata.SavedData;",
+            "import net.minecraft.world.level.saveddata.SavedData;\nimport net.minecraft.world.level.saveddata.SavedDataType;"
+        )
+        .replace(
+            "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";",
+            "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";\n        private static final SavedDataType<HomeData> TYPE = new SavedDataType<>(HomeData::new, (tag, provider) -> HomeData.load(tag), null);"
+        )
+        .replace(
             "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-            "return storage.computeIfAbsent((tag) -> HomeData.load(tag), HomeData::new, NAME);"
+            "return storage.computeIfAbsent(TYPE, NAME);"
         )
     )
     .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
