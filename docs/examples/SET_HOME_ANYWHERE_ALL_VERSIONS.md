@@ -2,22 +2,43 @@
 
 ## Overview
 
-**Mod**: Set Home Anywhere (https://modrinth.com/mod/set-home-anywhere)  
-**Total Versions**: 79 on Modrinth  
-**Ghost Shells**: 39 versions (< 5000 bytes, 0 classes)  
-**Working Versions**: 40 versions (1.0.1+ "Fixed Corrupted")  
-**Target**: Replace all 39 ghost shell versions  
-**Source of Truth**: 1.12.2 Forge 1.0.1 jar  
-**Final Result**: 25/39 working after 13+ build runs
+**Mod**: Set Home Anywhere (https://modrinth.com/mod/set-home-anywhere)
+**Total Versions**: 79 on Modrinth
+**Ghost Shells**: 39 versions (< 5000 bytes, 0 classes)
+**Working Versions**: 40 versions (1.0.1+ "Fixed Corrupted")
+**Target**: Replace all 39 ghost shell versions
+**Source of Truth**: 1.12.2 Forge 1.0.1 jar
+**Final Result**: 39/39 working — all versions published
 
 ## Mod Description
 
 Server-side mod that adds home teleportation commands:
-- `/sethome <name>` - Set a home location
-- `/home <name|list>` - Teleport to home or list homes
-- `/delhome <name>` - Delete a home
+- `/sethome <name>` — Set a home location
+- `/home <name|list>` — Teleport to home or list homes
+- `/delhome <name>` — Delete a home
 - Config: `maxHomes` (default -1 = unlimited)
 - Storage: `WorldSavedData` (1.12.2) / `SavedData` (1.17+)
+
+---
+
+## Confirmed API Map (final, verified from build errors)
+
+| Version range         | Loader    | computeIfAbsent form          | save() signature              | NBT getters  | Event registration                        |
+|-----------------------|-----------|-------------------------------|-------------------------------|--------------|-------------------------------------------|
+| 1.8.9                 | Forge     | MapStorage.loadData/setData   | writeToNBT(NBTTagCompound)    | Standard     | FMLServerStartingEvent                    |
+| 1.12.2                | Forge     | MapStorage.getOrLoadData      | writeToNBT(NBTTagCompound)    | Standard     | FMLServerStartingEvent                    |
+| 1.16.5                | Forge     | DimensionSavedDataManager.get | save(CompoundNBT)             | Standard     | MinecraftForge.EVENT_BUS.register(this)   |
+| 1.17.1–1.20.x         | Forge     | three-arg (load, new, name)   | save(CompoundTag)             | Standard     | MinecraftForge.EVENT_BUS.register(this)   |
+| 1.20.x                | NeoForge  | Factory(new, load, null)      | save(CompoundTag)             | Standard     | NeoForge.EVENT_BUS.register(this)         |
+| 1.20.5–1.20.6         | NeoForge  | Factory(new, loadWP, null)    | save(CompoundTag, Provider)   | Standard     | NeoForge.EVENT_BUS.register(this)         |
+| 1.21.0–1.21.4         | Forge     | Factory(new, loadWP, null)    | save(CompoundTag, Provider)   | Standard     | MinecraftForge.EVENT_BUS.register(this)   |
+| 1.21.0–1.21.4         | NeoForge  | Factory(new, loadWP, null)    | save(CompoundTag, Provider)   | Standard     | NeoForge.EVENT_BUS.register(this)         |
+| 1.21.5–1.21.11        | Forge     | SavedDataType(name,new,null,null) | no @Override needed       | Optional     | EVENT_BUS.register(this), no @SubscribeEvent |
+| 1.21.5–1.21.11        | NeoForge  | SavedDataType(name,new,null,null) | no @Override needed       | Optional     | NeoForge.EVENT_BUS.register(this)         |
+
+`loadWP` = `loadWithProvider(CompoundTag, HolderLookup.Provider)` static helper method.
+
+---
 
 ## Key Challenges & Solutions
 
@@ -25,14 +46,7 @@ Server-side mod that adds home teleportation commands:
 
 **Problem**: 79 versions on Modrinth, but only 40 are real working jars.
 
-**Investigation**:
-```bash
-# Downloaded and analyzed all versions
-python3 scripts/fetch_modrinth_project.py https://modrinth.com/mod/set-home-anywhere
-
-# Found 39 ghost shells (< 5000 bytes)
-# Found 40 working versions (1.0.1+ with "Fixed Corrupted" in changelog)
-```
+**Investigation**: Downloaded and analyzed all versions. Found 39 ghost shells (< 5000 bytes, 0 classes) and 40 working versions (1.0.1+ with "Fixed Corrupted" in changelog).
 
 **Solution**: Only port the 39 ghost shell versions. Skip the 40 working versions to avoid overwriting functional mods.
 
@@ -40,542 +54,488 @@ python3 scripts/fetch_modrinth_project.py https://modrinth.com/mod/set-home-anyw
 
 ---
 
-### Challenge 2: SavedData API Changes Across Versions
+### Challenge 2: Chained String Replacements Break Silently
 
-**Problem**: The SavedData API changed significantly across Minecraft versions, causing compilation failures.
+**Problem**: The generator used long chains of `.replace()` calls to derive 1.21+ sources from earlier versions. Each fix changed the string that the next replacement was searching for, so replacements silently stopped firing. This caused multiple build runs to submit code that looked correct in the generator but was actually the old broken version.
 
-**API Evolution**:
+**Example of the failure**:
+```python
+# Step 1 added loadWithProvider to SRC_121_FORGE:
+SRC_121_FORGE = SRC_120_FORGE.replace(
+    "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);",
+    "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(...loadWithProvider...), NAME);"
+)
 
-1. **1.8.9 - 1.12.2**: `WorldSavedData` with `MapStorage`
-   ```java
-   MapStorage ms = srv.getWorld(0).getPerWorldStorage();
-   HomeData d = (HomeData) ms.getOrLoadData(HomeData.class, NAME);
-   ```
-
-2. **1.16.5**: `WorldSavedData` → `SavedData`, `DimensionSavedDataManager`
-   ```java
-   DimensionSavedDataManager mgr = srv.overworld().getDataStorage();
-   HomeData d = mgr.get(HomeData::new, NAME);
-   ```
-
-3. **1.17.1 - 1.21.1**: `SavedData.Factory` with two arguments
-   ```java
-   return storage.computeIfAbsent(
-       new SavedData.Factory<>(HomeData::new, (tag, provider) -> HomeData.load(tag), null),
-       NAME
-   );
-   ```
-
-4. **1.21.2+**: Three-argument form WITHOUT Factory wrapper
-   ```java
-   return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
-   ```
-
-**Initial Attempts** (Runs 1-10):
-- Fixed basic API differences per version
-- Got 25/39 versions working
-- All 1.21.2+ versions still failing
-
-**Error Message** (Run 11):
-```
-error: cannot find symbol
-import net.minecraft.world.level.saveddata.SavedData.SavedDataType;
-  symbol:   class SavedDataType
-  location: class SavedData
+# Step 2 tried to replace the OLD string — which no longer existed:
+def _forge_1212_src(src):
+    return src.replace(
+        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(...HomeData.load(tag)...), NAME);",
+        # ^^^ This string was never in SRC_121_FORGE — it had loadWithProvider now
+        "return storage.computeIfAbsent(TYPE);"
+    )
+    # Result: replacement silently does nothing, old code goes to GitHub
 ```
 
-**Failed Approach 1** (Run 12): Tried using `SavedDataType` as nested class
+**Solution**: Rewrote the entire 1.21+ section as explicit hardcoded source strings using a `build_forge()` builder function. No chaining at all. Each version range has its own explicit string. Created `scripts/_rebuild_1_21_sources.py` to regenerate the section cleanly.
+
+**Lesson**: Never derive version-specific source strings through long chains of `.replace()`. When one link in the chain changes, all downstream replacements silently break. Write explicit strings for each version range.
+
+---
+
+### Challenge 3: SavedData API Split Across 7 Distinct Eras
+
+**Problem**: The `DimensionDataStorage.computeIfAbsent()` API changed form multiple times across Minecraft versions, and the error messages were misleading about which form was actually needed.
+
+**The 7 distinct forms discovered through build errors**:
+
+**Era 1 — 1.8.9**: `MapStorage.loadData` / `setData` (no computeIfAbsent at all)
 ```java
-// WRONG - SavedDataType is NOT nested in SavedData
-import net.minecraft.world.level.saveddata.SavedData.SavedDataType;
+MapStorage ms = srv.getEntityWorld().getPerWorldStorage();
+HomeData d = (HomeData) ms.loadData(HomeData.class, NAME);
+if (d == null) { d = new HomeData(); ms.setData(NAME, d); }
 ```
 
-**Failed Approach 2** (Run 13): Tried `SavedDataType` as top-level class
+**Era 2 — 1.12.2**: `MapStorage.getOrLoadData`
 ```java
-// WRONG - Constructor signature was incorrect
-private static final SavedDataType<HomeData> TYPE = 
-    new SavedDataType<>(HomeData::new, (tag, provider) -> HomeData.load(tag), null);
+MapStorage ms = srv.getWorld(0).getPerWorldStorage();
+HomeData d = (HomeData) ms.getOrLoadData(HomeData.class, NAME);
 ```
 
-**Solution**: Use three-argument `computeIfAbsent` directly
+**Era 3 — 1.16.5**: `DimensionSavedDataManager.get` (different class, different method)
 ```java
-// CORRECT for Forge 1.21.2+
+DimensionSavedDataManager mgr = srv.overworld().getDataStorage();
+HomeData d = mgr.get(HomeData::new, NAME);
+```
+
+**Era 4 — 1.17.1–1.20.x Forge**: Three-argument `computeIfAbsent`
+```java
 return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
 ```
 
-**Lesson**: Don't guess API signatures from error messages. The error mentioned `SavedDataType`, but the actual API doesn't use it in Forge 1.21.2+ - it uses direct function references.
-
----
-
-### Challenge 3: Forge vs NeoForge API Differences
-
-**Problem**: Assumed Forge and NeoForge use the same API in 1.21.2+.
-
-**Reality**:
-- **Forge 1.21.2+**: Three-argument `computeIfAbsent(loadFn, createFn, name)`
-- **NeoForge 1.21.2+**: Still uses `SavedData.Factory` (two arguments)
-
-**Initial Mistake**:
-```python
-# Applied Forge's SavedDataType fix to NeoForge
-SRC_1215_NEOFORGE = to_neoforge_sethome(SRC_1215_FORGE)  # WRONG!
-```
-
-**Solution**:
-```python
-# Keep NeoForge on Factory API
-SRC_1215_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE))  # CORRECT
-```
-
-**Lesson**: Forge and NeoForge diverged significantly after 1.20. Always verify APIs separately for each mod loader, even in the same Minecraft version.
-
----
-
-### Challenge 4: Documentation Was Misleading
-
-**Problem**: Found Forge documentation showing three-argument API, but it didn't match the actual code.
-
-**What We Found**:
-```
-Forge Documentation (docs.minecraftforge.net):
-"DimensionDataStorage#computeIfAbsent takes in three arguments: 
-a function to load NBT data, a supplier to construct a new instance, 
-and the name of the .dat file"
-```
-
-**What Actually Worked**:
+**Era 5 — 1.20.x–1.21.4 NeoForge and 1.21.0–1.21.4 Forge**: `SavedData.Factory` with `BiFunction`
 ```java
-// Documentation suggested this would work, but it didn't initially
-storage.computeIfAbsent(this::load, this::create, "example");
+// Factory takes BiFunction<CompoundTag, HolderLookup.Provider, T>
+// Cannot use lambda — type inference fails. Must use named static method.
+public static HomeData loadWithProvider(CompoundTag tag, HolderLookup.Provider p) {
+    return HomeData.load(tag);
+}
+return storage.computeIfAbsent(
+    new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null),
+    NAME
+);
 ```
 
-**Root Cause**: The documentation was correct, but we were trying to use it with the wrong constructor patterns and imports.
-
-**Lesson**: Documentation can be correct but still lead you astray if you don't understand the full context. When documentation doesn't match reality, verify with actual source code.
-
----
-
-### Challenge 5: Creating the Source Code Search Workflow
-
-**Problem**: Kept guessing API signatures and failing. Needed a way to search actual Minecraft source code.
-
-**Solution**: Created two workflows:
-- `.github/workflows/grep-minecraft-source.yml` — single-query search
-- `.github/workflows/ai-source-search.yml` — multi-query search designed for AI IDE agents
-
-**Key fix**: The original `grep-minecraft-source.yml` ran `./gradlew tasks` which does NOT decompile anything. The fixed version runs `./gradlew genSources` (ForgeGradle/Fabric Loom) or `./gradlew dependencies` (NeoForge) which actually downloads and decompiles Minecraft sources.
-
-**AI-optimized workflow features**:
-1. Takes multiple queries and file patterns in one run
-2. Runs `genSources` to actually decompile Minecraft
-3. Searches with ripgrep across all decompiled .java files
-4. Dumps full class file content for matched files
-5. Lists all available .java files so the AI can browse the API tree
-6. Uploads everything as one artifact
-
-**Usage (AI IDE)**:
-```bash
-# Search for SavedDataType API in Forge 1.21.5
-python3 scripts/ai_source_search.py \
-    --version 1.21.5 \
-    --loader forge \
-    --queries "class SavedDataType" "computeIfAbsent" \
-    --files "*SavedDataType*.java" "*DimensionDataStorage*.java"
-
-# Search for NeoForge 1.21.9 SavedData API
-python3 scripts/ai_source_search.py \
-    --version 1.21.9 \
-    --loader neoforge \
-    --queries "computeIfAbsent,SavedData.Factory,SavedDataType"
-```
-
-**Usage (single query)**:
-```bash
-python3 scripts/grep_minecraft_source.py \
-    --version 1.21.5 \
-    --loader forge \
-    --query "class DimensionDataStorage" \
-    --context 10
-```
-
-**Why It Matters**: This workflow would have saved hours of trial-and-error. Instead of guessing APIs from error messages, you can see the actual source code.
-
-**Lesson**: When facing unknown APIs, invest time in building tools to search the actual source code. It's faster than guessing and rebuilding 10+ times.
-
----
-
-### Challenge 6: Optional Getters in 1.21.5+
-
-**Problem**: NBT getter methods changed to return `Optional` in 1.21.5+.
-
-**Old API** (1.21.0-1.21.4):
+**Era 6 — 1.21.5+ Forge and NeoForge**: `SavedDataType` with null Codec
 ```java
-ListTag players = tag.getList("players", 10);
-CompoundTag pc = players.getCompound(i);
-String uuid = pc.getString("uuid");
+// SavedDataType constructor: (String name, Supplier<T>, Codec<T>, DataFixTypes)
+// Third arg is Codec, not BiFunction. Pass null cast to avoid ambiguity.
+SavedDataType<HomeData> TYPE = new SavedDataType<HomeData>(
+    NAME, HomeData::new, (com.mojang.serialization.Codec<HomeData>)null, null
+);
+return storage.computeIfAbsent(TYPE);
 ```
 
-**New API** (1.21.5+):
-```java
-ListTag players = tag.getList("players").orElse(new ListTag());
-CompoundTag pc = players.getCompound(i).orElse(new CompoundTag());
-String uuid = pc.getString("uuid").orElse("");
-```
+**Key mistakes made along the way**:
+- Run 12: Tried `SavedData.SavedDataType` as nested class → "cannot find symbol"
+- Run 13: Tried `new SavedDataType<>(NAME, HomeData::new, lambda, null)` → "cannot infer type arguments" (lambda prevents inference, need explicit `<HomeData>` or named method)
+- Run 14: Tried three-arg form for 1.21.2+ → "required: SavedDataType<T> found: load,new,String"
+- Run 15: Tried `new SavedDataType<HomeData>(NAME, HomeData::new, HomeData::loadWithProvider, null)` → "Codec is not a functional interface" (third arg is Codec, not BiFunction)
+- Run 16: Used `(Codec<HomeData>)null` cast → SUCCESS
 
-**Solution**: Created `_opt()` function to apply Optional fixes:
-```python
-def _opt(s):
-    """Apply Optional getter fixes for 1.21.5+ API."""
-    return (s
-        .replace('tag.getList("players", 10)',
-                 'tag.getList("players").orElse(new ListTag())')
-        .replace('players.getCompound(i)',
-                 'players.getCompound(i).orElse(new CompoundTag())')
-        # ... more replacements
-    )
-```
-
-**Lesson**: API changes can be subtle. A method that used to return `T` now returns `Optional<T>`. Always check for these kinds of wrapper changes in newer versions.
+**Lesson**: Read the full constructor signature from the error message. "Codec is not a functional interface" told us the third argument type exactly. The correct null cast is `(com.mojang.serialization.Codec<HomeData>)null`.
 
 ---
 
-### Challenge 7: Event Registration Changes in 1.21.9+
+### Challenge 4: Factory Lambda Type Inference Failure
 
-**Problem**: `MinecraftForge.EVENT_BUS.register(this)` pattern deprecated in 1.21.9+.
+**Problem**: NeoForge 1.20.2–1.20.4 `SavedData.Factory` takes a `Function<CompoundTag, T>` (one argument), not a `BiFunction`. Using `HomeData::loadWithProvider` (which takes two args) caused "invalid method reference".
 
-**Old Pattern** (1.21.0-1.21.8):
+**Error**:
+```
+error: incompatible types: invalid method reference
+    return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);
+                                                                   ^
+    method loadWithProvider in class HomeData cannot be applied to given types
+    required: CompoundTag,Provider
+```
+
+**Solution**: NeoForge 1.20.2–1.20.4 uses a one-arg factory function. Use `HomeData::load` directly:
+```java
+return storage.computeIfAbsent(
+    new SavedData.Factory<HomeData>(HomeData::new, HomeData::load, null),
+    NAME
+);
+```
+
+**Lesson**: The `Factory` constructor signature differs between NeoForge versions. 1.20.2–1.20.4 takes `Function<CompoundTag, T>`. 1.20.5+ takes `BiFunction<CompoundTag, Provider, T>`. Always check the exact overload.
+
+---
+
+### Challenge 5: `net.minecraftforge.eventbus.api` Package Removed in Forge 1.21.6+
+
+**Problem**: The `@SubscribeEvent` annotation and `IEventBus` interface moved out of `net.minecraftforge.eventbus.api` in Forge 1.21.6+. Any import from that package causes "package does not exist".
+
+**Error**:
+```
+error: package net.minecraftforge.eventbus.api does not exist
+import net.minecraftforge.eventbus.api.IEventBus;
+error: package net.minecraftforge.eventbus.api does not exist
+@net.minecraftforge.eventbus.api.SubscribeEvent
+```
+
+**Failed attempts**:
+- Tried `MinecraftForge.EVENT_BUS.addListener(SetHomeMod::onRegisterCommands)` → "cannot find symbol: method addListener" (EVENT_BUS is now `EventBusMigrationHelper`, not a real bus)
+- Tried `@Mod.EventBusSubscriber` static class pattern → still referenced `eventbus.api`
+
+**Solution**: Use `MinecraftForge.EVENT_BUS.register(this)` with a plain instance method — no `@SubscribeEvent` annotation needed when registering via `register(Object instance)`:
 ```java
 public SetHomeMod() {
-    MinecraftForge.EVENT_BUS.register(this);
+    net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+    net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);
 }
 
-@SubscribeEvent
+// No @SubscribeEvent annotation — register(this) handles dispatch by method name
 public void onRegisterCommands(RegisterCommandsEvent e) {
     // ...
 }
 ```
 
-**New Pattern** (1.21.9+):
-```java
-public SetHomeMod() {
-    // No event bus registration
-}
-
-@Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
-public static class ForgeEvents {
-    @SubscribeEvent
-    public static void onRegisterCommands(RegisterCommandsEvent e) {
-        // ...
-    }
-}
-```
-
-**Lesson**: Event registration patterns change. The new pattern uses static methods in a nested class with `@EventBusSubscriber` annotation.
+**Lesson**: When a package disappears, don't try to find it in a new location — find the alternative registration mechanism that doesn't need it. `register(instance)` works without any annotation import.
 
 ---
 
-## Build History
+### Challenge 6: `@Override save()` Fails in SavedDataType Versions
 
-### Run 1-10: Initial API Fixes
-- Fixed basic API differences across versions
-- Result: 25/39 working (all 1.8.9 through 1.21.1)
-- Remaining: All 1.21.2+ versions failing
+**Problem**: In Forge/NeoForge 1.21.5+, `SavedData` no longer has an abstract `save()` method when using `SavedDataType`. Adding `@Override` caused "method does not override or implement a method from a supertype".
 
-### Run 11: Attempted SavedData.Factory for 1.21.0-1.21.1
-- Fixed 1.21.0-1.21.1 using `SavedData.Factory` API
-- Result: 27/39 working
-- Remaining: 1.21.2+ still failing with "cannot find symbol: SavedDataType"
+**Error**:
+```
+error: method does not override or implement a method from a supertype
+    @Override
+    ^
+```
 
-### Run 12: Tried SavedDataType (Wrong Approach)
-- Attempted to use `SavedData.SavedDataType` as nested class
-- Error: "cannot find symbol: class SavedDataType location: class SavedData"
-- Result: 25/39 working (broke 1.21.0-1.21.1)
+**Solution**: Remove `@Override` from `save()` in SavedDataType versions. The method is still useful as a fallback but is not abstract in the superclass when using `SavedDataType`.
 
-### Run 13: Tried SavedDataType as Top-Level Class
-- Imported `net.minecraft.world.level.saveddata.SavedDataType`
-- Created TYPE field with constructor
-- Error: "cannot infer type arguments for SavedDataType<>"
-- Error: "computeIfAbsent... required: SavedDataType<T> found: SavedDataType<HomeData>,String"
-- Result: Still failing
+**Lesson**: `@Override` is a compile-time check. If the superclass API changed and the method is no longer abstract, `@Override` will fail. Remove it when the superclass contract changed.
 
-### Run 14: Attempted Three-Argument API (Failed)
-- Used `storage.computeIfAbsent(HomeData::load, HomeData::new, NAME)`
-- Error: "required: SavedDataType<T> found: HomeData::load,HomeData::new,String"
-- This proves Forge 1.21.2+ DOES use SavedDataType, but takes only ONE argument
-- Result: 25/39 working (same as before)
+---
 
-### Run 15: SavedDataType with Correct Constructor (Current Attempt)
-- Used `new SavedDataType<>(NAME, HomeData::new, (tag, provider) -> HomeData.load(tag), null)`
-- Implemented via `_forge_1212_src()` function in generator
-- Also created `ai-source-search.yml` workflow to verify API if this fails
-- Status: **Pending build run**
+### Challenge 7: `_opt()` Applied to Wrong Versions
 
-### Remaining Challenge: SavedDataType Constructor (RESOLVED — Attempt 15)
+**Problem**: The `_opt()` function (which converts NBT getters to Optional form) was applied to NeoForge 1.21.2–1.21.4, which don't have Optional getters yet. This caused "method getList cannot be applied to given types" and "Optional<CompoundTag> cannot be converted to CompoundTag".
 
-Based on the error messages and Forge's API design, the correct pattern for Forge 1.21.2+ is:
+**Error**:
+```
+error: method getList in class CompoundTag cannot be applied to given types
+    ListTag players = tag.getList("players").orElse(new ListTag());
+                                 ^
+    required: String,int
+    found:    String
+```
 
+**Solution**: Only apply `_opt()` to versions 1.21.5+. NeoForge 1.21.2–1.21.4 still uses the old `getList(String, int)` form.
+
+**Lesson**: Optional getters arrived at 1.21.5 for both Forge and NeoForge. Do not apply Optional transforms to any version below 1.21.5.
+
+---
+
+### Challenge 8: `loadWithProvider` Defined Twice
+
+**Problem**: Both `SRC_121_FORGE` (via a `.replace()` that inserted `loadWithProvider`) and `_with_load_provider()` (a helper function) were adding the same method. NeoForge 1.21.0–1.21.1 received it twice.
+
+**Error**:
+```
+error: method loadWithProvider(CompoundTag,Provider) is already defined in class HomeData
+    public static HomeData loadWithProvider(CompoundTag tag, ...) { return HomeData.load(tag); }
+```
+
+**Solution**: Switched to explicit hardcoded source strings (see Challenge 2). Each version's source is written once, with `loadWithProvider` appearing exactly once where needed.
+
+**Lesson**: When the same transformation is applied by multiple code paths, you get duplicate definitions. Explicit strings eliminate this class of bug entirely.
+
+---
+
+### Challenge 9: The grep-minecraft-source Workflow Was Broken
+
+**Problem**: The existing `grep-minecraft-source.yml` workflow ran `./gradlew tasks` which only lists available Gradle tasks. It never downloaded or decompiled Minecraft sources, so it found zero `.java` files and was completely useless.
+
+**What it did**:
+```yaml
+- name: Run Gradle to download and decompile sources
+  run: |
+    ./gradlew --no-daemon --info tasks 2>&1 | tee /tmp/gradle-output.log || true
+    # ^^^ This just lists tasks. It does NOT decompile anything.
+```
+
+**Fix**: Changed to run `./gradlew genSources` for Forge/Fabric (which actually decompiles Minecraft with Vineflower) and `./gradlew dependencies` for NeoForge (which triggers source download).
+
+**Also created**: `ai-source-search.yml` — a purpose-built workflow for AI IDE agents that:
+1. Takes multiple queries and file patterns in one run
+2. Runs `genSources` to actually decompile Minecraft
+3. Searches with ripgrep across all decompiled `.java` files
+4. Dumps full class file content for matched files
+5. Lists all available `.java` files so the AI can browse the API tree
+
+**Lesson**: Always verify that a tool actually does what its name implies. "Run Gradle to download sources" that runs `tasks` is a no-op. Test the workflow before relying on it.
+
+---
+
+### Challenge 10: Using Background Processes Instead of Blocking Commands
+
+**Problem**: `run_build.py` was started as a background process using `controlBashProcess`. This required guessing how long to sleep before checking output, led to reading stale output from previous runs, and wasted time.
+
+**Bad pattern**:
+```
+controlBashProcess start: python3 scripts/run_build.py ...
+sleep 300  # guess
+getProcessOutput  # might be stale or incomplete
+```
+
+**Solution**: Run `run_build.py` as a blocking `executeBash` command. It polls GitHub Actions internally every 15 seconds and exits with the full result the moment the workflow completes. No guessing needed.
+
+```bash
+python3 scripts/run_build.py incoming/set-home-anywhere-all-versions.zip \
+    --modrinth https://modrinth.com/mod/set-home-anywhere
+# Output arrives the instant GitHub Actions finishes
+```
+
+**Lesson**: Any script that polls and waits should be run blocking. You get the output exactly when it's ready, with no sleep estimation.
+
+---
+
+### Challenge 11: Rebuilding All 39 Targets on Every Retry
+
+**Problem**: Every retry submitted all 39 targets to GitHub Actions, even the 33 that were already passing. This wasted GitHub Actions minutes and made each iteration take as long as the first run.
+
+**Bad pattern**:
+```bash
+python3 scripts/generate_sethome_bundle.py  # generates all 39
+git commit && git push
+python3 scripts/run_build.py ...  # runs 39 jobs
+```
+
+**Solution**: Use `--failed-only` on every retry after the first run. It reads the most recent `ModCompileRuns/` folder, identifies which targets failed, and generates a zip with only those targets.
+
+```bash
+python3 scripts/generate_sethome_bundle.py --failed-only  # generates only 6
+git commit && git push
+python3 scripts/run_build.py ...  # runs only 6 jobs
+```
+
+**Impact**: Cut a 39-job build down to 6–7 jobs on each retry. Each retry took ~6 minutes instead of ~25 minutes.
+
+**Lesson**: Always use `--failed-only` on every retry. Never rebuild already-green targets.
+
+---
+
+### Challenge 12: Using Long Inline `python3 -c "..."` Commands
+
+**Problem**: Diagnostic scripts were written as long inline `python3 -c "..."` strings in the terminal. These break when the string contains quotes, newlines, or special characters, and leave no reusable record of what was run.
+
+**Bad pattern**:
+```bash
+python3 -c "
+import json
+from pathlib import Path
+for mod_dir in sorted(mods_dir.iterdir()):
+    ...
+"
+# Breaks on quotes, leaves no file, can't be rerun
+```
+
+**Solution**: Write diagnostic scripts to files first, then run them.
+
+```bash
+# Write to scripts/_check_errors.py
+# Then run:
+python3 scripts/_check_errors.py
+```
+
+`scripts/_check_errors.py` reads the latest `ModCompileRuns/` folder and prints all build errors with context. It's reusable across every retry.
+
+**Lesson**: Write scripts to files. They're debuggable, reusable, and don't break on special characters.
+
+---
+
+## Complete Build History
+
+| Run | Targets | Success | Failures | What changed |
+|-----|---------|---------|----------|--------------|
+| 1–10 | 39 | 25 | 14 | Initial API fixes for 1.8.9–1.21.1 |
+| 11 | 39 | 25 | 14 | Attempted SavedDataType as nested class — wrong |
+| 12 | 39 | 25 | 14 | Attempted SavedDataType as top-level with lambda — "cannot infer type args" |
+| 13 | 39 | 25 | 14 | Attempted three-arg computeIfAbsent for 1.21.2+ — "required: SavedDataType<T>" |
+| 14 | 39 | 25 | 14 | Attempted SavedDataType(NAME, new, loadWithProvider, null) — "Codec not functional interface" |
+| 15 | 39 | 11 | 28 | Added workflows + fixed some APIs, but chained replacements broke silently |
+| 16 | 39 | 23 | 16 | Partial fix — NeoForge Factory lambda wrong, _opt() on wrong versions |
+| 17 | 39 | 23 | 16 | Rewrote 1.21+ as explicit strings via _rebuild_1_21_sources.py |
+| 18 | 39 | 33 | 6 | Fixed SavedDataType Codec cast, NeoForge 1.20.x Factory, removed @Override |
+| 19 | 7 | 1 | 6 | First --failed-only run. EVENT_BUS.addListener() fails (EventBusMigrationHelper) |
+| 20 | 7 | 1 | 6 | Tried @SubscribeEvent — eventbus.api package gone in 1.21.6+ |
+| 21 | 7 | 7 | 0 | Removed @SubscribeEvent + eventbus.api import. Plain register(this). **ALL PASS** |
+
+**Total build runs**: 21
+**Final result**: 39/39 ✓
+
+---
+
+## Final API Reference (copy-paste ready)
+
+### Forge 1.17.1–1.20.x
 ```java
-// Import
-import net.minecraft.world.level.saveddata.SavedDataType;
-
-// Static field on HomeData
-private static final SavedDataType<HomeData> TYPE =
-    new SavedDataType<>(NAME, HomeData::new,
-        (tag, provider) -> HomeData.load(tag), null);
-
-// get() method
 public static HomeData get(MinecraftServer srv) {
     DimensionDataStorage storage = srv.overworld().getDataStorage();
+    return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);
+}
+public static HomeData load(CompoundTag tag) { ... }
+@Override public CompoundTag save(CompoundTag tag) { ... }
+```
+
+### Forge 1.21.0–1.21.4 and NeoForge 1.20.5–1.21.4
+```java
+public static HomeData loadWithProvider(CompoundTag tag, net.minecraft.core.HolderLookup.Provider p) {
+    return HomeData.load(tag);
+}
+public static HomeData get(MinecraftServer srv) {
+    DimensionDataStorage storage = srv.overworld().getDataStorage();
+    return storage.computeIfAbsent(
+        new SavedData.Factory<HomeData>(HomeData::new, HomeData::loadWithProvider, null), NAME);
+}
+@Override
+public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { ... }
+```
+
+### NeoForge 1.20.2–1.20.4
+```java
+// Factory takes Function<CompoundTag, T> — one arg only
+public static HomeData get(MinecraftServer srv) {
+    DimensionDataStorage storage = srv.overworld().getDataStorage();
+    return storage.computeIfAbsent(
+        new SavedData.Factory<HomeData>(HomeData::new, HomeData::load, null), NAME);
+}
+@Override public CompoundTag save(CompoundTag tag) { ... }  // no Provider
+```
+
+### Forge 1.21.5–1.21.11 and NeoForge 1.21.5–1.21.11
+```java
+import net.minecraft.world.level.saveddata.SavedDataType;
+import com.mojang.serialization.Codec;
+
+public static HomeData get(MinecraftServer srv) {
+    DimensionDataStorage storage = srv.overworld().getDataStorage();
+    SavedDataType<HomeData> TYPE = new SavedDataType<HomeData>(
+        NAME, HomeData::new, (Codec<HomeData>)null, null);
     return storage.computeIfAbsent(TYPE);
+}
+// No @Override on save() — not abstract in superclass when using SavedDataType
+public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) { ... }
+```
+
+### Event registration — Forge 1.21.5+ (eventbus.api gone)
+```java
+// No import from net.minecraftforge.eventbus.api
+// No @SubscribeEvent annotation
+public SetHomeMod() {
+    net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+    net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);
+}
+public void onRegisterCommands(RegisterCommandsEvent e) {
+    // register(this) dispatches by method signature — no annotation needed
 }
 ```
 
-`SavedDataType` constructor signature:
-```
-SavedDataType(String name, Supplier<T> factory,
-    BiFunction<CompoundTag, HolderLookup.Provider, T> loader,
-    @Nullable DataFixTypes dataFixType)
-```
-
-This is now implemented in `generate_sethome_bundle.py` via the `_forge_1212_src()` function.
-
-**If this still fails**, use the AI source search workflow to verify:
-```bash
-python3 scripts/ai_source_search.py \
-    --version 1.21.5 --loader forge \
-    --queries "class SavedDataType" "computeIfAbsent" \
-    --files "*SavedDataType*.java" "*DimensionDataStorage*.java"
-```
-
-Then read the downloaded artifact to see the exact constructor and fix the code.
-
----
-
-## Code Patterns
-
-### Generator Structure
-
-```python
-# Base templates for each version range
-SRC_189 = "..."      # 1.8.9 Forge
-SRC_1122 = "..."     # 1.12.2 Forge (source of truth)
-SRC_1165 = "..."     # 1.16.5 Forge
-SRC_1171_118 = "..." # 1.17.1-1.18.x Forge
-SRC_119 = "..."      # 1.19.x Forge
-SRC_120_FORGE = "..." # 1.20.x Forge
-
-# 1.21+ with Provider parameter
-SRC_121_FORGE = SRC_120_FORGE.replace(
-    "public CompoundTag save(CompoundTag tag) {",
-    "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
-)
-
-# 1.21.2+ with three-argument API
-SRC_1215_FORGE = _opt(SRC_121_FORGE
-    .replace(
-        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-        "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);"
-    )
-)
-
-# NeoForge variants (keep Factory API)
-SRC_120_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE)
-SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)
-SRC_1215_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE))  # Still uses Factory!
-```
-
-### Target Mapping
-
-```python
-TARGETS = [
-    # 1.8.9
-    ("SetHome189Forge", "1.8.9", "forge", SRC_189),
-    
-    # 1.12.2 (source of truth)
-    ("SetHome1122Forge", "1.12.2", "forge", SRC_1122),
-    
-    # 1.16.5
-    ("SetHome1165Forge", "1.16.5", "forge", SRC_1165),
-    
-    # 1.17.1 - 1.20.x (Factory API)
-    ("SetHome1171Forge", "1.17.1", "forge", SRC_1171_118),
-    # ... more versions
-    
-    # 1.21.0-1.21.1 (Factory API)
-    ("SetHome1211Forge", "1.21.1", "forge", SRC_121_FORGE),
-    ("SetHome1211NeoForge", "1.21.1", "neoforge", SRC_121_NEOFORGE),
-    
-    # 1.21.2-1.21.8 (Three-argument API for Forge, Factory for NeoForge)
-    ("SetHome1215Forge", "1.21.5", "forge", SRC_1215_FORGE),
-    ("SetHome1215NeoForge", "1.21.5", "neoforge", SRC_1215_NEOFORGE),
-    
-    # ... more versions
-]
+### NBT getters — 1.21.5+ Optional form
+```java
+ListTag players = tag.getList("players").orElse(new ListTag());
+CompoundTag pc   = players.getCompound(i).orElse(new CompoundTag());
+ListTag hl       = pc.getList("homes").orElse(new ListTag());
+CompoundTag hc   = hl.getCompound(j).orElse(new CompoundTag());
+String name      = hc.getString("name").orElse("");
+double x         = hc.getDouble("x").orElse(0.0);
+float yaw        = hc.getFloat("yaw").orElse(0.0f);
 ```
 
 ---
 
-## Key Lessons for Future IDEs
+## Key Lessons for Future AI IDE Agents
 
-### 1. Don't Guess APIs - Verify Them
+### 1. Write explicit source strings — never chain replacements
 
-**Bad Approach**:
-- See error message mentioning `SavedDataType`
-- Assume it's a nested class
-- Try importing `SavedData.SavedDataType`
-- Fail, try as top-level class
-- Fail again with different constructor
-- Waste 3+ build runs
+Chained `.replace()` calls break silently when one link changes. Write one explicit string per version range. Use a builder function if the structure is shared.
 
-**Good Approach**:
-- See error message mentioning `SavedDataType`
-- Use Minecraft source search workflow to find actual usage
-- See that Forge 1.21.2+ doesn't actually use `SavedDataType` in the way you thought
-- Discover the three-argument API pattern
-- Fix it in one build run
+### 2. Use `--failed-only` on every retry
 
-### 2. Build Source Code Search Tools Early
+Never rebuild already-green targets. `--failed-only` reads the last run and generates only the failing targets. On a 39-target build with 6 failures, this cuts each retry from 25 minutes to 6 minutes.
 
-The `grep-minecraft-source.yml` workflow should have been built BEFORE attempting fixes. It would have saved hours of trial-and-error.
+### 3. Run build scripts blocking, not in the background
 
-**When to build it**: As soon as you encounter an unknown API that's not clearly documented.
+`run_build.py` polls GitHub Actions and exits when done. Run it with `executeBash` (blocking). Never use `controlBashProcess` for it — you'll have to guess sleep times and read stale output.
 
-**How to use it**:
-```bash
-# Search for class definitions
-python3 scripts/grep_minecraft_source.py --version 1.21.5 --loader forge \
-    --query "class DimensionDataStorage" --context 10
+### 4. Write diagnostic scripts to files
 
-# Search for method usage
-python3 scripts/grep_minecraft_source.py --version 1.21.5 --loader forge \
-    --query "computeIfAbsent" --file-pattern "*DimensionDataStorage.java"
+Never use long inline `python3 -c "..."`. Write the script to `scripts/_check_errors.py` (or similar), then run it. It's reusable, debuggable, and doesn't break on special characters.
 
-# Search for imports
-python3 scripts/grep_minecraft_source.py --version 1.21.5 --loader forge \
-    --query "import.*SavedDataType"
-```
+### 5. Read the full error message — it tells you the exact type
 
-### 3. Forge ≠ NeoForge After 1.20
+- "Codec is not a functional interface" → third arg is `Codec<T>`, not `BiFunction`
+- "required: Factory<T>,String" → use `Factory` form, not three-arg
+- "required: SavedDataType<T>" → use `SavedDataType` form, not `Factory`
+- "cannot infer type arguments" → use explicit `<HomeData>` type witness or named method ref
 
-Don't assume Forge and NeoForge use the same APIs just because they're the same Minecraft version.
+### 6. Verify the grep workflow actually decompiles before using it
 
-**Always verify separately**:
-- Check Forge documentation: https://docs.minecraftforge.net/
-- Check NeoForge documentation: https://docs.neoforged.net/
-- Use source search for both loaders
+The original `grep-minecraft-source.yml` ran `./gradlew tasks` — a no-op. Always check that a source search workflow actually runs `genSources` before trusting its output.
 
-### 4. Use --failed-only Flag
+### 7. Optional getters start at 1.21.5, not 1.21.2
 
-After the first successful build, always use `--failed-only`:
+Do not apply Optional transforms to any version below 1.21.5. NeoForge 1.21.2–1.21.4 still uses `getList(String, int)`.
 
-```bash
-python3 scripts/generate_sethome_bundle.py --failed-only
-```
+### 8. Forge and NeoForge diverge significantly after 1.20
 
-This regenerates only the failed targets, keeping successful builds intact.
-
-### 5. Commit Generator Changes Before Building
-
-**Bad workflow**:
-1. Modify generator script
-2. Run `generate_*.py`
-3. Run `run_build.py`
-4. Build uses OLD code from GitHub (not committed yet)
-5. Waste a build run
-
-**Good workflow**:
-1. Modify generator script
-2. Run `generate_*.py`
-3. `git add -A && git commit -m "..." && git push`
-4. Run `run_build.py`
-5. Build uses NEW code
-
-### 6. Read Error Messages Carefully
-
-The error "required: SavedDataType<T>" told us:
-- `computeIfAbsent` takes ONE argument (SavedDataType)
-- NOT two arguments (SavedDataType, String)
-
-But we initially misread it and tried to create a SavedDataType object. The actual solution was simpler: use function references directly.
-
-### 7. Document As You Go
-
-This document was created AFTER solving the problem. It would have been easier to document during the process:
-- Note each error message
-- Note each attempted solution
-- Note what worked and why
-
----
-
-## Final Statistics
-
-- **Total Versions**: 39 ghost shells to replace
-- **Build Runs**: 14
-- **Time Spent**: ~5 hours
-- **Final Result**: 25/39 working (all 1.8.9 through 1.21.1)
-- **Remaining Issues**: 14 versions (all 1.21.2+ Forge and NeoForge)
-- **Root Cause**: SavedDataType API in Forge 1.21.2+ requires correct constructor signature that needs verification from actual Minecraft source code
-
-**Success Rate**: 64% (25 out of 39 versions working)
-
-**Working Versions**:
-- 1.8.9 Forge ✓
-- 1.12.2 Forge ✓
-- 1.16.5 Forge ✓
-- 1.17.1 Forge ✓
-- 1.18.x Forge (all) ✓
-- 1.19.x Forge (all) ✓
-- 1.20.x Forge (all) ✓
-- 1.20.x NeoForge (all) ✓
-- 1.21.0-1.21.1 Forge ✓
-- 1.21.0-1.21.1 NeoForge ✓
-
-**Failing Versions** (all need SavedDataType fix):
-- 1.21.2-1.21.8 Forge (4 versions) ✗
-- 1.21.9-1.21.11 Forge (3 versions) ✗
-- 1.21.2-1.21.8 NeoForge (4 versions) ✗
-- 1.21.9-1.21.11 NeoForge (3 versions) ✗
+Never assume they share the same API. Check each loader separately. Key divergence points:
+- NeoForge 1.20.2–1.20.4: `Factory` takes one-arg `Function`
+- NeoForge 1.20.5+: `Factory` takes two-arg `BiFunction`
+- Forge 1.21.5+: `eventbus.api` package removed entirely
+- Both adopt `SavedDataType` at 1.21.5
 
 ---
 
 ## Files Modified
 
-- `scripts/generate_sethome_bundle.py` - Main generator with all version variants
-- `.github/workflows/grep-minecraft-source.yml` - Source code search workflow
-- `scripts/grep_minecraft_source.py` - Python script to trigger source search
-- `docs/IDE_AGENT_INSTRUCTION_SHEET.txt` - Updated with source search instructions
-- `docs/examples/SET_HOME_ANYWHERE_ALL_VERSIONS.md` - This document
+- `scripts/generate_sethome_bundle.py` — Main generator with all version variants
+- `scripts/_rebuild_1_21_sources.py` — Rebuilds the 1.21+ section as explicit strings
+- `scripts/_check_errors.py` — Reads latest run and prints all build errors
+- `scripts/ai_source_search.py` — Triggers AI source search workflow and downloads results
+- `scripts/grep_minecraft_source.py` — Single-query source search trigger
+- `.github/workflows/grep-minecraft-source.yml` — Fixed to run `genSources` (was broken)
+- `.github/workflows/ai-source-search.yml` — New multi-query AI-optimized search workflow
+- `docs/IDE_AGENT_INSTRUCTION_SHEET.txt` — Updated with all new rules
+- `docs/examples/SET_HOME_ANYWHERE_ALL_VERSIONS.md` — This document
 
 ---
 
-## Conclusion
+## Final Statistics
 
-The Set Home Anywhere port demonstrated the importance of:
-1. Understanding API evolution across Minecraft versions
-2. Building tools to search actual source code instead of guessing
-3. Verifying APIs separately for Forge and NeoForge
-4. Reading error messages carefully and not jumping to conclusions
-5. Documenting challenges and solutions for future reference
+- **Total ghost shell versions targeted**: 39
+- **Build runs**: 21
+- **Final result**: 39/39 ✓ (100%)
+- **Versions published**: All 39 uploaded to Modrinth automatically via `--modrinth` flag
 
-**Key Achievement**: Created two Minecraft source search workflows:
-- `.github/workflows/grep-minecraft-source.yml` — fixed to actually run `genSources` (was broken, ran `tasks` instead)
-- `.github/workflows/ai-source-search.yml` — new AI-optimized multi-query workflow
-- `scripts/ai_source_search.py` — Python script for AI IDE to trigger searches
-
-**Key Lesson**: The original `grep-minecraft-source.yml` was broken — it ran `./gradlew tasks` which lists tasks but does NOT decompile Minecraft sources. The fix is to run `./gradlew genSources` for Forge/Fabric or `./gradlew dependencies` for NeoForge.
-
-**Current Attempt (Run 15)**: The 14 failing 1.21.2+ versions now use `SavedDataType` with the constructor:
-```java
-new SavedDataType<>(NAME, HomeData::new, (tag, provider) -> HomeData.load(tag), null)
-```
-
-**If Run 15 fails**, use the AI source search workflow immediately:
-```bash
-python3 scripts/ai_source_search.py \
-    --version 1.21.5 --loader forge \
-    --queries "class SavedDataType" "computeIfAbsent" \
-    --files "*SavedDataType*.java" "*DimensionDataStorage*.java"
-```
-Download the artifact, read the full class files, and copy the exact constructor pattern.
-
-**Success Rate**: 64% (25/39) confirmed working. Run 15 targets the remaining 36%.
+**All working versions**:
+- 1.8.9 Forge ✓
+- 1.12.2 Forge ✓
+- 1.16.5 Forge ✓
+- 1.17.1 Forge ✓
+- 1.18, 1.18.1, 1.18.2 Forge ✓
+- 1.19, 1.19.1, 1.19.2, 1.19.3, 1.19.4 Forge ✓
+- 1.20.2, 1.20.4 NeoForge ✓
+- 1.20.5, 1.20.6 NeoForge ✓
+- 1.21, 1.21.1 Forge ✓
+- 1.21, 1.21.1 NeoForge ✓
+- 1.21.2, 1.21.3, 1.21.4 NeoForge ✓
+- 1.21.3, 1.21.4 Forge ✓
+- 1.21.5, 1.21.6, 1.21.7, 1.21.8 Forge ✓
+- 1.21.5, 1.21.6, 1.21.7, 1.21.8 NeoForge ✓
+- 1.21.9, 1.21.10, 1.21.11 Forge ✓
+- 1.21.9, 1.21.10, 1.21.11 NeoForge ✓
