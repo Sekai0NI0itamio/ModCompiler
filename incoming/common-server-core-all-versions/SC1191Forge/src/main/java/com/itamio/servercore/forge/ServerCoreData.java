@@ -264,9 +264,6 @@ public final class ServerCoreData extends SavedData {
       return tag;
    }
 
-   public CompoundTag save(CompoundTag tag) {
-      return this.save(tag, null);
-   }
 
    private static ListTag getListTag(CompoundTag tag, String key) {
       Object value = invoke(tag, "getList", new Class[]{String.class, int.class}, key, 10);
