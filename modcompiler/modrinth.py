@@ -140,6 +140,10 @@ def publish_one_mod(
     new_jar_size = jar_path.stat().st_size
 
     # Check if ANY existing version is a shell
+    # Shell heuristic: < 5000 bytes OR new jar is 10x larger.
+    # IMPORTANT: This can false-positive on tiny recipe/data mods (e.g. a mod
+    # with one .class + one JSON recipe may legitimately be 2-3KB). The 10x
+    # ratio guard helps — if our rebuilt jar is also small, it won't trigger.
     shell_versions = []
     real_versions = []
     for v in all_existing:
