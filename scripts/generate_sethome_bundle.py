@@ -1074,7 +1074,7 @@ SRC_1215_FORGE = _opt(SRC_121_FORGE
         "    public static class HomeData extends SavedData {\n        private static final String NAME = \"sethome_data\";\n        private static final SavedDataType<HomeData> TYPE = new SavedDataType<>(HomeData::new, (tag, provider) -> HomeData.load(tag), null);"
     )
     .replace(
-        "return storage.computeIfAbsent((tag) -> HomeData.load(tag), HomeData::new, NAME);",
+        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
         "return storage.computeIfAbsent(TYPE, NAME);"
     )
 )
