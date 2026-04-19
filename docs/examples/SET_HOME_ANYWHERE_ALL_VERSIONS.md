@@ -277,10 +277,32 @@ public static class ForgeEvents {
 - Error: "computeIfAbsent... required: SavedDataType<T> found: SavedDataType<HomeData>,String"
 - Result: Still failing
 
-### Run 14: Final Solution - Three-Argument API
+### Run 14: Attempted Three-Argument API (Failed)
 - Used `storage.computeIfAbsent(HomeData::load, HomeData::new, NAME)`
-- No Factory wrapper, no SavedDataType
-- Result: Build in progress (expected 39/39 working)
+- Error: "required: SavedDataType<T> found: HomeData::load,HomeData::new,String"
+- This proves Forge 1.21.2+ DOES use SavedDataType, but takes only ONE argument
+- Result: 25/39 working (same as before)
+
+### Remaining Challenge: SavedDataType Constructor
+
+The error message reveals the truth:
+- Forge 1.21.2+ `computeIfAbsent` takes ONE argument: `SavedDataType<T>`
+- NOT three separate arguments
+- The SavedDataType must be constructed correctly, but the constructor signature is unknown
+
+**What we know**:
+```java
+// This is what the API expects
+storage.computeIfAbsent(SavedDataType<HomeData>)
+
+// But how to construct SavedDataType?
+// Attempt 1: new SavedDataType<>(HomeData::new, (tag, provider) -> HomeData.load(tag), null)
+// Error: "cannot infer type arguments"
+
+// The correct constructor signature is still unknown
+```
+
+**Status**: 14 versions (all 1.21.2+) remain unresolved. The SavedDataType API in Forge 1.21.2+ requires deeper investigation with actual Minecraft source code, which the grep-minecraft-source workflow was designed to provide.
 
 ---
 
@@ -443,11 +465,31 @@ This document was created AFTER solving the problem. It would have been easier t
 ## Final Statistics
 
 - **Total Versions**: 39 ghost shells to replace
-- **Build Runs**: 13+
-- **Time Spent**: ~4 hours
+- **Build Runs**: 14
+- **Time Spent**: ~5 hours
 - **Final Result**: 25/39 working (all 1.8.9 through 1.21.1)
-- **Remaining Issues**: 1.21.2+ versions (14 targets)
-- **Root Cause**: API changes in Forge 1.21.2+ that require deeper investigation
+- **Remaining Issues**: 14 versions (all 1.21.2+ Forge and NeoForge)
+- **Root Cause**: SavedDataType API in Forge 1.21.2+ requires correct constructor signature that needs verification from actual Minecraft source code
+
+**Success Rate**: 64% (25 out of 39 versions working)
+
+**Working Versions**:
+- 1.8.9 Forge ✓
+- 1.12.2 Forge ✓
+- 1.16.5 Forge ✓
+- 1.17.1 Forge ✓
+- 1.18.x Forge (all) ✓
+- 1.19.x Forge (all) ✓
+- 1.20.x Forge (all) ✓
+- 1.20.x NeoForge (all) ✓
+- 1.21.0-1.21.1 Forge ✓
+- 1.21.0-1.21.1 NeoForge ✓
+
+**Failing Versions** (all need SavedDataType fix):
+- 1.21.2-1.21.8 Forge (4 versions) ✗
+- 1.21.9-1.21.11 Forge (3 versions) ✗
+- 1.21.2-1.21.8 NeoForge (4 versions) ✗
+- 1.21.9-1.21.11 NeoForge (3 versions) ✗
 
 ---
 
@@ -470,4 +512,13 @@ The Set Home Anywhere port demonstrated the importance of:
 4. Reading error messages carefully and not jumping to conclusions
 5. Documenting challenges and solutions for future reference
 
-The key breakthrough was realizing that Forge 1.21.2+ uses a simpler three-argument API without the Factory wrapper, while NeoForge continues using the Factory pattern. This kind of divergence is common in Minecraft modding and requires careful verification for each loader and version.
+**Key Achievement**: Created the Minecraft Source Code Search workflow (`.github/workflows/grep-minecraft-source.yml` and `scripts/grep_minecraft_source.py`) which will be invaluable for future ports.
+
+**Key Lesson**: The error message "required: SavedDataType<T>" was telling us the exact API signature, but we misinterpreted it multiple times. The correct approach would have been to:
+1. Use the grep-minecraft-source workflow immediately to find SavedDataType usage examples
+2. Search for "new SavedDataType" in actual Minecraft/Forge source code
+3. Copy the exact constructor pattern from working code
+
+**Remaining Work**: The 14 failing 1.21.2+ versions require finding the correct SavedDataType constructor signature. The grep-minecraft-source workflow is now available to solve this, but time constraints prevented completing this investigation.
+
+**Success**: 64% of versions (25/39) are now working and ready for publication. This represents all versions from 1.8.9 through 1.21.1 across Forge and NeoForge, covering the vast majority of active Minecraft players.
