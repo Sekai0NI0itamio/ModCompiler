@@ -1,0 +1,501 @@
+Write only the Modrinth summary for one Minecraft mod.
+
+You already reviewed the original source folder earlier in this chat.
+Use that source-based understanding first, then use the chosen name and long description below only to stay aligned.
+Use SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT as the highest-trust fact list.
+Use ORIGINAL SOURCE CONTEXT below as direct evidence from the provided src folder, not just as background history.
+Return plain text only.
+Do not return JSON.
+Do not return markdown bullets, headings, explanations, quotes, or multiple options.
+Focus only on producing one strong player-facing summary line.
+
+Summary rules:
+- Usually 1 sentence, or 2 very short sentences.
+- Write naturally. The script will shorten the final summary later if needed.
+- Sound like a real human mod page, not corporate marketing copy.
+- Prefer an accurate complaint/problem -> payoff cadence when the mod naturally fits it.
+- Learn from the examples very closely, but do not force every mod into the exact same sentence shape.
+- It is okay to copy an example structure almost directly when it fits, but switch to a different example style when that fits the mod better.
+- Prefer the most relatable player pain over the most literal implementation detail.
+- When it fits naturally, strongly prefer starting with a player frustration hook like "Hate...", "Tired of...", or "Wanting...".
+- Be specific about the actual player-visible benefit.
+- Keep the wording simple and casual rather than polished or dramatic.
+- Small helper words and bridge phrases are good, like "well", "now", "so", "basically", or "which means", when they make it sound more human.
+- Slightly imperfect grammar is okay if it sounds clearer, more casual, and closer to the examples.
+- Do not mention internal implementation details, package names, event names, hooks, APIs, or metadata trivia.
+- Do not add compatibility or command claims unless the project info clearly proves them.
+- Do not mention exact numbers, cooldown values, tick counts, `vanilla cooldown`, `bulk transfer`, or similar internal timing in the summary.
+- If the source clearly proves a bigger visible effect than just "faster", say that bigger visible effect in simple words.
+- For example, if the source clearly shows whole-stack transfer or repeated transfer loops, prefer wording like "moves full stacks in one go" over just "moves items faster".
+- Do not exaggerate.
+- Never count characters, words, or tokens out loud.
+- Never show your steps, analysis, or any 'Count:' style output.
+- Avoid generic openings like "Hostile mobs..." or "This mod..." when a sharper player-facing hook would fit better.
+- Avoid advanced wording like "ignite", "deadly zones", or "roaming safely in daylight" when simpler wording would sound more human.
+- Avoid clever rewrites, slogans, or edgy phrases like "free-range mob-killer".
+- Avoid sounding like patch notes, changelogs, or technical documentation.
+- Never output template placeholders like `[problem]`, `[main payoff]`, or bracketed labels. Always replace them with the real mod details.
+
+Important:
+- Treat the examples below like strong style references, not a single fixed script.
+- Copy the example pattern closely when it helps, but pick the example angle that best matches the mod's real player problem.
+- Prefer sounding like the examples over sounding polished or over-explained.
+- Reuse phrases like "Hate that...", "Hate the...", "This mod makes it so that...", "Wanting to...", and "Well this mod cancels that pain..." when they fit.
+- Do not paraphrase the examples into brand new wording if the example phrasing already works.
+- Do not invent a fake second complaint just to fit Template A. If only one real complaint is clearly supported, use Template C.
+- Reuse the concrete nouns already present in PROJECT INFO. Do not swap in new problems like raids, bases, or travel unless PROJECT INFO really proves them.
+- If the verified notes only prove one clear complaint, stick to one clear complaint.
+
+Preferred reusable templates:
+- Template A: Hate that [annoying thing]? Hate the [second annoying thing]? This mod makes it so that [main payoff].
+- Template B: Wanting to [goal]? Tired of [pain]? Well this mod cancels that pain, you can [main payoff].
+- Template C: Hate when [problem]? This mod [simple payoff].
+
+Good vs bad examples:
+- Good: Why look for TNT dupers when you could just build one with one dispenser and one tnt? No need for slime, no need for tutorials, no anything else then a dispenser and tnt.
+- Why good: it sounds like a real player, it talks about the usual pain players face, and it keeps the wording casual.
+- Bad: Tired of dispensers using up your TNT? Well this mod makes dispensers fire TNT without consuming it.
+- Why bad: too literal, too implementation-specific, and it reads more like patch notes than a real player-facing summary.
+
+SPECIFIC GUIDANCE FOR THIS MOD:
+- Use the template that best fits the concrete, proven annoyance for this mod.
+
+Good style examples:
+Wanting to play as if your in a server? Tired of digging back up just to go back to your base? Well this mod cancels that pain, you can use /rtp, /tpa, /rtp just like if your in a server, but in single player!
+
+Hate that creeper that doesn't burn after day? Hate the slimes that spawn in super flat worlds? This mob makes it so that ALL mobs burn in day.
+
+Chosen mod name:
+No Hostile Mobs
+
+Chosen long description:
+# No Hostile Mobs
+
+## Description
+
+This mod stops hostile mobs from appearing in your world, no matter the difficulty setting. You can also edit a simple config file to choose exactly which mobs are blocked, and the game will pick up any changes without needing a restart.
+
+### What It Does (for the user)
+
+- Hostile mobs such as zombies, skeletons, creepers, spiders, and many others simply do not spawn.
+- You can open the config file and add or remove mob IDs to change which creatures are blocked.
+- The game checks the config file every few seconds and reloads it automatically when you save changes.
+- No commands or special items are needed – the effect is always active.
+
+### Features
+
+- Blocks a built‑in list of hostile mobs that can be customized.
+- Real‑time reload of the config file when it is edited.
+- No extra items, blocks, or crafting required.
+
+## What You'll Notice
+
+- Allows editing the config file to add or remove mob IDs from the blocked list.
+- Reloads the config automatically when the file is changed.
+
+ORIGINAL SOURCE CONTEXT (DIRECT EXCERPTS FROM PROVIDED SRC):
+# Original Source Context
+
+generated_at=2026-04-03T05:15:02+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-hostile-mobs-1.0.0/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-hostile-mobs-1.0.0/source/src/main/java
+source_file_count=3
+package_count=1
+packages=com.nohostilemobs
+
+## Source Tree
+
+com/nohostilemobs/MobSpawnHandler.java
+com/nohostilemobs/NoHostileMobsConfig.java
+com/nohostilemobs/NoHostileMobsMod.java
+
+## Key Source Excerpts
+
+### com/nohostilemobs/MobSpawnHandler.java
+```
+package com.nohostilemobs;
+
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityList;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.event.entity.living.LivingSpawnEvent;
+import net.minecraftforge.fml.common.eventhandler.Event.Result;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+public class MobSpawnHandler {
+    private int tickCounter = 0;
+    private static final int CONFIG_CHECK_INTERVAL = 100; // Check config every 100 ticks (5 seconds)
+
+    @SubscribeEvent
+    public void onMobSpawn(LivingSpawnEvent.CheckSpawn event) {
+        if (event.getEntity() instanceof EntityLiving) {
+            EntityLiving entity = (EntityLiving) event.getEntity();
+            ResourceLocation entityId = EntityList.getKey(entity);
+
+            if (entityId != null) {
+                String entityIdString = entityId.toString();
+
+                if (NoHostileMobsMod.config.isMobBlocked(entityIdString)) {
+                    event.setResult(Result.DENY);
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            tickCounter++;
+            if (tickCounter >= CONFIG_CHECK_INTERVAL) {
+                tickCounter = 0;
+                NoHostileMobsMod.config.checkAndReload();
+            }
+        }
+    }
+}
+```
+
+### com/nohostilemobs/NoHostileMobsMod.java
+```
+package com.nohostilemobs;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = NoHostileMobsMod.MODID, name = NoHostileMobsMod.NAME, version = NoHostileMobsMod.VERSION)
+public class NoHostileMobsMod {
+    public static final String MODID = "nohostilemobs";
+    public static final String NAME = "No Hostile Mobs";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static NoHostileMobsConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new NoHostileMobsConfig(event.getSuggestedConfigurationFile());
+        MinecraftForge.EVENT_BUS.register(new MobSpawnHandler());
+        logger.info("No Hostile Mobs initialized - blocking hostile mob spawns");
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        logger.info("No Hostile Mobs config loaded with " + config.getBlockedMobs().size() + " blocked mobs");
+    }
+}
+```
+
+### com/nohostilemobs/NoHostileMobsConfig.java
+```
+package com.nohostilemobs;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class NoHostileMobsConfig {
+    private Configuration config;
+    private List<String> blockedMobs;
+    private File configFile;
+    private long lastModified;
+
+    private static final String[] DEFAULT_HOSTILE_MOBS = {
+        "minecraft:zombie",
+        "minecraft:skeleton",
+        "minecraft:creeper",
+        "minecraft:spider",
+        "minecraft:cave_spider",
+        "minecraft:enderman",
+        "minecraft:blaze",
+        "minecraft:ghast",
+        "minecraft:slime",
+        "minecraft:magma_cube",
+        "minecraft:witch",
+        "minecraft:silverfish",
+        "minecraft:endermite",
+        "minecraft:guardian",
+        "minecraft:elder_guardian",
+        "minecraft:shulker",
+        "minecraft:husk",
+        "minecraft:stray",
+        "minecraft:zombie_villager",
+        "minecraft:wither_skeleton",
+        "minecraft:zombie_pigman",
+        "minecraft:evoker",
+        "minecraft:vindicator",
+        "minecraft:vex"
+    };
+
+    public NoHostileMobsConfig(File configFile) {
+        this.configFile = configFile;
+        this.config = new Configuration(configFile);
+        loadConfig();
+        this.lastModified = configFile.lastModified();
+    }
+
+    private void loadConfig() {
+        config.load();
+
+        String[] mobArray = config.getStringList(
+            "blockedMobs",
+            Configuration.CATEGORY_GENERAL,
+            DEFAULT_HOSTILE_MOBS,
+            "List of mob entity IDs that will be prevented from spawning. Edit this list to customize which mobs are blocked."
+        );
+
+        blockedMobs = new ArrayList<>(Arrays.asList(mobArray));
+
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+
+    public void checkAndReload() {
+        long currentModified = configFile.lastModified();
+        if (currentModified != lastModified) {
+            NoHostileMobsMod.logger.info("Config file changed, reloading...");
+            loadConfig();
+            lastModified = currentModified;
+            NoHostileMobsMod.logger.info("Config reloaded with " + blockedMobs.size() + " blocked mobs");
+        }
+    }
+
+    public List<String> getBlockedMobs() {
+        return blockedMobs;
+    }
+
+    public boolean isMobBlocked(String entityId) {
+        return blockedMobs.contains(entityId);
+    }
+}
+```
+
+SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT:
+GUARANTEED PLAYER-VISIBLE FACTS
+- Allows editing the config file to add or remove mob IDs from the blocked list.
+- Reloads the config automatically when the file is changed.
+- Runs without requiring player commands.
+
+DO NOT CLAIM
+- Adds any new items or blocks to the game.
+- Provides a graphical configuration menu.
+- Changes mob behavior after they are spawned.
+- Works only on specific worlds or dimensions.
+- Requires a specific command to activate.
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-04-03T05:15:02+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/9/No-Hostile-Mobs-1.0.0.jar
+jar_size_bytes=52202
+jar_sha1=1b3e3c44f7051ed7fb68389fc48fdc39e0cd4dd1
+
+## Detected Metadata
+
+jar_name=No-Hostile-Mobs-1.0.0.jar
+jar_display_name=No Hostile Mobs
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=nohostilemobs
+name=No Hostile Mobs
+mod_version=1.0.0
+description=Prevents hostile mobs from spawning in your world, regardless of difficulty. Fully configurable via config file with real-time updates.
+authors=YourName
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-hostile-mobs-1.0.0/source
+decompiled_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-hostile-mobs-1.0.0/decompiled
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/no-hostile-mobs-1.0.0/source/src/main/java
+source_file_count=3
+package_count=1
+packages=com.nohostilemobs
+
+## Source Tree
+
+com/nohostilemobs/MobSpawnHandler.java
+com/nohostilemobs/NoHostileMobsConfig.java
+com/nohostilemobs/NoHostileMobsMod.java
+
+## Key Source Excerpts
+
+### com/nohostilemobs/MobSpawnHandler.java
+```
+package com.nohostilemobs;
+
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityList;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.event.entity.living.LivingSpawnEvent;
+import net.minecraftforge.fml.common.eventhandler.Event.Result;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+public class MobSpawnHandler {
+    private int tickCounter = 0;
+    private static final int CONFIG_CHECK_INTERVAL = 100; // Check config every 100 ticks (5 seconds)
+
+    @SubscribeEvent
+    public void onMobSpawn(LivingSpawnEvent.CheckSpawn event) {
+        if (event.getEntity() instanceof EntityLiving) {
+            EntityLiving entity = (EntityLiving) event.getEntity();
+            ResourceLocation entityId = EntityList.getKey(entity);
+
+            if (entityId != null) {
+                String entityIdString = entityId.toString();
+
+                if (NoHostileMobsMod.config.isMobBlocked(entityIdString)) {
+                    event.setResult(Result.DENY);
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            tickCounter++;
+            if (tickCounter >= CONFIG_CHECK_INTERVAL) {
+                tickCounter = 0;
+                NoHostileMobsMod.config.checkAndReload();
+            }
+        }
+    }
+}
+```
+
+### com/nohostilemobs/NoHostileMobsMod.java
+```
+package com.nohostilemobs;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = NoHostileMobsMod.MODID, name = NoHostileMobsMod.NAME, version = NoHostileMobsMod.VERSION)
+public class NoHostileMobsMod {
+    public static final String MODID = "nohostilemobs";
+    public static final String NAME = "No Hostile Mobs";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static NoHostileMobsConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new NoHostileMobsConfig(event.getSuggestedConfigurationFile());
+        MinecraftForge.EVENT_BUS.register(new MobSpawnHandler());
+        logger.info("No Hostile Mobs initialized - blocking hostile mob spawns");
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        logger.info("No Hostile Mobs config loaded with " + config.getBlockedMobs().size() + " blocked mobs");
+    }
+}
+```
+
+### com/nohostilemobs/NoHostileMobsConfig.java
+```
+package com.nohostilemobs;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class NoHostileMobsConfig {
+    private Configuration config;
+    private List<String> blockedMobs;
+    private File configFile;
+    private long lastModified;
+
+    private static final String[] DEFAULT_HOSTILE_MOBS = {
+        "minecraft:zombie",
+        "minecraft:skeleton",
+        "minecraft:creeper",
+        "minecraft:spider",
+        "minecraft:cave_spider",
+        "minecraft:enderman",
+        "minecraft:blaze",
+        "minecraft:ghast",
+        "minecraft:slime",
+        "minecraft:magma_cube",
+        "minecraft:witch",
+        "minecraft:silverfish",
+        "minecraft:endermite",
+        "minecraft:guardian",
+        "minecraft:elder_guardian",
+        "minecraft:shulker",
+        "minecraft:husk",
+        "minecraft:stray",
+        "minecraft:zombie_villager",
+        "minecraft:wither_skeleton",
+        "minecraft:zombie_pigman",
+        "minecraft:evoker",
+        "minecraft:vindicator",
+        "minecraft:vex"
+    };
+
+    public NoHostileMobsConfig(File configFile) {
+        this.configFile = configFile;
+        this.config = new Configuration(configFile);
+        loadConfig();
+        this.lastModified = configFile.lastModified();
+    }
+
+    private void loadConfig() {
+        config.load();
+
+        String[] mobArray = config.getStringList(
+            "blockedMobs",
+            Configuration.CATEGORY_GENERAL,
+            DEFAULT_HOSTILE_MOBS,
+            "List of mob entity IDs that will be prevented from spawning. Edit this list to customize which mobs are blocked."
+        );
+
+        blockedMobs = new ArrayList<>(Arrays.asList(mobArray));
+
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+
+    public void checkAndReload() {
+        long currentModified = configFile.lastModified();
+        if (currentModified != lastModified) {
+            NoHostileMobsMod.logger.info("Config file changed, reloading...");
+            loadConfig();
+            lastModified = currentModified;
+            NoHostileMobsMod.logger.info("Config reloaded with " + blockedMobs.size() + " blocked mobs");
+        }
+    }
+
+    public List<String> getBlockedMobs() {
+        return blockedMobs;
+    }
+
+    public boolean isMobBlocked(String entityId) {
+        return blockedMobs.contains(entityId);
+    }
+}
+```

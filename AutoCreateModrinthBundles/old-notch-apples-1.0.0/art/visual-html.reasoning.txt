@@ -1,0 +1,112 @@
+We need to output JSON with shape exactly as described. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must not mention draft etc. Must describe actual mod behavior.
+
+We have mod title "Old Notch Apples". But we need to adapt to the template. The example uses "TNT Duper". We need to produce similar content for this mod.
+
+We need to choose background_image from options. The mod is about crafting Enchanted Golden Apples with original effects. Mood maybe "fire burning.jpg" or "purple flowers and sun set or sun rise.png" or "winter forest with sunset.jpg". Probably "fire burning.jpg" fits industrial? Or "purple flowers and sun set or sun rise.png" maybe not. The mod is about restoration of old effects, maybe "winter forest with sunset.jpg" fits nostalgic? But recommended options: fire burning.jpg, purple flowers..., winter forest with sunset.jpg. Choose one that matches mood. The mod is about bringing back old powerful effects, maybe "winter forest with sunset.jpg" fits nostalgic, but also "fire burning.jpg" could represent power. Let's pick "fire burning.jpg" as strong.
+
+Accent color: need a hex like #ff7f2f (orange). Could use #ff7f2f as example, but can choose any single hex. Use #ff7f2f.
+
+Logo: eyebrow: short phrase maybe "Crafting Classic". mark: maybe "ONA" or "ONA". title: "Old Notch Aples". subtitle: a short phrase describing mod's identity: "Reviving 1.8.9 potency with authentic crafting". rail_left: maybe "Legacy Effects". rail_right: "Infinite Restores". Must be actual behavior.
+
+Description: kicker: maybe "Utility Mod". title: "Old Notch Apples". tagline: short description of behavior: "Craft enchanted golden apples with 8 gold blocks + 1 apple, restoring 1.8.9 effects: Regeneration V, Absorption IV, Resistance I, Fire Resistance I." chips: 2-4 short labels, e.g., ["Craftable", "1.8.9 Effects", "Legacy Power"]. stats: exactly 2 items. Each with value (string), label, note (short sentence). For example:
+
+- value: "1.8.9 Effects", label: "Effect Restoration", note: "Regeneration V, Absorption IV, Resistance I, Fire Resistance I are applied."
+- value: "Craft Ratio", label: "Materials", note: "8 gold blocks and 1 apple produce one enchanted apple."
+
+But need to keep concise. Also stats.value should be a string maybe "1". Actually example had "0" and "24/7". Could be "1" for "Crafted". But we need to describe actual behavior. Let's craft:
+
+stats item 1:
+{
+  "value": "1",
+  "label": "Crafted",
+  "note": "8 gold blocks + 1 apple yield a single enchanted apple."
+}
+stats item 2:
+{
+  "value": "4",
+  "label": "Effects",
+  "note": "Regeneration V, Absorption IV, Resistance I, Fire Resistance I are granted."
+}
+
+But value should be maybe "4"? Could be number of effects? Might be okay. But need to be concise.
+
+Make sure chips array has 2-4 items. Let's use 3: ["Craftable", "1.8.9 Effects", "Legacy Power"].
+
+Now ensure JSON shape exactly matches. Provide only JSON.
+
+Check required fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "fire burning.jpg",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+    "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+       "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+     {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+     }
+    ]
+  }
+}
+
+All strings concise, polished.
+
+Now fill values:
+
+accent_color: "#ff7f2f"
+
+background_image: "fire burning.jpg"
+
+logo:
+- eyebrow: "Crafting Classic"
+- mark: "ONA"
+- title: "Old Notch Aples"
+- subtitle: "Reviving 1.8.9 potency with authentic crafting"
+- rail_left: "Legacy Effects"
+- rail_right: "Infinite Restores"
+
+description:
+- kicker: "Utility Mod"
+- title: "Old Notch Apples"
+- tagline: "Craft enchanted golden apples with 8 gold blocks + 1 apple, restoring 1.8.9 effects: Regeneration V, Absorption IV, Resistance I, Fire Resistance I."
+- chips: ["Craftable", "1.8.9 Effects", "Legacy Power"]
+- stats: two items.
+
+First stats item:
+{
+  "value": "1",
+  "label": "Crafted",
+  "note": "8 gold blocks + 1 apple produce one enchanted apple."
+}
+Second stats item:
+{
+  "value": "4",
+  "label": "Effects",
+ "note": "Regeneration V, Absorption IV, Resistance I, Fire Resistance I are applied."
+}
+
+Check note sentences are short.
+
+Now ensure JSON is valid, no trailing commas.
+
+Return only JSON.
+
+Let's craft final JSON.

@@ -25,6 +25,7 @@ MANIFEST_PATH = REPO_ROOT / "version-manifest.json"
 
 class DecompileTests(unittest.TestCase):
     def test_inspect_mod_jar_reads_fabric_metadata(self) -> None:
+        manifest = load_json(MANIFEST_PATH)
         with tempfile.TemporaryDirectory() as temp_dir:
             jar_path = Path(temp_dir) / "fabric-test.jar"
             with zipfile.ZipFile(jar_path, "w") as archive:

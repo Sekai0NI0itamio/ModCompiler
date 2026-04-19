@@ -1,0 +1,93 @@
+We need to output JSON with exact shape. Provide accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4), stats (exactly 2 items) each with value, label, note.
+
+We must follow rules: concise polished strings, accent_color single hex, background_image must be one exact filename from options. Must choose background image that matches mood. For Auto Replant mod, likely "winter forest with sunset.jpg" or "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png". Probably "winter forest with sunset.jpg" fits? It's about replanting, maybe "fresh spring.png"? But recommended options: winter forest with sunset.jpg, mountain breeze with spring forest.png, purple flowers... Choose one that best fits. I'd pick "winter forest with sunset.jpg" as strong.
+
+accent_color: choose something like "#ff7f2f" (orange) maybe appropriate.
+
+logo.mark: short monogram, 2-4 chars. Could be "AR". Or "AR"? 2 chars. Use "AR". eyebrow: "Utility Mod"? In example they used "Automation Class". For this mod maybe "Auto Replant". But eyebrow is a label, maybe "Auto Replant". Should be uppercase? In example they used uppercase. So "AUTO REPLANT". But keep concise. Could be "Auto Replant". Use uppercase: "AUTO REPLANT". mark: "AR". title: "Auto Replant". subtitle: short phrase describing behavior: "Automatic crop and tree replanting using inventory seeds." Must be concise. rail_left: "Instant Replant". rail_right: "Seed‑Driven". Must describe actual behavior.
+
+description.kicker: maybe "Utility Mod". title: "Auto Replant". tagline: short tagline describing behavior: "Automatically replants crops and trees from your inventory seeds." Must be concise.
+
+chips: 2-4 short labels. Could be ["Auto‑Replant", "Seed‑Consume", "Server‑Safe"] but need 2-4. Let's do 3: ["Auto‑Replant", "Seed‑Driven", "Server‑Side"].
+
+stats: exactly 2 items. Each with value (string), label, note (short sentence). Provide values maybe "100%"? But must be concise. Example earlier had "0" and "24/7". We can use "Instant" and "Always On"? But note must be one short sentence. Let's craft:
+
+stat1: value "Instant", label "Replant Delay", note "Places the new block within a single tick." stat2: value "Unlimited", label "Seed Use", note "Consumes one seed per replant without depleting your stock."
+
+But value should be a string, maybe "0" or "1". Use "0" for delay? Might be confusing. Could use "0 t" but keep simple. Use "0" for delay? Actually delay is about one tick, maybe "0" is okay. But note explains. Could use "1" for seed consumption? Let's do:
+
+{
+ "value": "0",
+ "label": "Replant Delay",
+ "note": "Places the new block within a single tick."
+},
+{
+ "value": "1",
+ "label": "Seed Consumed",
+ "note": "Uses one seed from your inventory per replant."
+}
+
+But value "1" maybe okay. Or use "∞" but not numeric. Keep numeric? Not required. Could be "∞"? Might be okay but better numeric. Use "0" and "1". Provide note sentences.
+
+Make sure stats array has exactly 2 objects.
+
+Now ensure JSON shape exactly as given.
+
+Check fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "AUTO REPLANT",
+    "mark": "AR",
+    "title": "Auto Replant",
+    "subtitle": "Automatic crop and tree replanting using inventory seeds.",
+    "rail_left": "Instant Replant",
+    "rail_right": "Seed‑Driven"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Auto Replant",
+    "tagline": "Automatically replants crops and trees from your inventory seeds.",
+    "chips": [
+      "Auto‑Replant",
+      "Seed‑Driven",
+      "Server‑Side"
+    ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Replant Delay",
+        "note": "Places the new block within a single tick."
+      },
+      {
+        "value": "1",
+        "label": "Seed Consumed",
+        "note": "Uses one seed from your inventory per replant."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename from options: "winter forest with sunset.jpg" matches one of the options exactly? The list includes "winter forest with sunset.jpg". Yes.
+
+logo.mark is "AR" (2 chars). eyebrow is "AUTO REPLANT" (uppercase). subtitle is concise. rail_left and rail_right describe behavior.
+
+description.chips has 3 items, okay.
+
+stats exactly 2 items, each with note one short sentence.
+
+All strings concise and polished.
+
+Make sure no extra fields. Provide only JSON.
+
+Check that "subtitle" is a string, okay.
+
+Check that "chips" items are short labels, okay.
+
+Check that "note" sentences are short.
+
+All good.
+
+Now output JSON only.

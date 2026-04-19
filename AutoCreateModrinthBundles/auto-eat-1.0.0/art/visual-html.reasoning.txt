@@ -1,0 +1,68 @@
+We need to output JSON with exact shape. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must reuse composition language from approved examples but adapt words to this mod.
+
+We need to choose background_image filename from options that best fits mod. Mod is about auto-eating, hunger, mining, building. Mood maybe "ocean.jpg" or "purple flowers and sun set or sun rise.png". Probably "ocean.jpg" fits calm, but maybe "purple flowers and sun set or sun rise.png" is more serene. Choose one that matches vibe. Let's pick "ocean.jpg". Provide exact filename.
+
+Accent color: need a hex like #ff7f2f (orange). Could use #ff7f2f as example. Use same? Could use #ff7f2f as recommended. Use that.
+
+Logo: eyebrow: short phrase like "Auto Eat". mark: short monogram maybe "AE". title: "Auto Eat". subtitle: a short phrase describing behavior: "Never miss a bite while mining". rail_left: "Hunger‑Aware". rail_right: "Zero Interruption". Must be actual mod behavior.
+
+Description: kicker: maybe "Utility Mod". title: "Auto Eat". tagline: concise: "Automatically consumes food at low hunger, keeping you fed without breaking focus." chips: 2-4 short labels: maybe "Instant Satiation", "Inventory‑Smart", "Performance Light". stats: exactly 2 items. Each with value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats: maybe "Hunger Threshold" value "14" label "Trigger Point" note "Eats when hunger drops to 14". Another stat maybe "Food Scan Interval" value "1s" label "Check Rate" note "Scans once per second for efficiency."
+
+Make sure each stats.note is one short sentence.
+
+All strings concise and polished.
+
+Make sure JSON shape exactly matches example: top-level keys: accent_color, background_image, logo (object with eyebrow, mark, title, subtitle, rail_left, rail_right), description (object with kicker, title, tagline, chips (array), stats (array of objects each with value, label, note)).
+
+Make sure chips array contains 2-4 items. Provide maybe 3 items.
+
+Make sure stats array contains exactly 2 items.
+
+Make sure each stats object has "value", "label", "note". Value should be a string (maybe "14" and "1s").
+
+Make sure no extra fields.
+
+Now produce JSON only.
+
+Let's craft:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "ocean.jpg",
+  "logo": {
+    "eyebrow": "Auto Eat",
+    "mark": "AE",
+    "title": "Auto Eat",
+    "subtitle": "Never miss a bite while mining or building.",
+    "rail_left": "Hunger‑Aware",
+    "rail_right": "Zero Interruption"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Auto Eat",
+    "tagline": "Automatically consumes food at low hunger, keeping you fed without breaking focus.",
+    "chips": [
+      "Instant Satiation",
+      "Inventory‑Smart",
+      "Performance Light"
+    ],
+    "stats": [
+      {
+        "value": "14",
+        "label": "Trigger Point",
+        "note": "Eats when hunger drops to 14."
+      },
+      {
+        "value": "1s",
+        "label": "Check Rate",
+        "note": "Scans hunger once per second for efficiency."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename from options: "ocean.jpg" is in options. logo.mark is 2 characters "AE". rail_left and rail_right describe actual behavior. description.chips has 3 items, okay. stats has exactly 2 items. Each note is one short sentence. All strings concise. No mention of draft etc. Use modern premium style.
+
+Make sure JSON is valid, no trailing commas. Provide only JSON.

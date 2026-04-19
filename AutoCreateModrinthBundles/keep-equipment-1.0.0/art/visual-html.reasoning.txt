@@ -1,0 +1,98 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items), each stats has value, label, note.
+
+We must adapt to mod "Keep Equipment". Provide concise polished strings. Must match style modern premium non-Minecraft-themed. Use approved example composition language but adapt words.
+
+We need to choose background_image filename from options that best fits mod. Probably "winter forest with sunset.jpg" or "fire burning.jpg" or "purple flowers and sun set or sun rise.png". Keep Equipment is about preserving gear, maybe "winter forest with sunset.jpg" fits mood? Could be "fire burning.jpg" maybe not. "winter forest with sunset.jpg" seems serene, preserving. Let's pick "winter forest with sunset.jpg". Ensure exact filename.
+
+Accent color: choose a hex, maybe "#ff7f2f" as example but can pick something else. Must be single hex color. Use "#ff7f2f" maybe okay but we can choose something else like "#c0392b". But must be valid hex. Use "#ff7f2f" as given in example but it's okay. Let's use "#ff7f2f" as it's already used in example but it's okay.
+
+Logo: eyebrow: maybe "Preserve". mark: maybe "KE". title: "Keep Equipment". subtitle: a short phrase describing mod: "Retain all gear, XP, and effects on death, with toggleable keybind and full inventory control." Must be concise.
+
+rail_left: "Full Inventory Retention". rail_right: "XP & Effects Preserved". Must describe actual behavior.
+
+description: kicker: maybe "Gameplay". title: "Keep Equipment". tagline: short tagline: "Never lose gear, XP, or effects on death—customizable retention for any playstyle." chips: 2-4 short labels: maybe "Full Inventory", "XP & Effects", "Toggle Keybind". That's 3 items, okay.
+
+stats: exactly 2 items. Each with value, label, note. Value can be string maybe "100%" etc. Provide two stats describing behavior.
+
+Stat1: value "All", label "Items Kept", note "Everything in inventory, hotbar, offhand, and armor stays on death." Stat2: value "Unlimited", label "XP Retention", note "All experience points are preserved upon death."
+
+But note must be one short sentence. Ensure each note is short.
+
+Make sure stats array has exactly 2 objects.
+
+Now produce JSON exactly as shape.
+
+Check fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+    "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      }
+    ]
+  }
+}
+
+Make sure strings concise, no extra punctuation maybe okay.
+
+Let's craft:
+
+accent_color: "#ff7f2f"
+
+background_image: "winter forest with sunset.jpg"
+
+logo:
+eyebrow: "Preserve"
+mark: "KE"
+title: "Keep Equipment"
+subtitle: "Retain gear, XP, and effects on death with full inventory control."
+rail_left: "Full Inventory Retention"
+rail_right: "XP & Effects Preserved"
+
+description:
+kicker: "Gameplay"
+title: "Keep Equipment"
+tagline: "Never lose gear, XP, or effects on death—customizable retention for any playstyle."
+chips: ["Full Inventory", "XP & Effects", "Toggle Keybind"]
+stats: [
+  {
+    "value": "All",
+    "label": "Items Kept",
+    "note": "Everything in inventory, hotbar, offhand, and armor stays on death."
+  },
+  {
+    "value": "Unlimited",
+    "label": "XP Retention",
+    "note": "All experience points are preserved upon death."
+  }
+]
+
+Check constraints: chips 2-4 items, we have 3, okay. stats exactly 2 items, okay. Each note is one short sentence. Yes.
+
+Make sure no extra fields. Provide only JSON.
+
+Check that background_image filename matches exactly one of the options: "winter forest with sunset.jpg" is in list. Yes.
+
+Now output JSON only.

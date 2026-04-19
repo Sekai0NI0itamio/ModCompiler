@@ -1,0 +1,255 @@
+<!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Instant Experience Orb</title>
+          <style>
+            :root {
+              color-scheme: dark;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            html, body {
+              margin: 0;
+              width: 1024px;
+              height: 1024px;
+              overflow: hidden;
+              background: #000;
+            }
+
+            body {
+              position: relative;
+              font-family: "Helvetica Neue", "Avenir Next", "SF Pro Display", Arial, sans-serif;
+              color: #fff;
+              isolation: isolate;
+            }
+
+            body::before {
+              content: "";
+              position: absolute;
+              inset: 0;
+              background:
+                linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.72)),
+                url("background.webp") center center / cover no-repeat;
+              filter: saturate(1.05) brightness(0.68);
+              transform: scale(1.06);
+              transform-origin: center;
+            }
+
+            body::after {
+              content: "";
+              position: absolute;
+              inset: 0;
+              background:
+                radial-gradient(circle at top left, rgba(255,255,255,0.12), transparent 38%),
+                radial-gradient(circle at bottom right, rgba(255,255,255,0.10), transparent 34%);
+              mix-blend-mode: screen;
+              pointer-events: none;
+            }
+
+            #modcompiler-root {
+  position: absolute;
+  z-index: 1;
+  width: 1024px;
+  height: 1024px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(1.000000);
+  transform-origin: center center;
+  opacity: 0.80;
+}
+
+            #root {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+  padding:
+    var(--root-pad-top, 170px)
+    var(--root-pad-x, 94px)
+    var(--root-pad-bottom, 172px);
+}
+.layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--side-width, 260px);
+  gap: var(--layout-gap, 42px);
+  align-items: stretch;
+  min-height: 0;
+}
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--hero-stack-gap, 18px);
+  min-width: 0;
+  padding: var(--hero-pad-y, 62px) var(--hero-pad-x, 68px);
+  border-radius: 34px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
+    rgba(10, 10, 12, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -80px;
+  left: -80px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, #ff7f2f 46%, transparent), transparent 72%);
+  filter: blur(8px);
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  right: -120px;
+  bottom: -120px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, #ff7f2f 38%, transparent), transparent 72%);
+  filter: blur(16px);
+}
+.kicker {
+  position: relative;
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255,255,255,0.82);
+  font-size: var(--kicker-size, 16px);
+  font-weight: 700;
+  letter-spacing: var(--kicker-spacing, 0.24em);
+  text-transform: uppercase;
+}
+.kicker::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff7f2f;
+  box-shadow: 0 0 14px color-mix(in srgb, #ff7f2f 92%, transparent);
+}
+h1 {
+  position: relative;
+  margin: 0;
+  max-width: 100%;
+  font-size: var(--description-title-size, 118px);
+  line-height: var(--description-title-line-height, 0.9);
+  letter-spacing: -0.06em;
+  font-weight: 900;
+  color: white;
+  text-wrap: balance;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
+}
+.tagline {
+  position: relative;
+  max-width: var(--tagline-max-width, 680px);
+  margin: 0;
+  font-size: var(--tagline-size, 30px);
+  line-height: 1.45;
+  color: rgba(244, 247, 251, 0.92);
+  font-weight: 500;
+  text-wrap: pretty;
+}
+.meta {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: var(--meta-padding-top, 22px);
+}
+.chip {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(244, 247, 251, 0.74);
+  font-size: var(--chip-size, 16px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.side {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 20px;
+  min-height: 0;
+}
+.stat {
+  position: relative;
+  padding: 28px 24px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
+    rgba(9, 9, 10, 0.48);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+  overflow: hidden;
+}
+.stat::before {
+  content: "";
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.05), #ff7f2f, rgba(255,255,255,0.05));
+}
+.stat .value {
+  position: relative;
+  font-size: var(--stat-value-size, 58px);
+  line-height: 0.92;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: white;
+}
+.stat .label {
+  position: relative;
+  margin-top: 10px;
+  font-size: var(--stat-label-size, 15px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.62);
+}
+.stat .note {
+  position: relative;
+  margin-top: 16px;
+  font-size: var(--stat-note-size, 16px);
+  line-height: 1.45;
+  color: rgba(255,255,255,0.74);
+}
+          </style>
+        </head>
+        <body class="modcompiler-description">
+          <div id="modcompiler-root">
+            <div id="root" style="--root-pad-top: 126px; --root-pad-bottom: 126px; --root-pad-x: 68px; --layout-gap: 28px; --side-width: 214px; --hero-pad-y: 40px; --hero-pad-x: 46px; --kicker-size: 14px; --kicker-spacing: 0.20em; --description-title-size: 74px; --description-title-line-height: 0.95; --tagline-size: 22px; --tagline-max-width: 100%; --chip-size: 14px; --stat-value-size: 48px; --stat-label-size: 14px; --stat-note-size: 15px; --hero-stack-gap: 14px; --meta-padding-top: 18px"><div class="layout"><section class="hero"><div class="kicker">Performance Mod</div><h1>Instant Experience Orb</h1><p class="tagline">Absorb XP instantly, merge orbs, and simplify leveling.</p><div class="meta"><div class="chip">Instant Absorb</div><div class="chip">Orb Clumping</div><div class="chip">Level Simplification</div></div></section><aside class="side"><section class="stat"><div class="value">0ms</div><div class="label">Absorption Delay</div><div class="note">XP orbs are taken instantly with no animation lag.</div></section><section class="stat"><div class="value">100%</div><div class="label">Clump Efficiency</div><div class="note">Nearby orbs merge each tick to cut entity count.</div></section></aside></div></div>
+          </div>
+        </body>
+        </html>

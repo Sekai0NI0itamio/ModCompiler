@@ -1,0 +1,260 @@
+# Project Info
+
+generated_at=2026-04-09T11:08:03+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/25/Auto-Crystal-1.0.0.jar
+jar_size_bytes=8115
+jar_sha1=c97276745ef140e713f8b4ab6b244b75d2c96c89
+
+## Detected Metadata
+
+jar_name=Auto-Crystal-1.0.0.jar
+jar_display_name=Auto Crystal
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=autocrystal
+name=Auto Crystal
+mod_version=1.0.0
+description=Automatically attacks end crystals when you place them. Perfect for PvP crystal combat! Toggle with C key.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-crystal-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-crystal-1.0.0/source
+source_file_count=4
+package_count=1
+packages=asd.itamio.autocrystal
+
+## Source Tree
+
+asd/itamio/autocrystal/AutoCrystalConfig.java
+asd/itamio/autocrystal/AutoCrystalHandler.java
+asd/itamio/autocrystal/AutoCrystalKeyHandler.java
+asd/itamio/autocrystal/AutoCrystalMod.java
+
+## Key Source Excerpts
+
+### asd/itamio/autocrystal/AutoCrystalHandler.java
+```
+package asd.itamio.autocrystal;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.item.EntityEnderCrystal;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumHand;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class AutoCrystalHandler {
+    private List<EntityEnderCrystal> crystalsToAttack = new ArrayList<>();
+    private boolean justPlacedCrystal = false;
+    
+    @SubscribeEvent
+    @SideOnly(Side.CLIENT)
+    public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (!AutoCrystalConfig.enabled) return;
+        
+        EntityPlayer player = event.getEntityPlayer();
+        if (player == null || !player.world.isRemote) return;
+        
+        ItemStack heldItem = player.getHeldItem(event.getHand());
+        if (heldItem.isEmpty() || heldItem.getItem() != Items.END_CRYSTAL) return;
+        
+        // Mark that we just placed a crystal
+        justPlacedCrystal = true;
+    }
+    
+    @SubscribeEvent
+    @SideOnly(Side.CLIENT)
+    public void onEntityJoinWorld(EntityJoinWorldEvent event) {
+        if (!AutoCrystalConfig.enabled) return;
+        if (!event.getWorld().isRemote) return;
+        
+        Entity entity = event.getEntity();
+        if (!(entity instanceof EntityEnderCrystal)) return;
+        
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player == null) return;
+        
+        // If we just placed a crystal and this crystal is close to us, mark it for attack
+        if (justPlacedCrystal) {
+            EntityEnderCrystal crystal = (EntityEnderCrystal) entity;
+            double distance = mc.player.getDistance(crystal);
+            
+            if (distance <= AutoCrystalConfig.attackRange) {
+                crystalsToAttack.add(crystal);
+                justPlacedCrystal = false;
+            }
+        }
+    }
+    
+    @SubscribeEvent
+    @SideOnly(Side.CLIENT)
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        if (!AutoCrystalConfig.enabled) return;
+        
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player == null || mc.world == null) return;
+        
+        // Attack all crystals in the queue
+        if (!crystalsToAttack.isEmpty()) {
+            List<EntityEnderCrystal> toRemove = new ArrayList<>();
+            
+            for (EntityEnderCrystal crystal : crystalsToAttack) {
+                if (crystal == null || crystal.isDead) {
+                    toRemove.add(crystal);
+                    continue;
+                }
+                
+                double distance = mc.player.getDistance(crystal);
+                if (distance <= AutoCrystalConfig.attackRange) {
+                    // Attack the crystal
+                    mc.playerController.attackEntity(mc.player, crystal);
+                    mc.player.swingArm(EnumHand.MAIN_HAND);
+                }
+                
+                toRemove.add(crystal);
+            }
+            
+            crystalsToAttack.removeAll(toRemove);
+        }
+    }
+}
+```
+
+### asd/itamio/autocrystal/AutoCrystalKeyHandler.java
+```
+package asd.itamio.autocrystal;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.InputEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import org.lwjgl.input.Keyboard;
+
+public class AutoCrystalKeyHandler {
+    private static final String KEY_CATEGORY = "Auto Crystal";
+    private KeyBinding toggleKey;
+    
+    public AutoCrystalKeyHandler() {
+        toggleKey = new KeyBinding("Toggle Auto Crystal", Keyboard.KEY_C, KEY_CATEGORY);
+        ClientRegistry.registerKeyBinding(toggleKey);
+    }
+    
+    @SubscribeEvent
+    public void onKeyInput(InputEvent.KeyInputEvent event) {
+        if (toggleKey.isPressed()) {
+            AutoCrystalConfig.enabled = !AutoCrystalConfig.enabled;
+            AutoCrystalMod.config.save();
+            
+            Minecraft mc = Minecraft.getMinecraft();
+            if (mc.player != null) {
+                String status = AutoCrystalConfig.enabled ? 
+                    TextFormatting.GREEN + "ON" : 
+                    TextFormatting.RED + "OFF";
+                mc.player.sendMessage(new TextComponentString(
+                    TextFormatting.GOLD + "[Auto Crystal] " + 
+                    TextFormatting.RESET + status
+                ));
+            }
+        }
+    }
+}
+```
+
+### asd/itamio/autocrystal/AutoCrystalMod.java
+```
+package asd.itamio.autocrystal;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = AutoCrystalMod.MODID, name = AutoCrystalMod.NAME, version = AutoCrystalMod.VERSION)
+public class AutoCrystalMod {
+    public static final String MODID = "autocrystal";
+    public static final String NAME = "Auto Crystal";
+    public static final String VERSION = "1.0.0";
+    
+    public static Logger logger;
+    public static AutoCrystalConfig config;
+    
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new AutoCrystalConfig(event.getSuggestedConfigurationFile());
+        logger.info("Auto Crystal initialized");
+    }
+    
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new AutoCrystalHandler());
+        MinecraftForge.EVENT_BUS.register(new AutoCrystalKeyHandler());
+    }
+}
+```
+
+### asd/itamio/autocrystal/AutoCrystalConfig.java
+```
+package asd.itamio.autocrystal;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+
+public class AutoCrystalConfig {
+    private Configuration config;
+    
+    public static boolean enabled = true;
+    public static int attackDelay = 0; // 0 = instant (0-tick)
+    public static double attackRange = 6.0;
+    
+    public AutoCrystalConfig(File configFile) {
+        config = new Configuration(configFile);
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enabled = config.getBoolean("enabled", "general", true, 
+            "Enable auto crystal attack");
+        attackDelay = config.getInt("attackDelay", "general", 0, 0, 20, 
+            "Delay in ticks before attacking crystal (0 = instant)");
+        attackRange = config.getFloat("attackRange", "general", 6.0f, 1.0f, 10.0f, 
+            "Maximum range to attack crystals");
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void save() {
+        config.get("general", "enabled", true).set(enabled);
+        config.get("general", "attackDelay", 0).set(attackDelay);
+        config.get("general", "attackRange", 6.0f).set(attackRange);
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+```

@@ -1,0 +1,83 @@
+We need to output JSON with exact shape. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items) each with value, label, note.
+
+We must not include any extra text. Must be valid JSON.
+
+We need to adapt to mod "No Particles". Provide concise polished strings.
+
+We need to choose background_image from options. The recommended is purple flowers and sun set or sun rise.png. That matches mood? The mod is about performance, maybe not visual. But we can pick that. Or maybe "fire burning.jpg"? But recommended is purple flowers... Let's choose "purple flowers and sun set or sun rise.png". That filename exactly matches option: "purple flowers and sun set or sun rise.png". Use that as string.
+
+Accent color: choose something like "#ff7f2f" (orange) as example. Could use same. Must be a single hex color.
+
+Logo: eyebrow: maybe "Performance". mark: maybe "NP". title: "No Particles". subtitle: a short phrase describing mod: "Eliminates all particle effects for maximum FPS." rail_left: maybe "Zero Lag". rail_right: maybe "Clean Visuals". Must describe actual mod behavior.
+
+Description: kicker: maybe "Performance". title: "No Particles". tagline: "Remove every particle effect to boost FPS and eliminate visual clutter." chips: 2-4 short labels, e.g., ["Particle Free", "ASM Core", "FPS Boost"]. Must be 2-4 items. stats: exactly 2 items. Each stats has value (string), label, note (short sentence). Provide two stats describing behavior: maybe "0" value? Actually value is a string, could be "N/A" or "100%". Provide label like "Particles Removed". note: "All particle spawns are suppressed." Another stat: "FPS Gain" with value maybe "Up to 200%". note: "Significant improvement in particle‑heavy scenes."
+
+Make sure each note is one short sentence.
+
+Make sure chips length 2-4. Provide maybe 3 chips.
+
+Make sure stats exactly 2 items.
+
+Make sure all strings concise and polished.
+
+Make sure no mention of draft status etc.
+
+Now construct JSON.
+
+Structure:
+
+{
+ "accent_color": "#ff7f2f",
+  "background_image": "purple flowers and sun set or sun rise.png",
+ "logo": {
+    "eyebrow": "Performance",
+    "mark": "NP",
+    "title": "No Particles",
+   "subtitle": "Eliminates all particle effects for maximum FPS.",
+    "rail_left": "Zero Lag",
+    "rail_right": "Clean Visuals"
+  },
+  "description": {
+    "kicker": "Performance",
+    "title": "No Particles",
+    "tagline": "Remove every particle effect to boost FPS and eliminate visual clutter.",
+    "chips": [
+      "Particle Free",
+      "ASM Core",
+      "FPS Boost"
+   ],
+    "stats": [
+      {
+        "value": "100%",
+        "label": "Particles Removed",
+        "note": "All particle spawns are suppressed."
+     },
+      {
+        "value": "Up to 200%",
+        "label": "FPS Gain",
+        "note": "Significant improvement in particle‑heavy scenes."
+     }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename, matches option exactly: "purple flowers and sun set or sun rise.png". Yes.
+
+logo.mark is "NP" (2 chars). ok.
+
+logo.rail_left "Zero Lag" describes behavior? It says zero lag, but maybe "Zero Particles". But must describe actual mod behavior, not project status. "Zero Particles" is okay. Let's use "Zero Particles". rail_right "Clean Visuals" maybe okay but maybe "No Visual Noise". Let's use "No Visual Noise". That describes effect.
+
+So modify:
+
+"rail_left": "Zero Particles",
+"rail_right": "No Visual Noise"
+
+Now description.chips: 3 items, okay.
+
+stats: two items, each with value string, label, note. Value can be "100%" and "Up to 20%". That's fine.
+
+Make sure note is one short sentence, ends with period. Provide period.
+
+Now ensure JSON is valid: no trailing commas.
+
+Now output only JSON.

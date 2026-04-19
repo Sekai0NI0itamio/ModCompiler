@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TNT Duper Logo Example</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050505;
+      --panel: rgba(14, 14, 16, 0.64);
+      --panel-edge: rgba(255, 255, 255, 0.12);
+      --hot: #ff7a18;
+      --hot-2: #ff4d00;
+      --cold: #f4f7fb;
+      --muted: rgba(255, 255, 255, 0.74);
+      --line: rgba(255, 255, 255, 0.1);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 1024px;
+      height: 1024px;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: "Helvetica Neue", "Avenir Next", "SF Pro Display", Arial, sans-serif;
+    }
+
+    body {
+      position: relative;
+      color: white;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 18% 20%, rgba(255, 132, 0, 0.22), transparent 26%),
+        radial-gradient(circle at 82% 80%, rgba(255, 80, 0, 0.18), transparent 24%),
+        linear-gradient(160deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.82)),
+        url("background.jpg") center center / cover no-repeat;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      inset: -8%;
+      background:
+        repeating-linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.032) 0,
+          rgba(255, 255, 255, 0.032) 2px,
+          transparent 2px,
+          transparent 34px
+        );
+      opacity: 0.55;
+      transform: rotate(-4deg);
+      pointer-events: none;
+    }
+
+    body::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(4, 4, 5, 0.1), rgba(4, 4, 5, 0.72)),
+        radial-gradient(circle at center, transparent 0 46%, rgba(0, 0, 0, 0.36) 78%, rgba(0, 0, 0, 0.8) 100%);
+      pointer-events: none;
+    }
+
+    .frame {
+      position: absolute;
+      inset: 62px;
+      border-radius: 42px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+        var(--panel);
+      border: 1px solid var(--panel-edge);
+      box-shadow:
+        0 35px 100px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -24px 40px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+    }
+
+    .content {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 110px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      margin-bottom: 26px;
+      padding: 10px 18px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .mark {
+      position: relative;
+      line-height: 0.82;
+      font-size: 320px;
+      font-weight: 900;
+      letter-spacing: -0.08em;
+      text-transform: uppercase;
+      color: #f4f7fb;
+      text-shadow:
+        0 0 18px rgba(255, 255, 255, 0.28),
+        0 0 46px rgba(255, 255, 255, 0.18),
+        0 26px 65px rgba(0, 0, 0, 0.48);
+    }
+
+    .title {
+      margin-top: 18px;
+      font-size: 74px;
+      line-height: 0.94;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      text-transform: uppercase;
+      color: white;
+    }
+
+    .sub {
+      margin-top: 22px;
+      max-width: 660px;
+      font-size: 24px;
+      line-height: 1.45;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="content">
+      <div class="eyebrow">Automation Class</div>
+      <div class="mark">TD</div>
+      <div class="title">TNT Duper</div>
+      <div class="sub">A sharper industrial identity built around duplication, ignition, and redstone-scale impact.</div>
+    </div>
+  </div>
+</body>
+</html>

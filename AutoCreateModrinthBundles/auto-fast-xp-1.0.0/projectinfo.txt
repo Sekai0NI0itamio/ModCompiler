@@ -1,0 +1,197 @@
+# Project Info
+
+generated_at=2026-04-10T13:53:24+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/28/Auto-Fast-XP-1.0.0.jar
+jar_size_bytes=6019
+jar_sha1=3b5afaaae68b2190d4f3cea2e113f38143d66d35
+
+## Detected Metadata
+
+jar_name=Auto-Fast-XP-1.0.0.jar
+jar_display_name=Auto Fast XP
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=autofastxp
+name=Auto Fast XP
+mod_version=1.0.0
+description=Automatically throws XP bottles rapidly when you hold right-click. Perfect for quickly gaining XP!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-fast-xp-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-fast-xp-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.autofastxp
+
+## Source Tree
+
+asd/itamio/autofastxp/AutoFastXPConfig.java
+asd/itamio/autofastxp/AutoFastXPHandler.java
+asd/itamio/autofastxp/AutoFastXPMod.java
+
+## Key Source Excerpts
+
+### asd/itamio/autofastxp/AutoFastXPHandler.java
+```
+package asd.itamio.autofastxp;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumActionResult;
+import net.minecraft.util.EnumHand;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+
+public class AutoFastXPHandler {
+    private int tickCounter = 0;
+    private boolean wasRightClickPressed = false;
+    
+    @SubscribeEvent
+    @SideOnly(Side.CLIENT)
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
+        if (!AutoFastXPConfig.enabled) return;
+        
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player == null || mc.world == null) return;
+        
+        // Check if player is holding right-click
+        boolean isRightClickPressed = mc.gameSettings.keyBindUseItem.isKeyDown();
+        
+        // Check if player is holding an XP bottle
+        EnumHand handWithBottle = null;
+        ItemStack heldItem = mc.player.getHeldItemMainhand();
+        
+        if (!heldItem.isEmpty() && heldItem.getItem() == Items.EXPERIENCE_BOTTLE) {
+            handWithBottle = EnumHand.MAIN_HAND;
+        } else {
+            // Check offhand too
+            heldItem = mc.player.getHeldItemOffhand();
+            if (!heldItem.isEmpty() && heldItem.getItem() == Items.EXPERIENCE_BOTTLE) {
+                handWithBottle = EnumHand.OFF_HAND;
+            }
+        }
+        
+        // If right-click is pressed and holding XP bottle
+        if (isRightClickPressed && handWithBottle != null) {
+            tickCounter++;
+            
+            // Throw bottle at configured rate
+            if (tickCounter >= AutoFastXPConfig.throwDelay) {
+                throwXPBottle(mc, handWithBottle);
+                tickCounter = 0;
+            }
+            
+            wasRightClickPressed = true;
+        } else {
+            // Reset when not holding right-click
+            if (wasRightClickPressed) {
+                tickCounter = 0;
+                wasRightClickPressed = false;
+            }
+        }
+    }
+    
+    private void throwXPBottle(Minecraft mc, EnumHand hand) {
+        if (mc.player == null || mc.world == null) return;
+        if (mc.playerController == null) return;
+        
+        // Use the item properly through the player controller
+        // This sends the packet to the server and handles everything correctly
+        EnumActionResult result = mc.playerController.processRightClick(
+            mc.player, 
+            mc.world, 
+            hand
+        );
+        
+        // If successful, swing the arm
+        if (result == EnumActionResult.SUCCESS) {
+            mc.player.swingArm(hand);
+        }
+    }
+}
+```
+
+### asd/itamio/autofastxp/AutoFastXPMod.java
+```
+package asd.itamio.autofastxp;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
+import org.apache.logging.log4j.Logger;
+import java.io.File;
+
+@Mod(modid = AutoFastXPMod.MODID, name = AutoFastXPMod.NAME, version = AutoFastXPMod.VERSION, clientSideOnly = true)
+public class AutoFastXPMod {
+    public static final String MODID = "autofastxp";
+    public static final String NAME = "Auto Fast XP";
+    public static final String VERSION = "1.0.0";
+    
+    public static Logger logger;
+    public static AutoFastXPConfig config;
+    
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new AutoFastXPConfig(new File(event.getModConfigurationDirectory(), "autofastxp.cfg"));
+    }
+    
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new AutoFastXPHandler());
+        logger.info("Auto Fast XP mod initialized!");
+    }
+}
+```
+
+### asd/itamio/autofastxp/AutoFastXPConfig.java
+```
+package asd.itamio.autofastxp;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+
+public class AutoFastXPConfig {
+    private Configuration config;
+    
+    public static boolean enabled = true;
+    public static int throwDelay = 1; // Ticks between throws (1 = super fast, 20 = 1 second)
+    
+    public AutoFastXPConfig(File configFile) {
+        config = new Configuration(configFile);
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enabled = config.getBoolean("enabled", "general", true, 
+            "Enable auto fast XP bottle throwing");
+        
+        throwDelay = config.getInt("throwDelay", "general", 1, 1, 20,
+            "Delay in ticks between XP bottle throws (1 = fastest, 20 = 1 second)");
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void save() {
+        config.get("general", "enabled", true).set(enabled);
+        config.get("general", "throwDelay", 1).set(throwDelay);
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+```

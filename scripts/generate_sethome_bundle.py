@@ -1032,9 +1032,9 @@ for old, new in [
 
 # ============================================================
 # 1.21+ FORGE
-# 1.21.1-1.21.4: save(CompoundTag, Provider), Factory — already in SRC_121_FORGE
-# 1.21.2-1.21.8: revert to save(CompoundTag) + old computeIfAbsent, add Optional getters
-# 1.21.9-1.21.11: save(CompoundTag, Provider) + Factory + Optional getters + no SubscribeEvent
+# 1.21.1-1.21.4: save(CompoundTag, Provider) + Factory — SRC_121_FORGE
+# 1.21.2-1.21.8: same as 1.21.1 + Optional getters — SRC_1215_FORGE
+# 1.21.9-1.21.11: same + no SubscribeEvent/MinecraftForge — SRC_1219_FORGE
 # ============================================================
 SRC_121_FORGE = SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag) {",
@@ -1062,15 +1062,16 @@ def _opt(s):
                  'd.data.put(pc.getString("uuid").orElse(""), homes);')
     )
 
-# 1.21.2-1.21.8: Factory + save(CompoundTag,Provider) + Optional getters (same as 1.21.9+)
+# 1.21.2-1.21.8: NO Factory (doesn't exist yet), but save(CompoundTag,Provider) + Optional getters
+# Use OLD computeIfAbsent API from 1.17-1.20.x
 SRC_1215_FORGE = _opt(SRC_121_FORGE
     .replace(
         "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (t, p) -> HomeData.load(t), null), NAME);"
+        "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);"
     )
 )
 
-# 1.21.9-1.21.11 Forge: new save(Provider), Factory, Optional getters, no SubscribeEvent
+# 1.21.9-1.21.11 Forge: Factory DOES exist here + save(CompoundTag,Provider) + Optional getters + EventBusSubscriber pattern
 SRC_1219_FORGE = (
     _opt(SRC_121_FORGE
         .replace(
@@ -1131,9 +1132,9 @@ SRC_1205_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE.replace(
     "public CompoundTag save(CompoundTag tag) {",
     "public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {"
 ))
-SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)    # 1.21.1-1.21.4
-SRC_1215_NEOFORGE = to_neoforge_sethome(SRC_1215_FORGE)  # 1.21.2-1.21.8
-SRC_1219_NEOFORGE = to_neoforge_sethome(SRC_1219_FORGE)  # 1.21.9+
+SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)    # 1.21.0-1.21.1 (Factory exists)
+SRC_1215_NEOFORGE = to_neoforge_sethome(SRC_1215_FORGE)  # 1.21.2-1.21.8 (NO Factory, old API)
+SRC_1219_NEOFORGE = to_neoforge_sethome(SRC_1219_FORGE)  # 1.21.9+ (Factory exists)
 
 # ============================================================
 # TARGETS — only ghost shell versions

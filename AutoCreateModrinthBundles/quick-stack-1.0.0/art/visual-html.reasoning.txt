@@ -1,0 +1,112 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of 2 items each with value, label, note). Must be concise, polished, modern premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must reuse approved example composition language but adapt words to this mod.
+
+We need to choose background_image from options. The mod is "Quick Stack". It's about stacking items, automation, convenience. Which background image fits? Probably "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png" or "winter forest with sunset.jpg". Choose one that matches mood. Probably "mountain breeze with spring forest.png" (fresh, natural). Let's pick that.
+
+Accent color: need a single hex color. Could be #ff7f2f (orange) as example, but we can choose something else. Must be a single hex color. Let's pick #6c5ce7 (purple) maybe. But must be a single hex color. Use #ff7f2f? That's used in example but okay. Could use #7b2cbf (purple). Let's choose #7b2cbf.
+
+Logo: fields: eyebrow, mark, title, subtitle, rail_left, rail_right.
+
+- eyebrow: short label like "Automation" maybe.
+- mark: short monogram, 2-4 chars. Could be "QS" for Quick Stack.
+- title: "Quick Stack"
+- subtitle: a short phrase describing behavior: "Effortless item transfer to nearby storage". Must be concise.
+- rail_left: describes actual behavior, e.g., "Instant Transfer"
+- rail_right: e.g., "Container Aware"
+
+Description: kicker, title, tagline, chips (2-4 short labels), stats (exactly 2 items). Each stat has value (string), label, note (short sentence). Must describe actual mod behavior.
+
+kicker: maybe "Utility". Title: "Quick Stack". tagline: something like "Stack items into nearby containers with a single key, preserving inventory flow." Must be concise.
+
+chips: 2-4 short labels, e.g., ["One‑Key Stack", "Smart Matching", "Audio Cue"] maybe 3.
+
+stats: exactly 2 items. Each with value (string), label, note.
+
+Possible stats:
+- value: "0" label: "Inventory Impact" note: "No items are consumed, only rearranged."
+- value: "8" label: "Range" note: "Works within an 8‑block radius of compatible containers."
+
+But value must be a string; could be "0" or "8". Use numeric strings.
+
+Make sure each note is one short sentence.
+
+Now produce JSON exactly matching shape.
+
+Check required fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "anime girl alya eating lolipop.png",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+    "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      }
+    ]
+  }
+}
+
+We must not use background_image "anime girl alya eating lolipop.png" because that's not matching mood. Must choose from options. The instruction says background_image must be one exact filename from BACKGROUND IMAGE OPTIONS. So we must pick one of the listed filenames. The list includes "mountain breeze with spring forest.png". That's exact filename with .png. So we should use that.
+
+Thus background_image: "mountain breeze with spring forest.png"
+
+Now produce JSON.
+
+Make sure all strings concise and polished.
+
+Let's craft:
+
+accent_color: "#7b2cbf" (purple). Could also be "#ff7f2f" but that's example; but it's okay. Use something else.
+
+logo:
+- eyebrow: "Automation"
+- mark: "QS"
+- title: "Quick Stack"
+- subtitle: "Effortless item transfer to nearby storage"
+- rail_left: "Instant Transfer"
+- rail_right: "Container Aware"
+
+description:
+- kicker: "Utility"
+- title: "Quick Stack"
+- tagline: "Stack matching items into nearby containers with a single key press."
+- chips: ["One‑Key Stack", "Smart Matching", "Audio Cue"] (3 items)
+- stats: two items.
+
+Stat 1:
+value: "0"
+label: "Inventory Impact"
+note: "No items are consumed, only rearranged."
+
+Stat 2:
+value: "8"
+label: "Effective Range"
+note: "Works within an 8‑block radius of compatible containers."
+
+Make sure note is one short sentence.
+
+Now produce JSON.
+
+Check that chips array contains strings, no extra punctuation.
+
+Now output only JSON, no extra text.
+
+Let's craft final JSON.

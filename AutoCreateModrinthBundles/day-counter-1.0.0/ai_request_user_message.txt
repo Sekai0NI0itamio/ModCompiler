@@ -1,0 +1,752 @@
+Generate Modrinth listing copy for one Minecraft mod.
+
+You already reviewed the original source folder earlier in this chat.
+Use that source-based understanding as the main truth for what the mod actually does.
+Use only the facts found in PROJECT INFO below.
+Use SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT as the highest-trust description of what the mod actually does.
+Use ORIGINAL SOURCE CONTEXT below as direct evidence from the provided src folder, not just as background history.
+If PROJECT INFO, code comments, or your own instincts suggest extra claims that are not clearly supported by SOURCE-VERIFIED NOTES, leave them out.
+Do not invent features, commands, compatibility, authors, loaders, game versions, or licensing facts.
+Use the perfect template examples below for tone, quality, and formatting only.
+Do not copy the example mod's features unless PROJECT INFO proves them.
+Lead with the main player-facing feature, not the internal implementation.
+If the jar metadata already contains a solid name, keep it very close to that name.
+Compare the raw jar filename, jar_display_name, metadata name, and primary_mod_id before choosing the final name.
+If one candidate has an obvious typo and another candidate is clearly the corrected human-readable name, use the corrected one.
+Prefer fixing obvious spelling mistakes like "most" to "mobs" when the jar naming proves the intended public name.
+Make the long description feel like a real human-written Modrinth page in simple everyday wording.
+You may use Markdown headings and bullet lists when they improve clarity.
+Prefer this easy-to-scan structure when it fits:
+- `# Mod Name` or `# Mod Name: Example`
+- `## Description`
+- one clear intro paragraph in plain words
+- `### How It Works (for the user)` or `### What It Does (for the user)`
+- 2 to 5 short bullets about what the player will actually notice
+- `### Features`
+- 3 to 6 short bullets when the mod has enough concrete features
+- `### Why Use This Mod?`
+- 2 to 4 short bullets when the reason-to-use is clear from the source
+Keep it organized and easy to skim.
+Mention secondary features only if they are clearly present and worth surfacing.
+If the original source clearly shows a repeated transfer loop, whole-stack movement, or "keep going until empty/full" behavior,
+explain that in plain player wording like "moves full stacks in one go" or "keeps pulling items until it is full"
+instead of only saying it is "faster".
+If the source clearly shows dropped items or loose entities getting pulled in, mention that in simple player wording too.
+Avoid implementation details like reflection, event hooks, custom damage sources,
+cooldown fields, package names, class names, or internal APIs.
+Avoid exact internal trigger details like cooldown values, tick counts, `vanilla cooldown`, or bulk-transfer internals unless players truly need that detail to understand the mod.
+Avoid filler compatibility lines unless PROJECT INFO makes them unusually important.
+Avoid overly advanced or dramatic wording like "ignite", "deadly zones", "seamless", or "streamlines" when simpler wording would be more natural.
+Do not pad the description with generic filler like "works in single-player and multiplayer", "works on existing saves",
+"lightweight", or broad "why use it" claims unless PROJECT INFO clearly proves them.
+Reuse the concrete nouns and behavior already present in PROJECT INFO instead of broadening them into extra gameplay claims.
+Small helper phrases are good when they make the writing feel more human, like "so", "well", "basically", "which means", or "that means".
+Slightly imperfect or casual grammar is okay if it makes the explanation easier to read and closer to the examples.
+Do not over-polish the wording into marketing copy or textbook English.
+Keep long_description focused and compact enough to complete cleanly in a single JSON response.
+Usually 3 to 7 short paragraphs or bullets is enough.
+Choose 1 to 3 most relevant primary categories for the categories array.
+Put any other clearly relevant search tags into additional_categories.
+Do not repeat a category across both arrays.
+Do not use loader names like forge, fabric, quilt, or neoforge as categories.
+Use only these official Modrinth mod category slugs: adventure, cursed, decoration, economy, equipment, food, game-mechanics, library, magic, management, minigame, mobs, optimization, social, storage, technology, transportation, utility, worldgen
+These classifier hints are inferred from Modrinth's official category names because the API does not return prose descriptions:
+- adventure: Exploration, progression, quests, dungeons, or travel-driven gameplay.
+- food: Cooking, crops, meals, hunger systems, or edible content.
+- minigame: Self-contained game modes, arenas, or score-based side activities.
+- technology: Machines, automation, engineering systems, power, or technical progression.
+- cursed: Intentionally weird, chaotic, trollish, or unsettling gameplay changes.
+- game-mechanics: Core rule changes, balance tweaks, combat rules, or vanilla behavior changes.
+- mobs: Adds, changes, or heavily focuses on creatures, NPCs, or mob behavior.
+- transportation: Movement, vehicles, teleportation, rails, portals, or travel helpers.
+- decoration: Building aesthetics, furniture, cosmetics, or decorative blocks/items.
+- library: Shared APIs, framework code, dependencies, or developer-facing support mods.
+- optimization: Performance, FPS, memory, loading, server tick, or lag reduction.
+- utility: General quality-of-life features, helpers, tools, or convenience tweaks.
+- economy: Currency, shops, trading, markets, or resource-value systems.
+- magic: Spells, mana, rituals, enchantment-focused systems, or mystical progression.
+- social: Multiplayer interactions, chat, parties, friends, sharing, or community features.
+- worldgen: Biomes, structures, terrain, ore generation, or world creation changes.
+- equipment: Armor, weapons, tools, trinkets, or gear-focused progression.
+- management: Admin tools, automation control panels, config-heavy oversight, or organization.
+- storage: Inventories, containers, item transport, sorting, logistics, or storage systems.
+Choose client_side and server_side only from: required, optional, unsupported, unknown
+Choose license_id only from this list when PROJECT INFO clearly supports it: CC0-1.0, CC-BY-4.0, Apache-2.0, BSD-2-Clause, BSD-3-Clause
+If the license is custom and PROJECT INFO provides a license link, return an empty license_id and include the license_url.
+If the license is all-rights-reserved or unclear, return an empty license_id and license_url. The script will apply a safe fallback.
+Return only valid JSON that matches this template exactly:
+
+{
+  "name": "Short memorable mod name",
+  "long_description": "Player-facing Markdown that matches the perfect template style.",
+  "categories": [
+    "utility",
+    "management"
+  ],
+  "additional_categories": [
+    "storage",
+    "technology"
+  ],
+  "client_side": "optional",
+  "server_side": "required",
+  "license_id": "",
+  "license_url": ""
+}
+
+PERFECT TEMPLATE EXAMPLES
+
+modname.txt
+Common Server Core
+
+description.txt
+# Mod Name: Elytra Chestplate Swap
+
+## Description
+
+**Elytra Chestplate Swap** is a simple quality-of-life mod for Minecraft Forge 1.12.2 that brings a modern convenience feature to older versions. With a single right-click, you can instantly swap your equipped chestplate with an elytra you're holding - and vice versa - without opening your inventory.
+
+### How It Works (for the user)
+
+- **Hold an elytra** in your hand.
+- **Right-click** while holding it.
+- If you're wearing a chestplate, the elytra equips immediately, and the chestplate is placed directly into your hotbar (in the slot you were holding the elytra).
+- If you're already wearing an elytra and holding a chestplate, right-clicking swaps the chestplate onto your body and moves the elytra to your hotbar.
+
+No inventory opening, no dragging - just a quick right-click to switch between flight mode and protection mode.
+
+### Features
+
+- One-click swapping between elytra and chestplates.
+- Works in both directions: chestplate -> elytra and elytra -> chestplate.
+- The removed item always lands in your hotbar (the slot you were holding), not somewhere random in your inventory.
+- Fully client-side: works on any server without installation.
+- No configuration needed - install and go.
+- Backports the chestplate-elytra swap mechanic (featured in modern Minecraft versions) to 1.12.2.
+
+### Why Use This Mod?
+
+- Quickly switch to elytra when you need to fly, and back to chestplate when you need protection.
+- Perfect for explorers who frequently toggle between traveling and combat.
+- Saves time and reduces inventory clutter.
+- Feels natural and intuitive - just right-click like you would in newer versions.
+
+ORIGINAL SOURCE CONTEXT (DIRECT EXCERPTS FROM PROVIDED SRC):
+# Original Source Context
+
+generated_at=2026-03-31T01:11:15+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/day-counter-1.0.0/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/day-counter-1.0.0/source/src/main/java
+source_file_count=4
+package_count=4
+packages=com.daycounter,com.daycounter.client,com.daycounter.config,com.daycounter.util
+
+## Source Tree
+
+com/daycounter/DayCounterMod.java
+com/daycounter/client/DayCounterClientHandler.java
+com/daycounter/config/DayCounterConfig.java
+com/daycounter/util/DayCounterFormatter.java
+
+## Key Source Excerpts
+
+### com/daycounter/client/DayCounterClientHandler.java
+```
+package com.daycounter.client;
+
+import com.daycounter.config.DayCounterConfig;
+import com.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.ScaledResolution;
+import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+public class DayCounterClientHandler {
+
+    private final DayCounterConfig config;
+
+    public DayCounterClientHandler(DayCounterConfig config) {
+        this.config = config;
+    }
+
+    @SubscribeEvent
+    public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
+        Minecraft minecraft = Minecraft.getMinecraft();
+        if (minecraft == null || minecraft.player == null || minecraft.world == null || minecraft.gameSettings.hideGUI) {
+            return;
+        }
+
+        config.reloadIfChanged();
+
+        String text = DayCounterFormatter.format(
+            minecraft.world.getTotalWorldTime(),
+            minecraft.world.getWorldTime(),
+            config.getDisplayMode()
+        );
+        if (text.isEmpty()) {
+            return;
+        }
+
+        FontRenderer fontRenderer = minecraft.fontRenderer;
+        ScaledResolution resolution = event.getResolution();
+        int width = fontRenderer.getStringWidth(text);
+        int x = config.getAnchor().resolveX(resolution.getScaledWidth(), width, config.getOffsetX());
+        int y = config.getAnchor().resolveY(resolution.getScaledHeight(), fontRenderer.FONT_HEIGHT, config.getOffsetY());
+
+        fontRenderer.drawStringWithShadow(text, x, y, 0xFFFFFF);
+    }
+}
+```
+
+### com/daycounter/DayCounterMod.java
+```
+package com.daycounter;
+
+import com.daycounter.client.DayCounterClientHandler;
+import com.daycounter.config.DayCounterConfig;
+import java.io.File;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(
+    modid = DayCounterMod.MODID,
+    name = DayCounterMod.NAME,
+    version = DayCounterMod.VERSION,
+    clientSideOnly = true,
+    acceptableRemoteVersions = "*"
+)
+public class DayCounterMod {
+
+    public static final String MODID = "daycounter";
+    public static final String NAME = "Day Counter";
+    public static final String VERSION = "1.0.0";
+    public static final Logger LOGGER = LogManager.getLogger(NAME);
+
+    private static DayCounterConfig config;
+
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        File configFile = new File(event.getModConfigurationDirectory(), "daycounter.txt");
+        config = new DayCounterConfig(configFile);
+        config.load();
+    }
+
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        if (event.getSide().isClient()) {
+            MinecraftForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+        }
+    }
+}
+```
+
+### com/daycounter/config/DayCounterConfig.java
+```
+package com.daycounter.config;
+
+import com.daycounter.DayCounterMod;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public class DayCounterConfig {
+
+    private static final long RELOAD_CHECK_INTERVAL_MS = 500L;
+
+    private final File file;
+
+    private Anchor anchor = Anchor.TOP_RIGHT;
+    private DisplayMode displayMode = DisplayMode.DAYS;
+    private int offsetX = 6;
+    private int offsetY = 6;
+    private long lastModified = -1L;
+    private long lastLength = -1L;
+    private long lastCheckTime = 0L;
+
+    public DayCounterConfig(File file) {
+        this.file = file;
+    }
+
+    public synchronized void load() {
+        ensureParentDirectoryExists();
+        if (!file.exists()) {
+            writeDefaultFile();
+        }
+        readFile();
+    }
+
+    public synchronized void reloadIfChanged() {
+        long now = System.currentTimeMillis();
+        if (now - lastCheckTime < RELOAD_CHECK_INTERVAL_MS) {
+            return;
+        }
+        lastCheckTime = now;
+
+        if (!file.exists()) {
+            writeDefaultFile();
+            readFile();
+            return;
+        }
+
+        long modified = file.lastModified();
+        long length = file.length();
+        if (modified != lastModified || length != lastLength) {
+            readFile();
+        }
+    }
+
+    public synchronized Anchor getAnchor() {
+        return anchor;
+    }
+
+    public synchronized DisplayMode getDisplayMode() {
+        return displayMode;
+    }
+
+    public synchronized int getOffsetX() {
+        return offsetX;
+    }
+
+    public synchronized int getOffsetY() {
+        return offsetY;
+    }
+
+    private void ensureParentDirectoryExists() {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            DayCounterMod.LOGGER.warn("Day Counter could not create config directory: {}", parent.getAbsolutePath());
+        }
+    }
+
+    private void writeDefaultFile() {
+        List<String> lines = new ArrayList<String>();
+        lines.add("# Day Counter configuration");
+        lines.add("# This file hot-reloads while the game is running.");
+        lines.add("#");
+        lines.add("# display_mode options:");
+        lines.add("# days");
+        lines.add("# days_hour");
+        lines.add("# days_hour_minute");
+        lines.add("display_mode=days");
+        lines.add("");
+        lines.add("# anchor options:");
+        lines.add("# top_left");
+        lines.add("# top_right");
+        lines.add("# bottom_left");
+        lines.add("# bottom_right");
+        lines.add("# center_top");
+        lines.add("# center_bottom");
+        lines.add("anchor=top_right");
+        lines.add("");
+        lines.add("# Pixel offsets from the selected anchor.");
+        lines.add("offset_x=6");
+        lines.add("offset_y=6");
+
+        try {
+            Files.write(file.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException exception) {
+            DayCounterMod.LOGGER.error("Day Counter could not write the default config file.", exception);
+        }
+    }
+
+    private void readFile() {
+        try {
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            applyLines(lines);
+            lastModified = file.lastModified();
+            lastLength = file.length();
+        } catch (IOException exception) {
+            DayCounterMod.LOGGER.error("Day Counter could not read its config file.", exception);
+... truncated ...
+```
+
+### com/daycounter/util/DayCounterFormatter.java
+```
+package com.daycounter.util;
+
+import com.daycounter.config.DayCounterConfig.DisplayMode;
+
+public final class DayCounterFormatter {
+
+    private static final long TICKS_PER_DAY = 24000L;
+    private static final long TICKS_PER_HOUR = 1000L;
+
+    private DayCounterFormatter() {
+    }
+
+    public static String format(long totalWorldTime, long worldTime, DisplayMode displayMode) {
+        long dayNumber = Math.max(1L, (totalWorldTime / TICKS_PER_DAY) + 1L);
+        String dayText = "Day " + dayNumber;
+
+        if (displayMode == DisplayMode.DAYS) {
+            return dayText;
+        }
+
+        long ticksOfDay = normalizeTicks(worldTime % TICKS_PER_DAY);
+        long shiftedTicks = normalizeTicks(ticksOfDay + (TICKS_PER_HOUR * 6L));
+        long totalMinutes = (shiftedTicks * 1440L) / TICKS_PER_DAY;
+
+        int hour24 = (int) (totalMinutes / 60L);
+        int minute = (int) (totalMinutes % 60L);
+        int hour12 = hour24 % 12;
+        if (hour12 == 0) {
+            hour12 = 12;
+        }
+        String meridiem = hour24 >= 12 ? "PM" : "AM";
+
+        if (displayMode == DisplayMode.DAYS_HOUR) {
+            return dayText + " | " + hour12 + " " + meridiem;
+        }
+
+        return dayText + " | " + hour12 + ":" + twoDigits(minute) + " " + meridiem;
+    }
+
+    private static long normalizeTicks(long ticks) {
+        long normalized = ticks % TICKS_PER_DAY;
+        return normalized < 0L ? normalized + TICKS_PER_DAY : normalized;
+    }
+
+    private static String twoDigits(int value) {
+        return value < 10 ? "0" + value : Integer.toString(value);
+    }
+}
+```
+
+SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT:
+GUARANTEED PLAYER-VISIBLE FACTS
+- Shows “Day X” where X is the current day number based on world time.
+- Optionally shows the current time of day (hour and minute) in 12‑hour format with AM/PM.
+- Updates the displayed day number automatically as the world progresses.
+- Reads a config file that can be edited while the game runs; changes appear after a short delay.
+- Positions the text according to an anchor (default top‑right) and offset pixels.
+- Only draws the overlay when the player is in the world and the GUI is not hidden.
+- Works only on the client side; no commands, items, or blocks are added.
+
+DO NOT CLAIM
+- Unclear if the mod functions on multiplayer servers.
+- Unclear whether editing the config file while the game is paused takes effect immediately.
+- Unclear if other anchor positions or display modes are supported beyond those listed.
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-03-31T01:11:15+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/4/Day-Counter-1.0.0.jar
+jar_size_bytes=13604
+jar_sha1=1cea9a095ff9d53c8e7c5c036d4670128b4cb4bb
+
+## Detected Metadata
+
+jar_name=Day-Counter-1.0.0.jar
+jar_display_name=Day Counter
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=daycounter
+name=Day Counter
+mod_version=1.0.0
+description=Shows the current world day and an optional real-life-style Minecraft clock in a movable HUD.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/day-counter-1.0.0/source
+decompiled_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/day-counter-1.0.0/decompiled
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/day-counter-1.0.0/source/src/main/java
+source_file_count=4
+package_count=4
+packages=com.daycounter,com.daycounter.client,com.daycounter.config,com.daycounter.util
+
+## Source Tree
+
+com/daycounter/DayCounterMod.java
+com/daycounter/client/DayCounterClientHandler.java
+com/daycounter/config/DayCounterConfig.java
+com/daycounter/util/DayCounterFormatter.java
+
+## Key Source Excerpts
+
+### com/daycounter/client/DayCounterClientHandler.java
+```
+package com.daycounter.client;
+
+import com.daycounter.config.DayCounterConfig;
+import com.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.ScaledResolution;
+import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+public class DayCounterClientHandler {
+
+    private final DayCounterConfig config;
+
+    public DayCounterClientHandler(DayCounterConfig config) {
+        this.config = config;
+    }
+
+    @SubscribeEvent
+    public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
+        Minecraft minecraft = Minecraft.getMinecraft();
+        if (minecraft == null || minecraft.player == null || minecraft.world == null || minecraft.gameSettings.hideGUI) {
+            return;
+        }
+
+        config.reloadIfChanged();
+
+        String text = DayCounterFormatter.format(
+            minecraft.world.getTotalWorldTime(),
+            minecraft.world.getWorldTime(),
+            config.getDisplayMode()
+        );
+        if (text.isEmpty()) {
+            return;
+        }
+
+        FontRenderer fontRenderer = minecraft.fontRenderer;
+        ScaledResolution resolution = event.getResolution();
+        int width = fontRenderer.getStringWidth(text);
+        int x = config.getAnchor().resolveX(resolution.getScaledWidth(), width, config.getOffsetX());
+        int y = config.getAnchor().resolveY(resolution.getScaledHeight(), fontRenderer.FONT_HEIGHT, config.getOffsetY());
+
+        fontRenderer.drawStringWithShadow(text, x, y, 0xFFFFFF);
+    }
+}
+```
+
+### com/daycounter/DayCounterMod.java
+```
+package com.daycounter;
+
+import com.daycounter.client.DayCounterClientHandler;
+import com.daycounter.config.DayCounterConfig;
+import java.io.File;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(
+    modid = DayCounterMod.MODID,
+    name = DayCounterMod.NAME,
+    version = DayCounterMod.VERSION,
+    clientSideOnly = true,
+    acceptableRemoteVersions = "*"
+)
+public class DayCounterMod {
+
+    public static final String MODID = "daycounter";
+    public static final String NAME = "Day Counter";
+    public static final String VERSION = "1.0.0";
+    public static final Logger LOGGER = LogManager.getLogger(NAME);
+
+    private static DayCounterConfig config;
+
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        File configFile = new File(event.getModConfigurationDirectory(), "daycounter.txt");
+        config = new DayCounterConfig(configFile);
+        config.load();
+    }
+
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        if (event.getSide().isClient()) {
+            MinecraftForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+        }
+    }
+}
+```
+
+### com/daycounter/config/DayCounterConfig.java
+```
+package com.daycounter.config;
+
+import com.daycounter.DayCounterMod;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public class DayCounterConfig {
+
+    private static final long RELOAD_CHECK_INTERVAL_MS = 500L;
+
+    private final File file;
+
+    private Anchor anchor = Anchor.TOP_RIGHT;
+    private DisplayMode displayMode = DisplayMode.DAYS;
+    private int offsetX = 6;
+    private int offsetY = 6;
+    private long lastModified = -1L;
+    private long lastLength = -1L;
+    private long lastCheckTime = 0L;
+
+    public DayCounterConfig(File file) {
+        this.file = file;
+    }
+
+    public synchronized void load() {
+        ensureParentDirectoryExists();
+        if (!file.exists()) {
+            writeDefaultFile();
+        }
+        readFile();
+    }
+
+    public synchronized void reloadIfChanged() {
+        long now = System.currentTimeMillis();
+        if (now - lastCheckTime < RELOAD_CHECK_INTERVAL_MS) {
+            return;
+        }
+        lastCheckTime = now;
+
+        if (!file.exists()) {
+            writeDefaultFile();
+            readFile();
+            return;
+        }
+
+        long modified = file.lastModified();
+        long length = file.length();
+        if (modified != lastModified || length != lastLength) {
+            readFile();
+        }
+    }
+
+    public synchronized Anchor getAnchor() {
+        return anchor;
+    }
+
+    public synchronized DisplayMode getDisplayMode() {
+        return displayMode;
+    }
+
+    public synchronized int getOffsetX() {
+        return offsetX;
+    }
+
+    public synchronized int getOffsetY() {
+        return offsetY;
+    }
+
+    private void ensureParentDirectoryExists() {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            DayCounterMod.LOGGER.warn("Day Counter could not create config directory: {}", parent.getAbsolutePath());
+        }
+    }
+
+    private void writeDefaultFile() {
+        List<String> lines = new ArrayList<String>();
+        lines.add("# Day Counter configuration");
+        lines.add("# This file hot-reloads while the game is running.");
+        lines.add("#");
+        lines.add("# display_mode options:");
+        lines.add("# days");
+        lines.add("# days_hour");
+        lines.add("# days_hour_minute");
+        lines.add("display_mode=days");
+        lines.add("");
+        lines.add("# anchor options:");
+        lines.add("# top_left");
+        lines.add("# top_right");
+        lines.add("# bottom_left");
+        lines.add("# bottom_right");
+        lines.add("# center_top");
+        lines.add("# center_bottom");
+        lines.add("anchor=top_right");
+        lines.add("");
+        lines.add("# Pixel offsets from the selected anchor.");
+        lines.add("offset_x=6");
+        lines.add("offset_y=6");
+
+        try {
+            Files.write(file.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException exception) {
+            DayCounterMod.LOGGER.error("Day Counter could not write the default config file.", exception);
+        }
+    }
+
+    private void readFile() {
+        try {
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            applyLines(lines);
+            lastModified = file.lastModified();
+            lastLength = file.length();
+        } catch (IOException exception) {
+            DayCounterMod.LOGGER.error("Day Counter could not read its config file.", exception);
+... truncated ...
+```
+
+### com/daycounter/util/DayCounterFormatter.java
+```
+package com.daycounter.util;
+
+import com.daycounter.config.DayCounterConfig.DisplayMode;
+
+public final class DayCounterFormatter {
+
+    private static final long TICKS_PER_DAY = 24000L;
+    private static final long TICKS_PER_HOUR = 1000L;
+
+    private DayCounterFormatter() {
+    }
+
+    public static String format(long totalWorldTime, long worldTime, DisplayMode displayMode) {
+        long dayNumber = Math.max(1L, (totalWorldTime / TICKS_PER_DAY) + 1L);
+        String dayText = "Day " + dayNumber;
+
+        if (displayMode == DisplayMode.DAYS) {
+            return dayText;
+        }
+
+        long ticksOfDay = normalizeTicks(worldTime % TICKS_PER_DAY);
+        long shiftedTicks = normalizeTicks(ticksOfDay + (TICKS_PER_HOUR * 6L));
+        long totalMinutes = (shiftedTicks * 1440L) / TICKS_PER_DAY;
+
+        int hour24 = (int) (totalMinutes / 60L);
+        int minute = (int) (totalMinutes % 60L);
+        int hour12 = hour24 % 12;
+        if (hour12 == 0) {
+            hour12 = 12;
+        }
+        String meridiem = hour24 >= 12 ? "PM" : "AM";
+
+        if (displayMode == DisplayMode.DAYS_HOUR) {
+            return dayText + " | " + hour12 + " " + meridiem;
+        }
+
+        return dayText + " | " + hour12 + ":" + twoDigits(minute) + " " + meridiem;
+    }
+
+    private static long normalizeTicks(long ticks) {
+        long normalized = ticks % TICKS_PER_DAY;
+        return normalized < 0L ? normalized + TICKS_PER_DAY : normalized;
+    }
+
+    private static String twoDigits(int value) {
+        return value < 10 ? "0" + value : Integer.toString(value);
+    }
+}
+```

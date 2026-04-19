@@ -1,0 +1,71 @@
+We need to output JSON with exact shape. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must reuse approved example composition language but adapt words to this mod. Must match level of polish, layout discipline, typography hierarchy. Must keep strings concise. Must ensure each stats.note is one short sentence. Must have exactly 2 stats items. Must have chips 2-4 items. Must have rail_left and rail_right describing actual mod behavior. Must choose background_image filename that matches mood best. For Mob Vision mod, maybe "winter forest with sunset.jpg" or "purple flowers and sun set or sun rise.png"? The mod is about vision, maybe "winter forest with sunset.jpg" fits mood of cold, vision? Could also be "mountain breeze with spring forest.png". Let's pick "winter forest with sunset.jpg". That is one of recommended options. Provide accent_color maybe "#ff7f2f" as example? Could choose something else but must be a single hex color. Use "#ff7f2f" maybe okay. Provide logo: eyebrow maybe "Vision Control". mark maybe "MV". title "Mob Vision". subtitle "Fine‑tuned detection ranges for hostile mobs, halting unwanted aggression." rail_left maybe "Customizable Sight". rail_right maybe "Instant Reload". description.kicker maybe "Utility Mod". description.title "Mob Vision". description.tagline maybe "Adjust each hostile mob’s sight radius or disable targeting entirely, with live config reload." chips maybe ["Range Control","Target Disable","Live Edit"] (3 items). stats: need two items with value and label and note. Could be "0" value? Actually stats.value is a string maybe numeric? In example they used "0" and "24/7". For our mod maybe "100%"? But must be string. Provide something like "Full Config Reload" with note "Reloads the config each second for immediate changes." Another stat maybe "0" with label "Vision Adjusted"? Hmm need to follow shape: stats is array of objects each with value, label, note. Provide two items. Example: first: value "0", label "Blocks Lost", note "Dispensers keep firing..." but we need actual behavior. Let's craft: first stat: value "0", label "Targeting Disabled", note "Set a mob’s range to 0 to make it ignore players." second stat: value "1", label "Update Rate", note "Checks for config changes once per second." But value should be maybe "1". That's okay.
+
+Make sure each note is one short sentence.
+
+Now produce JSON exactly as shape.
+
+Check fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+    "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      }
+    ]
+  }
+}
+
+All strings concise and polished.
+
+Let's craft:
+
+accent_color: "#ff7f2f" (same as example but okay)
+
+background_image: "winter forest with sunset.jpg"
+
+logo:
+eyebrow: "Vision Control"
+mark: "MV"
+title: "Mob Vision"
+subtitle: "Fine‑tuned detection ranges for hostile mobs, halting unwanted aggression."
+rail_left: "Customizable Sight"
+rail_right: "Instant Reload"
+
+description:
+kicker: "Utility Mod"
+title: "Mob Vision"
+tagline: "Adjust each hostile mob’s sight radius or disable targeting entirely, with live config reload."
+chips: ["Range Control","Target Disable","Live Edit"] (3 items)
+
+stats: two items.
+
+First: value "0", label "Targeting Disabled", note "Set a mob’s range to 0 to make it ignore players."
+Second: value "1", label "Update Rate", note "Checks the config each second for immediate changes."
+
+Make sure note is one short sentence.
+
+Now produce JSON. Ensure no extra fields. Ensure proper quoting. Ensure no trailing commas.
+
+Let's craft final JSON.

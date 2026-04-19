@@ -1,0 +1,288 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must match composition language from examples. Must reuse approved example's composition language but adapt words.
+
+We need to produce JSON only, no extra text.
+
+We need to choose background_image from options. The mod is "Instant Experience Orb". The background image should match mood. Probably "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png" or "winter forest with sunset.jpg". Choose one that fits. Let's pick "mountain breeze with spring forest.png". That is in options.
+
+Accent color: need a hex color. Could be something like "#ff7f2f" (orange) as example, but we can choose any. Must be single hex color. Let's choose "#6c5ce7" (purple) maybe. But need to be concise and match style. Use "#ff7f2f"? That's already used in example but okay. Could use "#ff6b6b"? Let's pick "#ff7f2f" as it's common. But maybe choose something else like "#7b2cbf". Let's pick "#ff7f2f" as it's safe.
+
+Logo: need eyebrow, mark, title, subtitle, rail_left, rail_right.
+
+Eyebrow: short phrase like "XP Optimizer" maybe. Should be uppercase? In example it's "Automation Class". So we can use "XP Optimizer". Mark: short monogram, maybe "IE" or "IX". Title: "Instant Experience Orb". Subtitle: a short description about the mod's behavior: "Instantly absorb XP orbs, merge them to cut lag, and treat each orb as a level." Must be concise.
+
+rail_left: "Instant Absorb" maybe. rail_right: "Lag‑Free Levels". Must describe actual behavior.
+
+Description: kicker, title, tagline, chips (2-4), stats (2 items). Must be concise.
+
+kicker: maybe "Performance". title: "Instant Experience Orb". tagline: "Absorb XP instantly, merge orbs to reduce lag, and simplify leveling to 1 orb = 1 level." chips: array of 2-4 short labels like "Instant Absorb", "Orb Clumping", "Level Simplifier". stats: two items each with value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats example: value "0", label "Blocks Lost", note "Dispensers keep firing..." but we need actual behavior: maybe "0", label "Lag Impact", note "Reduces entity count dramatically." Another: "24/7", label "Automation", note "Works continuously in any world." But must be about mod behavior. Could be "0", label "Entity Count", note "Merges orbs to lower entity count." Another: "1", label "Level Conversion", note "Each orb equals exactly one level." Let's craft.
+
+We need exactly 2 stats items.
+
+Each stats.note must be one short sentence.
+
+Make sure JSON structure matches exactly.
+
+Let's draft JSON:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "mountain breeze with spring forest.png",
+  "logo": {
+    "eyebrow": "XP Optimizer",
+    "mark": "IX",
+    "title": "Instant Experience Orb",
+    "subtitle": "Instantly absorb XP orbs, merge them to cut lag, and treat each as a level.",
+    "rail_left": "Instant Absorb",
+    "rail_right": "Lag‑Free Levels"
+  },
+  "description": {
+    "kicker": "Performance",
+    "title": "Instant Experience Orb",
+    "tagline": "Absorb XP instantly, merge orbs to reduce lag, and simplify leveling to 1 orb = 1 level.",
+    "chips": [
+     "Instant Absorb",
+      "Orb Clumping",
+      "Level Simplifier"
+   ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Entity Count",
+        "note": "Merges orbs to dramatically lower entity count."
+     },
+      {
+        "value": "1",
+        "label": "Level Conversion",
+        "note": "Each absorbed orb equals exactly one level."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, background_image exact filename from options. "mountain breeze with spring forest.png" is in options. Good.
+
+logo.mark is "IX" (2 characters). Good.
+
+logo.rail_left and rail_right describe actual behavior: "Instant Absorb", "Lag‑Free Levels". Good.
+
+description.chips has 3 items, allowed 2-4. Good.
+
+description.stats has exactly 2 items. Good.
+
+Each stats.note is one short sentence. Yes.
+
+All strings concise and polished.
+
+No mention of draft etc.
+
+Make sure JSON is valid, no trailing commas.
+
+Return only JSON.
+We need to output JSON with shape as described. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. Also description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items) each with value, label, note.
+
+We must not include any extra text. Provide only JSON.
+
+We need to adapt to mod "Instant Experience Orb". Provide concise polished strings. Use modern premium style.
+
+We need to choose background_image filename from options that best fits. Probably "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png" or "winter forest with sunset.jpg". The mod is about XP orbs, maybe "mountain breeze with spring forest.png" fits? Could also be "purple flowers and sun set or sun rise.png". Choose one. Let's pick "mountain breeze with spring forest.png". That's allowed.
+
+Accent color: maybe #ff7f2f (orange) as example, but can choose any hex. Must be single hex color. Use #ff7f2f as given example? It's okay. Use #ff7f2f.
+
+Logo: eyebrow: short phrase like "XP Booster". mark: maybe "IEO" or "IX". Title: "Instant Experience Orb". subtitle: short description similar to example: "A sleek utility that instantly consumes XP orbs, merges them for performance, and simplifies leveling to 1 orb = 1 level." Must be concise.
+
+rail_left: "Instant Absorb". rail_right: "Clump & Optimize". Those describe behavior.
+
+Description: kicker: maybe "Utility". title: "Instant Experience Orb". tagline: short tagline describing behavior. chips: 2-4 short labels like "Instant Absorb", "Orb Clumping", "1:1 Level". stats: two items with value and label and note.
+
+Stats: maybe "XP Gain" value "1:1" label "Level per Orb" note "Each orb equals exactly one level." Another stat: "Entity Count" value "↓80%" label "Performance Impact" note "Merges orbs to cut entity load dramatically."
+
+But note must be one short sentence. Value can be string maybe "1:1". Provide exactly 2 stats.
+
+Make sure chips array length 2-4. Provide maybe 3 chips.
+
+Now construct JSON.
+
+Fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "mountain breeze with spring forest.png",
+  "logo": {
+    "eyebrow": "XP Booster",
+    "mark": "IEO",
+    "title": "Instant Experience Orb",
+    "subtitle": "Instantly absorb XP orbs, merge them for performance, and simplify leveling to 1 orb = 1 level.",
+    "rail_left": "Instant Absorb",
+    "rail_right": "Clump & Optimize"
+  },
+  "description": {
+    "kicker": "Utility",
+    "title": "Instant Experience Orb",
+    "tagline": "Absorb XP instantly, auto‑clump orbs, and turn each orb into a guaranteed level.",
+    "chips": [
+      "Instant Absorb",
+      "Orb Clumping",
+      "1:1 Level"
+    ],
+    "stats": [
+      {
+       "value": "1:1",
+        "label": "Level per Orb",
+        "note": "Each orb grants exactly one level, removing complex XP curves."
+      },
+      {
+        "value": "↓80%",
+       "label": "Entity Reduction",
+        "note": "Merges orbs to slash entity count and boost tick performance."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename from options, we used "mountain breeze with spring forest.png" which is in list. logo.mark is short monogram 3 chars, ok. description.chips length 3, within 2-4. description.stats exactly 2 items, ok. Each stats.note is one short sentence, yes. All strings concise and polished. No mention of draft etc. All labels about behavior. Good.
+
+Return only JSON.
+We need to output JSON with shape matching example. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4), stats (exactly 2 items) each with value, label, note.
+
+We must not include HTML etc. Just JSON.
+
+We need to pick background image filename from options that best fits mod. The mod is about XP orbs, instant absorption, clumping, performance. Which background image fits? Options list includes various scenic images. Probably "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png" or "winter forest with sunset.jpg". Choose one that matches vibe. Maybe "mountain breeze with spring forest.png" fits natural, but maybe "purple flowers and sun set or sun rise.png" could be more serene. Let's pick "mountain breeze with spring forest.png". That is in options.
+
+Accent color: need a hex color. Could be something like "#ff7f2f" (orange) as example. Could choose something else but must be single hex. Let's use "#ff7f2f" as given example.
+
+Logo: eyebrow: short phrase maybe "XP Fusion". mark: short monogram maybe "IE" (Instant Experience). title: "Instant Experience Orb". subtitle: a short phrase describing mod: "Instantly absorb XP orbs, clump them, and treat each as a level". rail_left: maybe "Instant Absorb". rail_right: "Clumped Orbs". Must describe actual behavior.
+
+Description: kicker: maybe "Performance Mod". title: same as mod title? Could be "Instant Experience Orb". tagline: short tagline: "Absorb XP instantly, merge orbs, and simplify leveling." chips: 2-4 short labels: maybe ["Instant Absorb","Orb Clumping","Level Simplification"]. stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats could be:
+
+- value: "0ms" label: "Absorption Delay" note: "XP orbs are taken instantly with no animation lag."
+- value: "100%" label: "Clump Efficiency" note: "Orbs within 3 blocks merge each tick to reduce entity count."
+
+But value should be a string maybe "Instant" or "0ms". Keep concise.
+
+Make sure stats array has exactly 2 objects.
+
+Now produce JSON with required fields.
+
+Check constraints: all strings concise and polished. No mention of draft etc. Use actual behavior.
+
+Make sure background_image is exactly one of the filenames from options. Use "mountain breeze with spring forest.png". That includes spaces; must be exact string including spaces? The options list includes filenames with spaces and capital letters. The JSON string must match exactly. Use that filename.
+
+Make sure accent_color is a single hex color like "#ff7f2f". Use same.
+
+Now construct JSON:
+
+{
+  "acent_color": "#ff7f2f",
+  "background_image": "mountain breeze with spring forest.png",
+  "logo": {
+   "eyebrow": "XP Fusion",
+    "mark": "IE",
+    "title": "Instant Experience Orb",
+    "subtitle": "Instantly absorb XP orbs, merge them, and treat each as a level.",
+    "rail_left": "Instant Absorb",
+    "rail_right": "Clumped Orbs"
+ },
+  "description": {
+    "kicker": "Performance Mod",
+    "title": "Instant Experience Orb",
+    "tagline": "Absorb XP instantly, merge orbs, and simplify leveling.",
+    "chips": [
+      "Instant Absorb",
+      "Orb Clumping",
+      "Level Simplification"
+    ],
+    "stats": [
+      {
+       "value": "0ms",
+        "label": "Absorption Delay",
+        "note": "XP orbs are taken instantly with no animation lag."
+      },
+      {
+        "value": "100%",
+        "label": "Clump Efficiency",
+        "note": "Nearby orbs merge each tick to cut entity count."
+      }
+    ]
+  }
+}
+
+Check constraints: chips length is 3, okay. stats length is 2, okay. Each note is one short sentence. Good.
+
+Make sure no extra fields. Provide only JSON.
+
+Now output.
+We need to output JSON with shape matching example. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4), stats (exactly 2 items) each with value, label, note.
+
+We must not include HTML etc. Just JSON.
+
+We need to pick background image filename from options that best fits mod. The mod is about XP orbs, instant absorption, clumping, performance. Which background image fits? Options list includes various scenic images. Probably "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png" or "winter forest with sunset.jpg". Choose one that matches vibe. Maybe "mountain breeze with spring forest.png" fits natural, but maybe "purple flowers and sun set or sun rise.png" could be more serene. Let's pick "mountain breeze with spring forest.png". That is in options.
+
+Accent color: need a hex color. Could be something like "#ff7f2f" (orange) as example. Could choose something else but must be single hex. Let's use "#ff7f2f" as given example.
+
+Logo: eyebrow: short phrase maybe "XP Fusion". mark: short monogram maybe "IE" (Instant Experience). title: "Instant Experience Orb". subtitle: a short phrase describing mod: "Instantly absorb XP orbs, clump them, and treat each as a level". rail_left: maybe "Instant Absorb". rail_right: "Clumped Orbs". Must describe actual behavior.
+
+Description: kicker: maybe "Performance Mod". title: same as mod title? Could be "Instant Experience Orb". tagline: short tagline: "Absorb XP instantly, merge orbs, and simplify leveling." chips: 2-4 short labels: maybe ["Instant Absorb","Orb Clumping","Level Simplification"]. stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats could be:
+
+- value: "0ms" label: "Absorption Delay" note: "XP orbs are taken instantly with no animation lag."
+- value: "100%" label: "Clump Efficiency" note: "Orbs within 3 blocks merge each tick to reduce entity count."
+
+But value should be a string maybe "Instant" or "0ms". Keep concise.
+
+Make sure stats array has exactly 2 objects.
+
+Now produce JSON with required fields.
+
+Check constraints: all strings concise and polished. No mention of draft etc. Use actual behavior.
+
+Make sure background_image is exactly one of the filenames from options. Use "mountain breeze with spring forest.png". That includes spaces; must be exact string including spaces? The options list includes filenames with spaces and capital letters. The JSON string must match exactly. Use that filename.
+
+Make sure accent_color is a single hex color like "#ff7f2f". Use same.
+
+Now construct JSON:
+
+{
+  "acent_color": "#ff7f2f",
+  "background_image": "mountain breeze with spring forest.png",
+  "logo": {
+   "eyebrow": "XP Fusion",
+    "mark": "IE",
+    "title": "Instant Experience Orb",
+    "subtitle": "Instantly absorb XP orbs, merge them, and treat each as a level.",
+    "rail_left": "Instant Absorb",
+    "rail_right": "Clumped Orbs"
+ },
+  "description": {
+    "kicker": "Performance Mod",
+    "title": "Instant Experience Orb",
+    "tagline": "Absorb XP instantly, merge orbs, and simplify leveling.",
+    "chips": [
+      "Instant Absorb",
+      "Orb Clumping",
+      "Level Simplification"
+    ],
+    "stats": [
+      {
+       "value": "0ms",
+        "label": "Absorption Delay",
+        "note": "XP orbs are taken instantly with no animation lag."
+      },
+      {
+        "value": "100%",
+        "label": "Clump Efficiency",
+        "note": "Nearby orbs merge each tick to cut entity count."
+      }
+    ]
+  }
+}
+
+Check constraints: chips length is 3, okay. stats length is 2, okay. Each note is one short sentence. Good.
+
+Make sure no extra fields. Provide only JSON.
+
+Now output.

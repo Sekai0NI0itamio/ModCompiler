@@ -1,0 +1,70 @@
+Downloading https://services.gradle.org/distributions/gradle-7.2-bin.zip
+..........10%...........20%...........30%...........40%...........50%...........60%...........70%...........80%...........90%...........100%
+
+Welcome to Gradle 7.2!
+
+Here are the highlights of this release:
+ - Toolchain support for Scala
+ - More cache hits when Java source files have platform-specific line endings
+ - More resilient remote HTTP build cache behavior
+
+For more details see https://docs.gradle.org/7.2/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/7.2/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Java: 16.0.2 JVM: 16.0.2+7(Eclipse Foundation) Arch: amd64
+WARNING: This project is configured to use the official obfuscation mappings provided by Mojang. These mapping fall under their associated license, you should be fully aware of this license. For the latest license text, refer below, or the reference copy here: https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md, You can hide this warning by running the `hideOfficialWarningUntilChanged` task
+WARNING: (c) 2020 Microsoft Corporation. These mappings are provided "as-is" and you bear the risk of using them. You may copy and use the mappings for development purposes, but you may not redistribute the mappings complete and unmodified. Microsoft makes no warranties, express or implied, with respect to the mappings provided here.  Use and modification of this document or the source code (in any form) of Minecraft: Java Edition is governed by the Minecraft End User License Agreement available at https://account.mojang.com/documents/minecraft_eula.
+Setting up MCP environment
+Initializing steps
+Executing steps
+ > Running 'downloadManifest'
+ > Running 'downloadJson'
+ > Running 'downloadClient'
+ > Running 'downloadServer'
+ > Running 'downloadClientMappings'
+ > Running 'mergeMappings'
+ > Running 'stripClient'
+ > Running 'stripServer'
+ > Running 'merge'
+ > Running 'listLibraries'
+ > Running 'rename'
+Stopping at requested step: /home/runner/.gradle/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.17.1-20210706.113038/joined/rename/output.jar
+[09:19:30] [main/INFO]: Writing debug log file accesstransform.log
+[09:19:30] [main/INFO]: Access Transformer processor running version 8.0.7+8.0.7+master.43473d43
+[09:19:30] [main/INFO]: Command line arguments [--inJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.17.1-37.1.1/forge-1.17.1-37.1.1-injected.jar, --outJar, /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.17.1-37.1.1_mapped_official_1.17.1/forge-1.17.1-37.1.1_mapped_official_1.17.1.jar, --logFile, accesstransform.log, --atFile, /tmp/modcompiler-sortchest-forge-1-17-1-fbcwbwpc/workspace/build/_atJar_4/parent_at.cfg]
+[09:19:30] [main/INFO]: Reading from /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.17.1-37.1.1/forge-1.17.1-37.1.1-injected.jar
+[09:19:30] [main/INFO]: Writing to /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.17.1-37.1.1_mapped_official_1.17.1/forge-1.17.1-37.1.1_mapped_official_1.17.1.jar
+[09:19:30] [main/INFO]: Transformer file /tmp/modcompiler-sortchest-forge-1-17-1-fbcwbwpc/workspace/build/_atJar_4/parent_at.cfg
+[09:19:30] [main/WARN]: Found existing output jar /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.17.1-37.1.1_mapped_official_1.17.1/forge-1.17.1-37.1.1_mapped_official_1.17.1.jar, overwriting
+[09:19:32] [main/INFO]: JAR transformation complete /home/runner/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.17.1-37.1.1_mapped_official_1.17.1/forge-1.17.1-37.1.1_mapped_official_1.17.1.jar
+Creating SRG -> MCP TSRG
+
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :jar
+> Task :downloadMcpConfig
+> Task :extractSrg
+> Task :createMcpToSrg
+> Task :reobfJar
+> Task :jarJar SKIPPED
+> Task :reobfJarJar SKIPPED
+> Task :assemble
+> Task :build
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 8.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+See https://docs.gradle.org/7.2/userguide/command_line_interface.html#sec:command_line_warnings
+
+BUILD SUCCESSFUL in 1m 45s
+7 actionable tasks: 7 executed
+$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.17-1.17.1/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-sortchest-forge-1-17-1-fbcwbwpc/metadata.json --source-dir .workflow_state/prepared/mods/sortchest-forge-1-17-1/src --template-workspace /tmp/modcompiler-sortchest-forge-1-17-1-fbcwbwpc/workspace --minecraft-version 1.17.1 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+
+
+$ ./modcompiler-build.sh
+

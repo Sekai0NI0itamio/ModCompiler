@@ -1,0 +1,59 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must use approved example composition language but adapt to this mod.
+
+We need to choose background_image from options. The mod is "No Hostile Mobs". Which background fits? Probably "winter forest with sunset.jpg" or "purple flowers and sun set or sun rise.png". The mod is about removing hostile mobs, maybe a calm serene vibe. Could choose "winter forest with sunset.jpg". That is recommended. Let's pick that filename exactly: "winter forest with sunset.jpg". Ensure matches case? The options list filenames exactly as given. So use that.
+
+Accent color: choose a hex color. Could be something like "#ff7f2f" (orange) as example, but we can choose any. Must be a single hex color. Let's pick "#4a90e2" (blue) maybe. But must be concise. Use "#ff7f2f"? That's used in example but we can use any. Let's use "#ff7f2f" is okay but maybe better to choose something else. Use "#ff7f2f"? It's okay. But maybe choose "#ff7f2f" is fine. However they might want a different color. Use "#ff7f2f"? It's okay.
+
+Logo: eyebrow: short phrase like "Safety First"? But must be concise, maybe "Peaceful World". But eyebrow is a label, maybe "No Hostile Mobs". But must be short, maybe "Hostile-Free". Let's pick "Hostile-Free". Mark: short monogram, 2-4 characters. Could be "NH". Or "HM". Let's use "NH". Title: "No Hostile Mobs". Subtitle: a short phrase describing behavior: "Prevents hostile mob spawns, configurable and instant." Must be concise. rail_left: "Zero Spawns". rail_right: "Instant Reload". Those describe behavior.
+
+Description: kicker: maybe "Utility". Title: "No Hostile Mobs". tagline: short tagline describing behavior: "Eliminates hostile mob spawns, with live config reload." chips: 2-4 short labels, e.g., ["Mob Block", "Live Reload", "Config Edit"]. stats: exactly 2 items. Each with value (string), label, note (short sentence). Must describe actual behavior. For example:
+
+- value: "100%" label: "Spawn Rate" note: "All hostile mobs are prevented from appearing."
+- value: "0s" label: "Reload Delay" note: "Config updates apply immediately."
+
+But note must be one short sentence. Keep concise.
+
+Make sure stats array has exactly 2 objects.
+
+Now ensure JSON shape exactly matches. Provide only JSON.
+
+Let's craft:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "Hostile-Free",
+    "mark": "NH",
+    "title": "No Hostile Mobs",
+    "subtitle": "Eliminates hostile mob spawns with live config reload.",
+    "rail_left": "Zero Spawns",
+    "rail_right": "Instant Reload"
+  },
+  "description": {
+    "kicker": "Utility",
+    "title": "No Hostile Mobs",
+    "tagline": "Eliminates hostile mob spawns, with live config reload.",
+    "chips": [
+      "Mob Block",
+      "Live Reload",
+      "Config Edit"
+    ],
+    "stats": [
+      {
+        "value": "100%",
+        "label": "Spawn Rate",
+        "note": "All hostile mobs are prevented from appearing."
+      },
+      {
+        "value": "0s",
+        "label": "Reload Delay",
+        "note": "Config updates apply immediately."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename, matches option "winter forest with sunset.jpg". logo fields: eyebrow short phrase, mark short monogram, title, subtitle short phrase, rail_left and rail_right describe behavior. description.kicker short, title, tagline short. chips array 3 items (2-4 allowed). stats array exactly 2 items, each with value, label, note. notes are short sentences. All strings concise. No mention of draft etc. All behavior described. Good.
+
+Make sure JSON is valid, no trailing commas. Provide only JSON.

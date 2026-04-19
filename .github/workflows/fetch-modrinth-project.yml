@@ -1,0 +1,517 @@
+name: Fetch Modrinth Project
+
+# ---------------------------------------------------------------------------
+# Purpose
+# -------
+# Fetches ALL metadata AND decompiled source for every published version of a
+# Modrinth project, then assembles everything into one clean downloadable
+# artifact bundle an IDE agent can read offline.
+#
+# Jobs
+# ----
+#   fetch    - Hits the Modrinth API, writes project.json / summary.txt /
+#              per-version metadata, downloads every primary jar, and emits a
+#              build matrix (one entry per version).
+#
+#   decompile - Matrix job (one runner per version). Runs Vineflower via the
+#               repo's own `build_mods.py decompile-jar` command on the jar
+#               that was downloaded in the fetch job.
+#
+#   assemble  - Collects every per-version artifact, merges them with the
+#               project metadata, and uploads the final bundle.
+#
+# Final artifact: "modrinth-project-bundle"
+# -----------------------------------------
+# Bundle layout:
+#
+#   README.md                          - read this first (index + usage guide)
+#   project.json                       - full Modrinth project object
+#   summary.txt                        - human-readable one-page overview
+#   index.json                         - machine-readable file index
+#   versions/
+#     <version_id>/
+#       version.json                   - full Modrinth version object
+#       changelog.txt                  - changelog for this version
+#       files.json                     - file list (names, URLs, hashes, sizes)
+#       <filename>.jar                 - the primary jar for this version
+#       decompiled/
+#         src/main/java/...            - decompiled Java source tree
+#         mod_info.txt                 - extracted mod metadata (key=value)
+#         result.json                  - full decompile result object
+#         decompile.log                - raw Vineflower output
+#         SUMMARY.md                   - decompile summary table
+#
+# Intended use by an IDE agent
+# ----------------------------
+# 1. Trigger this workflow with the Modrinth project URL or slug.
+# 2. Download the "modrinth-project-bundle" artifact when the run completes.
+# 3. Unzip it. Read README.md first, then summary.txt and project.json.
+# 4. For each version, read versions/<id>/mod_info.txt and browse
+#    versions/<id>/decompiled/src/ to understand the implementation.
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      modrinth_project_url:
+        description: >
+          Modrinth project URL, slug, or project ID.
+          Examples: https://modrinth.com/mod/sort-chest  |  sort-chest  |  XXXXXXXX
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# ---------------------------------------------------------------------------
+# Job 1 – fetch metadata + jars, emit decompile matrix
+# ---------------------------------------------------------------------------
+jobs:
+  fetch:
+    name: Fetch project metadata and jars
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.emit-matrix.outputs.matrix }}
+      version_count: ${{ steps.emit-matrix.outputs.version_count }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ── Fetch all Modrinth metadata and download every primary jar ──────
+      - name: Fetch project bundle and download jars
+        id: fetch
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
+          from pathlib import Path
+
+          API   = "https://api.modrinth.com/v2"
+          TOKEN = os.environ.get("MODRINTH_TOKEN") or ""
+          RAW   = "${{ inputs.modrinth_project_url }}".strip().rstrip("/")
+
+          def slug_from_url(v):
+              m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", v)
+              return m.group(1) if m else v
+
+          def headers():
+              h = {"User-Agent": "ModCompilerIDEAgent/1.0", "Accept": "application/json"}
+              if TOKEN:
+                  h["Authorization"] = TOKEN
+              return h
+
+          def get(path, params=None):
+              url = API + path
+              if params:
+                  url += "?" + urllib.parse.urlencode(params)
+              req = urllib.request.Request(url, headers=headers())
+              for attempt in range(1, 6):
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          return json.loads(r.read().decode())
+                  except urllib.error.HTTPError as e:
+                      if e.code == 404:
+                          sys.exit(f"Project not found: {url}")
+                      if e.code in {429,500,502,503,504} and attempt < 5:
+                          time.sleep(2**attempt); continue
+                      sys.exit(f"HTTP {e.code}: {url}")
+                  except urllib.error.URLError as e:
+                      if attempt < 5:
+                          time.sleep(2**attempt); continue
+                      sys.exit(f"Network error: {e.reason}")
+
+          def download(url, dest):
+              dest = Path(dest)
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              req = urllib.request.Request(url, headers=headers())
+              for attempt in range(1, 4):
+                  try:
+                      with urllib.request.urlopen(req, timeout=60) as r:
+                          dest.write_bytes(r.read())
+                      return True
+                  except Exception:
+                      if attempt < 3:
+                          time.sleep(2**attempt)
+              return False
+
+          ref = slug_from_url(RAW)
+          print(f"Fetching project: {ref}")
+          project = get(f"/project/{urllib.parse.quote(ref, safe='')}")
+          pid     = project["id"]
+          slug    = project.get("slug", ref)
+
+          out = Path(".workflow_artifacts/fetch")
+          out.mkdir(parents=True, exist_ok=True)
+
+          # project-level files
+          (out / "project.json").write_text(json.dumps(project, indent=2), encoding="utf-8")
+
+          print("Fetching versions...")
+          versions = get(f"/project/{urllib.parse.quote(pid, safe='')}/version") or []
+
+          matrix_entries = []
+          for v in versions:
+              vid      = v["id"]
+              vdir     = out / "versions" / vid
+              vdir.mkdir(parents=True, exist_ok=True)
+
+              (vdir / "version.json").write_text(json.dumps(v, indent=2), encoding="utf-8")
+              (vdir / "changelog.txt").write_text(v.get("changelog") or "", encoding="utf-8")
+              (vdir / "files.json").write_text(json.dumps(v.get("files", []), indent=2), encoding="utf-8")
+
+              # pick primary jar
+              primary = next((f for f in v.get("files", []) if f.get("primary")), None)
+              if not primary and v.get("files"):
+                  primary = v["files"][0]
+
+              jar_name = ""
+              if primary:
+                  jar_name = primary["filename"]
+                  jar_dest = vdir / jar_name
+                  ok = download(primary["url"], jar_dest)
+                  print(f"  [{vid}] {jar_name} {'OK' if ok else 'FAILED'}")
+              else:
+                  print(f"  [{vid}] no primary file found")
+
+              matrix_entries.append({
+                  "version_id": vid,
+                  "jar_name":   jar_name,
+                  "version_number": v.get("version_number", vid),
+              })
+
+          # write matrix json
+          matrix = {"include": matrix_entries}
+          (out / "matrix.json").write_text(json.dumps(matrix), encoding="utf-8")
+          print(f"Done. {len(versions)} versions fetched.")
+          PY
+
+      # ── Emit matrix output ───────────────────────────────────────────────
+      - name: Emit decompile matrix
+        id: emit-matrix
+        shell: bash
+        run: |
+          MATRIX=$(cat .workflow_artifacts/fetch/matrix.json | tr -d '\n')
+          COUNT=$(python3 -c "import json; d=json.loads(open('.workflow_artifacts/fetch/matrix.json').read()); print(len(d.get('include',[])))")
+          printf 'matrix=%s\n' "$MATRIX"    >> "$GITHUB_OUTPUT"
+          printf 'version_count=%s\n' "$COUNT" >> "$GITHUB_OUTPUT"
+
+      # ── Upload fetch artifact so decompile jobs can download it ─────────
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fetch-output
+          path: .workflow_artifacts/fetch
+
+# ---------------------------------------------------------------------------
+# Job 2 – decompile each version (matrix, one runner per version)
+# ---------------------------------------------------------------------------
+  decompile:
+    name: Decompile ${{ matrix.version_number }} (${{ matrix.version_id }})
+    needs: fetch
+    if: ${{ needs.fetch.outputs.version_count != '0' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.fetch.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # ── Download the fetch artifact (contains the jars) ─────────────────
+      - uses: actions/download-artifact@v4
+        with:
+          name: fetch-output
+          path: .workflow_artifacts/fetch
+
+      # ── Download Vineflower ──────────────────────────────────────────────
+      - name: Download Vineflower
+        shell: bash
+        run: |
+          mkdir -p .workflow_tools
+          curl -fsSL \
+            https://repo1.maven.org/maven2/org/vineflower/vineflower/1.11.0/vineflower-1.11.0.jar \
+            -o .workflow_tools/vineflower.jar
+
+      # ── Run decompile via the repo's own CLI ─────────────────────────────
+      - name: Decompile jar
+        shell: bash
+        env:
+          VERSION_ID: ${{ matrix.version_id }}
+          JAR_NAME:   ${{ matrix.jar_name }}
+        run: |
+          JAR_PATH=".workflow_artifacts/fetch/versions/${VERSION_ID}/${JAR_NAME}"
+
+          if [ -z "$JAR_NAME" ] || [ ! -f "$JAR_PATH" ]; then
+            echo "No jar available for version ${VERSION_ID}, skipping decompile."
+            mkdir -p ".workflow_artifacts/decompile/${VERSION_ID}"
+            echo "status=skipped" > ".workflow_artifacts/decompile/${VERSION_ID}/result_status.txt"
+            exit 0
+          fi
+
+          # Copy jar into "To Be Decompiled/" so resolve_input_jar_path finds it
+          mkdir -p "To Be Decompiled"
+          cp "$JAR_PATH" "To Be Decompiled/${JAR_NAME}"
+
+          python build_mods.py decompile-jar \
+            --jar-path "${JAR_NAME}" \
+            --manifest version-manifest.json \
+            --decompiler-jar .workflow_tools/vineflower.jar \
+            --artifact-dir ".workflow_artifacts/decompile/${VERSION_ID}"
+
+      # ── Upload per-version decompile artifact ────────────────────────────
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: decompile-${{ matrix.version_id }}
+          path: .workflow_artifacts/decompile/${{ matrix.version_id }}
+          if-no-files-found: warn
+
+# ---------------------------------------------------------------------------
+# Job 3 – assemble the final bundle
+# ---------------------------------------------------------------------------
+  assemble:
+    name: Assemble final bundle
+    needs: [fetch, decompile]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ── Download fetch output ────────────────────────────────────────────
+      - uses: actions/download-artifact@v4
+        with:
+          name: fetch-output
+          path: .workflow_artifacts/fetch
+
+      # ── Download all decompile outputs ───────────────────────────────────
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: decompile-*
+          path: .workflow_artifacts/decompile-downloads
+
+      # ── Assemble everything into one clean bundle ────────────────────────
+      - name: Assemble bundle
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, shutil, textwrap
+          from pathlib import Path
+
+          fetch_root     = Path(".workflow_artifacts/fetch")
+          decompile_root = Path(".workflow_artifacts/decompile-downloads")
+          bundle         = Path(".workflow_artifacts/bundle")
+          bundle.mkdir(parents=True, exist_ok=True)
+
+          # ── project-level files ──────────────────────────────────────────
+          project = json.loads((fetch_root / "project.json").read_text(encoding="utf-8"))
+          shutil.copy(fetch_root / "project.json", bundle / "project.json")
+
+          # ── per-version assembly ─────────────────────────────────────────
+          versions_src = fetch_root / "versions"
+          version_summaries = []
+
+          for vdir in sorted(versions_src.iterdir()):
+              if not vdir.is_dir():
+                  continue
+              vid = vdir.name
+              dest = bundle / "versions" / vid
+              dest.mkdir(parents=True, exist_ok=True)
+
+              # copy metadata files
+              for fname in ("version.json", "changelog.txt", "files.json"):
+                  src = vdir / fname
+                  if src.exists():
+                      shutil.copy(src, dest / fname)
+
+              # copy jar
+              jar_files = list(vdir.glob("*.jar"))
+              jar_name = ""
+              if jar_files:
+                  jar_name = jar_files[0].name
+                  shutil.copy(jar_files[0], dest / jar_name)
+
+              # copy decompile output
+              decompile_src = decompile_root / f"decompile-{vid}"
+              decompile_dest = dest / "decompiled"
+              decompile_status = "not_run"
+              if decompile_src.exists():
+                  shutil.copytree(decompile_src, decompile_dest, dirs_exist_ok=True)
+                  result_json = decompile_dest / "result.json"
+                  if result_json.exists():
+                      r = json.loads(result_json.read_text(encoding="utf-8"))
+                      decompile_status = r.get("status", "unknown")
+                      # flatten the decompiled zip so src/ is directly browsable
+                      for zf in decompile_dest.glob("*.zip"):
+                          import zipfile
+                          with zipfile.ZipFile(zf) as z:
+                              z.extractall(decompile_dest / "src")
+                          zf.unlink()  # remove zip, keep extracted tree
+              else:
+                  decompile_dest.mkdir(parents=True, exist_ok=True)
+                  (decompile_dest / "SUMMARY.md").write_text(
+                      "Decompile output not available for this version.\n", encoding="utf-8"
+                  )
+
+              # read version metadata for summary
+              vdata = {}
+              vj = dest / "version.json"
+              if vj.exists():
+                  vdata = json.loads(vj.read_text(encoding="utf-8"))
+
+              version_summaries.append({
+                  "id":             vid,
+                  "version_number": vdata.get("version_number", vid),
+                  "name":           vdata.get("name", ""),
+                  "version_type":   vdata.get("version_type", ""),
+                  "game_versions":  vdata.get("game_versions", []),
+                  "loaders":        vdata.get("loaders", []),
+                  "jar":            jar_name,
+                  "decompile":      decompile_status,
+              })
+
+          # ── summary.txt ──────────────────────────────────────────────────
+          lines = [
+              f"Project:     {project.get('title', '?')}",
+              f"Slug:        {project.get('slug', '?')}",
+              f"ID:          {project.get('id', '?')}",
+              f"Type:        {project.get('project_type', 'mod')}",
+              f"License:     {project.get('license', {}).get('id', '?')}",
+              f"Status:      {project.get('status', '?')}",
+              f"Downloads:   {project.get('downloads', 0):,}",
+              f"Client side: {project.get('client_side', '?')}",
+              f"Server side: {project.get('server_side', '?')}",
+              f"Categories:  {', '.join(project.get('categories', []) + project.get('additional_categories', []))}",
+              f"Loaders:     {', '.join(project.get('loaders', []))}",
+              f"MC versions: {', '.join(project.get('game_versions', []))}",
+              "",
+              "Description:",
+              project.get("description", ""),
+              "",
+              "Full body:",
+              project.get("body", ""),
+              "",
+              f"Versions ({len(version_summaries)} total):",
+          ]
+          for vs in version_summaries:
+              gvs = ", ".join(vs["game_versions"])
+              ldr = ", ".join(vs["loaders"])
+              lines.append(
+                  f"  [{vs['id']}] {vs['version_number']}  type={vs['version_type']}"
+                  f"  mc={gvs}  loaders={ldr}"
+                  f"  jar={vs['jar'] or 'none'}  decompile={vs['decompile']}"
+              )
+          (bundle / "summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+          # ── index.json ───────────────────────────────────────────────────
+          index = {
+              "project_id":    project.get("id"),
+              "slug":          project.get("slug"),
+              "title":         project.get("title"),
+              "version_count": len(version_summaries),
+              "versions":      version_summaries,
+          }
+          (bundle / "index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
+
+          # ── README.md ────────────────────────────────────────────────────
+          slug  = project.get("slug", "unknown")
+          title = project.get("title", slug)
+          rows  = []
+          for vs in version_summaries:
+              gvs = ", ".join(vs["game_versions"])
+              ldr = ", ".join(vs["loaders"])
+              rows.append(
+                  f"| `{vs['id']}` | {vs['version_number']} | {vs['version_type']} "
+                  f"| {gvs} | {ldr} | `{vs['jar'] or '-'}` | {vs['decompile']} |"
+              )
+          rows_text = "\n".join(rows)
+
+          readme = textwrap.dedent(f"""\
+          # Modrinth Bundle: {title}
+
+          Generated by the **Fetch Modrinth Project** GitHub Actions workflow.
+          This bundle contains all public metadata AND decompiled source for every
+          published version so an IDE agent can understand the mod offline.
+
+          ## How to use this bundle
+
+          1. Read `summary.txt` for a full plain-text overview of the project.
+          2. Read `project.json` for the raw Modrinth API project object.
+          3. Read `index.json` for a machine-readable version list.
+          4. For each version, browse `versions/<id>/`:
+             - `version.json`          full Modrinth version object
+             - `changelog.txt`         changelog for this version
+             - `files.json`            file list with download URLs and hashes
+             - `<name>.jar`            the primary jar
+             - `decompiled/mod_info.txt`        extracted mod metadata (key=value)
+             - `decompiled/result.json`         full decompile result
+             - `decompiled/src/main/java/...`   decompiled Java source tree
+
+          ## Quick facts
+
+          - Slug: `{slug}`
+          - Project ID: `{project.get('id', '?')}`
+          - License: {project.get('license', {}).get('id', '?')}
+          - Downloads: {project.get('downloads', 0):,}
+          - Client side: {project.get('client_side', '?')}
+          - Server side: {project.get('server_side', '?')}
+          - Loaders: {', '.join(project.get('loaders', []))}
+          - MC versions: {', '.join(project.get('game_versions', []))}
+
+          ## Versions
+
+          | ID | Version | Type | MC versions | Loaders | Jar | Decompile |
+          |----|---------|------|-------------|---------|-----|-----------|
+          {rows_text}
+
+          ## Links
+
+          - Project page: https://modrinth.com/mod/{slug}
+          - API: https://api.modrinth.com/v2/project/{slug}
+          """)
+          (bundle / "README.md").write_text(readme, encoding="utf-8")
+
+          print(f"Bundle assembled: {len(version_summaries)} versions")
+          for vs in version_summaries:
+              print(f"  {vs['version_number']} ({vs['id']})  decompile={vs['decompile']}")
+          PY
+
+      # ── Write step summary ───────────────────────────────────────────────
+      - name: Write step summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f .workflow_artifacts/bundle/summary.txt ]; then
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat .workflow_artifacts/bundle/summary.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Bundle was not assembled." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # ── Upload final bundle ──────────────────────────────────────────────
+      - name: Upload final bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modrinth-project-bundle
+          path: .workflow_artifacts/bundle
+          if-no-files-found: error

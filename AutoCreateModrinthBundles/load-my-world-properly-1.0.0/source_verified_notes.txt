@@ -1,0 +1,16 @@
+GUARANTEED PLAYER-VISIBLE FACTS
+- Runs only on the client in singleplayer worlds.
+- Waits for the world and player to be loaded before acting.
+- Monitors for a loading screen or skipRenderWorld flag being true.
+- After 10 world‑ready ticks and 40 stuck ticks it triggers a fix.
+- The fix clears the skipRenderWorld flag.
+- It removes any active GUI screens such as download terrain or working screens.
+- It reloads renderers if they exist.
+- It sets the render view entity to the player.
+- It sets the ingame focus.
+
+DO NOT CLAIM
+- It may not trigger if the tick thresholds are not reached.
+- It may not work if the player leaves the world before the condition is met.
+- It does not add new items, blocks, mobs, or commands (not shown).
+- It does not modify game mechanics such as mob spawning or item drops (not shown).

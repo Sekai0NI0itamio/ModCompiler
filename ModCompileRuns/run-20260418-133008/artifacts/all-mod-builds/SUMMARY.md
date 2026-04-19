@@ -1,0 +1,31 @@
+# Build Summary
+
+| Mod ID | Name | Minecraft | Folder | Loader | Status | Jar | Log |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| sethome | Set Home | 1.16.5 | 1.16.5 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.1 | 1.21-1.21.1 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.10 | 1.21.9-1.21.11 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.11 | 1.21.9-1.21.11 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.3 | 1.21.2-1.21.8 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.4 | 1.21.2-1.21.8 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.5 | 1.21.2-1.21.8 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.6 | 1.21.2-1.21.8 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.7 | 1.21.2-1.21.8 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.8 | 1.21.2-1.21.8 | forge | failed | - | build.log |
+| sethome | Set Home | 1.21.9 | 1.21.9-1.21.11 | forge | failed | - | build.log |
+| sethome | Set Home | 1.8.9 | 1.8.9 | forge | success | sethome-1.0.1.jar | build.log |
+| sethome | Set Home | 1.20.2 | 1.20-1.20.6 | neoforge | success | sethome-1.0.1.jar | build.log |
+| sethome | Set Home | 1.20.4 | 1.20-1.20.6 | neoforge | success | sethome-1.0.1.jar | build.log |
+| sethome | Set Home | 1.20.5 | 1.20-1.20.6 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.20.6 | 1.20-1.20.6 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.1 | 1.21-1.21.1 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.10 | 1.21.9-1.21.11 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.11 | 1.21.9-1.21.11 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.2 | 1.21.2-1.21.8 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.3 | 1.21.2-1.21.8 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.4 | 1.21.2-1.21.8 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.5 | 1.21.2-1.21.8 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.6 | 1.21.2-1.21.8 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.7 | 1.21.2-1.21.8 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.8 | 1.21.2-1.21.8 | neoforge | failed | - | build.log |
+| sethome | Set Home | 1.21.9 | 1.21.9-1.21.11 | neoforge | failed | - | build.log |

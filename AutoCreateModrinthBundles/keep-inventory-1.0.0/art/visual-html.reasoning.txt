@@ -1,0 +1,224 @@
+We need to output JSON with shape exactly as described. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items) each with value, label, note. Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft status etc. Must reuse approved example composition language but adapt words to this mod.
+
+We need to choose background_image from options. The mod is about keepInventory enforcement, industrial? Not exactly. But we need to pick a background image filename that matches mood. Options list includes various images. Probably "fire burning.jpg" fits industrial? Or "mountain breeze with spring forest.png"? The mod is about enforcement, maybe "fire burning.jpg" fits. But we need to choose one exact filename. Let's pick "fire burning.jpg". That is in options.
+
+Accent color: maybe #ff7f2f (orange) as example. Could use same #ff7f2f.
+
+Logo: eyebrow: maybe "Persistence". mark: "KI". title: "Keep Inventory". subtitle: something like "Ensures your items survive every demise, enforced without compromise." rail_left: maybe "Item Retention". rail_right: "Zero Loss". Must describe actual behavior.
+
+description.kicker: maybe "Persistence". description.title: "Keep Inventory". description.tagline: something like "Auto‑enforces keepInventory, preserving every item on death without manual intervention." chips: 2-4 short labels describing behavior: maybe "Auto‑Enable", "Constant Check", "Self‑Repair". Must be 2-4 items. Let's do 3: "Auto‑Enable", "Tick‑Perfect", "Self‑Repair". description.stats: exactly 2 items. Each with value, label, note. Value should be a string? In example they used "0" and "24/7". So we can use "Always" and "1s". Let's craft:
+
+stats[0]: value "Always", label "Items Kept", note "Your inventory persists regardless of death." stats[1]: value "1s", label "Correction", note "Resets keepInventory instantly if altered."
+
+Make sure each note is one short sentence.
+
+Now ensure JSON shape exactly matches. Must include all fields.
+
+Let's construct JSON:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "fire burning.jpg",
+  "logo": {
+    "eyebrow": "Persistence",
+    "mark": "KI",
+    "title": "Keep Inventory",
+    "subtitle": "Ensures your items survive every demise, enforced without compromise.",
+    "rail_left": "Item Retention",
+    "rail_right": "Zero Loss"
+  },
+  "description": {
+   "kicker": "Persistence",
+    "title": "Keep Inventory",
+    "tagline": "Auto‑enforces keepInventory, preserving every item on death without manual intervention.",
+    "chips": [
+      "Auto‑Enable",
+      "Tick‑Perfect",
+      "Self‑Repair"
+    ],
+    "stats": [
+      {
+        "value": "Always",
+       "label": "Items Kept",
+        "note": "Your inventory persists regardless of death."
+      },
+      {
+        "value": "1s",
+        "label": "Correction",
+        "note": "Resets keepInventory instantly if altered."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename from options: "fire burning.jpg" is present. logo.mark is 2 characters "KI". logo.rail_left and rail_right describe behavior. description.chips has 3 items, okay. description.stats has exactly 2 items, each with value, label, note is one short sentence. All strings concise and polished. No mention of draft etc. Good.
+
+Now output only JSON.
+We need to generate JSON with shape exactly as given. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. Also description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must reuse approved example composition language but adapt to this mod.
+
+We need to choose background image from options that best fits "Keep Inventory". Probably "winter forest with sunset.jpg" or "mountain breeze with spring forest.png"? The mod is about enforcing keepInventory, maybe a calm, steady vibe. Could choose "winter forest with sunset.jpg" (implies persistence). Or "mountain breeze with spring forest.png" (fresh). Let's pick "winter forest with sunset.jpg" maybe. But need exact filename. Options list includes "winter forest with sunset.jpg". That seems appropriate: winter forest with sunset suggests enduring. Let's choose that.
+
+Accent color: need a hex like #ff7f2f (orange). Could use #ff7f2f as example but maybe choose something else but must be a single hex. Use #ff7f2f as given example? It's okay. Use #ff7f2f.
+
+Logo: eyebrow: short phrase maybe "Persistence". mark: maybe "KI". title: "Keep Inventory". subtitle: description similar to example: "A relentless safeguard that guarantees your items survive any demise, enforced without compromise." rail_left: maybe "Item Retention". rail_right: "Unbreakable Safeguard". Must describe actual behavior.
+
+Description: kicker: maybe "Persistence". title: "Keep Inventory". tagline: short phrase describing behavior: "Ensures your inventory persists through death, enforced automatically." chips: 2-4 short labels: maybe ["Auto‑Enable", "Constant Guard", "Forge 1.12.2"] but must be 2-4 items. Use 3 items. stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior. For example:
+
+- value "100%" label "Preservation Rate" note "Items are never lost, regardless of death."
+- value "Instant" label "Corection Speed" note "Resets the rule within a single tick if altered."
+
+But note must be one short sentence. Use concise.
+
+Make sure stats array has exactly 2 objects.
+
+All strings concise and polished.
+
+Make sure no mention of draft etc.
+
+Now produce JSON exactly as shape.
+
+Check fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+   "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      }
+    ]
+  }
+
+Make sure JSON is valid, no trailing commas.
+
+Now craft content.
+
+Eyebrow: maybe "Persistence". Should be short phrase, maybe uppercase? In example they used "Automation Class". So we can use "Persistence". Keep concise.
+
+Mark: maybe "KI". Title: "Keep Inventory". Subtitle: "A relentless safeguard that guarantees your items survive any demise, enforced without compromise." That's okay but must be concise. Maybe "Guarantees item survival across death, enforced without compromise." Keep under maybe 120 chars.
+
+Rail_left: "Item Retention". Rail_right: "Unbreakable Safeguard". Both describe behavior.
+
+Description kicker: maybe "Persistence". Title: "Keep Inventory". Tagline: "Ensures your inventory persists through death, enforced automatically." Chips: maybe ["Auto‑Enable", "Constant Guard", "Forge 1.12.2"] but must be 2-4 items. Use 3 items. Ensure they are short labels describing behavior: "Auto‑Enable", "Constant Guard", "Forge 1.12.2". That's okay.
+
+Stats: need exactly 2 items.
+
+First stat: value "Never Lost", label "Item Survival", note "Your inventory remains intact after any death." That's a short sentence.
+
+Second stat: value "Instant", label "Rule Enforcement", note "Resets keepInventory to true within a single tick if altered." That's short.
+
+Make sure value strings are concise, maybe "Always" or "100%". Use "Always". Let's use "Always" as value? But value should be a string, maybe "100%"? Use "Always". Let's use "Always". label "Survival Rate". note "Items are never lost, regardless of death." That's okay.
+
+Second: value "Instant", label "Enforcement", note "Corrects any false setting within one tick." That's okay.
+
+Now ensure chips array items are strings, no extra punctuation.
+
+Now produce JSON.
+
+Check that all strings are concise and polished.
+
+Now produce final answer with only JSON.
+We need to generate JSON with shape exactly as given. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. Also description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern, premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must reuse approved example composition language but adapt to this mod.
+
+We need to choose background image from options that best fits "Keep Inventory". Probably "winter forest with sunset.jpg" or "mountain breeze with spring forest.png"? The mod is about enforcing keepInventory, maybe a calm, steady vibe. Could choose "winter forest with sunset.jpg" (implies persistence). Or "mountain breeze with spring forest.png" (fresh). Let's pick "winter forest with sunset.jpg" maybe. But need exact filename. Options list includes "winter forest with sunset.jpg". That seems appropriate: winter forest with sunset suggests enduring. Let's choose that.
+
+Accent color: need a hex like #ff7f2f (orange). Could use #ff7f2f as example but maybe choose something else but must be a single hex. Use #ff7f2f as given example? It's okay. Use #ff7f2f.
+
+Logo: eyebrow: short phrase maybe "Persistence". mark: maybe "KI". title: "Keep Inventory". subtitle: description similar to example: "A relentless safeguard that guarantees your items survive any demise, enforced without compromise." rail_left: maybe "Item Retention". rail_right: "Unbreakable Safeguard". Must describe actual behavior.
+
+Description: kicker: maybe "Persistence". title: "Keep Inventory". tagline: short phrase describing behavior: "Ensures your inventory persists through death, enforced automatically." chips: 2-4 short labels: maybe ["Auto‑Enable", "Constant Guard", "Forge 1.12.2"] but must be 2-4 items. Use 3 items. stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior. For example:
+
+- value "100%" label "Preservation Rate" note "Items are never lost, regardless of death."
+- value "Instant" label "Corection Speed" note "Resets the rule within a single tick if altered."
+
+But note must be one short sentence. Use concise.
+
+Make sure stats array has exactly 2 objects.
+
+All strings concise and polished.
+
+Make sure no mention of draft etc.
+
+Now produce JSON exactly as shape.
+
+Check fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+   "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      }
+    ]
+  }
+
+Make sure JSON is valid, no trailing commas.
+
+Now craft content.
+
+Eyebrow: maybe "Persistence". Should be short phrase, maybe uppercase? In example they used "Automation Class". So we can use "Persistence". Keep concise.
+
+Mark: maybe "KI". Title: "Keep Inventory". Subtitle: "A relentless safeguard that guarantees your items survive any demise, enforced without compromise." That's okay but must be concise. Maybe "Guarantees item survival across death, enforced without compromise." Keep under maybe 120 chars.
+
+Rail_left: "Item Retention". Rail_right: "Unbreakable Safeguard". Both describe behavior.
+
+Description kicker: maybe "Persistence". Title: "Keep Inventory". Tagline: "Ensures your inventory persists through death, enforced automatically." Chips: maybe ["Auto‑Enable", "Constant Guard", "Forge 1.12.2"] but must be 2-4 items. Use 3 items. Ensure they are short labels describing behavior: "Auto‑Enable", "Constant Guard", "Forge 1.12.2". That's okay.
+
+Stats: need exactly 2 items.
+
+First stat: value "Never Lost", label "Item Survival", note "Your inventory remains intact after any death." That's a short sentence.
+
+Second stat: value "Instant", label "Rule Enforcement", note "Resets keepInventory to true within a single tick if altered." That's short.
+
+Make sure value strings are concise, maybe "Always" or "100%". Use "Always". Let's use "Always" as value? But value should be a string, maybe "100%"? Use "Always". Let's use "Always". label "Survival Rate". note "Items are never lost, regardless of death." That's okay.
+
+Second: value "Instant", label "Enforcement", note "Corrects any false setting within one tick." That's okay.
+
+Now ensure chips array items are strings, no extra punctuation.
+
+Now produce JSON.
+
+Check that all strings are concise and polished.
+
+Now produce final answer with only JSON.

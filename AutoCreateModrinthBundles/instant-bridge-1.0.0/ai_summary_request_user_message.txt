@@ -1,0 +1,372 @@
+Write only the Modrinth summary for one Minecraft mod.
+
+You already reviewed the original source folder earlier in this chat.
+Use that source-based understanding first, then use the chosen name and long description below only to stay aligned.
+Use SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT as the highest-trust fact list.
+Use ORIGINAL SOURCE CONTEXT below as direct evidence from the provided src folder, not just as background history.
+Return plain text only.
+Do not return JSON.
+Do not return markdown bullets, headings, explanations, quotes, or multiple options.
+Focus only on producing one strong player-facing summary line.
+
+Summary rules:
+- Usually 1 sentence, or 2 very short sentences.
+- Write naturally. The script will shorten the final summary later if needed.
+- Sound like a real human mod page, not corporate marketing copy.
+- Prefer an accurate complaint/problem -> payoff cadence when the mod naturally fits it.
+- Learn from the examples very closely, but do not force every mod into the exact same sentence shape.
+- It is okay to copy an example structure almost directly when it fits, but switch to a different example style when that fits the mod better.
+- Prefer the most relatable player pain over the most literal implementation detail.
+- When it fits naturally, strongly prefer starting with a player frustration hook like "Hate...", "Tired of...", or "Wanting...".
+- Be specific about the actual player-visible benefit.
+- Keep the wording simple and casual rather than polished or dramatic.
+- Small helper words and bridge phrases are good, like "well", "now", "so", "basically", or "which means", when they make it sound more human.
+- Slightly imperfect grammar is okay if it sounds clearer, more casual, and closer to the examples.
+- Do not mention internal implementation details, package names, event names, hooks, APIs, or metadata trivia.
+- Do not add compatibility or command claims unless the project info clearly proves them.
+- Do not mention exact numbers, cooldown values, tick counts, `vanilla cooldown`, `bulk transfer`, or similar internal timing in the summary.
+- If the source clearly proves a bigger visible effect than just "faster", say that bigger visible effect in simple words.
+- For example, if the source clearly shows whole-stack transfer or repeated transfer loops, prefer wording like "moves full stacks in one go" over just "moves items faster".
+- Do not exaggerate.
+- Never count characters, words, or tokens out loud.
+- Never show your steps, analysis, or any 'Count:' style output.
+- Avoid generic openings like "Hostile mobs..." or "This mod..." when a sharper player-facing hook would fit better.
+- Avoid advanced wording like "ignite", "deadly zones", or "roaming safely in daylight" when simpler wording would sound more human.
+- Avoid clever rewrites, slogans, or edgy phrases like "free-range mob-killer".
+- Avoid sounding like patch notes, changelogs, or technical documentation.
+- Never output template placeholders like `[problem]`, `[main payoff]`, or bracketed labels. Always replace them with the real mod details.
+
+Important:
+- Treat the examples below like strong style references, not a single fixed script.
+- Copy the example pattern closely when it helps, but pick the example angle that best matches the mod's real player problem.
+- Prefer sounding like the examples over sounding polished or over-explained.
+- Reuse phrases like "Hate that...", "Hate the...", "This mod makes it so that...", "Wanting to...", and "Well this mod cancels that pain..." when they fit.
+- Do not paraphrase the examples into brand new wording if the example phrasing already works.
+- Do not invent a fake second complaint just to fit Template A. If only one real complaint is clearly supported, use Template C.
+- Reuse the concrete nouns already present in PROJECT INFO. Do not swap in new problems like raids, bases, or travel unless PROJECT INFO really proves them.
+- If the verified notes only prove one clear complaint, stick to one clear complaint.
+
+Preferred reusable templates:
+- Template A: Hate that [annoying thing]? Hate the [second annoying thing]? This mod makes it so that [main payoff].
+- Template B: Wanting to [goal]? Tired of [pain]? Well this mod cancels that pain, you can [main payoff].
+- Template C: Hate when [problem]? This mod [simple payoff].
+
+Good vs bad examples:
+- Good: Why look for TNT dupers when you could just build one with one dispenser and one tnt? No need for slime, no need for tutorials, no anything else then a dispenser and tnt.
+- Why good: it sounds like a real player, it talks about the usual pain players face, and it keeps the wording casual.
+- Bad: Tired of dispensers using up your TNT? Well this mod makes dispensers fire TNT without consuming it.
+- Why bad: too literal, too implementation-specific, and it reads more like patch notes than a real player-facing summary.
+
+SPECIFIC GUIDANCE FOR THIS MOD:
+- Use the template that best fits the concrete, proven annoyance for this mod.
+
+Good style examples:
+Wanting to play as if your in a server? Tired of digging back up just to go back to your base? Well this mod cancels that pain, you can use /rtp, /tpa, /rtp just like if your in a server, but in single player!
+
+Hate that creeper that doesn't burn after day? Hate the slimes that spawn in super flat worlds? This mob makes it so that ALL mobs burn in day.
+
+Chosen mod name:
+Instant Bridge
+
+Chosen long description:
+# Instant Bridge
+
+Never fall into gaps again! Instant Bridge automatically places blocks beneath you while you're sneaking and walking, making bridging across chasms effortless.
+
+## Features
+
+### Automatic Block Placement
+- Hold Shift (sneak) and walk forward
+- Blocks automatically place beneath you
+- Perfect for crossing gaps, lava lakes, and chasms
+- No more tedious manual block placement
+
+### Smart Activation
+- Only activates when moving (prevents accidental placement)
+- Won't place blocks where they already exist
+
+### Safe & Intelligent
+- Skips dangerous blocks (TNT, sand, gravel, bedrock)
+- Uses any block from your inventory
+- Consumes blocks in survival mode
+- Free block placement in creative mode
+- No duplication glitches
+
+## How It Works
+
+Make sure you have blocks in your inventory.
+Hold Shift to sneak.
+Walk forward.
+Blocks automatically place beneath you as you move.
+Cross gaps and build bridges effortlessly!
+
+ORIGINAL SOURCE CONTEXT (DIRECT EXCERPTS FROM PROVIDED SRC):
+Pre-generated metadata used
+
+SOURCE-VERIFIED NOTES FROM EARLIER IN THIS CHAT:
+Using pre-generated AI metadata
+
+PROJECT INFO:
+# Project Info
+
+generated_at=2026-04-03T10:50:09+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/16/Instant-Bridge-1.0.0.jar
+jar_size_bytes=7188
+jar_sha1=75e7a7ad8ad4093eb89431ef2b6ee42ef1f8c2be
+
+## Detected Metadata
+
+jar_name=Instant-Bridge-1.0.0.jar
+jar_display_name=Instant Bridge
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=instantbridge
+name=Instant Bridge
+mod_version=1.0.0
+description=Automatically places blocks beneath you while sneaking and walking. Perfect for bridging across gaps.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-bridge-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/instant-bridge-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.instantbridge
+
+## Source Tree
+
+main/java/asd/itamio/instantbridge/InstantBridgeConfig.java
+main/java/asd/itamio/instantbridge/InstantBridgeHandler.java
+main/java/asd/itamio/instantbridge/InstantBridgeMod.java
+
+## Key Source Excerpts
+
+### main/java/asd/itamio/instantbridge/InstantBridgeHandler.java
+```
+package asd.itamio.instantbridge;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemBlock;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class InstantBridgeHandler {
+
+    private final Map<UUID, Integer> playerCooldowns = new HashMap<>();
+    private final Map<UUID, BlockPos> lastPlayerPositions = new HashMap<>();
+
+    @SubscribeEvent
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || event.player.world.isRemote) {
+            return;
+        }
+
+        if (!InstantBridgeMod.config.enableInstantBridge) {
+            return;
+        }
+
+        EntityPlayer player = event.player;
+        UUID playerId = player.getUniqueID();
+
+        // Update cooldown
+        if (playerCooldowns.containsKey(playerId)) {
+            int cooldown = playerCooldowns.get(playerId);
+            if (cooldown > 0) {
+                playerCooldowns.put(playerId, cooldown - 1);
+                return;
+            }
+        }
+
+        // Check if player should place blocks
+        if (!shouldPlaceBlock(player, playerId)) {
+            return;
+        }
+
+        // Try to place block beneath player
+        if (placeBlockBeneath(player)) {
+            // Set cooldown
+            playerCooldowns.put(playerId, InstantBridgeMod.config.placementDelay);
+        }
+    }
+
+    private boolean shouldPlaceBlock(EntityPlayer player, UUID playerId) {
+        // Check if sneaking is required
+        if (InstantBridgeMod.config.requireSneaking && !player.isSneaking()) {
+            return false;
+        }
+
+        // Check if player needs to be moving
+        if (InstantBridgeMod.config.placeOnlyWhenMoving) {
+            BlockPos currentPos = player.getPosition();
+            BlockPos lastPos = lastPlayerPositions.get(playerId);
+
+            // Update last position
+            lastPlayerPositions.put(playerId, currentPos);
+
+            // Check if player moved
+            if (lastPos != null && lastPos.equals(currentPos)) {
+                return false; // Player hasn't moved
+            }
+        }
+
+        return true;
+    }
+
+    private boolean placeBlockBeneath(EntityPlayer player) {
+        World world = player.world;
+        BlockPos playerPos = player.getPosition();
+        BlockPos belowPos = playerPos.down();
+
+        // Check if there's already a block below
+        IBlockState belowState = world.getBlockState(belowPos);
+        if (!belowState.getBlock().isReplaceable(world, belowPos)) {
+            return false; // Already a solid block
+        }
+
+        // Find a block in player's inventory
+        ItemStack blockStack = findBlockInInventory(player);
+        if (blockStack.isEmpty()) {
+            return false; // No blocks available
+        }
+
+        // Get the block to place
+        if (!(blockStack.getItem() instanceof ItemBlock)) {
+            return false;
+        }
+
+        ItemBlock itemBlock = (ItemBlock) blockStack.getItem();
+        Block block = itemBlock.getBlock();
+
+        // Place the block
+        IBlockState stateToPlace = block.getDefaultState();
+        world.setBlockState(belowPos, stateToPlace, 3);
+
+        // Play placement sound
+        world.playSound(
+            null,
+            belowPos,
+            block.getSoundType(stateToPlace, world, belowPos, player).getPlaceSound(),
+            net.minecraft.util.SoundCategory.BLOCKS,
+            1.0F,
+            1.0F
+        );
+... truncated ...
+```
+
+### main/java/asd/itamio/instantbridge/InstantBridgeMod.java
+```
+package asd.itamio.instantbridge;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = InstantBridgeMod.MODID, name = InstantBridgeMod.NAME, version = InstantBridgeMod.VERSION)
+public class InstantBridgeMod {
+    public static final String MODID = "instantbridge";
+    public static final String NAME = "Instant Bridge";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static InstantBridgeConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+
+        // Load configuration
+        File configFile = new File(event.getModConfigurationDirectory(), "instantbridge.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new InstantBridgeConfig(configuration);
+
+        MinecraftForge.EVENT_BUS.register(new InstantBridgeHandler());
+        logger.info("Instant Bridge initialized!");
+    }
+}
+```
+
+### main/java/asd/itamio/instantbridge/InstantBridgeConfig.java
+```
+package asd.itamio.instantbridge;
+
+import net.minecraftforge.common.config.Configuration;
+
+public class InstantBridgeConfig {
+    private final Configuration config;
+
+    public boolean enableInstantBridge;
+    public boolean requireSneaking;
+    public boolean placeOnlyWhenMoving;
+    public int placementDelay;
+
+    public InstantBridgeConfig(Configuration configuration) {
+        this.config = configuration;
+        load();
+    }
+
+    public void load() {
+        config.load();
+
+        // Enable instant bridge feature
+        enableInstantBridge = config.getBoolean(
+            "enableInstantBridge",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Enable instant bridge feature. Default: true"
+        );
+
+        // Require sneaking to activate
+        requireSneaking = config.getBoolean(
+            "requireSneaking",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Require player to be sneaking to place blocks. Default: true"
+        );
+
+        // Only place when moving
+        placeOnlyWhenMoving = config.getBoolean(
+            "placeOnlyWhenMoving",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Only place blocks when player is moving. Default: true"
+        );
+
+        // Placement delay in ticks
+        placementDelay = config.getInt(
+            "placementDelay",
+            Configuration.CATEGORY_GENERAL,
+            5,
+            1,
+            20,
+            "Delay between block placements in ticks (20 ticks = 1 second). Default: 5"
+        );
+
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+
+    public void reload() {
+        load();
+    }
+}
+```

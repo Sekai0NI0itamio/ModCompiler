@@ -1,0 +1,135 @@
+# Project Info
+
+generated_at=2026-04-09T12:45:50+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/26/Full-Brightness-1.0.0.jar
+jar_size_bytes=4994
+jar_sha1=3559e0a86720af459d609208a498ab6f9841bde0
+
+## Detected Metadata
+
+jar_name=Full-Brightness-1.0.0.jar
+jar_display_name=Full Brightness
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=fullbright
+name=Full Brightness
+mod_version=1.0.0
+description=Makes the game always at maximum brightness. No more darkness in caves or at night!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/full-brightness-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/full-brightness-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.fullbright
+
+## Source Tree
+
+asd/itamio/fullbright/FullBrightConfig.java
+asd/itamio/fullbright/FullBrightHandler.java
+asd/itamio/fullbright/FullBrightMod.java
+
+## Key Source Excerpts
+
+### asd/itamio/fullbright/FullBrightHandler.java
+```
+package asd.itamio.fullbright;
+
+import net.minecraft.client.Minecraft;
+import net.minecraftforge.client.event.EntityViewRenderEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+
+public class FullBrightHandler {
+    
+    // Override the brightness calculation to always return maximum brightness
+    @SubscribeEvent
+    @SideOnly(Side.CLIENT)
+    public void onGetBrightness(EntityViewRenderEvent.FogDensity event) {
+        if (!FullBrightConfig.enabled) return;
+        
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player != null) {
+            // Set gamma to maximum (15.0 is way beyond normal max of 1.0)
+            mc.gameSettings.gammaSetting = 15.0F;
+        }
+    }
+}
+```
+
+### asd/itamio/fullbright/FullBrightMod.java
+```
+package asd.itamio.fullbright;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
+import org.apache.logging.log4j.Logger;
+import java.io.File;
+
+@Mod(modid = FullBrightMod.MODID, name = FullBrightMod.NAME, version = FullBrightMod.VERSION, clientSideOnly = true)
+public class FullBrightMod {
+    public static final String MODID = "fullbright";
+    public static final String NAME = "Full Brightness";
+    public static final String VERSION = "1.0.0";
+    
+    public static Logger logger;
+    public static FullBrightConfig config;
+    
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        config = new FullBrightConfig(new File(event.getModConfigurationDirectory(), "fullbright.cfg"));
+    }
+    
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new FullBrightHandler());
+        logger.info("Full Brightness mod initialized!");
+    }
+}
+```
+
+### asd/itamio/fullbright/FullBrightConfig.java
+```
+package asd.itamio.fullbright;
+
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+
+public class FullBrightConfig {
+    private Configuration config;
+    
+    public static boolean enabled = true;
+    
+    public FullBrightConfig(File configFile) {
+        config = new Configuration(configFile);
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        enabled = config.getBoolean("enabled", "general", true, 
+            "Enable full brightness (no darkness anywhere)");
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void save() {
+        config.get("general", "enabled", true).set(enabled);
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+```

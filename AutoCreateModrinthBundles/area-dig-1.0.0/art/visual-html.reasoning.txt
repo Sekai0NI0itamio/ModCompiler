@@ -1,0 +1,56 @@
+We need to output JSON with exact shape. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must not mention draft etc. Must describe actual mod behavior.
+
+We need to choose background_image from options list. The mod is about area digging, silent removal, etc. Which background image fits? Probably "winter forest with sunset.jpg" or "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png". The recommended ones: winter forest with sunset.jpg, mountain breeze with spring forest.png, purple flowers and sun set or sun rise.png. Choose one that matches mood. The mod is about efficient digging, maybe "winter forest with sunset.jpg" fits a serene but powerful vibe. Let's pick "winter forest with sunset.jpg". Ensure exact filename.
+
+Accent color: need a hex like #ff7f2f (orange). Could use #ff7f2f as example, but can choose any single hex. Must be like "#ff7f2f". Use maybe "#ff7f2f". Keep same as example? Not required but must be a single hex color. Use "#ff7f2f".
+
+Logo: eyebrow: short phrase maybe "Efficiency". mark: short monogram maybe "AD". title: "Area Dig". subtitle: a short phrase describing behavior: "Excavates entire volumes with a single strike." rail_left: maybe "Instant Excavation". rail_right: "Silent Harvest". Must be concise.
+
+Description: kicker: maybe "Utility". title: "Area Dig". tagline: short tagline describing behavior: "Breaks surrounding blocks instantly, no particles, all drops at source." chips: 2-4 short labels: maybe ["Area Breaker","Silent Removal","Drop Consolidation","Forge 1.12.2"] but must be 2-4 items. Provide exactly maybe 3 items. stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior. Example: value "0" label "Blocks Lost" note "No loss of collected items". Another: value "∞" label "Automation" note "Works in any redstone loop." But must be concise.
+
+We must ensure each stats.note is one short sentence. Provide value as string maybe "0" or "∞". Provide label maybe "Blocks Lost" etc.
+
+Make sure JSON is valid, no trailing commas.
+
+Let's craft:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "Efficiency",
+    "mark": "AD",
+    "title": "Area Dig",
+    "subtitle": "Excavates entire volumes with a single strike.",
+    "rail_left": "Instant Excavation",
+    "rail_right": "Silent Harvest"
+  },
+  "description": {
+    "kicker": "Utility",
+    "title": "Area Dig",
+    "tagline": "Breaks surrounding blocks instantly, no particles, all drops at source.",
+    "chips": [
+      "Area Breaker",
+      "Silent Removal",
+      "Drop Consolidation"
+    ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Blocks Lost",
+        "note": "Collected items appear at the original break position."
+      },
+      {
+        "value": "∞",
+        "label": "Automation",
+        "note": "Functions in any redstone-powered loop."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename from options: "winter forest with sunset.jpg" is in list. logo.mark is 2 chars "AD". eyebrow is "Efficiency" (short phrase). subtitle is short phrase. rail_left and rail_right are short phrases describing behavior. description.chips has 3 items (2-4). stats has exactly 2 items. Each note is one short sentence. All strings concise. No mention of draft etc. All behavior described. Good.
+
+Make sure JSON keys exactly as specified: "accent_color", "background_image", "logo", "description". Inside logo: "eyebrow", "mark", "title", "subtitle", "rail_left", "rail_right". Inside description: "kicker", "title", "tagline", "chips", "stats". Stats items have "value", "label", "note". Ensure no extra fields.
+
+Return only JSON.

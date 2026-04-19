@@ -1,0 +1,295 @@
+Look at this original Minecraft mod source folder and explain, in simple everyday language, what this mod appears to do for players.
+
+Use only the ORIGINAL SOURCE CONTEXT below.
+Do not use jar metadata, decompiled output, old summaries, or guesses from past mods.
+If something is uncertain, say that it is uncertain.
+Keep the wording plain and direct.
+Avoid polished or dramatic phrases like "ignite", "deadly zones", "streamlines", or "player-facing utility" unless the source itself really demands that wording.
+Prefer leaving details out over guessing.
+
+Return plain text with exactly these sections:
+GUARANTEED PLAYER-VISIBLE FACTS
+- short bullets with only things the source clearly proves will happen in-game
+
+DO NOT CLAIM
+- short bullets for things that are unclear, not proven, or should be left out
+
+Rules:
+- Lead with the main thing the player will notice in-game.
+- Mention commands, mobs, blocks, items, or rules only when the source clearly proves them.
+- Prefer concrete wording over fancy wording.
+- If the source clearly shows repeated transfers, stack-sized moves, or loops that keep going until nothing else can move, say that in plain player words like "moves full stacks in one go" instead of centering the explanation on internal cooldowns.
+- If the source clearly shows dropped items, projectiles, or other entities being pulled in or moved around, say that in plain player words too.
+- Prefer the biggest visible player effect over the internal trigger that caused it.
+- Do not return JSON.
+
+ORIGINAL SOURCE CONTEXT:
+# Original Source Context
+
+generated_at=2026-03-31T03:38:57+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/mob-vision-1.0.0/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/mob-vision-1.0.0/source/src/main/java
+source_file_count=3
+package_count=2
+packages=com.mobvision,com.mobvision.config
+
+## Source Tree
+
+com/mobvision/EntityListBridge.java
+com/mobvision/MobVisionMod.java
+com/mobvision/config/MobVisionConfig.java
+
+## Key Source Excerpts
+
+### com/mobvision/MobVisionMod.java
+```
+package com.mobvision;
+
+import com.mobvision.config.MobVisionConfig;
+import java.io.File;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.attributes.IAttributeInstance;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = MobVisionMod.MOD_ID, name = MobVisionMod.NAME, version = MobVisionMod.VERSION)
+@Mod.EventBusSubscriber(modid = MobVisionMod.MOD_ID)
+public final class MobVisionMod {
+    public static final String MOD_ID = "mobvision";
+    public static final String NAME = "Mob Vision";
+    public static final String VERSION = "1.0.0";
+    public static final Logger LOGGER = LogManager.getLogger(NAME);
+
+    private static final long UPDATE_INTERVAL_TICKS = 20L;
+    private static MobVisionConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        config = new MobVisionConfig(new File(event.getModConfigurationDirectory(), "mobvision.txt"));
+        config.load();
+    }
+
+    @SubscribeEvent
+    public static void onEntityJoin(EntityJoinWorldEvent event) {
+        if (event.getWorld().isRemote || !(event.getEntity() instanceof EntityLiving) || !(event.getEntity() instanceof IMob) || config == null) {
+            return;
+        }
+
+        config.reloadIfChanged();
+        applyMobVision((EntityLiving) event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || event.world == null || event.world.isRemote || config == null) {
+            return;
+        }
+
+        config.reloadIfChanged();
+        if ((event.world.getTotalWorldTime() % UPDATE_INTERVAL_TICKS) != 0L) {
+            return;
+        }
+
+        for (Entity entity : event.world.loadedEntityList) {
+            if (entity instanceof EntityLiving && entity instanceof IMob) {
+                applyMobVision((EntityLiving) entity);
+            }
+        }
+    }
+
+    private static void applyMobVision(EntityLiving mob) {
+        String mobId = getMobId(mob);
+        double configuredRange = config.getRangeForMob(mobId);
+        IAttributeInstance followRange = mob.getEntityAttribute(SharedMonsterAttributes.FOLLOW_RANGE);
+        if (followRange != null && Math.abs(followRange.getBaseValue() - configuredRange) > 0.001D) {
+            followRange.setBaseValue(configuredRange);
+        }
+
+        if (configuredRange <= 0.0D) {
+            mob.setAttackTarget(null);
+            return;
+        }
+
+        EntityPlayer nearestPlayer = findNearestPlayer(mob.world, mob, configuredRange);
+        mob.setAttackTarget(nearestPlayer);
+    }
+
+    private static EntityPlayer findNearestPlayer(World world, EntityLiving mob, double range) {
+        EntityPlayer nearest = null;
+        double bestDistanceSq = Double.MAX_VALUE;
+        double maxDistanceSq = range * range;
+
+        for (EntityPlayer player : world.playerEntities) {
+            if (player == null || !player.isEntityAlive() || player.isSpectator() || player.capabilities.disableDamage) {
+                continue;
+            }
+
+            double distanceSq = mob.getDistanceSq(player);
+            if (distanceSq > maxDistanceSq || distanceSq >= bestDistanceSq) {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
+            nearest = player;
+        }
+
+        return nearest;
+    }
+
+    pr
+... truncated ...
+```
+
+### com/mobvision/config/MobVisionConfig.java
+```
+package com.mobvision.config;
+
+import com.mobvision.MobVisionMod;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+public class MobVisionConfig {
+
+    private static final long RELOAD_CHECK_INTERVAL_MS = 500L;
+    private static final double DEFAULT_INFINITE_RANGE = 2048.0D;
+
+    private final File file;
+
+    private double defaultRange = DEFAULT_INFINITE_RANGE;
+    private Map<String, Double> mobRanges = buildDefaultMobRanges();
+    private long lastModified = -1L;
+    private long lastLength = -1L;
+    private long lastCheckTime = 0L;
+
+    public MobVisionConfig(File file) {
+        this.file = file;
+    }
+
+    public synchronized void load() {
+        ensureParentDirectoryExists();
+        if (!file.exists()) {
+            writeDefaultFile();
+        }
+        readFile();
+    }
+
+    public synchronized void reloadIfChanged() {
+        long now = System.currentTimeMillis();
+        if (now - lastCheckTime < RELOAD_CHECK_INTERVAL_MS) {
+            return;
+        }
+        lastCheckTime = now;
+
+        if (!file.exists()) {
+            writeDefaultFile();
+            readFile();
+            return;
+        }
+
+        long modified = file.lastModified();
+        long length = file.length();
+        if (modified != lastModified || length != lastLength) {
+            readFile();
+        }
+    }
+
+    public synchronized double getRangeForMob(String mobId) {
+        Double specificRange = mobRanges.get(normalizeKey(mobId));
+        return specificRange == null ? defaultRange : specificRange.doubleValue();
+    }
+
+    private void ensureParentDirectoryExists() {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            MobVisionMod.LOGGER.warn("Mob Vision could not create config directory: {}", parent.getAbsolutePath());
+        }
+    }
+
+    private void writeDefaultFile() {
+        List<String> lines = new ArrayList<String>();
+        lines.add("# Mob Vision configuration");
+        lines.add("# This file hot-reloads while the game is running.");
+        lines.add("#");
+        lines.add("# Use 'infinite' for maximum hostile detection range.");
+        lines.add("# Use any number like 32, 64, or 128 for a custom block range.");
+        lines.add("# Use 0 to stop a mob type from targeting players through Mob Vision.");
+        lines.add("#");
+        lines.add("# Any mob id not listed here falls back to default_range.");
+        lines.add("default_range=infinite");
+        lines.add("");
+        lines.add("# Vanilla hostile mob ranges");
+
+        for (String mobId : buildDefaultMobRanges().keySet()) {
+            lines.add("mob." + mobId + "=infinite");
+        }
+
+        try {
+            Files.write(file.toPath(), lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException exception) {
+            MobVisionMod.LOGGER.error("Mob Vision could not write the default config file.", exception);
+        }
+    }
+
+    private void readFile() {
+        try {
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            applyLines(lines);
+            lastModified = file.lastModified();
+            lastLength = file.length();
+        } catch (IOException exception) {
+            MobVisionMod.LOGGER.error("Mob Vision could not read its config file.", exception);
+        }
+    }
+
+    private void applyLines(List<String> lines) {
+        double parsedDefaultRange = DEFAULT_INFINITE_RANGE;
+        Map<String, Double> parsedMobRanges = buildDefaultMobRanges();
+
+        for (String rawLine : lines) {
+            String line = rawLine == null ? "" : rawLine.trim();
+            if (line.isEmpty() || line.startsWith("#")) {
+                c
+... truncated ...
+```
+
+### com/mobvision/EntityListBridge.java
+```
+package com.mobvision;
+
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
+import net.minecraft.util.ResourceLocation;
+
+final class EntityListBridge {
+
+    private EntityListBridge() {
+    }
+
+    static ResourceLocation getEntityKey(Entity entity) {
+        return EntityList.getKey(entity);
+    }
+}
+```

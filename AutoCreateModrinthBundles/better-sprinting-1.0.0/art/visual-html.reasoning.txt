@@ -1,0 +1,68 @@
+We need to output JSON with shape exactly as described. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4 items), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must not mention draft etc. Must describe actual mod behavior.
+
+We need to pick background_image filename from options that matches mood. The mod is "Better Sprinting". It's about movement, toggling sprint/sneak, flying boost. Mood maybe "mountain breeze with spring forest.png" or "purple flowers and sun set or sun rise.png" or "winter forest with sunset.jpg". Probably "mountain breeze with spring forest.png" fits dynamic movement. Or "fire burning.jpg"? But recommended options: mountain breeze with spring forest.png, purple flowers..., winter forest with sunset.jpg. Choose one that matches vibe: maybe "mountain breeze with spring forest.png" (dynamic, fresh). Let's pick that.
+
+Accent color: choose a hex like #ff7f2f (orange) as example, but can be any. Must be single hex. Use #ff7f2f maybe.
+
+Logo: eyebrow: short phrase maybe "Movement". mark: short monogram maybe "BS". title: "Better Sprinting". subtitle: a short phrase describing behavior: "Toggle sprint and sneak, boost flight". rail_left: "One‑Press Control". rail_right: "Flight Acceleration". Must be concise.
+
+Description: kicker: maybe "Utility". title: "Better Sprinting". tagline: short phrase: "Toggle sprint, sneak, and boost flight with a single press." chips: 2-4 items: maybe "Toggle Sprint", "Toggle Sneak", "Flight Boost", "HUD Indicators". stats: exactly 2 items. Each stat has value (string), label, note (short sentence). Must describe actual behavior.
+
+Stats examples: maybe "1.0x" speed boost? But need value string. Could be "Instant" or "Toggle". Let's craft:
+
+stat1: value "Toggle", label "Sprint", note "Press once to start/stop sprinting". stat2: value "Toggle", label "Sneak", note "Press once to start/stop sneaking". Or could be "Boost", "Flight". But must be exactly 2 items.
+
+Make sure each stats.note is one short sentence.
+
+Now ensure JSON shape exactly matches example: top-level keys: accent_color, background_image, logo: {eyebrow, mark, title, subtitle, rail_left, rail_right}, description: {kicker, title, tagline, chips: [...], stats: [{value: "...", label: "...", note: "..."}, {value: "...", label: "...", note: "..."}]}
+
+All strings concise and polished.
+
+Make sure no extra keys.
+
+Now produce JSON only.
+
+Let's craft:
+
+accent_color: "#ff7f2f"
+
+background_image: "mountain breeze with spring forest.png"
+
+logo: {
+  "eyebrow": "Movement",
+  "mark": "BS",
+ "title": "Better Sprinting",
+  "subtitle": "Toggle sprint, sneak, and flight boost with a single press.",
+  "rail_left": "One‑Press Control",
+  "rail_right": "Flight Acceleration"
+}
+
+description: {
+  "kicker": "Utility",
+ "title": "Better Sprinting",
+  "tagline": "Toggle sprint, sneak, and flight boost with a single press.",
+  "chips": [
+    "Toggle Sprint",
+    "Toggle Sneak",
+    "Flight Boost",
+    "HUD Indicators"
+  ],
+ "stats": [
+    {
+      "value": "Toggle",
+      "label": "Sprint",
+      "note": "Press once to start or stop sprinting."
+    },
+    {
+     "value": "Toggle",
+      "label": "Sneak",
+      "note": "Press once to start or stop sneaking."
+   }
+  ]
+}
+
+Check constraints: chips 2-4 items, we have 4, okay. stats exactly 2 items, okay. Each note is one short sentence. Good.
+
+Make sure no extra whitespace? JSON can have whitespace but must be valid. Provide as single JSON object.
+
+Now output only JSON.

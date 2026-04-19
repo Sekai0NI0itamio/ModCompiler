@@ -1,0 +1,260 @@
+# Project Info
+
+generated_at=2026-04-03T09:24:37+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/13/Auto-Eat-1.0.0.jar
+jar_size_bytes=7165
+jar_sha1=0a1470b333356ebe727a10859b82e36d9ad00230
+
+## Detected Metadata
+
+jar_name=Auto-Eat-1.0.0.jar
+jar_display_name=Auto Eat
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=autoeat
+name=Auto Eat
+mod_version=1.0.0
+description=Automatically eats food from your inventory when hunger is low. Configurable hunger threshold and food blacklist. Never forget to eat while mining or building again!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-eat-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-eat-1.0.0/source
+source_file_count=3
+package_count=1
+packages=asd.itamio.autoeat
+
+## Source Tree
+
+main/java/asd/itamio/autoeat/AutoEatConfig.java
+main/java/asd/itamio/autoeat/AutoEatHandler.java
+main/java/asd/itamio/autoeat/AutoEatMod.java
+
+## Key Source Excerpts
+
+### main/java/asd/itamio/autoeat/AutoEatHandler.java
+```
+package asd.itamio.autoeat;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemFood;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.FoodStats;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+public class AutoEatHandler {
+    private int tickCounter = 0;
+    private static final int CHECK_INTERVAL = 20; // Check every second (20 ticks)
+    
+    @SubscribeEvent
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        // Only run on server side and during END phase
+        if (event.phase != TickEvent.Phase.END || event.player.world.isRemote) {
+            return;
+        }
+        
+        EntityPlayer player = event.player;
+        
+        // Only check every second to reduce performance impact
+        tickCounter++;
+        if (tickCounter < CHECK_INTERVAL) {
+            return;
+        }
+        tickCounter = 0;
+        
+        // Check if player needs food
+        FoodStats foodStats = player.getFoodStats();
+        int currentHunger = foodStats.getFoodLevel();
+        
+        if (currentHunger >= AutoEatMod.config.hungerThreshold) {
+            return; // Player has enough food
+        }
+        
+        // Find and eat the best food
+        ItemStack bestFood = findBestFood(player);
+        if (bestFood != null && !bestFood.isEmpty()) {
+            eatFood(player, bestFood);
+        }
+    }
+    
+    private ItemStack findBestFood(EntityPlayer player) {
+        ItemStack bestFood = ItemStack.EMPTY;
+        float bestSaturation = 0;
+        int bestSlot = -1;
+        
+        // Search through player's inventory
+        for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
+            ItemStack stack = player.inventory.getStackInSlot(i);
+            
+            if (stack.isEmpty()) {
+                continue;
+            }
+            
+            Item item = stack.getItem();
+            
+            // Check if it's food
+            if (!(item instanceof ItemFood)) {
+                continue;
+            }
+            
+            // Check if it's blacklisted
+            String itemId = item.getRegistryName().toString();
+            
+            // Get food properties
+            ItemFood foodItem = (ItemFood) item;
+            int healAmount = foodItem.getHealAmount(stack);
+            float saturationModifier = foodItem.getSaturationModifier(stack);
+            float totalSaturation = healAmount * saturationModifier * 2.0F;
+            
+            if (AutoEatMod.config.blacklistedFoods.contains(itemId)) {
+                continue;
+            }
+            
+            // Prefer food with higher saturation
+            if (totalSaturation > bestSaturation) {
+                bestSaturation = totalSaturation;
+                bestFood = stack;
+                bestSlot = i;
+            }
+        }
+        
+        return bestFood;
+    }
+    
+    private void eatFood(EntityPlayer player, ItemStack foodStack) {
+        if (foodStack.isEmpty() || !(foodStack.getItem() instanceof ItemFood)) {
+            return;
+        }
+        
+        // Find the slot containing this food
+        int slot = -1;
+        for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
+            ItemStack stack = player.inventory.getStackInSlot(i);
+            if (ItemStack.areItemsEqual(stack, foodStack) && 
+                ItemStack.areItemStackTagsEqual(stack, foodStack)) {
+                slot = i;
+                break;
+            }
+        }
+        
+        if (slot == -1) {
+            return;
+        }
+        
+        ItemStack stack = player.inventory.getStackInSlot(slot);
+        ItemFood foodItem = (ItemFood) stack.getItem();
+        
+        // Apply food effects
+        int healAmount = foodItem.getHealAmount(stack);
+        float saturationModifier = foodItem.getSaturationModifier(stack);
+        
+        player.get
+... truncated ...
+```
+
+### main/java/asd/itamio/autoeat/AutoEatMod.java
+```
+package asd.itamio.autoeat;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = AutoEatMod.MODID, name = AutoEatMod.NAME, version = AutoEatMod.VERSION)
+public class AutoEatMod {
+    public static final String MODID = "autoeat";
+    public static final String NAME = "Auto Eat";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static AutoEatConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        
+        // Load configuration
+        File configFile = new File(event.getModConfigurationDirectory(), "autoeat.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new AutoEatConfig(configuration);
+        
+        MinecraftForge.EVENT_BUS.register(new AutoEatHandler());
+        logger.info("Auto Eat initialized - will automatically eat when hungry!");
+    }
+}
+```
+
+### main/java/asd/itamio/autoeat/AutoEatConfig.java
+```
+package asd.itamio.autoeat;
+
+import net.minecraftforge.common.config.Configuration;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+public class AutoEatConfig {
+    private final Configuration config;
+    
+    public int hungerThreshold;
+    public Set<String> blacklistedFoods;
+    
+    public AutoEatConfig(Configuration configuration) {
+        this.config = configuration;
+        load();
+    }
+    
+    public void load() {
+        config.load();
+        
+        // Hunger threshold (0-20, where 20 is full)
+        hungerThreshold = config.getInt(
+            "hungerThreshold",
+            Configuration.CATEGORY_GENERAL,
+            14,
+            0,
+            20,
+            "Hunger level at which to auto-eat (0-20, where 20 is full). Default: 14"
+        );
+        
+        // Blacklisted foods
+        String[] defaultBlacklist = {
+            "minecraft:spider_eye",
+            "minecraft:rotten_flesh",
+            "minecraft:poisonous_potato",
+            "minecraft:golden_apple",
+            "minecraft:chorus_fruit"
+        };
+        
+        String[] blacklistArray = config.getStringList(
+            "blacklistedFoods",
+            Configuration.CATEGORY_GENERAL,
+            defaultBlacklist,
+            "Foods that will never be auto-eaten. Format: modid:itemname\n" +
+            "Default blacklist includes: spider_eye, rotten_flesh, poisonous_potato, golden_apple (both types), chorus_fruit"
+        );
+        
+        blacklistedFoods = new HashSet<>(Arrays.asList(blacklistArray));
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public void reload() {
+        load();
+    }
+}
+```

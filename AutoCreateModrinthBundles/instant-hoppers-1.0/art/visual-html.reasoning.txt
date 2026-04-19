@@ -1,0 +1,44 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. Then description with kicker, title, tagline, chips (array 2-4 items), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must not mention draft status etc. Must describe actual mod behavior.
+
+We need to choose background_image filename from options that matches mood. The mod is about instant hoppers moving full stacks. Mood maybe "fresh spring"? Or "purple flowers and sun set or sun rise.png"? The recommended background options: "purple flowers and sun set or sun rise.png". That seems fitting for a bright, fresh vibe. Let's choose that.
+
+Accent color: maybe #ff7f2f (orange) as example. Could use same but must be a single hex. Use #ff7f2f.
+
+Logo: need eyebrow (short phrase), mark (monogram 2-4 chars), title (full name), subtitle (short phrase), rail_left and rail_right (short phrases describing behavior). Must be concise.
+
+Our mod title: Instant-Hoppers. Could use "Instant Hoppers". Mark maybe "IH". Title "Instant Hoppers". Subtitle: "Full‑stack transfer, instant pickup." rail_left maybe "Stack‑Shift". rail_right maybe "Zero Lag". Must be actual behavior.
+
+Description: kicker maybe "Efficiency". title maybe "Instant Hoppers". tagline: short phrase describing behavior. chips: 2-4 short labels, e.g., "Full Stacks", "Instant Pull", "No Delay". stats: exactly 2 items. Each with value (string), label, note (short sentence). For example:
+
+- value "100%" label "Throughput" note "Transfers entire stacks in a single tick."
+- value "0s" label "Latency" note "No delay between pickup and insertion."
+
+Make sure stats array has exactly 2 objects.
+
+All strings concise and polished.
+
+Make sure JSON keys exactly as specified: "accent_color", "background_image", "logo": { "eyebrow": "...", "mark": "...", "title": "...", "subtitle": "...", "rail_left": "...", "rail_right": "..." }, "description": { "kicker": "...", "title": "...", "tagline": "...", "chips": [ "..." , ... ], "stats": [ { "value": "...", "label": "...", "note": "..." }, { "value": "...", "label": "...", "note": "..." } ] }
+
+Make sure no extra fields.
+
+Now choose background_image: "purple flowers and sun set or sun rise.png". That's exact filename.
+
+Now produce JSON.
+
+Check constraints: accent_color must be a single hex color like "#ff7f2f". Use "#ff7f2f". Good.
+
+Now craft values.
+
+Eyebrow: maybe "Stack Master". Mark: "IH". Title: "Instant Hoppers". Subtitle: "Full‑stack transfer, instant pickup." rail_left: "Stack‑Shift". rail_right: "Zero Lag". Ensure they describe actual behavior.
+
+Description kicker: "Efficiency". Title: "Instant Hoppers". Tagline: "Move entire stacks instantly, without draining your inventory." chips: maybe 3 items: "Full Stacks", "Instant Pull", "Zero Delay". stats: two items.
+
+First stat: value "100%" label "Throughput" note "Transfers whole stacks in a single tick." Second stat: value "0 ms" label "Latency" note "No perceptible delay between pickup and insertion."
+
+Make sure note is one short sentence, ends with period.
+
+Now produce JSON.
+
+Check that chips array items are strings, no extra punctuation.
+
+Now produce final JSON.

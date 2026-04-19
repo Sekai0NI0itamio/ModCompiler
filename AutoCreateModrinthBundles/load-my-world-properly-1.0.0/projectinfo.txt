@@ -1,0 +1,192 @@
+# Project Info
+
+generated_at=2026-04-01T07:48:11+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/8/Load-My-World-PROPERLY-1.0.0.jar
+jar_size_bytes=5508
+jar_sha1=d85fcd9adf7f7cdbc774b8eb94c4c6948243e06c
+
+## Detected Metadata
+
+jar_name=Load-My-World-PROPERLY-1.0.0.jar
+jar_display_name=Load My World PROPERLY
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=loadmyworldproperly
+name=Load My World PROPERLY
+mod_version=1.0.0
+description=A client-side singleplayer watchdog that forces the world to finish entering when Minecraft 1.12.2 gets stuck on the black post-loading screen.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/load-my-world-properly-1.0.0/source
+decompiled_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/load-my-world-properly-1.0.0/decompiled
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/load-my-world-properly-1.0.0/source/src/main/java
+source_file_count=2
+package_count=2
+packages=com.loadmyworldproperly,com.loadmyworldproperly.client
+
+## Source Tree
+
+com/loadmyworldproperly/LoadMyWorldProperlyMod.java
+com/loadmyworldproperly/client/SingleplayerWorldLoadFixer.java
+
+## Key Source Excerpts
+
+### com/loadmyworldproperly/LoadMyWorldProperlyMod.java
+```
+package com.loadmyworldproperly;
+
+import com.loadmyworldproperly.client.SingleplayerWorldLoadFixer;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(
+    modid = LoadMyWorldProperlyMod.MOD_ID,
+    name = LoadMyWorldProperlyMod.NAME,
+    version = LoadMyWorldProperlyMod.VERSION,
+    clientSideOnly = true
+)
+@Mod.EventBusSubscriber(modid = LoadMyWorldProperlyMod.MOD_ID)
+public final class LoadMyWorldProperlyMod {
+    public static final String MOD_ID = "loadmyworldproperly";
+    public static final String NAME = "Load My World PROPERLY";
+    public static final String VERSION = "1.0.0";
+    public static final Logger LOGGER = LogManager.getLogger(NAME);
+
+    private static final SingleplayerWorldLoadFixer FIXER = new SingleplayerWorldLoadFixer();
+
+    private LoadMyWorldProperlyMod() {
+    }
+
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            FIXER.onClientTick();
+        }
+    }
+}
+```
+
+### com/loadmyworldproperly/client/SingleplayerWorldLoadFixer.java
+```
+package com.loadmyworldproperly.client;
+
+import com.loadmyworldproperly.LoadMyWorldProperlyMod;
+import java.lang.reflect.Field;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiDownloadTerrain;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiScreenWorking;
+import net.minecraftforge.fml.relauncher.ReflectionHelper;
+
+public class SingleplayerWorldLoadFixer {
+
+    private static final int WORLD_READY_TICKS_BEFORE_FIX = 10;
+    private static final int STUCK_TICKS_BEFORE_FIX = 40;
+    private static final Field SKIP_RENDER_WORLD_FIELD = ReflectionHelper.findField(
+        Minecraft.class,
+        "skipRenderWorld",
+        "field_71454_w"
+    );
+
+    private boolean sessionActive = false;
+    private int worldReadyTicks = 0;
+    private int stuckTicks = 0;
+    private boolean fixApplied = false;
+
+    public void onClientTick() {
+        Minecraft minecraft = Minecraft.getMinecraft();
+        if (minecraft == null) {
+            reset();
+            return;
+        }
+
+        boolean singleplayerSession = minecraft.isSingleplayer() || minecraft.getIntegratedServer() != null;
+        if (!singleplayerSession) {
+            reset();
+            return;
+        }
+
+        if (!sessionActive) {
+            sessionActive = true;
+            worldReadyTicks = 0;
+            stuckTicks = 0;
+            fixApplied = false;
+        }
+
+        boolean worldReady = minecraft.world != null && minecraft.player != null;
+        boolean loadingScreenVisible = isLoadingScreen(minecraft.currentScreen);
+        boolean skipRenderWorld = getSkipRenderWorld(minecraft);
+
+        if (!worldReady) {
+            worldReadyTicks = 0;
+            stuckTicks = 0;
+            fixApplied = false;
+            return;
+        }
+
+        worldReadyTicks++;
+        if (loadingScreenVisible || skipRenderWorld) {
+            stuckTicks++;
+        } else {
+            stuckTicks = 0;
+            if (fixApplied) {
+                fixApplied = false;
+            }
+        }
+
+        if (!fixApplied && worldReadyTicks >= WORLD_READY_TICKS_BEFORE_FIX && stuckTicks >= STUCK_TICKS_BEFORE_FIX) {
+            forceFinishWorldEntry(minecraft);
+            fixApplied = true;
+        }
+    }
+
+    private void reset() {
+        sessionActive = false;
+        worldReadyTicks = 0;
+        stuckTicks = 0;
+        fixApplied = false;
+    }
+
+    private boolean isLoadingScreen(GuiScreen screen) {
+        return screen instanceof GuiDownloadTerrain || screen instanceof GuiScreenWorking;
+    }
+
+    private boolean getSkipRenderWorld(Minecraft minecraft) {
+        try {
+            return SKIP_RENDER_WORLD_FIELD.getBoolean(minecraft);
+        } catch (IllegalAccessException exception) {
+            return false;
+        }
+    }
+
+    private void setSkipRenderWorld(Minecraft minecraft, boolean value) {
+        try {
+            SKIP_RENDER_WORLD_FIELD.setBoolean(minecraft, value);
+        } catch (IllegalAccessException exception) {
+            LoadMyWorldProperlyMod.LOGGER.warn("Load My World PROPERLY could not update skipRenderWorld.", exception);
+        }
+    }
+
+    private void forceFinishWorldEntry(Minecraft minecraft) {
+        setSkipRenderWorld(minecraft, false);
+        if (minecraft.renderGlobal != null) {
+            minecraft.renderGlobal.loadRenderers();
+        }
+        minecraft.displayGuiScreen(null);
+        if (minecraft.player != null) {
+            minecraft.setRenderViewEntity(minecraft.player);
+        }
+        minecraft.setIngameFocus();
+        LoadMyWorldProperlyMod.LOGGER.warn(
+            "Load My World PROPERLY forced the client out of the stuck post-loading state for a singleplayer world."
+        );
+    }
+}
+```

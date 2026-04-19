@@ -1,0 +1,309 @@
+# Project Info
+
+generated_at=2026-04-04T03:01:19+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/22/Keep-Equipment-1.0.0.jar
+jar_size_bytes=12608
+jar_sha1=e9aec46436443a4d6aa3ebea22d90187bc9029c4
+
+## Detected Metadata
+
+jar_name=Keep-Equipment-1.0.0.jar
+jar_display_name=Keep Equipment
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=keepequipment
+name=Keep Equipment
+mod_version=1.0.0
+description=Keep your armor, tools, and weapons when you die! Highly configurable - choose what to keep (armor, hotbar, offhand, XP). Toggle on/off with keybind. No new blocks or textures needed. Perfect for survival players who want less frustration without being overpowered.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/keep-equipment-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/keep-equipment-1.0.0/source
+source_file_count=4
+package_count=1
+packages=asd.itamio.keepequipment
+
+## Source Tree
+
+keepequipment/KeepEquipmentConfig.java
+keepequipment/KeepEquipmentHandler.java
+keepequipment/KeepEquipmentKeyHandler.java
+keepequipment/KeepEquipmentMod.java
+
+## Key Source Excerpts
+
+### keepequipment/KeepEquipmentHandler.java
+```
+package asd.itamio.keepequipment;
+
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.item.*;
+import net.minecraft.potion.PotionEffect;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
+public class KeepEquipmentHandler {
+    
+    // Store items to keep temporarily
+    private static class DeathInventory {
+        List<ItemStack> armor = new ArrayList<>();
+        List<ItemStack> hotbar = new ArrayList<>();
+        ItemStack offhand = ItemStack.EMPTY;
+        List<ItemStack> mainInventory = new ArrayList<>();
+        int xpLevel = 0;
+        int xpTotal = 0;
+        float xp = 0;
+        Collection<PotionEffect> potionEffects = new ArrayList<>();
+    }
+    
+    private DeathInventory lastDeath = null;
+    
+    @SubscribeEvent
+    public void onLivingDrops(LivingDropsEvent event) {
+        KeepEquipmentMod.logger.info("[Keep Equipment] LivingDropsEvent triggered");
+        
+        if (!(event.getEntityLiving() instanceof EntityPlayer)) {
+            KeepEquipmentMod.logger.info("[Keep Equipment] Not a player, ignoring");
+            return;
+        }
+        
+        KeepEquipmentMod.logger.info("[Keep Equipment] Player death detected");
+        
+        if (!KeepEquipmentMod.config.enableKeepEquipment) {
+            KeepEquipmentMod.logger.info("[Keep Equipment] Mod is disabled in config");
+            return;
+        }
+        
+        KeepEquipmentMod.logger.info("[Keep Equipment] Processing death...");
+        EntityPlayer player = (EntityPlayer) event.getEntityLiving();
+        KeepEquipmentMod.logger.info("[Keep Equipment] Player: " + player.getName());
+        
+        // Store what we want to keep - capture from DROPS, not inventory
+        lastDeath = new DeathInventory();
+        KeepEquipmentMod.logger.info("[Keep Equipment] Created death inventory storage");
+        KeepEquipmentMod.logger.info("[Keep Equipment] Total drops: " + event.getDrops().size());
+        
+        // Store XP first (before we modify drops)
+        if (KeepEquipmentMod.config.keepAllXP) {
+            lastDeath.xpLevel = player.experienceLevel;
+            lastDeath.xpTotal = player.experienceTotal;
+            lastDeath.xp = player.experience;
+        } else if (KeepEquipmentMod.config.xpKeptPercentage > 0) {
+            float percentage = KeepEquipmentMod.config.xpKeptPercentage / 100.0f;
+            lastDeath.xpLevel = (int)(player.experienceLevel * percentage);
+            lastDeath.xpTotal = (int)(player.experienceTotal * percentage);
+            lastDeath.xp = player.experience * percentage;
+        }
+        
+        // Store potion effects
+        if (KeepEquipmentMod.config.keepPotionEffects) {
+            Collection<PotionEffect> effects = player.getActivePotionEffects();
+            for (PotionEffect effect : effects) {
+                // Create a copy of each effect
+                lastDeath.potionEffects.add(new PotionEffect(effect));
+            }
+            KeepEquipmentMod.logger.info("[Keep Equipment] Stored " + lastDeath.potionEffects.size() + " potion effects");
+        }
+        
+        // Process drops and capture items we want to keep
+        int removedCount = 0;
+        Iterator<EntityItem> iterator = event.getDrops().iterator();
+        while (iterator.hasNext()) {
+            EntityItem entityItem = iterator.next();
+            ItemStack drop = entityItem.getItem();
+            
+            KeepEquipmentMod.logger.info("[Keep Equipment] Checking drop: " + drop.getDisplayName() + " x" + drop.getCount());
+            
+            // Check if this is armor
+... truncated ...
+```
+
+### keepequipment/KeepEquipmentKeyHandler.java
+```
+package asd.itamio.keepequipment;
+
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.InputEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import org.lwjgl.input.Keyboard;
+
+@SideOnly(Side.CLIENT)
+public class KeepEquipmentKeyHandler {
+    private static final String CATEGORY = "Keep Equipment";
+    public static KeyBinding toggleKey;
+    
+    public static boolean keepEquipmentEnabled = true;
+
+    public KeepEquipmentKeyHandler() {
+        toggleKey = new KeyBinding("Toggle Keep Equipment", Keyboard.KEY_K, CATEGORY);
+        ClientRegistry.registerKeyBinding(toggleKey);
+    }
+
+    @SubscribeEvent
+    public void onKeyInput(InputEvent.KeyInputEvent event) {
+        if (toggleKey.isPressed()) {
+            keepEquipmentEnabled = !keepEquipmentEnabled;
+            
+            if (keepEquipmentEnabled) {
+                net.minecraft.client.Minecraft.getMinecraft().player.sendMessage(
+                    new net.minecraft.util.text.TextComponentString("§aKeep Equipment: ENABLED"));
+            } else {
+                net.minecraft.client.Minecraft.getMinecraft().player.sendMessage(
+                    new net.minecraft.util.text.TextComponentString("§cKeep Equipment: DISABLED"));
+            }
+        }
+    }
+}
+```
+
+### keepequipment/KeepEquipmentMod.java
+```
+package asd.itamio.keepequipment;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = KeepEquipmentMod.MODID, name = KeepEquipmentMod.NAME, version = KeepEquipmentMod.VERSION)
+public class KeepEquipmentMod {
+    public static final String MODID = "keepequipment";
+    public static final String NAME = "Keep Equipment";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static KeepEquipmentConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        
+        File configFile = new File(event.getModConfigurationDirectory(), "keepequipment.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new KeepEquipmentConfig(configuration);
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new KeepEquipmentHandler());
+        MinecraftForge.EVENT_BUS.register(new KeepEquipmentKeyHandler());
+    }
+}
+```
+
+### keepequipment/KeepEquipmentConfig.java
+```
+package asd.itamio.keepequipment;
+
+import net.minecraftforge.common.config.Configuration;
+
+public class KeepEquipmentConfig {
+    public boolean enableKeepEquipment;
+    
+    // Armor slots
+    public boolean keepHelmet;
+    public boolean keepChestplate;
+    public boolean keepLeggings;
+    public boolean keepBoots;
+    
+    // Hotbar
+    public boolean keepHotbar;
+    public boolean keepOnlyTools;
+    
+    // Offhand
+    public boolean keepOffhand;
+    
+    // Main inventory
+    public boolean keepMainInventory;
+    
+    // Experience
+    public boolean keepAllXP;
+    public float xpKeptPercentage;
+    
+    // Potion effects
+    public boolean keepPotionEffects;
+    
+    // Death message
+    public boolean showDeathMessage;
+    public boolean showKeptItems;
+
+    public KeepEquipmentConfig(Configuration config) {
+        config.load();
+
+        enableKeepEquipment = config.getBoolean("Enable Keep Equipment", "general", true,
+                "Enable or disable the keep equipment feature");
+        
+        // Armor
+        keepHelmet = config.getBoolean("Keep Helmet", "armor", true,
+                "Keep helmet on death");
+        
+        keepChestplate = config.getBoolean("Keep Chestplate", "armor", true,
+                "Keep chestplate on death");
+        
+        keepLeggings = config.getBoolean("Keep Leggings", "armor", true,
+                "Keep leggings on death");
+        
+        keepBoots = config.getBoolean("Keep Boots", "armor", true,
+                "Keep boots on death");
+        
+        // Hotbar
+        keepHotbar = config.getBoolean("Keep Hotbar", "hotbar", true,
+                "Keep hotbar items on death");
+        
+        keepOnlyTools = config.getBoolean("Keep Only Tools", "hotbar", false,
+                "If true, only keep tools/weapons in hotbar. If false, keep all hotbar items");
+        
+        // Offhand
+        keepOffhand = config.getBoolean("Keep Offhand", "offhand", true,
+                "Keep offhand item on death");
+        
+        // Main inventory
+        keepMainInventory = config.getBoolean("Keep Main Inventory", "inventory", true,
+                "Keep all main inventory items (rows 1-3) on death");
+        
+        // Experience
+        keepAllXP = config.getBoolean("Keep All XP", "experience", true,
+                "Keep all experience on death");
+        
+        xpKeptPercentage = config.getFloat("XP Kept Percentage", "experience", 0.0f, 0.0f, 100.0f,
+                "Percentage of XP to keep on death (0-100). Only used if Keep All XP is false");
+        
+        // Potion effects
+        keepPotionEffects = config.getBoolean("Keep Potion Effects", "effects", true,
+                "Keep all potion effects on death");
+        
+        // Messages
+        showDeathMessage = config.getBoolean("Show Death Message", "messages", true,
+                "Show a message when you die indicating what was kept");
+        
+        showKeptItems = config.getBoolean("Show Kept Items", "messages", true,
+                "Show which items were kept in the death message");
+
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+```

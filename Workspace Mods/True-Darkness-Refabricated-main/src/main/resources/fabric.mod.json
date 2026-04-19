@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "${id}",
+  "version": "${version}",
+  "name": "${name}",
+  "description": "Moon phases and pitch black caves. A maintained fork of the 'True Darkness' mod for Fabric!",
+  "authors": [
+    "HaXr"
+  ],
+  "contributors": [
+    "Grondag (Original Author)"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/true-darkness-refabricated",
+    "sources": "https://github.com/HaXrBOT/True-Darkness-Refabricated",
+    "issues": "https://github.com/HaXrBOT/True-Darkness-Refabricated/issues"
+  },
+  "license": "LGPL 3.0",
+  "icon": "icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "grondag.darkness.DarknessInit"
+    ],
+    "client": [
+      "grondag.darkness.DarknessClientInit"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "${id}.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.15",
+    "minecraft": "${mcdep}",
+    "fabric-api": "*",
+    "owo-lib": "*"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://discord.gg/Kss5gBgeDA"
+      }
+    }
+  }
+}

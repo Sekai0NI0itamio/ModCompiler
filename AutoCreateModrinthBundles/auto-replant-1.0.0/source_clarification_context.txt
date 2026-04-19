@@ -1,0 +1,155 @@
+# Original Source Context
+
+generated_at=2026-04-03T07:36:13+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-replant-1.0.0/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-replant-1.0.0/source
+source_file_count=2
+package_count=1
+packages=asd.itamio.autoreplant
+
+## Source Tree
+
+asd/itamio/autoreplant/AutoReplantMod.java
+asd/itamio/autoreplant/ReplantHandler.java
+
+## Key Source Excerpts
+
+### asd/itamio/autoreplant/ReplantHandler.java
+```
+package asd.itamio.autoreplant;
+
+import net.minecraft.block.*;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+public class ReplantHandler {
+
+    @SubscribeEvent
+    public void onBlockBreak(BlockEvent.HarvestDropsEvent event) {
+        World world = event.getWorld();
+        BlockPos pos = event.getPos();
+        IBlockState state = event.getState();
+        EntityPlayer player = event.getHarvester();
+        
+        // Only run on server side
+        if (world.isRemote || player == null) {
+            return;
+        }
+
+        Block block = state.getBlock();
+        
+        // Handle crops (wheat, carrots, potatoes, beetroot)
+        if (block instanceof BlockCrops) {
+            handleCropReplant(world, pos, state, block, player);
+        }
+        // Handle cocoa beans
+        else if (block instanceof BlockCocoa) {
+            handleCocoaReplant(world, pos, state, player);
+        }
+        // Handle saplings (trees)
+        else if (block == Blocks.LOG || block == Blocks.LOG2) {
+            handleTreeReplant(world, pos, player);
+        }
+    }
+
+    private void handleCropReplant(World world, BlockPos pos, IBlockState state, Block block, EntityPlayer player) {
+        BlockCrops crop = (BlockCrops) block;
+        
+        // Get the correct age property for this crop
+        int age;
+        int maxAge;
+        
+        if (block == Blocks.BEETROOTS) {
+            // Beetroot uses BlockBeetroot.BEETROOT_AGE (0-3)
+            age = state.getValue(net.minecraft.block.BlockBeetroot.BEETROOT_AGE);
+            maxAge = 3;
+        } else {
+            // Other crops use BlockCrops.AGE (0-7)
+            age = state.getValue(BlockCrops.AGE);
+            maxAge = 7;
+        }
+        
+        // Only replant if crop is fully grown
+        if (age >= maxAge) {
+            // Determine what seed to use and what block to plant
+            Item seedItem = null;
+            Block blockToPlant = null;
+            
+            if (block == Blocks.WHEAT) {
+                seedItem = Items.WHEAT_SEEDS;
+                blockToPlant = Blocks.WHEAT;
+            } else if (block == Blocks.CARROTS) {
+                seedItem = Items.CARROT;
+                blockToPlant = Blocks.CARROTS;
+            } else if (block == Blocks.POTATOES) {
+                seedItem = Items.POTATO;
+                blockToPlant = Blocks.POTATOES;
+            } else if (block == Blocks.BEETROOTS) {
+                seedItem = Items.BEETROOT_SEEDS;
+                blockToPlant = Blocks.BEETROOTS;
+            }
+            
+            if (seedItem != null && blockToPlant != null && consumeItemFromInventory(player, seedItem)) {
+                // Schedule replant for next tick to avoid conflicts with block breaking
+                final Block finalBlock = blockToPlant;
+                
+                // Use a runnable to delay the replant
+                new java.util.Timer().schedule(new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        if (world.isAirBlock(pos)) {
+                            world.setBlockState(pos, finalBlock.getDefaultState(), 3);
+                        }
+                    }
+                }, 50); // 50ms delay (1 tick)
+            }
+        }
+    }
+
+    private void handleCocoaReplant(World world, BlockPos pos, IBlockState state, EntityPlayer player) {
+        // Only replant if cocoa is fully grown
+        int age = state.getValue(BlockCocoa.AGE);
+        
+        if (age >= 2) { // Cocoa is fully grown at age 2
+... truncated ...
+```
+
+### asd/itamio/autoreplant/AutoReplantMod.java
+```
+package asd.itamio.autoreplant;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = AutoReplantMod.MODID, name = AutoReplantMod.NAME, version = AutoReplantMod.VERSION)
+public class AutoReplantMod {
+    public static final String MODID = "autoreplant";
+    public static final String NAME = "Auto Replant";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        MinecraftForge.EVENT_BUS.register(new ReplantHandler());
+        logger.info("Auto Replant initialized - crops and trees will auto-replant!");
+    }
+}
+```

@@ -1,0 +1,269 @@
+Look at this original Minecraft mod source folder and explain, in simple everyday language, what this mod appears to do for players.
+
+Use only the ORIGINAL SOURCE CONTEXT below.
+Do not use jar metadata, decompiled output, old summaries, or guesses from past mods.
+If something is uncertain, say that it is uncertain.
+Keep the wording plain and direct.
+Avoid polished or dramatic phrases like "ignite", "deadly zones", "streamlines", or "player-facing utility" unless the source itself really demands that wording.
+Prefer leaving details out over guessing.
+
+Return plain text with exactly these sections:
+GUARANTEED PLAYER-VISIBLE FACTS
+- short bullets with only things the source clearly proves will happen in-game
+
+DO NOT CLAIM
+- short bullets for things that are unclear, not proven, or should be left out
+
+Rules:
+- Lead with the main thing the player will notice in-game.
+- Mention commands, mobs, blocks, items, or rules only when the source clearly proves them.
+- Prefer concrete wording over fancy wording.
+- If the source clearly shows repeated transfers, stack-sized moves, or loops that keep going until nothing else can move, say that in plain player words like "moves full stacks in one go" instead of centering the explanation on internal cooldowns.
+- If the source clearly shows dropped items, projectiles, or other entities being pulled in or moved around, say that in plain player words too.
+- Prefer the biggest visible player effect over the internal trigger that caused it.
+- Do not return JSON.
+
+ORIGINAL SOURCE CONTEXT:
+# Original Source Context
+
+generated_at=2026-04-03T06:26:23+00:00
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/area-dig-1.0.0/source
+
+## Source Summary
+
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/area-dig-1.0.0/source/src/main/java
+source_file_count=3
+package_count=1
+packages=asd.itamio.areadig
+
+## Source Tree
+
+asd/itamio/areadig/AreaDigMod.java
+asd/itamio/areadig/BlockBreakHandler.java
+asd/itamio/areadig/EnchantmentAreaDig.java
+
+## Key Source Excerpts
+
+### asd/itamio/areadig/BlockBreakHandler.java
+```
+package asd.itamio.areadig;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.NonNullList;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class BlockBreakHandler {
+
+    @SubscribeEvent
+    public void onBlockBreak(BlockEvent.BreakEvent event) {
+        EntityPlayer player = event.getPlayer();
+        World world = event.getWorld();
+        BlockPos pos = event.getPos();
+
+        // Only run on server side
+        if (world.isRemote || player == null) {
+            return;
+        }
+
+        ItemStack heldItem = player.getHeldItemMainhand();
+        if (heldItem.isEmpty()) {
+            return;
+        }
+
+        int enchantmentLevel = EnchantmentHelper.getEnchantmentLevel(AreaDigMod.AREA_DIG_ENCHANTMENT, heldItem);
+
+        if (enchantmentLevel <= 0) {
+            return;
+        }
+
+        // Calculate radius based on enchantment level
+        int radius = enchantmentLevel + 1;
+
+        // Get all blocks in the cube around the broken block
+        List<BlockPos> blocksToBreak = getBlocksInCube(pos, radius);
+
+        // Collect all drops in one list
+        List<ItemStack> allDrops = new ArrayList<>();
+
+        // Break each block silently
+        for (BlockPos targetPos : blocksToBreak) {
+            if (targetPos.equals(pos)) {
+                continue; // Skip the original block (already broken)
+            }
+
+            IBlockState state = world.getBlockState(targetPos);
+            Block block = state.getBlock();
+
+            // Don't break air
+            if (block == Blocks.AIR) {
+                continue;
+            }
+
+            // Don't break bedrock
+            if (block == Blocks.BEDROCK) {
+                continue;
+            }
+
+            // Check hardness
+            float hardness = state.getBlockHardness(world, targetPos);
+            if (hardness < 0) {
+                continue;
+            }
+
+            // Check if tool can break this block
+            if (!ForgeHooks.canHarvestBlock(block, player, world, targetPos)) {
+                continue;
+            }
+
+            // Collect drops from this block
+            List<ItemStack> drops = collectBlockDrops(world, targetPos, player, heldItem, state);
+            allDrops.addAll(drops);
+
+            // Remove the block silently (no particles, no sound)
+            world.setBlockToAir(targetPos);
+
+            // Damage the tool
+            if (!player.capabilities.isCreativeMode) {
+                heldItem.damageItem(1, player);
+
+                // Stop if tool broke
+                if (heldItem.getCount() == 0) {
+                    break;
+                }
+            }
+        }
+
+        // Drop all items at the center position (where player broke the block)
+        spawnItemsAtPosition(world, pos, allDrops);
+    }
+
+    private List<BlockPos> getBlocksInCube(BlockPos center, int radius) {
+        List<BlockPos> blocks = new ArrayList<>();
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    blocks.add(center.add(x, y, z));
+                }
+            }
+        }
+
+        return blocks;
+    }
+
+    private List<ItemStack> collectBlockDrops(World world, BlockPos pos, EntityPlayer player, ItemStack tool, IBlockState state) {
+        List<Ite
+... truncated ...
+```
+
+### asd/itamio/areadig/AreaDigMod.java
+```
+package asd.itamio.areadig;
+
+import net.minecraft.enchantment.Enchantment;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = AreaDigMod.MODID, name = AreaDigMod.NAME, version = AreaDigMod.VERSION)
+public class AreaDigMod {
+    public static final String MODID = "areadig";
+    public static final String NAME = "Area Dig";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+    public static EnchantmentAreaDig AREA_DIG_ENCHANTMENT;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(new BlockBreakHandler());
+        logger.info("Area Dig mod initialized");
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        logger.info("Area Dig enchantment registered");
+    }
+
+    @SubscribeEvent
+    public void registerEnchantments(RegistryEvent.Register<Enchantment> event) {
+        AREA_DIG_ENCHANTMENT = new EnchantmentAreaDig();
+        event.getRegistry().register(AREA_DIG_ENCHANTMENT);
+        logger.info("Registered Area Dig enchantment");
+    }
+}
+```
+
+### asd/itamio/areadig/EnchantmentAreaDig.java
+```
+package asd.itamio.areadig;
+
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnumEnchantmentType;
+import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.item.ItemAxe;
+import net.minecraft.item.ItemPickaxe;
+import net.minecraft.item.ItemSpade;
+import net.minecraft.item.ItemStack;
+
+public class EnchantmentAreaDig extends Enchantment {
+
+    public EnchantmentAreaDig() {
+        super(Rarity.UNCOMMON, EnumEnchantmentType.DIGGER, new EntityEquipmentSlot[] {EntityEquipmentSlot.MAINHAND});
+        this.setRegistryName("areadig", "area_dig");
+        this.setName("area_dig");
+    }
+
+    @Override
+    public int getMinEnchantability(int enchantmentLevel) {
+        return 10 + (enchantmentLevel - 1) * 10;
+    }
+
+    @Override
+    public int getMaxEnchantability(int enchantmentLevel) {
+        return this.getMinEnchantability(enchantmentLevel) + 50;
+    }
+
+    @Override
+    public int getMaxLevel() {
+        return 5;
+    }
+
+    @Override
+    public boolean canApply(ItemStack stack) {
+        return stack.getItem() instanceof ItemPickaxe || 
+               stack.getItem() instanceof ItemAxe || 
+               stack.getItem() instanceof ItemSpade;
+    }
+
+    @Override
+    public boolean canApplyAtEnchantingTable(ItemStack stack) {
+        return canApply(stack);
+    }
+
+    @Override
+    public String getName() {
+        return "enchantment.areadig.area_dig";
+    }
+}
+```

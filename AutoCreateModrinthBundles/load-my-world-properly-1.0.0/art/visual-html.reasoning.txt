@@ -1,0 +1,72 @@
+We need to output JSON with shape matching example. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of 2 items each with value, label, note). Must be concise, polished, modern premium, non-Minecraft-themed. Must describe actual mod behavior. Must not mention draft etc. Must reuse composition language but adapt words.
+
+We need to choose background image from options that best fits mod. The mod is about fixing loading screen black screen. Probably "winter forest with sunset.jpg" or "purple flowers and sun set or sun rise.png". Choose one that matches mood. Let's pick "winter forest with sunset.jpg". Provide exact filename.
+
+Accent color: maybe #ff7f2f (orange) as example. Could choose something else but must be hex. Use #ff7f2f.
+
+Logo: eyebrow: short phrase like "Instant Play". mark: maybe "LM". title: "Load My World PROPERLY". subtitle: a short phrase describing behavior: "Breaks the black‑screen lock and returns control instantly." rail_left: maybe "Singleplayer Only". rail_right: "Zero Config". Must be concise.
+
+Description: kicker: maybe "Utility Mod". title: "Load My World PROPERLY". tagline: short description: "Automatically clears the stuck loading flag so you can actually play." chips: 2-4 items: maybe ["Auto‑Detect", "No UI", "Singleplayer Only"]. stats: two items: first value "0" label "Stuck Loads Fixed" note "Removes the frozen screen without restarts." second value "100%" label "Seamless Play" note "Control returns as soon as the world is ready."
+
+But stats.value must be a string? In example they used "0" and "24/7". So we can use "0" and "100%". Provide note sentences.
+
+Make sure chips length 2-4. Provide 3 chips.
+
+Make sure stats array exactly 2 items.
+
+All strings concise.
+
+Now produce JSON only.
+
+Check fields:
+
+{
+  "accent_color": "#ff7f2f",
+  "background_image": "winter forest with sunset.jpg",
+  "logo": {
+    "eyebrow": "Instant Play",
+    "mark": "LM",
+    "title": "Load My World PROPERLY",
+    "subtitle": "Breaks the black‑screen lock and returns control instantly.",
+    "rail_left": "Singleplayer Only",
+    "rail_right": "Zero Config"
+  },
+  "description": {
+    "kicker": "Utility Mod",
+    "title": "Load My World PROPERLY",
+    "tagline": "Automatically clears the stuck loading flag so you can actually play.",
+    "chips": [
+      "Auto‑Detect",
+      "No UI",
+      "Singleplayer Only"
+    ],
+    "stats": [
+      {
+        "value": "0",
+        "label": "Stuck Loads Fixed",
+        "note": "Removes the frozen screen without restarts."
+      },
+      {
+        "value": "100%",
+        "label": "Seamless Play",
+        "note": "Control returns as soon as the world is ready."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, background_image exact filename from options: "winter forest with sunset.jpg" matches option "winter forest with sunset.jpg". Good.
+
+logo.mark is 2 characters "LM". Good.
+
+description.chips length 3, okay.
+
+stats exactly 2 items.
+
+All notes are short sentences.
+
+All labels about mod behavior.
+
+No mention of draft etc.
+
+Now output only JSON.

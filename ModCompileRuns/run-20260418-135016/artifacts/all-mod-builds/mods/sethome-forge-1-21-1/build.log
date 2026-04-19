@@ -1,0 +1,157 @@
+Downloading https://services.gradle.org/distributions/gradle-9.3.1-bin.zip
+.............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 9.3.1!
+
+Here are the highlights of this release:
+ - Test reporting improvements
+ - Error and warning improvements
+ - Build authoring improvements
+
+For more details see https://docs.gradle.org/9.3.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Parallel Configuration Cache is an incubating feature.
+Configuration on demand is an incubating feature.
+Calculating task graph as no cached configuration is available for tasks: build
+
+> Configure project :
+Minecraft Mavenizer 0.4.25 by Forge Development LLC
+  Output:             /tmp/modcompiler-sethome-forge-1-21-1-240dril7/workspace/.gradle/mavenizer/repo
+  Output JSON:        /tmp/modcompiler-sethome-forge-1-21-1-240dril7/workspace/.gradle/mavenizer/dependencies/default.json
+  Dependencies Only:  false
+  Cache:              /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
+  JDK Cache:          /home/runner/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches
+  Offline:            false
+  Cache Only:         false
+  Mappings:           official
+  Foreign Repos:      [https://repo.maven.apache.org/maven2/, https://maven.minecraftforge.net/, https://libraries.minecraft.net/]
+  GradleVariantHack:  true
+  Disable Gradle:     false
+  Stub Jars:          false
+
+Processing Minecraft dependency: net.minecraftforge:forge:1.21.1-52.1.10
+Processing Minecraft Forge (userdev): 1.21.1-52.1.10
+Mappings Zip
+  extract[mappings]
+  downloadLauncherManifest
+  downloadVersionJson[1.21.1]
+  download[1.21.1][client_mappings]
+  mergeMappings
+  download[1.21.1][server_mappings]
+  srg2names[official-1.21.1]
+Mappings POM
+  pom[mappings_official]
+Mappings map2obf
+  mapped2obf[official-1.21.1]
+Mappings map2srg
+  mapped2srg[official-1.21.1]
+Client Extra
+  download[1.21.1][client]
+  extract[mappings]
+  mergeMappings
+  extra[client]
+Client Maven POM
+  pom[client-extra]
+Sources
+  listLibraries
+  download[1.21.1][server]
+  extractServer
+  stripServer
+  stripClient
+  merge
+  rename
+  modifyAccess
+  stripSides
+  decompile
+  extract[inject]
+  inject
+  extract[patches]
+  patch
+  patch[forge]
+  downloadSources
+  injectSources[forge]
+  remap[forge][official-1.21.1][javadoc]
+  remap[forge][official-1.21.1][javadoc][variants]
+Classes
+  recompile[forge][official-1.21.1]
+  injectData[forge][official-1.21.1]
+  injectData[forge][official-1.21.1][variants]
+Maven POM
+  pom[forge]
+Metadata
+  metadata[forge]
+  metadata[forge][variants]
+Minecraft Maven has finished, took 3:22.018
+
+> Task :compileJava
+/tmp/modcompiler-sethome-forge-1-21-1-240dril7/workspace/src/main/java/net/itamio/sethome/SetHomeMod.java:34: warning: [removal] get() in ModLoadingContext has been deprecated and marked for removal
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+                                                ^
+1 warning
+
+> Task :processResources
+> Task :classes
+> Task :jar
+> Task :assemble
+> Task :build
+You have 1 new message from ForgeGradle.
+
+---   Message 1/1   ---
+Welcome to ForgeGradle 7.0!
+
+Here are some release highlights:
+- Now requires Gradle 9.3.0.
+- A new message board that will display any new messages (only on the next
+  successful build) from ForgeGradle, including release highlights and
+  project-wide warnings.
+- Complete rewrite of the plugin and underlying code.
+- Complete overhaul of DSL objects and registrations.
+- Slimmed down the plugin, which now delegates many actions to separate tools.
+- Support for declaring defaults in settings.gradle (experimental).
+- Support for all Forge versions that are supported by ForgeGradle 6.
+  - Minecraft 1.20.6+ are natively supported with no additional setup.
+  - Minecraft 1.13.2 - 1.20.4 (along with certain versions of 1.12.2) are
+    supported alongside the usage of the Renamer plugin (experimental).
+
+A couple of important things to note:
+- Many plugins that worked with ForgeGradle 6, such as Parchments Librarian,
+  do not work with ForgeGradle 7. For most cases (such as parchment), we have
+  implemented native support.
+- Many things that ForgeGradle 6 and older used to do are now decentralized
+  away from the plugin. This means that your project will need to apply
+  net.minecraftforge.jarjar if you wish to use Forges Jar-in-Jar system.
+  If you are on an older version (1.20.4 and older), you will need the
+  net.minecraftforge.renamer plugin. Many of these come with our provided
+  MDK, so this should not be an issue for you.
+- If you come across any lingering bugs, please report them to our GitHub
+  issue tracker. Please do not use Discord as a means to report issues, as
+  they will get lost in the discussion very easily.
+- If you would like to see additional examples of ForgeGradle 7 usages,
+  please see our MDKExamples repo (https://github.com/MinecraftForge/MDKExamples).
+  If would like to request a specific usage for ForgeGradle 7, please file an
+  issue on the GitHub issue tracker for it.
+
+For our GitHub issue tracker, see https://github.com/MinecraftForge/ForgeGradle/issues
+
+Proper documentation for ForgeGradle 7 is coming soon. For now, feel free to
+ask any questions you may have on the following platforms:
+- Forums (https://forums.minecraftforge.net/)
+- Discord (https://discord.minecraftforge.net/)
+
+This message will not display again until ForgeGradle 7.1 or the below file is
+deleted:
+/home/runner/.gradle/caches/minecraftforge/forgegradle/messages/7_0_WELCOME_1
+--- End of Message ---
+
+[Incubating] Problems report is available at: file:///tmp/modcompiler-sethome-forge-1-21-1-240dril7/workspace/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 4m 1s
+3 actionable tasks: 3 executed
+Configuration cache entry stored.
+$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.21-1.21.1/build_adapter.py --loader forge --metadata-json /tmp/modcompiler-sethome-forge-1-21-1-240dril7/metadata.json --source-dir .workflow_state/prepared/mods/sethome-forge-1-21-1/src --template-workspace /tmp/modcompiler-sethome-forge-1-21-1-240dril7/workspace --minecraft-version 1.21.1 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+
+
+$ ./modcompiler-build.sh
+

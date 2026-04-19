@@ -1,0 +1,30 @@
+package com.itamio.eurekavalkerianships.block;
+
+import com.itamio.eurekavalkerianships.EurekaValkerianShipsMod;
+import com.itamio.eurekavalkerianships.tileentity.TileEntityEngine;
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.world.World;
+import javax.annotation.Nullable;
+
+public class BlockEngine extends Block {
+    public BlockEngine() {
+        super(Material.IRON);
+        setRegistryName(EurekaValkerianShipsMod.MODID, "engine");
+        setUnlocalizedName("engine");
+        setCreativeTab(net.minecraft.creativetab.CreativeTabs.TRANSPORTATION);
+    }
+    
+    @Override
+    public boolean hasTileEntity(IBlockState state) {
+        return true;
+    }
+    
+    @Nullable
+    @Override
+    public TileEntity createTileEntity(World world, IBlockState state) {
+        return new TileEntityEngine();
+    }
+}

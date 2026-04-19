@@ -1,0 +1,53 @@
+{
+  "com/daycounter/DayCounterMod": {
+    "name": "com/daycounter/DayCounterMod",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "com/daycounter/DayCounterMod",
+        "values": {
+          "acceptableRemoteVersions": {
+            "value": "*"
+          },
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "clientSideOnly": {
+            "type": "BOOL",
+            "value": "true"
+          },
+          "modid": {
+            "value": "daycounter"
+          },
+          "name": {
+            "value": "Day Counter"
+          },
+          "version": {
+            "value": "1.0.0"
+          }
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "preInit(Lnet/minecraftforge/fml/common/event/FMLPreInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "init(Lnet/minecraftforge/fml/common/event/FMLInitializationEvent;)V"
+      }
+    ]
+  },
+  "com/daycounter/client/DayCounterClientHandler": {
+    "name": "com/daycounter/client/DayCounterClientHandler",
+    "annotations": [
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onRenderOverlay(Lnet/minecraftforge/client/event/RenderGameOverlayEvent$Text;)V"
+      }
+    ]
+  }
+}

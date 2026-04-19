@@ -1,0 +1,41 @@
+{
+  "com/seedprotect/SeedProtectMod": {
+    "name": "com/seedprotect/SeedProtectMod",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "com/seedprotect/SeedProtectMod",
+        "values": {
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "modid": {
+            "value": "seedprotect"
+          },
+          "name": {
+            "value": "Seed Protect"
+          },
+          "version": {
+            "value": "1.0.0"
+          }
+        }
+      },
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventBusSubscriber;",
+        "target": "com/seedprotect/SeedProtectMod",
+        "values": {
+          "modid": {
+            "value": "seedprotect"
+          }
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onFarmlandTrample(Lnet/minecraftforge/event/world/BlockEvent$FarmlandTrampleEvent;)V"
+      }
+    ]
+  }
+}

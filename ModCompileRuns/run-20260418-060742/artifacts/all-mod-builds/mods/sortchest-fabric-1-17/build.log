@@ -1,0 +1,44 @@
+Downloading https://services.gradle.org/distributions/gradle-7.3-bin.zip
+...........10%...........20%...........30%...........40%...........50%...........60%...........70%...........80%...........90%...........100%
+
+Welcome to Gradle 7.3!
+
+Here are the highlights of this release:
+ - Easily declare new test suites in Java projects
+ - Support for Java 17
+ - Support for Scala 3
+
+For more details see https://docs.gradle.org/7.3/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/7.3/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Fabric Loom: 0.10.66
+Minecraft Version (1.17) does not match yarn's minecraft version (1.17.1)
+:remapping minecraft (TinyRemapper, official -> named)
+:remapping minecraft (TinyRemapper, official -> intermediary)
+:remapping 48 mods (TinyRemapper, intermediary -> named)
+
+> Task :compileJava NO-SOURCE
+> Task :processResources
+> Task :classes
+> Task :jar
+> Task :remapJar
+> Task :sourcesJar
+> Task :assemble
+
+> Task :remapSourcesJar
+:remapping sources
+
+> Task :build
+
+BUILD SUCCESSFUL in 1m 31s
+5 actionable tasks: 5 executed
+$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.17-1.17.1/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-sortchest-fabric-1-17-l9uiz4u0/metadata.json --source-dir .workflow_state/prepared/mods/sortchest-fabric-1-17/src --template-workspace /tmp/modcompiler-sortchest-fabric-1-17-l9uiz4u0/workspace --minecraft-version 1.17 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+
+
+$ ./modcompiler-build.sh
+
+
+Build produced jars without .class files. Check source layout (expected under src/main/java).

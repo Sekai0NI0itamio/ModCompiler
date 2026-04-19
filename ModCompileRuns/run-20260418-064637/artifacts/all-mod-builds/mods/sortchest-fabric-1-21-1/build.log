@@ -1,0 +1,1015 @@
+Downloading https://services.gradle.org/distributions/gradle-9.2.1-bin.zip
+............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 9.2.1!
+
+Here are the highlights of this release:
+ - Windows ARM support
+ - Improved publishing APIs
+ - Better guidance for dependency verification failures
+
+For more details see https://docs.gradle.org/9.2.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Fabric Loom: 1.15.3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using of the official minecraft mappings is at your own risk!
+Please make sure to read and understand the following license:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# (c) 2020 Microsoft Corporation. These mappings are provided "as-is" and you bear the risk of using them. You may copy and use the mappings for development purposes, but you may not redistribute the mappings complete and unmodified. Microsoft makes no warranties, express or implied, with respect to the mappings provided here.  Use and modification of this document or the source code (in any form) of Minecraft: Java Edition is governed by the Minecraft End User License Agreement available at https://account.mojang.com/documents/minecraft_eula.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+> Task :compileJava
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:4: error: package net.fabricmc.fabric.api.client.screen.v1 does not exist
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+                                               ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:5: error: package net.fabricmc.fabric.api.client.screen.v1 does not exist
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
+                                               ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:6: error: package net.minecraft.client does not exist
+import net.minecraft.client.MinecraftClient;
+                           ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:7: error: package net.minecraft.client.gui.screen.ingame does not exist
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
+                                             ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:8: error: package net.minecraft.client.gui.widget does not exist
+import net.minecraft.client.gui.widget.ButtonWidget;
+                                      ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:9: error: package net.minecraft.screen does not exist
+import net.minecraft.screen.ScreenHandler;
+                           ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:10: error: package net.minecraft.screen.slot does not exist
+import net.minecraft.screen.slot.Slot;
+                                ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:11: error: package net.minecraft.screen.slot does not exist
+import net.minecraft.screen.slot.SlotActionType;
+                                ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:12: error: package net.minecraft.item does not exist
+import net.minecraft.item.ItemStack;
+                         ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:13: error: package net.minecraft.text does not exist
+import net.minecraft.text.Text;
+                         ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:37: error: cannot find symbol
+    private static void sortContainer(HandledScreen<?> screen) {
+                                      ^
+  symbol:   class HandledScreen
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:51: error: cannot find symbol
+    private static List<Integer> getContainerSlots(ScreenHandler handler,
+                                                   ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:52: error: package net.minecraft.entity.player does not exist
+            net.minecraft.entity.player.PlayerInventory inv) {
+                                       ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:61: error: cannot find symbol
+    private static void mergeStacks(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
+                                    ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:61: error: cannot find symbol
+    private static void mergeStacks(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
+                                                                                ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:78: error: cannot find symbol
+    private static List<ItemStack> buildLayout(ScreenHandler handler, List<Integer> slots) {
+                                               ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:78: error: cannot find symbol
+    private static List<ItemStack> buildLayout(ScreenHandler handler, List<Integer> slots) {
+                        ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:94: error: cannot find symbol
+    private static void reorder(ScreenHandler handler, List<Integer> slots,
+                                ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:95: error: cannot find symbol
+            List<ItemStack> layout, MinecraftClient mc) {
+                 ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:95: error: cannot find symbol
+            List<ItemStack> layout, MinecraftClient mc) {
+                                    ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:106: error: cannot find symbol
+    private static int findSlot(ScreenHandler handler, List<Integer> slots, int start, ItemStack target) {
+                                ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:106: error: cannot find symbol
+    private static int findSlot(ScreenHandler handler, List<Integer> slots, int start, ItemStack target) {
+                                                                                       ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:113: error: cannot find symbol
+    private static boolean stacksMatch(ItemStack a, ItemStack b) {
+                                       ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:113: error: cannot find symbol
+    private static boolean stacksMatch(ItemStack a, ItemStack b) {
+                                                    ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:120: error: cannot find symbol
+    private static void swap(ScreenHandler handler, int slotA, int slotB, MinecraftClient mc) {
+                             ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:120: error: cannot find symbol
+    private static void swap(ScreenHandler handler, int slotA, int slotB, MinecraftClient mc) {
+                                                                          ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:126: error: cannot find symbol
+    private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
+                              ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:126: error: cannot find symbol
+    private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
+                                                               ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:132: error: package net.minecraft.item does not exist
+        final net.minecraft.item.Item item;
+                                ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:133: error: package net.minecraft.component does not exist
+        final net.minecraft.component.ComponentMap components;
+                                     ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:135: error: cannot find symbol
+        ItemKey(ItemStack s) {
+                ^
+  symbol:   class ItemStack
+  location: class ItemKey
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:26: error: package ScreenEvents does not exist
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+                    ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:27: error: cannot find symbol
+            if (!(screen instanceof HandledScreen)) return;
+                                    ^
+  symbol:   class HandledScreen
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:28: error: cannot find symbol
+            HandledScreen<?> hs = (HandledScreen<?>) screen;
+            ^
+  symbol:   class HandledScreen
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:28: error: cannot find symbol
+            HandledScreen<?> hs = (HandledScreen<?>) screen;
+                                   ^
+  symbol:   class HandledScreen
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:31: error: cannot find symbol
+            Screens.getButtons(screen).add(ButtonWidget.builder(
+            ^
+  symbol:   variable Screens
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:31: error: cannot find symbol
+            Screens.getButtons(screen).add(ButtonWidget.builder(
+                                           ^
+  symbol:   variable ButtonWidget
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:32: error: cannot find symbol
+                    Text.translatable("sortchest.button.sort"),
+                    ^
+  symbol:   variable Text
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:38: error: cannot find symbol
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:38: error: cannot find symbol
+        MinecraftClient mc = MinecraftClient.getInstance();
+                             ^
+  symbol:   variable MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:41: error: cannot find symbol
+        ScreenHandler handler = screen.getScreenHandler();
+        ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:47: error: cannot find symbol
+        List<ItemStack> layout = buildLayout(handler, slots);
+             ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:55: error: cannot find symbol
+            Slot s = handler.slots.get(i);
+            ^
+  symbol:   class Slot
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:63: error: cannot find symbol
+            ItemStack stack = handler.slots.get(slots.get(i)).getStack();
+            ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:67: error: cannot find symbol
+                ItemStack other = handler.slots.get(slots.get(j)).getStack();
+                ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:69: error: cannot find symbol
+                if (ItemStack.areItemsAndComponentsEqual(stack, other)) {
+                    ^
+  symbol:   variable ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:79: error: cannot find symbol
+        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+                          ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:79: error: cannot find symbol
+        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+                                                                               ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:81: error: cannot find symbol
+            ItemStack s = handler.slots.get(slots.get(i)).getStack();
+            ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:84: error: cannot find symbol
+            List<ItemStack> group = groups.get(key);
+                 ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:85: error: cannot find symbol
+            if (group == null) { group = new ArrayList<ItemStack>(); groups.put(key, group); }
+                                                       ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:88: error: cannot find symbol
+        List<ItemStack> result = new ArrayList<ItemStack>();
+             ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:88: error: cannot find symbol
+        List<ItemStack> result = new ArrayList<ItemStack>();
+                                               ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:89: error: cannot find symbol
+        for (List<ItemStack> g : groups.values()) result.addAll(g);
+                  ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:90: error: cannot find symbol
+        while (result.size() < slots.size()) result.add(ItemStack.EMPTY);
+                                                        ^
+  symbol:   variable ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:97: error: cannot find symbol
+            ItemStack cur = handler.slots.get(slots.get(i)).getStack();
+            ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:98: error: cannot find symbol
+            ItemStack des = layout.get(i);
+            ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:117: error: cannot find symbol
+        return ItemStack.areItemsAndComponentsEqual(a, b);
+               ^
+  symbol:   variable ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:128: error: cannot find symbol
+        mc.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, mc.player);
+                                                                 ^
+  symbol:   variable SlotActionType
+  location: class SortChestMod
+59 errors
+
+> Task :compileJava FAILED
+
+[Incubating] Problems report is available at: file:///tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler output below.
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:37: error: cannot find symbol
+      private static void sortContainer(HandledScreen<?> screen) {
+                                        ^
+    symbol:   class HandledScreen
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:51: error: cannot find symbol
+      private static List<Integer> getContainerSlots(ScreenHandler handler,
+                                                     ^
+    symbol:   class ScreenHandler
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:61: error: cannot find symbol
+      private static void mergeStacks(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
+                                      ^
+    symbol:   class ScreenHandler
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:61: error: cannot find symbol
+      private static void mergeStacks(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
+                                                                                  ^
+    symbol:   class MinecraftClient
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:78: error: cannot find symbol
+      private static List<ItemStack> buildLayout(ScreenHandler handler, List<Integer> slots) {
+                                                 ^
+    symbol:   class ScreenHandler
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:78: error: cannot find symbol
+      private static List<ItemStack> buildLayout(ScreenHandler handler, List<Integer> slots) {
+                          ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:94: error: cannot find symbol
+      private static void reorder(ScreenHandler handler, List<Integer> slots,
+                                  ^
+    symbol:   class ScreenHandler
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:95: error: cannot find symbol
+              List<ItemStack> layout, MinecraftClient mc) {
+                   ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:95: error: cannot find symbol
+              List<ItemStack> layout, MinecraftClient mc) {
+                                      ^
+    symbol:   class MinecraftClient
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:106: error: cannot find symbol
+      private static int findSlot(ScreenHandler handler, List<Integer> slots, int start, ItemStack target) {
+                                  ^
+    symbol:   class ScreenHandler
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:106: error: cannot find symbol
+      private static int findSlot(ScreenHandler handler, List<Integer> slots, int start, ItemStack target) {
+                                                                                         ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:113: error: cannot find symbol
+      private static boolean stacksMatch(ItemStack a, ItemStack b) {
+                                         ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:113: error: cannot find symbol
+      private static boolean stacksMatch(ItemStack a, ItemStack b) {
+                                                      ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:120: error: cannot find symbol
+      private static void swap(ScreenHandler handler, int slotA, int slotB, MinecraftClient mc) {
+                               ^
+    symbol:   class ScreenHandler
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:120: error: cannot find symbol
+      private static void swap(ScreenHandler handler, int slotA, int slotB, MinecraftClient mc) {
+                                                                            ^
+    symbol:   class MinecraftClient
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:126: error: cannot find symbol
+      private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
+                                ^
+    symbol:   class ScreenHandler
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:126: error: cannot find symbol
+      private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
+                                                                 ^
+    symbol:   class MinecraftClient
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:135: error: cannot find symbol
+          ItemKey(ItemStack s) {
+                  ^
+    symbol:   class ItemStack
+    location: class ItemKey
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:27: error: cannot find symbol
+              if (!(screen instanceof HandledScreen)) return;
+                                      ^
+    symbol:   class HandledScreen
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:28: error: cannot find symbol
+              HandledScreen<?> hs = (HandledScreen<?>) screen;
+              ^
+    symbol:   class HandledScreen
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:28: error: cannot find symbol
+              HandledScreen<?> hs = (HandledScreen<?>) screen;
+                                     ^
+    symbol:   class HandledScreen
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:31: error: cannot find symbol
+              Screens.getButtons(screen).add(ButtonWidget.builder(
+              ^
+    symbol:   variable Screens
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:31: error: cannot find symbol
+              Screens.getButtons(screen).add(ButtonWidget.builder(
+                                             ^
+    symbol:   variable ButtonWidget
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:32: error: cannot find symbol
+                      Text.translatable("sortchest.button.sort"),
+                      ^
+    symbol:   variable Text
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:38: error: cannot find symbol
+          MinecraftClient mc = MinecraftClient.getInstance();
+          ^
+    symbol:   class MinecraftClient
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:38: error: cannot find symbol
+          MinecraftClient mc = MinecraftClient.getInstance();
+                               ^
+    symbol:   variable MinecraftClient
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:41: error: cannot find symbol
+          ScreenHandler handler = screen.getScreenHandler();
+          ^
+    symbol:   class ScreenHandler
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:47: error: cannot find symbol
+          List<ItemStack> layout = buildLayout(handler, slots);
+               ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:55: error: cannot find symbol
+              Slot s = handler.slots.get(i);
+              ^
+    symbol:   class Slot
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:63: error: cannot find symbol
+              ItemStack stack = handler.slots.get(slots.get(i)).getStack();
+              ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:67: error: cannot find symbol
+                  ItemStack other = handler.slots.get(slots.get(j)).getStack();
+                  ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:69: error: cannot find symbol
+                  if (ItemStack.areItemsAndComponentsEqual(stack, other)) {
+                      ^
+    symbol:   variable ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:79: error: cannot find symbol
+          Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+                            ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:79: error: cannot find symbol
+          Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+                                                                                 ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:81: error: cannot find symbol
+              ItemStack s = handler.slots.get(slots.get(i)).getStack();
+              ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:84: error: cannot find symbol
+              List<ItemStack> group = groups.get(key);
+                   ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:85: error: cannot find symbol
+              if (group == null) { group = new ArrayList<ItemStack>(); groups.put(key, group); }
+                                                         ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:88: error: cannot find symbol
+          List<ItemStack> result = new ArrayList<ItemStack>();
+               ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:88: error: cannot find symbol
+          List<ItemStack> result = new ArrayList<ItemStack>();
+                                                 ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:89: error: cannot find symbol
+          for (List<ItemStack> g : groups.values()) result.addAll(g);
+                    ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:90: error: cannot find symbol
+          while (result.size() < slots.size()) result.add(ItemStack.EMPTY);
+                                                          ^
+    symbol:   variable ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:97: error: cannot find symbol
+              ItemStack cur = handler.slots.get(slots.get(i)).getStack();
+              ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:98: error: cannot find symbol
+              ItemStack des = layout.get(i);
+              ^
+    symbol:   class ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:117: error: cannot find symbol
+          return ItemStack.areItemsAndComponentsEqual(a, b);
+                 ^
+    symbol:   variable ItemStack
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:128: error: cannot find symbol
+          mc.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, mc.player);
+                                                                   ^
+    symbol:   variable SlotActionType
+    location: class SortChestMod
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:4: error: package net.fabricmc.fabric.api.client.screen.v1 does not exist
+  import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+                                                 ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:5: error: package net.fabricmc.fabric.api.client.screen.v1 does not exist
+  import net.fabricmc.fabric.api.client.screen.v1.Screens;
+                                                 ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:6: error: package net.minecraft.client does not exist
+  import net.minecraft.client.MinecraftClient;
+                             ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:7: error: package net.minecraft.client.gui.screen.ingame does not exist
+  import net.minecraft.client.gui.screen.ingame.HandledScreen;
+                                               ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:8: error: package net.minecraft.client.gui.widget does not exist
+  import net.minecraft.client.gui.widget.ButtonWidget;
+                                        ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:9: error: package net.minecraft.screen does not exist
+  import net.minecraft.screen.ScreenHandler;
+                             ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:10: error: package net.minecraft.screen.slot does not exist
+  import net.minecraft.screen.slot.Slot;
+                                  ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:11: error: package net.minecraft.screen.slot does not exist
+  import net.minecraft.screen.slot.SlotActionType;
+                                  ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:12: error: package net.minecraft.item does not exist
+  import net.minecraft.item.ItemStack;
+                           ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:13: error: package net.minecraft.text does not exist
+  import net.minecraft.text.Text;
+                           ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:52: error: package net.minecraft.entity.player does not exist
+              net.minecraft.entity.player.PlayerInventory inv) {
+                                         ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:132: error: package net.minecraft.item does not exist
+          final net.minecraft.item.Item item;
+                                  ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:133: error: package net.minecraft.component does not exist
+          final net.minecraft.component.ComponentMap components;
+                                       ^
+  /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:26: error: package ScreenEvents does not exist
+          ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+                      ^
+  59 errors
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to generate a Build Scan (powered by Develocity).
+
+* Exception is:
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':compileJava'.
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:133)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:121)
+	at org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskExecuter.java:41)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.DefaultNodeExecutor.executeLocalTaskNode(DefaultNodeExecutor.java:55)
+	at org.gradle.execution.plan.DefaultNodeExecutor.execute(DefaultNodeExecutor.java:34)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:355)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:343)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:328)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:37: error: cannot find symbol
+    private static void sortContainer(HandledScreen<?> screen) {
+                                      ^
+  symbol:   class HandledScreen
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:51: error: cannot find symbol
+    private static List<Integer> getContainerSlots(ScreenHandler handler,
+                                                   ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:61: error: cannot find symbol
+    private static void mergeStacks(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
+                                    ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:61: error: cannot find symbol
+    private static void mergeStacks(ScreenHandler handler, List<Integer> slots, MinecraftClient mc) {
+                                                                                ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:78: error: cannot find symbol
+    private static List<ItemStack> buildLayout(ScreenHandler handler, List<Integer> slots) {
+                                               ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:78: error: cannot find symbol
+    private static List<ItemStack> buildLayout(ScreenHandler handler, List<Integer> slots) {
+                        ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:94: error: cannot find symbol
+    private static void reorder(ScreenHandler handler, List<Integer> slots,
+                                ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:95: error: cannot find symbol
+            List<ItemStack> layout, MinecraftClient mc) {
+                 ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:95: error: cannot find symbol
+            List<ItemStack> layout, MinecraftClient mc) {
+                                    ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:106: error: cannot find symbol
+    private static int findSlot(ScreenHandler handler, List<Integer> slots, int start, ItemStack target) {
+                                ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:106: error: cannot find symbol
+    private static int findSlot(ScreenHandler handler, List<Integer> slots, int start, ItemStack target) {
+                                                                                       ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:113: error: cannot find symbol
+    private static boolean stacksMatch(ItemStack a, ItemStack b) {
+                                       ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:113: error: cannot find symbol
+    private static boolean stacksMatch(ItemStack a, ItemStack b) {
+                                                    ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:120: error: cannot find symbol
+    private static void swap(ScreenHandler handler, int slotA, int slotB, MinecraftClient mc) {
+                             ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:120: error: cannot find symbol
+    private static void swap(ScreenHandler handler, int slotA, int slotB, MinecraftClient mc) {
+                                                                          ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:126: error: cannot find symbol
+    private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
+                              ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:126: error: cannot find symbol
+    private static void click(ScreenHandler handler, int slot, MinecraftClient mc) {
+                                                               ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:135: error: cannot find symbol
+        ItemKey(ItemStack s) {
+                ^
+  symbol:   class ItemStack
+  location: class ItemKey
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:27: error: cannot find symbol
+            if (!(screen instanceof HandledScreen)) return;
+                                    ^
+  symbol:   class HandledScreen
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:28: error: cannot find symbol
+            HandledScreen<?> hs = (HandledScreen<?>) screen;
+            ^
+  symbol:   class HandledScreen
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:28: error: cannot find symbol
+            HandledScreen<?> hs = (HandledScreen<?>) screen;
+                                   ^
+  symbol:   class HandledScreen
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:31: error: cannot find symbol
+            Screens.getButtons(screen).add(ButtonWidget.builder(
+            ^
+  symbol:   variable Screens
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:31: error: cannot find symbol
+            Screens.getButtons(screen).add(ButtonWidget.builder(
+                                           ^
+  symbol:   variable ButtonWidget
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:32: error: cannot find symbol
+                    Text.translatable("sortchest.button.sort"),
+                    ^
+  symbol:   variable Text
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:38: error: cannot find symbol
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ^
+  symbol:   class MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:38: error: cannot find symbol
+        MinecraftClient mc = MinecraftClient.getInstance();
+                             ^
+  symbol:   variable MinecraftClient
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:41: error: cannot find symbol
+        ScreenHandler handler = screen.getScreenHandler();
+        ^
+  symbol:   class ScreenHandler
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:47: error: cannot find symbol
+        List<ItemStack> layout = buildLayout(handler, slots);
+             ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:55: error: cannot find symbol
+            Slot s = handler.slots.get(i);
+            ^
+  symbol:   class Slot
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:63: error: cannot find symbol
+            ItemStack stack = handler.slots.get(slots.get(i)).getStack();
+            ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:67: error: cannot find symbol
+                ItemStack other = handler.slots.get(slots.get(j)).getStack();
+                ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:69: error: cannot find symbol
+                if (ItemStack.areItemsAndComponentsEqual(stack, other)) {
+                    ^
+  symbol:   variable ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:79: error: cannot find symbol
+        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+                          ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:79: error: cannot find symbol
+        Map<ItemKey, List<ItemStack>> groups = new LinkedHashMap<ItemKey, List<ItemStack>>();
+                                                                               ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:81: error: cannot find symbol
+            ItemStack s = handler.slots.get(slots.get(i)).getStack();
+            ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:84: error: cannot find symbol
+            List<ItemStack> group = groups.get(key);
+                 ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:85: error: cannot find symbol
+            if (group == null) { group = new ArrayList<ItemStack>(); groups.put(key, group); }
+                                                       ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:88: error: cannot find symbol
+        List<ItemStack> result = new ArrayList<ItemStack>();
+             ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:88: error: cannot find symbol
+        List<ItemStack> result = new ArrayList<ItemStack>();
+                                               ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:89: error: cannot find symbol
+        for (List<ItemStack> g : groups.values()) result.addAll(g);
+                  ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:90: error: cannot find symbol
+        while (result.size() < slots.size()) result.add(ItemStack.EMPTY);
+                                                        ^
+  symbol:   variable ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:97: error: cannot find symbol
+            ItemStack cur = handler.slots.get(slots.get(i)).getStack();
+            ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:98: error: cannot find symbol
+            ItemStack des = layout.get(i);
+            ^
+  symbol:   class ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:117: error: cannot find symbol
+        return ItemStack.areItemsAndComponentsEqual(a, b);
+               ^
+  symbol:   variable ItemStack
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:128: error: cannot find symbol
+        mc.interactionManager.clickSlot(handler.syncId, slot, 0, SlotActionType.PICKUP, mc.player);
+                                                                 ^
+  symbol:   variable SlotActionType
+  location: class SortChestMod
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:4: error: package net.fabricmc.fabric.api.client.screen.v1 does not exist
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+                                               ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:5: error: package net.fabricmc.fabric.api.client.screen.v1 does not exist
+import net.fabricmc.fabric.api.client.screen.v1.Screens;
+                                               ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:6: error: package net.minecraft.client does not exist
+import net.minecraft.client.MinecraftClient;
+                           ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:7: error: package net.minecraft.client.gui.screen.ingame does not exist
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
+                                             ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:8: error: package net.minecraft.client.gui.widget does not exist
+import net.minecraft.client.gui.widget.ButtonWidget;
+                                      ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:9: error: package net.minecraft.screen does not exist
+import net.minecraft.screen.ScreenHandler;
+                           ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:10: error: package net.minecraft.screen.slot does not exist
+import net.minecraft.screen.slot.Slot;
+                                ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:11: error: package net.minecraft.screen.slot does not exist
+import net.minecraft.screen.slot.SlotActionType;
+                                ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:12: error: package net.minecraft.item does not exist
+import net.minecraft.item.ItemStack;
+                         ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:13: error: package net.minecraft.text does not exist
+import net.minecraft.text.Text;
+                         ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:52: error: package net.minecraft.entity.player does not exist
+            net.minecraft.entity.player.PlayerInventory inv) {
+                                       ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:132: error: package net.minecraft.item does not exist
+        final net.minecraft.item.Item item;
+                                ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:133: error: package net.minecraft.component does not exist
+        final net.minecraft.component.ComponentMap components;
+                                     ^
+/tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace/src/main/java/net/itamio/sortchest/SortChestMod.java:26: error: package ScreenEvents does not exist
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+                    ^
+59 errors
+	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:89)
+	at org.gradle.api.internal.tasks.compile.JdkJavaCompiler.execute(JdkJavaCompiler.java:50)
+	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.delegateAndHandleErrors(NormalizingJavaCompiler.java:98)
+	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.execute(NormalizingJavaCompiler.java:52)
+	at org.gradle.api.internal.tasks.compile.NormalizingJavaCompiler.execute(NormalizingJavaCompiler.java:38)
+	at org.gradle.api.internal.tasks.compile.AnnotationProcessorDiscoveringCompiler.execute(AnnotationProcessorDiscoveringCompiler.java:52)
+	at org.gradle.api.internal.tasks.compile.AnnotationProcessorDiscoveringCompiler.execute(AnnotationProcessorDiscoveringCompiler.java:38)
+	at org.gradle.api.internal.tasks.compile.ModuleApplicationNameWritingCompiler.execute(ModuleApplicationNameWritingCompiler.java:46)
+	at org.gradle.api.internal.tasks.compile.ModuleApplicationNameWritingCompiler.execute(ModuleApplicationNameWritingCompiler.java:36)
+	at org.gradle.jvm.toolchain.internal.DefaultToolchainJavaCompiler.execute(DefaultToolchainJavaCompiler.java:57)
+	at org.gradle.api.tasks.compile.JavaCompile.lambda$createToolchainCompiler$3(JavaCompile.java:206)
+	at org.gradle.api.internal.tasks.compile.CleaningJavaCompiler.execute(CleaningJavaCompiler.java:53)
+	at org.gradle.api.internal.tasks.compile.incremental.IncrementalCompilerFactory.lambda$createRebuildAllCompiler$0(IncrementalCompilerFactory.java:55)
+	at org.gradle.api.internal.tasks.compile.incremental.SelectiveCompiler.execute(SelectiveCompiler.java:70)
+	at org.gradle.api.internal.tasks.compile.incremental.SelectiveCompiler.execute(SelectiveCompiler.java:44)
+	at org.gradle.api.internal.tasks.compile.incremental.IncrementalResultStoringCompiler.execute(IncrementalResultStoringCompiler.java:66)
+	at org.gradle.api.internal.tasks.compile.incremental.IncrementalResultStoringCompiler.execute(IncrementalResultStoringCompiler.java:52)
+	at org.gradle.api.internal.tasks.compile.CompileJavaBuildOperationReportingCompiler$1.call(CompileJavaBuildOperationReportingCompiler.java:64)
+	at org.gradle.api.internal.tasks.compile.CompileJavaBuildOperationReportingCompiler$1.call(CompileJavaBuildOperationReportingCompiler.java:48)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.api.internal.tasks.compile.CompileJavaBuildOperationReportingCompiler.execute(CompileJavaBuildOperationReportingCompiler.java:48)
+	at org.gradle.api.tasks.compile.JavaCompile.performCompilation(JavaCompile.java:224)
+	at org.gradle.api.tasks.compile.JavaCompile.performIncrementalCompilation(JavaCompile.java:165)
+	at org.gradle.api.tasks.compile.JavaCompile.compile(JavaCompile.java:150)
+	at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:125)
+	at org.gradle.api.internal.project.taskfactory.IncrementalTaskAction.doExecute(IncrementalTaskAction.java:45)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:51)
+	at org.gradle.api.internal.project.taskfactory.IncrementalTaskAction.execute(IncrementalTaskAction.java:26)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:29)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:252)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:237)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:220)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:203)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:170)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:68)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:38)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:28)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeAndStoreInCache(BuildCacheStep.java:145)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$4(BuildCacheStep.java:101)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$executeWithCache$5(BuildCacheStep.java:101)
+	at org.gradle.internal.Try$Success.map(Try.java:170)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithCache(BuildCacheStep.java:85)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$0(BuildCacheStep.java:74)
+	at org.gradle.internal.Either$Left.fold(Either.java:116)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:64)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:35)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:62)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:40)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:76)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:45)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:136)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:66)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:38)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:297)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:44)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:31)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:64)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
+	... 30 more
+
+
+BUILD FAILED in 1m 3s
+1 actionable task: 1 executed
+$ /opt/hostedtoolcache/Python/3.12.13/x64/bin/python 1.21-1.21.1/build_adapter.py --loader fabric --metadata-json /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/metadata.json --source-dir .workflow_state/prepared/mods/sortchest-fabric-1-21-1/src --template-workspace /tmp/modcompiler-sortchest-fabric-1-21-1-6rijeg0h/workspace --minecraft-version 1.21.1 --manifest /home/runner/work/ModCompiler/ModCompiler/version-manifest.json
+
+
+$ ./modcompiler-build.sh
+

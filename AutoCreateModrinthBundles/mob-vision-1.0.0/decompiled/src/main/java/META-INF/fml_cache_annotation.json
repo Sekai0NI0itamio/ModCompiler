@@ -1,0 +1,51 @@
+{
+  "com/mobvision/MobVisionMod": {
+    "name": "com/mobvision/MobVisionMod",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "com/mobvision/MobVisionMod",
+        "values": {
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "modid": {
+            "value": "mobvision"
+          },
+          "name": {
+            "value": "Mob Vision"
+          },
+          "version": {
+            "value": "1.0.0"
+          }
+        }
+      },
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventBusSubscriber;",
+        "target": "com/mobvision/MobVisionMod",
+        "values": {
+          "modid": {
+            "value": "mobvision"
+          }
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "preInit(Lnet/minecraftforge/fml/common/event/FMLPreInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onEntityJoin(Lnet/minecraftforge/event/entity/EntityJoinWorldEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onWorldTick(Lnet/minecraftforge/fml/common/gameevent/TickEvent$WorldTickEvent;)V"
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+# Auto Create Modrinth Draft Bundle
+
+- Status: `draft_created`
+- Bundle slug: `always-rain-1.0.0`
+- Jar: `Always-Rain-1.0.0.jar`
+- Loader: `forge`
+- Detected game versions: `1.12.2`
+
+## Listing Preview
+
+- Name: `Always Rain`
+- Summary: `Hate that rain stops after a while? This mod keeps it raining all the time, and you can even keep thunder on if you want.`
+
+## Next Step
+
+Draft created on Modrinth project `always-rain` (`nBrpBghv`), version `YF8Vk6YU`. Review it on Modrinth and submit it manually when ready.
+Project link: https://modrinth.com/mod/always-rain
+Version link: https://modrinth.com/mod/always-rain/version/YF8Vk6YU
+
+## Warnings
+
+GitHub wiki sync failed: ModCompilerError: Command failed: git -c http.https://github.com/.extraheader=AUTHORIZATION: basic <redacted> push origin HEAD:refs/heads/master
+remote: Repository not found.
+fatal: repository 'https://github.com/Sekai0NI0itamio/always-rain.wiki.git/' not found
+Falling back to repository docs page for wiki link: https://github.com/Sekai0NI0itamio/always-rain/blob/main/docs/Home.md

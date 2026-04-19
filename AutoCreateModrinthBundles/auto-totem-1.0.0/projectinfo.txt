@@ -1,0 +1,210 @@
+# Project Info
+
+generated_at=2026-04-09T09:34:04+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/23/Auto-Totem-1.0.0.jar
+jar_size_bytes=6962
+jar_sha1=5a76f8b5c1947cafe95953d7a5a4d66959b481bd
+
+## Detected Metadata
+
+jar_name=Auto-Totem-1.0.0.jar
+jar_display_name=Auto Totem
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=autototem
+name=Auto Totem
+mod_version=1.0.0
+description=Automatically equips Totem of Undying to your offhand when health is low or after one is consumed. Never die unexpectedly again!
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-totem-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/auto-totem-1.0.0/source
+source_file_count=4
+package_count=1
+packages=asd.itamio.autototem
+
+## Source Tree
+
+autototem/AutoTotemConfig.java
+autototem/AutoTotemHandler.java
+autototem/AutoTotemKeyHandler.java
+autototem/AutoTotemMod.java
+
+## Key Source Excerpts
+
+### autototem/AutoTotemHandler.java
+```
+package asd.itamio.autototem;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+public class AutoTotemHandler {
+    
+    @SubscribeEvent
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        if (!AutoTotemMod.config.enableAutoTotem) return;
+        
+        EntityPlayer player = event.player;
+        if (player.world.isRemote) return; // Server-side only
+        
+        // Check if offhand has a totem
+        ItemStack offhand = player.getHeldItemOffhand();
+        
+        // If no totem in offhand, try to equip one
+        if (offhand.isEmpty() || offhand.getItem() != Items.TOTEM_OF_UNDYING) {
+            equipTotemIfAvailable(player);
+        }
+    }
+    
+    private void equipTotemIfAvailable(EntityPlayer player) {
+        // Search inventory for totem
+        for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
+            ItemStack stack = player.inventory.getStackInSlot(i);
+            
+            if (stack.getItem() == Items.TOTEM_OF_UNDYING) {
+                // Found a totem! Swap it to offhand
+                ItemStack oldOffhand = player.getHeldItemOffhand().copy();
+                
+                // Set totem to offhand
+                player.inventory.offHandInventory.set(0, stack.copy());
+                
+                // Put old offhand item back in the slot where totem was
+                if (!oldOffhand.isEmpty()) {
+                    player.inventory.setInventorySlotContents(i, oldOffhand);
+                } else {
+                    player.inventory.setInventorySlotContents(i, ItemStack.EMPTY);
+                }
+                
+                // Show message
+                if (AutoTotemMod.config.showMessages) {
+                    player.sendMessage(new TextComponentString("§6[Auto Totem] §aTotem equipped"));
+                }
+                
+                return;
+            }
+        }
+    }
+}
+```
+
+### autototem/AutoTotemKeyHandler.java
+```
+package asd.itamio.autototem;
+
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.InputEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import org.lwjgl.input.Keyboard;
+
+@SideOnly(Side.CLIENT)
+public class AutoTotemKeyHandler {
+    
+    private static KeyBinding toggleKey;
+    
+    public AutoTotemKeyHandler() {
+        toggleKey = new KeyBinding("Toggle Auto Totem", Keyboard.KEY_O, "Auto Totem");
+        ClientRegistry.registerKeyBinding(toggleKey);
+    }
+    
+    @SubscribeEvent
+    public void onKeyInput(InputEvent.KeyInputEvent event) {
+        if (toggleKey.isPressed()) {
+            // Toggle the mod
+            AutoTotemMod.config.enableAutoTotem = !AutoTotemMod.config.enableAutoTotem;
+            
+            // Get player
+            EntityPlayer player = net.minecraft.client.Minecraft.getMinecraft().player;
+            if (player != null) {
+                String status = AutoTotemMod.config.enableAutoTotem ? "§aEnabled" : "§cDisabled";
+                player.sendMessage(new TextComponentString("§6[Auto Totem] " + status));
+            }
+        }
+    }
+}
+```
+
+### autototem/AutoTotemMod.java
+```
+package asd.itamio.autototem;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+
+@Mod(modid = AutoTotemMod.MODID, name = AutoTotemMod.NAME, version = AutoTotemMod.VERSION)
+public class AutoTotemMod {
+    public static final String MODID = "autototem";
+    public static final String NAME = "Auto Totem";
+    public static final String VERSION = "1.0.0";
+    
+    public static Logger logger;
+    public static AutoTotemConfig config;
+    
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        
+        // Load configuration
+        File configFile = new File(event.getModConfigurationDirectory(), "autototem.cfg");
+        Configuration configuration = new Configuration(configFile);
+        config = new AutoTotemConfig(configuration);
+        
+        logger.info("Auto Totem initialized");
+    }
+    
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        // Register event handlers
+        MinecraftForge.EVENT_BUS.register(new AutoTotemHandler());
+        MinecraftForge.EVENT_BUS.register(new AutoTotemKeyHandler());
+        
+        logger.info("Auto Totem event handlers registered");
+    }
+}
+```
+
+### autototem/AutoTotemConfig.java
+```
+package asd.itamio.autototem;
+
+import net.minecraftforge.common.config.Configuration;
+
+public class AutoTotemConfig {
+    public boolean enableAutoTotem;
+    public boolean showMessages;
+
+    public AutoTotemConfig(Configuration config) {
+        config.load();
+
+        enableAutoTotem = config.getBoolean("Enable Auto Totem", "general", true,
+                "Enable or disable the auto totem feature");
+        
+        showMessages = config.getBoolean("Show Messages", "messages", true,
+                "Show chat messages when totem is equipped");
+
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+```

@@ -1,0 +1,246 @@
+publish-modrinth	Set up job	﻿2026-04-18T13:35:36.1346894Z Current runner version: '2.333.1'
+publish-modrinth	Set up job	2026-04-18T13:35:36.1372872Z ##[group]Runner Image Provisioner
+publish-modrinth	Set up job	2026-04-18T13:35:36.1373832Z Hosted Compute Agent
+publish-modrinth	Set up job	2026-04-18T13:35:36.1374500Z Version: 20260213.493
+publish-modrinth	Set up job	2026-04-18T13:35:36.1375100Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+publish-modrinth	Set up job	2026-04-18T13:35:36.1375933Z Build Date: 2026-02-13T00:28:41Z
+publish-modrinth	Set up job	2026-04-18T13:35:36.1376566Z Worker ID: {c328ea71-ba4e-41a6-af90-17236f4217b6}
+publish-modrinth	Set up job	2026-04-18T13:35:36.1377234Z Azure Region: westus
+publish-modrinth	Set up job	2026-04-18T13:35:36.1377830Z ##[endgroup]
+publish-modrinth	Set up job	2026-04-18T13:35:36.1379880Z ##[group]Operating System
+publish-modrinth	Set up job	2026-04-18T13:35:36.1380477Z Ubuntu
+publish-modrinth	Set up job	2026-04-18T13:35:36.1381001Z 24.04.4
+publish-modrinth	Set up job	2026-04-18T13:35:36.1381454Z LTS
+publish-modrinth	Set up job	2026-04-18T13:35:36.1381929Z ##[endgroup]
+publish-modrinth	Set up job	2026-04-18T13:35:36.1382451Z ##[group]Runner Image
+publish-modrinth	Set up job	2026-04-18T13:35:36.1383028Z Image: ubuntu-24.04
+publish-modrinth	Set up job	2026-04-18T13:35:36.1383511Z Version: 20260413.86.1
+publish-modrinth	Set up job	2026-04-18T13:35:36.1384524Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+publish-modrinth	Set up job	2026-04-18T13:35:36.1386085Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+publish-modrinth	Set up job	2026-04-18T13:35:36.1387071Z ##[endgroup]
+publish-modrinth	Set up job	2026-04-18T13:35:36.1388108Z ##[group]GITHUB_TOKEN Permissions
+publish-modrinth	Set up job	2026-04-18T13:35:36.1390518Z Contents: read
+publish-modrinth	Set up job	2026-04-18T13:35:36.1391133Z Metadata: read
+publish-modrinth	Set up job	2026-04-18T13:35:36.1391603Z Packages: read
+publish-modrinth	Set up job	2026-04-18T13:35:36.1392202Z ##[endgroup]
+publish-modrinth	Set up job	2026-04-18T13:35:36.1394306Z Secret source: Actions
+publish-modrinth	Set up job	2026-04-18T13:35:36.1395258Z Prepare workflow directory
+publish-modrinth	Set up job	2026-04-18T13:35:36.1727664Z Prepare all required actions
+publish-modrinth	Set up job	2026-04-18T13:35:36.1772396Z Getting action download info
+publish-modrinth	Set up job	2026-04-18T13:35:36.6893945Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+publish-modrinth	Set up job	2026-04-18T13:35:36.8241067Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+publish-modrinth	Set up job	2026-04-18T13:35:36.9637669Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+publish-modrinth	Set up job	2026-04-18T13:35:37.5397992Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+publish-modrinth	Set up job	2026-04-18T13:35:37.7751226Z Complete job name: publish-modrinth
+publish-modrinth	Run actions/checkout@v4	﻿2026-04-18T13:35:37.8431477Z ##[group]Run actions/checkout@v4
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8432394Z with:
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8432858Z   repository: Sekai0NI0itamio/ModCompiler
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8433632Z   token: ***
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8434050Z   ssh-strict: true
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8434489Z   ssh-user: git
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8434919Z   persist-credentials: true
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8435390Z   clean: true
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8435811Z   sparse-checkout-cone-mode: true
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8436310Z   fetch-depth: 1
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8436719Z   fetch-tags: false
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8437138Z   show-progress: true
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8437568Z   lfs: false
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8438005Z   submodules: false
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8438696Z   set-safe-directory: true
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.8439458Z ##[endgroup]
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9526562Z Syncing repository: Sekai0NI0itamio/ModCompiler
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9528986Z ##[group]Getting Git version info
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9529837Z Working directory is '/home/runner/work/ModCompiler/ModCompiler'
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9530999Z [command]/usr/bin/git version
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9566084Z git version 2.53.0
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9593442Z ##[endgroup]
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9607901Z Temporarily overriding HOME='/home/runner/work/_temp/1bebec89-4f8f-4aa4-8d11-14f8bfdc4323' before making global git config changes
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9609837Z Adding repository directory to the temporary git global config as a safe directory
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9621438Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9653132Z Deleting the contents of '/home/runner/work/ModCompiler/ModCompiler'
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9656519Z ##[group]Initializing the repository
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9660857Z [command]/usr/bin/git init /home/runner/work/ModCompiler/ModCompiler
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9749543Z hint: Using 'master' as the name for the initial branch. This default branch name
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9751349Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9752477Z hint: to use in all of your new repositories, which will suppress this warning,
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9753317Z hint: call:
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9753876Z hint:
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9754414Z hint: 	git config --global init.defaultBranch <name>
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9755086Z hint:
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9756071Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9757404Z hint: 'development'. The just-created branch can be renamed via this command:
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9758433Z hint:
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9758911Z hint: 	git branch -m <name>
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9759557Z hint:
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9760246Z hint: Disable this message with "git config set advice.defaultBranchName false"
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9761640Z Initialized empty Git repository in /home/runner/work/ModCompiler/ModCompiler/.git/
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9763623Z [command]/usr/bin/git remote add origin https://github.com/Sekai0NI0itamio/ModCompiler
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9791032Z ##[endgroup]
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9791855Z ##[group]Disabling automatic garbage collection
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9794754Z [command]/usr/bin/git config --local gc.auto 0
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9822073Z ##[endgroup]
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9822804Z ##[group]Setting up auth
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9828530Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:37.9858623Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:38.0136130Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:38.0165276Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:38.0381467Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:38.0411275Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:38.0643124Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:38.0678068Z ##[endgroup]
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:38.0679209Z ##[group]Fetching the repository
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:38.0686790Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +25f217d932755ea627eedc8879b1c8ecb7c507c2:refs/remotes/origin/main
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6500319Z From https://github.com/Sekai0NI0itamio/ModCompiler
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6503743Z  * [new ref]         25f217d932755ea627eedc8879b1c8ecb7c507c2 -> origin/main
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6529569Z ##[endgroup]
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6530478Z ##[group]Determining the checkout info
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6532250Z ##[endgroup]
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6537979Z [command]/usr/bin/git sparse-checkout disable
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6574438Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6600664Z ##[group]Checking out the ref
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:39.6604738Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:40.1447409Z Switched to a new branch 'main'
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:40.1449141Z branch 'main' set up to track 'origin/main'.
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:40.1476061Z ##[endgroup]
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:40.1520533Z [command]/usr/bin/git log -1 --format=%H
+publish-modrinth	Run actions/checkout@v4	2026-04-18T13:35:40.1546382Z 25f217d932755ea627eedc8879b1c8ecb7c507c2
+publish-modrinth	Run actions/setup-python@v5	﻿2026-04-18T13:35:40.1790972Z ##[group]Run actions/setup-python@v5
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.1791323Z with:
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.1791506Z   python-version: 3.12
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.1791725Z   check-latest: false
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.1792313Z   token: ***
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.1792509Z   update-environment: true
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.1792739Z   allow-prereleases: false
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.1792948Z   freethreaded: false
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.1793139Z ##[endgroup]
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.3432822Z ##[group]Installed versions
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.3523504Z Successfully set up CPython (3.12.13)
+publish-modrinth	Run actions/setup-python@v5	2026-04-18T13:35:40.3524330Z ##[endgroup]
+publish-modrinth	Run actions/download-artifact@v4	﻿2026-04-18T13:35:40.3723706Z ##[group]Run actions/download-artifact@v4
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3724021Z with:
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3724201Z   name: all-mod-builds
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3724453Z   path: .workflow_downloads/combined
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3724738Z   merge-multiple: false
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3724964Z   repository: Sekai0NI0itamio/ModCompiler
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3725210Z   run-id: 24605741253
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3725394Z env:
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3725623Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3726054Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3726484Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3726843Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3727205Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3727571Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.3727867Z ##[endgroup]
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.5742309Z Downloading single artifact
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.8808722Z Preparing to download the following artifacts:
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:40.8810244Z - all-mod-builds (ID: 6511273144, Size: 173835, Expected Digest: sha256:bd9777048b2f8a908dc1c63d1dd866b9976951add918127e722fea1343df9d40)
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:41.1009932Z Redirecting to blob download url: https://productionresultssa8.blob.core.windows.net/actions-results/858ff805-c1d0-4f36-be3f-6c4b66bc943d/workflow-job-run-8c0f8b2f-652d-5bf9-a393-66af6261ec90/artifacts/a877febd0e793c9a35d48487943e02a2604a2206de4fd45ac527400a424804f5.zip
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:41.1012717Z Starting download of artifact to: /home/runner/work/ModCompiler/ModCompiler/.workflow_downloads/combined
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:41.3742740Z (node:2339) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:41.3744614Z (Use `node --trace-deprecation ...` to show where the warning was created)
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:41.5839953Z SHA256 digest of downloaded artifact is bd9777048b2f8a908dc1c63d1dd866b9976951add918127e722fea1343df9d40
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:41.5841050Z Artifact download completed successfully.
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:41.5841564Z Total of 1 artifact(s) downloaded
+publish-modrinth	Run actions/download-artifact@v4	2026-04-18T13:35:41.5842030Z Download artifact has finished successfully
+publish-modrinth	Mask Modrinth token	﻿2026-04-18T13:35:41.5976884Z ##[group]Run if [ -n "$MODRINTH_TOKEN" ]; then
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.5977270Z [36;1mif [ -n "$MODRINTH_TOKEN" ]; then[0m
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.5977567Z [36;1m  echo "::add-mask::$MODRINTH_TOKEN"[0m
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.5977865Z [36;1mfi[0m
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6074578Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6074919Z env:
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6075173Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6075607Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6076029Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6076394Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6076769Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6077169Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6077779Z   MODRINTH_TOKEN: ***
+publish-modrinth	Mask Modrinth token	2026-04-18T13:35:41.6077990Z ##[endgroup]
+publish-modrinth	Run set +e	﻿2026-04-18T13:35:41.6170477Z ##[group]Run set +e
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6170707Z [36;1mset +e[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6170940Z [36;1mpython build_mods.py publish-modrinth \[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6171313Z [36;1m  --artifacts-root .workflow_downloads/combined \[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6171922Z [36;1m  --project "https://modrinth.com/mod/set-home-anywhere" \[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6172369Z [36;1m  --artifact-dir .workflow_artifacts/modrinth-publish[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6172686Z [36;1mexit_code=$?[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6172889Z [36;1mset -e[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6173161Z [36;1mprintf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT"[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6173474Z [36;1mexit 0[0m
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6193822Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6194151Z env:
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6194398Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6194810Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6195242Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6195646Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6196003Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6196373Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6196914Z   MODRINTH_TOKEN: ***
+publish-modrinth	Run set +e	2026-04-18T13:35:41.6197110Z ##[endgroup]
+publish-modrinth	Run actions/upload-artifact@v4	﻿2026-04-18T13:35:43.2091368Z ##[group]Run actions/upload-artifact@v4
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2091667Z with:
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2091850Z   name: modrinth-publish
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2092093Z   path: .workflow_artifacts/modrinth-publish
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2092364Z   if-no-files-found: warn
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2092586Z   compression-level: 6
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2092785Z   overwrite: false
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2092980Z   include-hidden-files: false
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2093193Z env:
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2093423Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2093838Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2094242Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2094596Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2094970Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2095354Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.2095684Z ##[endgroup]
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.4310853Z With the provided path, there will be 2 files uploaded
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.4319259Z Artifact name is valid!
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.4320592Z Root directory input is valid!
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:43.7516390Z Beginning upload of artifact content to blob storage
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:44.0442787Z Uploaded bytes 1418
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:44.1195332Z Finished uploading artifact content to blob storage!
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:44.1198102Z SHA256 digest of uploaded artifact zip is 5041a01f96e6c92cd4e6ff64baee21f1b52cb9f7768379c7f94c68fbc80dc0f5
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:44.1200340Z Finalizing artifact upload
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:44.2960348Z Artifact modrinth-publish.zip successfully finalized. Artifact ID 6511274320
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:44.2961729Z Artifact modrinth-publish has been successfully uploaded! Final size is 1418 bytes. Artifact ID is 6511274320
+publish-modrinth	Run actions/upload-artifact@v4	2026-04-18T13:35:44.2969580Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/24605741253/artifacts/6511274320
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	﻿2026-04-18T13:35:44.3066377Z ##[group]Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3066953Z [36;1mif [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then[0m
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3067481Z [36;1m  cat .workflow_artifacts/modrinth-publish/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"[0m
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3067913Z [36;1mfi[0m
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3090201Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3090541Z env:
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3090801Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3091232Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3091654Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3092019Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3092584Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3092961Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+publish-modrinth	Run if [ -f .workflow_artifacts/modrinth-publish/SUMMARY.md ]; then	2026-04-18T13:35:44.3093313Z ##[endgroup]
+publish-modrinth	Run exit "0"	﻿2026-04-18T13:35:44.3201384Z ##[group]Run exit "0"
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3201650Z [36;1mexit "0"[0m
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3222327Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3222710Z env:
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3223075Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3223538Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3223959Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3224342Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3224731Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3225111Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+publish-modrinth	Run exit "0"	2026-04-18T13:35:44.3225440Z ##[endgroup]
+publish-modrinth	Post Run actions/setup-python@v5	﻿2026-04-18T13:35:44.3316755Z Post job cleanup.
+publish-modrinth	Post Run actions/checkout@v4	﻿2026-04-18T13:35:44.4963232Z Post job cleanup.
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6004150Z [command]/usr/bin/git version
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6045533Z git version 2.53.0
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6091194Z Temporarily overriding HOME='/home/runner/work/_temp/5451cec9-55a4-418d-babc-ad39d316f29b' before making global git config changes
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6092658Z Adding repository directory to the temporary git global config as a safe directory
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6108491Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6147197Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6183380Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6440790Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6465560Z http.https://github.com/.extraheader
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6479280Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6512261Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6760099Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+publish-modrinth	Post Run actions/checkout@v4	2026-04-18T13:35:44.6801134Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+publish-modrinth	Complete job	﻿2026-04-18T13:35:44.7166274Z Cleaning up orphan processes
+publish-modrinth	Complete job	2026-04-18T13:35:44.7421706Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/download-artifact@v4, actions/setup-python@v5, actions/upload-artifact@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

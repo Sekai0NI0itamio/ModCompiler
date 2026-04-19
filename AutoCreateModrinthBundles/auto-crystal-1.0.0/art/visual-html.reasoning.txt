@@ -1,0 +1,78 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must match composition language of approved examples but adapt words to this mod. Must not mention draft status etc. Must describe actual mod behavior.
+
+We need to choose background image from options. The mod is "Auto Crystal". It's about automatic attack of End Crystals. Mood maybe "fire burning.jpg" or "mountain breeze with spring forest.png"? Probably something more industrial? The approved background options: mountain breeze with spring forest.png or winter forest with sunset.jpg are recommended. But we can choose any that matches mood. The mod is about crystals, maybe "fire burning.jpg" fits? But they said strongly prefer one of those if clearly matches mod better. Auto Crystal is about crystals, maybe "fire burning.jpg" (explosions) fits. However the recommended options are mountain breeze with spring forest or winter forest with sunset. Those are nature scenes, maybe not fitting. But we can choose "fire burning.jpg" as it's about explosion. Let's pick "fire burning.jpg". That is in options.
+
+Accent color: choose a hex like #ff7f2f (orange) as example. Could use #ff6b6b or #ff7f2f. Use #ff7f2f as given example.
+
+Logo: need eyebrow, mark, title, subtitle, rail_left, rail_right.
+
+Eyebrow: short label like "Automation". Mark: maybe "AC". Title: "Auto Crystal". Subtitle: a short phrase describing behavior: "Automatic crystal targeting, toggle with C". Must be concise.
+
+Rail_left and rail_right: describe actual mod behavior: maybe "Auto‑Target" and "Zero‑Click". Must be short phrases.
+
+Description: kicker, title, tagline, chips (2-4), stats (exactly 2). Each stats item has value (string), label, note (short sentence). Must be concise.
+
+chips: short labels like "Auto Attack", "Toggle C". Could be 3 items.
+
+stats: two items. For example:
+
+- value "∞", label "Crystal Retention", note "Crystals remain placed while auto‑attacking."
+- value "C", label "Toggle Key", note "Press C to enable/disable."
+
+But note must be one short sentence.
+
+Make sure stats.value is a string, maybe "∞" or "C". Provide label and note.
+
+Make sure chips array length 2-4. Provide maybe 3 chips: "Auto Attack", "C‑Toggle", "PvP Optimized". Keep concise.
+
+Now ensure JSON shape exactly matches example: top-level keys: accent_color, background_image, logo: {eyebrow, mark, title, subtitle, rail_left, rail_right}, description: {kicker, title, tagline, chips: [...], stats: [{value: "...", label: "...", note: "..."}, {value: "...", label: "...", note: "..."}]}
+
+All strings must be concise and polished.
+
+Make sure no extra fields.
+
+Now produce JSON only.
+
+Let's craft:
+
+accent_color: "#ff7f2f"
+
+background_image: "fire burning.jpg"
+
+logo: {
+  "eyebrow": "Automation",
+  "mark": "AC",
+  "title": "Auto Crystal",
+  "subtitle": "Automatic crystal targeting, toggle with C",
+  "rail_left": "Auto‑Target",
+  "rail_right": "Zero‑Click"
+}
+
+description: {
+  "kicker": "Utility Mod",
+  "title": "Auto Crystal",
+  "tagline": "Automatically attacks End Crystals you place, freeing you from manual clicks.",
+  "chips": [
+    "Auto Attack",
+    "C‑Toggle",
+    "PvP Optimized"
+  ],
+  "stats": [
+    {
+      "value": "∞",
+      "label": "Crystal Retention",
+      "note": "Keeps placed crystals intact while auto‑attacking."
+    },
+    {
+      "value": "C",
+      "label": "Toggle Key",
+      "note": "Press C to enable or disable the feature."
+    }
+ ]
+}
+
+Check constraints: chips length 3 (2-4 ok). stats exactly 2 items. Each note is one short sentence. Good.
+
+Make sure all strings concise, no extra punctuation beyond needed. Ensure no mention of draft etc.
+
+Now output JSON only.
