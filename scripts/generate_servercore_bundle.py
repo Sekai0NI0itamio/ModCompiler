@@ -279,9 +279,10 @@ def write_forge_1_21_11(base):
         else:
             # Fall back to 1.21.0 source with patches
             src = read_forge_file(fname)
-            if fname == "ServerCoreData.java":
-                src = patch_server_core_data(src)
             src = patch_forge_1215_plus(src)
+        # Always apply varargs fix to ServerCoreData.java
+        if fname == "ServerCoreData.java":
+            src = patch_server_core_data(src)
         write(base / "src" / "main" / "java" / FORGE_PKG / fname, src)
     # Main mod class from 1.21.11
     main_path = BUNDLE_SRC / "versions" / REF_1_21_11_FORGE / "decompiled" / "src" / "src" / "main" / "java" / FORGE_PKG / "ServerCoreForgeMod.java"
@@ -301,8 +302,9 @@ def write_fabric_1_21_11(base):
             src = src_path.read_text(encoding="utf-8")
         else:
             src = read_forge_file(fname)
-            if fname == "ServerCoreData.java":
-                src = patch_server_core_data(src)
+        # Always apply varargs fix to ServerCoreData.java
+        if fname == "ServerCoreData.java":
+            src = patch_server_core_data(src)
         # Rename package from forge to fabric
         src = src.replace(
             "package com.itamio.servercore.forge;",
