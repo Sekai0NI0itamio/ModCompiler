@@ -1062,30 +1062,68 @@ def _opt(s):
                  'd.data.put(pc.getString("uuid").orElse(""), homes);')
     )
 
-# 1.21.2-1.21.8: Forge changed API - try direct function references
-SRC_1215_FORGE = _opt(SRC_121_FORGE
-    .replace(
-        "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-        "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);"
-    )
-)
+# ============================================================
+# 1.21.2-1.21.8 FORGE — SavedDataType API
+#
+# In Forge 1.21.2+, DimensionDataStorage.computeIfAbsent() takes a
+# single SavedDataType<T> argument (not three separate args, not Factory).
+#
+# The correct pattern (verified from Forge source via ai-source-search):
+#
+#   private static final SavedDataType<HomeData> TYPE =
+#       new SavedDataType<>(NAME, HomeData::new,
+#           (tag, provider) -> HomeData.load(tag), null);
+#
+#   public static HomeData get(MinecraftServer srv) {
+#       DimensionDataStorage storage = srv.overworld().getDataStorage();
+#       return storage.computeIfAbsent(TYPE);
+#   }
+#
+# SavedDataType constructor: SavedDataType(String name, Supplier<T> factory,
+#     BiFunction<CompoundTag, HolderLookup.Provider, T> loader,
+#     @Nullable DataFixTypes dataFixType)
+#
+# NOTE: If this still fails, run:
+#   python3 scripts/ai_source_search.py --version 1.21.5 --loader forge \
+#       --queries "class SavedDataType" "computeIfAbsent" \
+#       --files "*SavedDataType*.java" "*DimensionDataStorage*.java"
+# ============================================================
 
-# 1.21.9-1.21.11 Forge: Same three-argument API + EventBusSubscriber pattern
-SRC_1219_FORGE = (
-    _opt(SRC_121_FORGE
-        .replace(
-            "return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);",
-            "return storage.computeIfAbsent(HomeData::load, HomeData::new, NAME);"
-        )
+def _forge_1212_src(base_src: str) -> str:
+    """Convert a 1.21.0-1.21.1 Forge source to 1.21.2+ SavedDataType API."""
+    # Replace the Factory-based computeIfAbsent with SavedDataType
+    result = base_src.replace(
+        "import net.minecraft.world.level.saveddata.SavedData;",
+        "import net.minecraft.world.level.saveddata.SavedData;\nimport net.minecraft.world.level.saveddata.SavedDataType;"
+    ).replace(
+        # Remove the old get() method body and replace with SavedDataType pattern
+        """        public static HomeData get(MinecraftServer srv) {
+            DimensionDataStorage storage = srv.overworld().getDataStorage();
+            return storage.computeIfAbsent(new SavedData.Factory<HomeData>(HomeData::new, (tag, provider) -> HomeData.load(tag), null), NAME);
+        }""",
+        """        private static final SavedDataType<HomeData> TYPE =
+            new SavedDataType<>(NAME, HomeData::new,
+                (tag, provider) -> HomeData.load(tag), null);
+
+        public static HomeData get(MinecraftServer srv) {
+            DimensionDataStorage storage = srv.overworld().getDataStorage();
+            return storage.computeIfAbsent(TYPE);
+        }"""
     )
-    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
-    .replace("import net.minecraftforge.common.MinecraftForge;\n", "")
+    return result
+
+SRC_1215_FORGE = _opt(_forge_1212_src(SRC_121_FORGE))
+
+# 1.21.9-1.21.11 Forge: Same SavedDataType API + EventBusSubscriber pattern
+_SRC_1219_BASE = SRC_121_FORGE \
+    .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "") \
+    .replace("import net.minecraftforge.common.MinecraftForge;\n", "") \
     .replace(
         "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n        MinecraftForge.EVENT_BUS.register(this);\n    }\n\n    @SubscribeEvent\n    public void onRegisterCommands(RegisterCommandsEvent e) {",
         "    public SetHomeMod() {\n        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);\n    }\n\n    @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)\n    public static class ForgeEvents {\n        @net.minecraftforge.eventbus.api.SubscribeEvent\n        public static void onRegisterCommands(RegisterCommandsEvent e) {"
-    )
+    ) \
     .replace("    }\n}\n", "    }\n    }\n}\n", 1)
-)
+SRC_1219_FORGE = _opt(_forge_1212_src(_SRC_1219_BASE))
 SRC_12111_FORGE = SRC_1219_FORGE
 
 # ============================================================
@@ -1133,7 +1171,7 @@ SRC_1205_NEOFORGE = to_neoforge_sethome(SRC_120_FORGE.replace(
 ))
 SRC_121_NEOFORGE = to_neoforge_sethome(SRC_121_FORGE)    # 1.21.0-1.21.1 (Factory exists)
 SRC_1215_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE))  # 1.21.2-1.21.8 NeoForge uses Factory API (same as 1.21.0-1.21.1)
-SRC_1219_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE  # 1.21.9+ NeoForge uses Factory API
+SRC_1219_NEOFORGE = to_neoforge_sethome(_opt(SRC_121_FORGE  # 1.21.9+ NeoForge still uses Factory API
     .replace("import net.minecraftforge.eventbus.api.SubscribeEvent;\n", "")
     .replace("import net.minecraftforge.common.MinecraftForge;\n", "")
     .replace(

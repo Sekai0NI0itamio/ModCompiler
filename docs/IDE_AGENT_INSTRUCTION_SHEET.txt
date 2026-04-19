@@ -736,6 +736,72 @@ Do NOT:
 - Try to read .class files directly.
 - Skip this step and guess the source structure from the jar filename alone.
 
+Searching Minecraft/Forge/NeoForge API source code
+---------------------------------------------------
+When you encounter a compilation error caused by an unknown API (wrong method
+signature, missing class, changed constructor), DO NOT guess. Use the AI Source
+Search workflow to look up the actual Minecraft source code.
+
+CRITICAL: The old `grep-minecraft-source.yml` was broken (ran `./gradlew tasks`
+which does NOT decompile anything). It has been fixed. Both workflows now run
+`./gradlew genSources` which actually downloads and decompiles Minecraft.
+
+Primary workflow (AI-optimized, multi-query):
+  Workflow: `AI Source Search — Fetch Minecraft API for IDE Agent`
+  File:     `.github/workflows/ai-source-search.yml`
+
+  Trigger from IDE agent:
+    python3 scripts/ai_source_search.py \
+        --version 1.21.5 \
+        --loader forge \
+        --queries "class SavedDataType" "computeIfAbsent" \
+        --files "*SavedDataType*.java" "*DimensionDataStorage*.java"
+
+  The script:
+    1. Triggers the workflow via gh CLI
+    2. Waits for completion
+    3. Downloads the artifact
+    4. Prints all search results and full class files to stdout
+    5. Saves everything to MinecraftSourceSearch/run-<timestamp>/
+
+  Artifact contents:
+    - search-info.txt          - search parameters and stats
+    - queries/<query>.txt      - matches for each query with context
+    - full-classes/<Name>.java - full content of matched class files
+    - all-java-files.txt       - complete list of all .java files found
+    - gradle-output.log        - Gradle output (debug if sources missing)
+
+  Common queries for SavedData API issues:
+    --queries "class SavedDataType" "computeIfAbsent" "SavedData.Factory"
+    --files "*SavedDataType*.java" "*DimensionDataStorage*.java" "*SavedData*.java"
+
+  Common queries for event registration issues:
+    --queries "RegisterCommandsEvent" "EventBusSubscriber" "SubscribeEvent"
+    --files "*RegisterCommandsEvent*.java"
+
+  Common queries for NBT/tag API changes:
+    --queries "getList\|getCompound\|getString\|getDouble\|getFloat" "Optional"
+    --files "*CompoundTag*.java" "*ListTag*.java"
+
+Secondary workflow (single query):
+  Workflow: `Grep Minecraft Source Code`
+  File:     `.github/workflows/grep-minecraft-source.yml`
+
+  Trigger from IDE agent:
+    python3 scripts/grep_minecraft_source.py \
+        --version 1.21.5 \
+        --loader forge \
+        --query "class DimensionDataStorage" \
+        --context 10
+
+RULE: When you see a compilation error mentioning an unknown class or method,
+run the AI source search BEFORE attempting any code fix. One search run saves
+multiple failed build runs.
+
+RULE: After downloading the artifact, read the full-classes/ files. They contain
+the complete class definition with all method signatures, which is exactly what
+you need to write correct code.
+
 Agent checklist before doing work
 ---------------------------------
 Before starting:
@@ -774,6 +840,43 @@ Before multi-version compilation:
 5. Read SUMMARY.md in the output run folder when complete.
 6. Fix failed targets from the per-job logs in logs/ and rerun.
 7. Do NOT compile locally. Do NOT run Gradle locally.
+
+------------------------------------------------------------------------
+IMPORTANT: The AI IDE agent (you, reading this) must run these commands
+------------------------------------------------------------------------
+
+You are the one building. Do not ask the user to run commands. Run them
+yourself using your terminal/shell tools. The full sequence for a
+multi-version build is:
+
+  # Step 1: Regenerate the bundle (failed-only if retrying)
+  python3 scripts/generate_sethome_bundle.py --failed-only
+
+  # Step 2: Stage all changed files
+  git add .github/workflows/ scripts/ docs/ incoming/
+
+  # Step 3: Commit with a clear message describing what you fixed
+  git commit -m "Fix <describe what you changed>"
+
+  # Step 4: Push to GitHub (the workflow runs there, not locally)
+  git push
+
+  # Step 5: Trigger the build and wait for results
+  python3 scripts/run_build.py incoming/set-home-anywhere-all-versions.zip \
+      --modrinth https://modrinth.com/mod/set-home-anywhere
+
+  # Step 6: Read the results
+  cat ModCompileRuns/run-<latest>/SUMMARY.md
+
+  # Step 7: If builds failed, search the actual Minecraft source
+  python3 scripts/ai_source_search.py \
+      --version <failing-version> --loader <loader> \
+      --queries "the class or method that failed" \
+      --files "*TheClass*.java"
+
+  # Step 8: Fix the generator, go back to Step 1
+
+You have shell access. Use it. Do not wait for the user to run anything.
 
 What the agent should not do
 ----------------------------
