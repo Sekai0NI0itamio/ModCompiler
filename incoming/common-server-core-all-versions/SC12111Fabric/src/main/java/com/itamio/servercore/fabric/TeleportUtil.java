@@ -4,31 +4,31 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Set;
-import net.minecraft.class_1937;
-import net.minecraft.class_3218;
-import net.minecraft.class_3222;
-import net.minecraft.class_5321;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 
 public final class TeleportUtil {
    private TeleportUtil() {
    }
 
-   public static String dimensionKey(class_3218 level) {
-      return normalizeKey(keyToString(level.method_27983()));
+   public static String dimensionKey(ServerLevel level) {
+      return normalizeKey(keyToString(level.dimension()));
    }
 
-   public static class_3218 resolveLevel(MinecraftServer server, String dimensionKey) {
+   public static ServerLevel resolveLevel(MinecraftServer server, String dimensionKey) {
       if (server != null && dimensionKey != null) {
          String key = normalizeKey(dimensionKey);
          if (key == null) {
             return null;
-         } else if (keyEquals(class_1937.field_25179, key)) {
-            return server.method_30002();
-         } else if (keyEquals(class_1937.field_25180, key)) {
-            return server.method_3847(class_1937.field_25180);
-         } else if (keyEquals(class_1937.field_25181, key)) {
-            return server.method_3847(class_1937.field_25181);
+         } else if (keyEquals(Level.OVERWORLD, key)) {
+            return server.overworld();
+         } else if (keyEquals(Level.NETHER, key)) {
+            return server.getLevel(Level.NETHER);
+         } else if (keyEquals(Level.END, key)) {
+            return server.getLevel(Level.END);
          } else {
             Object resourceKey = createDimensionKey(key);
             return resourceKey == null ? null : getLevelByKey(server, resourceKey);
@@ -38,15 +38,15 @@ public final class TeleportUtil {
       }
    }
 
-   public static void teleport(class_3222 player, class_3218 level, double x, double y, double z, float yaw, float pitch) {
+   public static void teleport(ServerPlayer player, ServerLevel level, double x, double y, double z, float yaw, float pitch) {
       if (player != null && level != null) {
          try {
-            Method method = player.getClass().getMethod("teleportTo", class_3218.class, double.class, double.class, double.class, float.class, float.class);
+            Method method = player.getClass().getMethod("teleportTo", ServerLevel.class, double.class, double.class, double.class, float.class, float.class);
             method.invoke(player, level, x, y, z, yaw, pitch);
          } catch (ReflectiveOperationException var12) {
             try {
                Method methodx = player.getClass()
-                  .getMethod("teleportTo", class_3218.class, double.class, double.class, double.class, Set.class, float.class, float.class, boolean.class);
+                  .getMethod("teleportTo", ServerLevel.class, double.class, double.class, double.class, Set.class, float.class, float.class, boolean.class);
                methodx.invoke(player, level, x, y, z, Set.of(), yaw, pitch, false);
             } catch (ReflectiveOperationException var11) {
             }
@@ -54,11 +54,11 @@ public final class TeleportUtil {
       }
    }
 
-   public static String dimensionKey(class_5321<class_1937> key) {
+   public static String dimensionKey(ResourceKey<Level> key) {
       return normalizeKey(keyToString(key));
    }
 
-   private static boolean keyEquals(class_5321<class_1937> key, String value) {
+   private static boolean keyEquals(ResourceKey<Level> key, String value) {
       String keyValue = dimensionKey(key);
       return keyValue != null && keyValue.equals(value);
    }
@@ -102,7 +102,7 @@ public final class TeleportUtil {
                dimensionRegistry = registryClassx.getField("DIMENSION_REGISTRY").get(null);
             }
 
-            Method create = class_5321.class.getMethod("create", class_5321.class, id.getClass());
+            Method create = ResourceKey.class.getMethod("create", ResourceKey.class, id.getClass());
             return create.invoke(null, dimensionRegistry, id);
          } catch (ReflectiveOperationException var6) {
             return null;
@@ -150,16 +150,16 @@ public final class TeleportUtil {
       }
    }
 
-   private static class_3218 getLevelByKey(MinecraftServer server, Object key) {
+   private static ServerLevel getLevelByKey(MinecraftServer server, Object key) {
       try {
          Method method = server.getClass().getMethod("getLevel", key.getClass());
          Object value = method.invoke(server, key);
-         return value instanceof class_3218 ? (class_3218)value : null;
+         return value instanceof ServerLevel ? (ServerLevel)value : null;
       } catch (ReflectiveOperationException var5) {
          try {
             Method methodx = server.getClass().getMethod("getWorld", key.getClass());
             Object valuex = methodx.invoke(server, key);
-            return valuex instanceof class_3218 ? (class_3218)valuex : null;
+            return valuex instanceof ServerLevel ? (ServerLevel)valuex : null;
          } catch (ReflectiveOperationException var4) {
             return null;
          }

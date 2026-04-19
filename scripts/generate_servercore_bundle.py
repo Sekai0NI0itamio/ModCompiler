@@ -71,6 +71,8 @@ def patch_server_core_data(src: str) -> str:
     )
 
 
+REF_1_21_11_FORGE = "CqurFhjF"  # 1.21.11 Forge — uses reflection-based TeleportUtil
+
 def patch_for_pre_1_20_5_forge(src: str) -> str:
     """Remove HolderLookup.Provider for Forge 1.17-1.19.x (not available in these versions)."""
     src = src.replace("import net.minecraft.core.HolderLookup.Provider;\n", "")
@@ -82,6 +84,15 @@ def patch_for_pre_1_20_5_forge(src: str) -> str:
         "public CompoundTag save(CompoundTag tag, Provider provider) {",
         "public CompoundTag save(CompoundTag tag) {"
     )
+    # Remove the duplicate save(CompoundTag) fallback that calls save(tag, null)
+    # This is left over after renaming save(CompoundTag, Provider) to save(CompoundTag)
+    marker = "return this.save(tag, null);"
+    if marker in src:
+        idx = src.index(marker)
+        method_start = src.rfind("\n   public CompoundTag save(CompoundTag tag)", 0, idx)
+        if method_start >= 0:
+            method_end = src.index("\n   }", idx) + len("\n   }")
+            src = src[:method_start] + src[method_end:]
     return src
 
 
@@ -260,19 +271,24 @@ def write_forge_1_19(base): write_forge_src(base, patch_for_pre_1_20_5_forge)
 def write_forge_1_21_6_plus(base): write_forge_src(base, patch_forge_1215_plus)
 def write_forge_1_21_11(base): write_forge_src(base, lambda s: patch_1_21_11_api(patch_forge_1215_plus(s)))
 def write_fabric_1_21_11(base):
-    """For Fabric 1.21.11, use the actual 1.21.11 Fabric TeleportUtil."""
-    REF_1_21_11_FABRIC = "xyHAR2WW"  # 1.21.11 Fabric
-    def fabric_1_21_11_patch(src):
-        src = patch_1_21_11_api(src)
-        # Also rename package for fabric
-        return src
-    write_fabric_src(base, fabric_1_21_11_patch)
-    # Override TeleportUtil with the actual 1.21.11 Fabric version
+    """For Fabric 1.21.11, use the Forge 1.21.11 TeleportUtil (renamed to fabric package).
+    The Fabric 1.21.11 TeleportUtil uses intermediary names which don't compile.
+    The Forge 1.21.11 TeleportUtil uses reflection and official names — works for Fabric too."""
+    write_fabric_src(base, patch_1_21_11_api)
+    # Override TeleportUtil with the Forge 1.21.11 version (renamed to fabric package)
     try:
-        actual_tu = (BUNDLE_SRC / "versions" / REF_1_21_11_FABRIC / "decompiled" / "src" / "src" / "main" / "java" / FABRIC_PKG / "TeleportUtil.java").read_text(encoding="utf-8")
-        write(base / "src" / "main" / "java" / FABRIC_PKG / "TeleportUtil.java", actual_tu)
+        forge_tu = (BUNDLE_SRC / "versions" / REF_1_21_11_FORGE / "decompiled" / "src" / "src" / "main" / "java" / FORGE_PKG / "TeleportUtil.java").read_text(encoding="utf-8")
+        # Rename package
+        fabric_tu = forge_tu.replace(
+            "package com.itamio.servercore.forge;",
+            "package com.itamio.servercore.fabric;"
+        ).replace(
+            "import com.itamio.servercore.forge.",
+            "import com.itamio.servercore.fabric."
+        )
+        write(base / "src" / "main" / "java" / FABRIC_PKG / "TeleportUtil.java", fabric_tu)
     except Exception as e:
-        print(f"Warning: could not load 1.21.11 Fabric TeleportUtil: {e}")
+        print(f"Warning: could not load 1.21.11 Forge TeleportUtil for Fabric: {e}")
 
 # ============================================================
 # TARGETS
