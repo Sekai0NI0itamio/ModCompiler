@@ -446,6 +446,22 @@ TARGETS = [
      """\
         try {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (!(mc.currentScreen instanceof net.minecraft.client.gui.screen.TitleScreen)) return;
+            net.minecraft.client.gui.FontRenderer font = mc.fontRenderer;
+            com.mojang.blaze3d.matrix.MatrixStack ms = event.getMatrixStack();
+            String prefix = "Account: ";
+            String account = currentAccount;
+            font.drawStringWithShadow(ms, prefix, 10, 10, 0xFFFFFF);
+            font.drawStringWithShadow(ms, account, 10 + font.getStringWidth(prefix), 10, 0x00FF00);
+        } catch (Exception e) { LOGGER.error("Render error", e); }""",
+     True),
+
+    ("accountswitcher-forge-1-17-1", "1.17.1", "1.17.1",
+     "import net.minecraftforge.client.event.GuiScreenEvent;",
+     "GuiScreenEvent.DrawScreenEvent.Post",
+     """\
+        try {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
             if (!(mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
             net.minecraft.client.gui.Font font = mc.font;
             com.mojang.blaze3d.vertex.PoseStack ps = event.getPoseStack();
@@ -456,11 +472,6 @@ TARGETS = [
                 10 + font.width(prefix), 10, 0x00FF00);
         } catch (Exception e) { LOGGER.error("Render error", e); }""",
      True),
-
-    ("accountswitcher-forge-1-17-1", "1.17.1", "1.17.1",
-     "import net.minecraftforge.client.event.ScreenEvent;",
-     "ScreenEvent.DrawScreenEvent.Post",
-     RENDER_BODY_LEGACY, True),
 
     ("accountswitcher-forge-1-18", "1.18", "1.18",
      "import net.minecraftforge.client.event.ScreenEvent;",
@@ -590,7 +601,11 @@ def get_failed_slugs() -> set:
         return set()
     runs = sorted(runs_dir.iterdir(), reverse=True)
     for run in runs:
-        summary = run / "result.json"
+        # Try artifacts/all-mod-builds/run-summary.json (run_build.py layout)
+        summary = run / "artifacts" / "all-mod-builds" / "run-summary.json"
+        if not summary.exists():
+            # Fallback: result.json at run root
+            summary = run / "result.json"
         if summary.exists():
             data = json.loads(summary.read_text(encoding="utf-8"))
             failed = set()
