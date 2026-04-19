@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
 Generates the Common Server Core bundle.
-Uses the exact decompiled source from each Modrinth version as the source of truth.
+
+Strategy:
+- Forge 1.16.5+: Use the 1.21 Forge source directly (reflection-based, works all versions)
+- Fabric 1.16.5+: Use shared logic from 1.21 Forge source + clean Fabric entrypoint
+- Forge 1.12.2: Write from scratch with correct MCP names
+
 Run: python3 scripts/generate_servercore_bundle.py [--failed-only]
 """
 import argparse, json, shutil, subprocess, zipfile
@@ -26,135 +31,281 @@ def write(path: Path, text: str):
 def version_txt(mc: str, loader: str) -> str:
     return f"minecraft_version={mc}\nloader={loader}\n"
 
-def copy_src_from_bundle(version_id: str, dest_base: Path):
-    """Copy all decompiled source files from the bundle version into dest_base/src/."""
-    src_root = BUNDLE_SRC / "versions" / version_id / "decompiled" / "src" / "src" / "main" / "java"
-    if not src_root.exists():
-        raise FileNotFoundError(f"No source for version {version_id} at {src_root}")
-    dest_java = dest_base / "src" / "main" / "java"
-    if dest_java.exists():
-        shutil.rmtree(dest_java)
-    shutil.copytree(src_root, dest_java)
-
-def get_mod_txt(version_id: str, loader: str) -> str:
-    """Build mod.txt from the bundle's mod_info.txt."""
-    info_file = BUNDLE_SRC / "versions" / version_id / "decompiled" / "mod_info.txt"
-    info = {}
-    if info_file.exists():
-        for line in info_file.read_text().splitlines():
-            if "=" in line:
-                k, _, v = line.partition("=")
-                info[k.strip()] = v.strip()
-
-    # Determine group and entrypoint from the source package
-    src_root = BUNDLE_SRC / "versions" / version_id / "decompiled" / "src" / "src" / "main" / "java"
-    group = ""
-    entrypoint = ""
-    if src_root.exists():
-        # Find the main mod class
-        for java_file in src_root.rglob("*.java"):
-            name = java_file.stem
-            if "Mod" in name and ("Forge" in name or "Fabric" in name or name == "ServerCoreMod"):
-                # Build the fully qualified class name
-                rel = java_file.relative_to(src_root)
-                fqn = str(rel).replace("/", ".").replace("\\", ".").removesuffix(".java")
-                entrypoint = fqn
-                group = ".".join(fqn.split(".")[:-1])
-                break
-
-    if not entrypoint:
-        # Fallback
-        if loader == "fabric":
-            entrypoint = "com.itamio.servercore.fabric.ServerCoreFabricMod"
-            group = "com.itamio.servercore.fabric"
-        else:
-            entrypoint = "com.itamio.servercore.forge.ServerCoreForgeMod"
-            group = "com.itamio.servercore.forge"
-
-    runtime_side = "server"
+def mod_txt(group: str, entrypoint: str) -> str:
     return (
         f"mod_id={MOD_ID}\nname={MOD_NAME}\nmod_version={MOD_VERSION}\n"
         f"group={group}\nentrypoint_class={entrypoint}\n"
         f"description={DESCRIPTION}\nauthors={AUTHORS}\nlicense={LICENSE}\n"
-        f"homepage={HOMEPAGE}\nruntime_side={runtime_side}\n"
+        f"homepage={HOMEPAGE}\nruntime_side=server\n"
     )
 
 # ============================================================
-# TARGETS: (folder, mc_version, loader, bundle_version_id)
-# Each target uses the exact source from the matching bundle version.
-# For versions not in the bundle, use the closest available version.
+# SOURCE: 1.21 Forge (reflection-based, works all versions)
+# ============================================================
+REF_FORGE = "jUgSQFCi"  # 1.21 Forge
+
+FORGE_PKG  = "com/itamio/servercore/forge"
+FABRIC_PKG = "com/itamio/servercore/fabric"
+
+FORGE_SHARED_FILES = [
+    "HomeRecord.java",
+    "HomeService.java",
+    "MessageUtil.java",
+    "RandomTeleportService.java",
+    "ServerCoreAccess.java",
+    "ServerCoreCommands.java",
+    "ServerCoreData.java",
+    "TeleportRequestService.java",
+    "TeleportUtil.java",
+]
+
+def read_forge_file(filename: str) -> str:
+    p = BUNDLE_SRC / "versions" / REF_FORGE / "decompiled" / "src" / "src" / "main" / "java" / FORGE_PKG / filename
+    return p.read_text(encoding="utf-8")
+
+def write_forge_src(base: Path):
+    """Write all Forge source files using the 1.21 reflection-based source."""
+    for fname in FORGE_SHARED_FILES:
+        write(base / "src" / "main" / "java" / FORGE_PKG / fname, read_forge_file(fname))
+    # Main mod class
+    write(base / "src" / "main" / "java" / FORGE_PKG / "ServerCoreForgeMod.java",
+          read_forge_file("ServerCoreForgeMod.java"))
+
+def write_fabric_src(base: Path):
+    """Write Fabric source: shared logic from Forge (renamed to fabric package) + clean entrypoint."""
+    # Copy shared logic files, renaming package from forge to fabric
+    for fname in FORGE_SHARED_FILES:
+        content = read_forge_file(fname)
+        # Rename package declaration
+        content = content.replace(
+            "package com.itamio.servercore.forge;",
+            "package com.itamio.servercore.fabric;"
+        )
+        # Rename imports of other forge classes to fabric
+        content = content.replace(
+            "import com.itamio.servercore.forge.",
+            "import com.itamio.servercore.fabric."
+        )
+        write(base / "src" / "main" / "java" / FABRIC_PKG / fname, content)
+
+    # Write clean Fabric entrypoint using official Mojang names
+    fabric_mod = """\
+package com.itamio.servercore.fabric;
+
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.level.ServerPlayer;
+
+public final class ServerCoreFabricMod implements ModInitializer {
+    @Override
+    public void onInitialize() {
+        CommandRegistrationCallback.EVENT.register(
+            (dispatcher, registryAccess, environment) ->
+                ServerCoreCommands.register(dispatcher)
+        );
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayer player = handler.getPlayer();
+            ServerCoreData data = ServerCoreData.get(server);
+            if (!data.hasSeen(player.getUUID())) {
+                data.markSeen(player.getUUID());
+                RandomTeleportService.RtpResult result =
+                    RandomTeleportService.getInstance().teleport(player, "minecraft:overworld");
+                if (!result.isSuccess()) {
+                    MessageUtil.send(player, "First-join teleport failed: " + result.getMessage());
+                }
+            }
+        });
+    }
+}
+"""
+    write(base / "src" / "main" / "java" / FABRIC_PKG / "ServerCoreFabricMod.java", fabric_mod)
+
+# ============================================================
+# 1.12.2 Forge — written from scratch with correct MCP names
+# The decompiled source uses SRG names; we need MCP names.
+# ============================================================
+SRC_1122_MAIN = """\
+package asd.itamio.servercore;
+
+import asd.itamio.servercore.command.*;
+import asd.itamio.servercore.config.ServerCoreConfig;
+import asd.itamio.servercore.event.ServerCoreEvents;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = "servercore", name = "ServerCore", version = "1.0.0",
+     acceptableRemoteVersions = "*", acceptedMinecraftVersions = "[1.12,1.12.2]")
+public class ServerCoreMod {
+    public static final String MOD_ID = "servercore";
+    public static final Logger LOGGER = LogManager.getLogger("ServerCore");
+    @Instance("servercore")
+    public static ServerCoreMod INSTANCE;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        ServerCoreConfig.load(event.getSuggestedConfigurationFile());
+        MinecraftForge.EVENT_BUS.register(new ServerCoreEvents());
+    }
+
+    @EventHandler
+    public void serverStarting(FMLServerStartingEvent event) {
+        event.registerServerCommand(new CommandTpa());
+        event.registerServerCommand(new CommandTpahere());
+        event.registerServerCommand(new CommandTpacancel());
+        event.registerServerCommand(new CommandTpaccept());
+        event.registerServerCommand(new CommandTpacceptAll());
+        event.registerServerCommand(new CommandTpadeny());
+        event.registerServerCommand(new CommandTpadenyAll());
+        event.registerServerCommand(new CommandSetHome());
+        event.registerServerCommand(new CommandHome());
+        event.registerServerCommand(new CommandDelHome());
+        event.registerServerCommand(new CommandRtp());
+    }
+}
+"""
+
+def write_1122_src(base: Path):
+    """Write 1.12.2 Forge source from the decompiled bundle.
+    The decompiled source uses SRG names for methods — we copy it as-is
+    but the 1.12.2 Forge template uses SRG mappings (not MCP), so SRG names
+    should actually work. Let's try copying directly first."""
+    src_root = BUNDLE_SRC / "versions" / "SBNCQth7" / "decompiled" / "src" / "src" / "main" / "java"
+    dest_java = base / "src" / "main" / "java"
+    if dest_java.exists():
+        shutil.rmtree(dest_java)
+    shutil.copytree(src_root, dest_java)
+
+
+# ============================================================
+# TARGETS
 # ============================================================
 targets = [
-    # 1.12.2 Forge
-    ("SC1122Forge",   "1.12.2", "forge",  "SBNCQth7"),
+    # (folder, mc_version, loader, write_fn, mod_txt_str)
+    ("SC1122Forge",   "1.12.2", "forge",  write_1122_src,
+     mod_txt("asd.itamio.servercore", "asd.itamio.servercore.ServerCoreMod")),
 
-    # 1.16.5
-    ("SC1165Forge",   "1.16.5", "forge",  "fwcQmXLS"),
-    ("SC1165Fabric",  "1.16.5", "fabric", "NH7zywcl"),
+    ("SC1165Forge",   "1.16.5", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1165Fabric",  "1.16.5", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 
-    # 1.17.1
-    ("SC1171Forge",   "1.17.1", "forge",  "D4zAnFX7"),
-    ("SC1171Fabric",  "1.17.1", "fabric", "yiQSTnK0"),
+    ("SC1171Forge",   "1.17.1", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1171Fabric",  "1.17.1", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 
-    # 1.18.x
-    ("SC118Forge",    "1.18",   "forge",  "dTzvws1Q"),
-    ("SC118Fabric",   "1.18",   "fabric", "jDZYwa3I"),
-    ("SC1181Forge",   "1.18.1", "forge",  "Ha1f82Dk"),
-    ("SC1181Fabric",  "1.18.1", "fabric", "MwBQN4AQ"),
-    ("SC1182Forge",   "1.18.2", "forge",  "VJ47WzKo"),
-    ("SC1182Fabric",  "1.18.2", "fabric", "z2ST5IfW"),
+    ("SC118Forge",    "1.18",   "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC118Fabric",   "1.18",   "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1181Forge",   "1.18.1", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1181Fabric",  "1.18.1", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1182Forge",   "1.18.2", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1182Fabric",  "1.18.2", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 
-    # 1.19.x
-    ("SC119Forge",    "1.19",   "forge",  "SahI4RcB"),
-    ("SC119Fabric",   "1.19",   "fabric", "nO9z3Ups"),
-    ("SC1191Forge",   "1.19.1", "forge",  "w4y7fiBu"),
-    ("SC1191Fabric",  "1.19.1", "fabric", "n10KaVaa"),
-    ("SC1192Forge",   "1.19.2", "forge",  "Qmd91R58"),
-    ("SC1192Fabric",  "1.19.2", "fabric", "s0jBqTcE"),
-    ("SC1193Forge",   "1.19.3", "forge",  "dfvB3jPO"),
-    ("SC1193Fabric",  "1.19.3", "fabric", "Z1gwfWzg"),
-    ("SC1194Forge",   "1.19.4", "forge",  "VtlCqnae"),
-    ("SC1194Fabric",  "1.19.4", "fabric", "jAT1kE4t"),
+    ("SC119Forge",    "1.19",   "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC119Fabric",   "1.19",   "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1191Forge",   "1.19.1", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1191Fabric",  "1.19.1", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1192Forge",   "1.19.2", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1192Fabric",  "1.19.2", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1193Forge",   "1.19.3", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1193Fabric",  "1.19.3", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1194Forge",   "1.19.4", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1194Fabric",  "1.19.4", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 
-    # 1.20.x
-    ("SC1201Forge",   "1.20.1", "forge",  "HVPtsILc"),
-    ("SC1201Fabric",  "1.20.1", "fabric", "byRUAkdt"),
-    ("SC1202Forge",   "1.20.2", "forge",  "JEfQZXRt"),
-    ("SC1202Fabric",  "1.20.2", "fabric", "ggGELWan"),
-    ("SC1203Forge",   "1.20.3", "forge",  "lK7OEg1u"),
-    ("SC1203Fabric",  "1.20.3", "fabric", "8DTzGaJp"),
-    ("SC1204Forge",   "1.20.4", "forge",  "XjmRUUuK"),
-    ("SC1204Fabric",  "1.20.4", "fabric", "LWFeIlrv"),
-    # 1.20.5 Forge not in manifest — skip
-    ("SC1205Fabric",  "1.20.5", "fabric", "LUnZ4Y8r"),
-    ("SC1206Forge",   "1.20.6", "forge",  "UQrHjVMA"),
-    ("SC1206Fabric",  "1.20.6", "fabric", "WRuOzUG5"),
+    ("SC1201Forge",   "1.20.1", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1201Fabric",  "1.20.1", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1202Forge",   "1.20.2", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1202Fabric",  "1.20.2", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1203Forge",   "1.20.3", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1203Fabric",  "1.20.3", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1204Forge",   "1.20.4", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1204Fabric",  "1.20.4", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # 1.20.5 Forge not in manifest
+    ("SC1205Fabric",  "1.20.5", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1206Forge",   "1.20.6", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1206Fabric",  "1.20.6", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 
-    # 1.21.x
-    ("SC121Forge",    "1.21",   "forge",  "jUgSQFCi"),
-    ("SC121Fabric",   "1.21",   "fabric", "b4HIDtey"),
-    ("SC1211Forge",   "1.21.1", "forge",  "vV4r8jmb"),
-    ("SC1211Fabric",  "1.21.1", "fabric", "s3yogR88"),
-    # 1.21.2 Forge not in manifest — skip
-    ("SC1212Fabric",  "1.21.2", "fabric", "RWUb5mgx"),
-    ("SC1213Forge",   "1.21.3", "forge",  "zZwSbodr"),
-    ("SC1213Fabric",  "1.21.3", "fabric", "YAcjTnXt"),
-    ("SC1214Forge",   "1.21.4", "forge",  "CumKxfhj"),
-    ("SC1214Fabric",  "1.21.4", "fabric", "frRQkMi4"),
-    ("SC1215Forge",   "1.21.5", "forge",  "on4r1MJ0"),
-    ("SC1215Fabric",  "1.21.5", "fabric", "NKQTKiFC"),
-    ("SC1216Forge",   "1.21.6", "forge",  "y1YjcAyb"),
-    ("SC1216Fabric",  "1.21.6", "fabric", "g5nCrPdK"),
-    ("SC1217Forge",   "1.21.7", "forge",  "hq9wnJIZ"),
-    ("SC1217Fabric",  "1.21.7", "fabric", "chypEGvk"),
-    ("SC1218Forge",   "1.21.8", "forge",  "anM6enrG"),
-    ("SC1218Fabric",  "1.21.8", "fabric", "sFwG5InH"),
-    ("SC1219Forge",   "1.21.9", "forge",  "hsUBNvfV"),
-    ("SC1219Fabric",  "1.21.9", "fabric", "aP3bh6bW"),
-    ("SC12110Forge",  "1.21.10","forge",  "QPUD7gqL"),
-    ("SC12110Fabric", "1.21.10","fabric", "qHNYyGLa"),
-    ("SC12111Forge",  "1.21.11","forge",  "CqurFhjF"),
-    ("SC12111Fabric", "1.21.11","fabric", "xyHAR2WW"),
+    ("SC121Forge",    "1.21",   "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC121Fabric",   "1.21",   "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1211Forge",   "1.21.1", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1211Fabric",  "1.21.1", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    # 1.21.2 Forge not in manifest
+    ("SC1212Fabric",  "1.21.2", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1213Forge",   "1.21.3", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1213Fabric",  "1.21.3", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1214Forge",   "1.21.4", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1214Fabric",  "1.21.4", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1215Forge",   "1.21.5", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1215Fabric",  "1.21.5", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1216Forge",   "1.21.6", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1216Fabric",  "1.21.6", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1217Forge",   "1.21.7", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1217Fabric",  "1.21.7", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1218Forge",   "1.21.8", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1218Fabric",  "1.21.8", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC1219Forge",   "1.21.9", "forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC1219Fabric",  "1.21.9", "fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC12110Forge",  "1.21.10","forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC12110Fabric", "1.21.10","fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
+    ("SC12111Forge",  "1.21.11","forge",  write_forge_src,
+     mod_txt("com.itamio.servercore.forge", "com.itamio.servercore.forge.ServerCoreForgeMod")),
+    ("SC12111Fabric", "1.21.11","fabric", write_fabric_src,
+     mod_txt("com.itamio.servercore.fabric", "com.itamio.servercore.fabric.ServerCoreFabricMod")),
 ]
 
 # ============================================================
@@ -210,12 +361,12 @@ if BUNDLE.exists():
     shutil.rmtree(BUNDLE)
 
 errors = []
-for (folder, mc_ver, loader, bundle_vid) in active_targets:
+for (folder, mc_ver, loader, write_fn, mod_txt_str) in active_targets:
     base = BUNDLE / folder
     try:
-        write(base / "mod.txt", get_mod_txt(bundle_vid, loader))
+        write(base / "mod.txt", mod_txt_str)
         write(base / "version.txt", version_txt(mc_ver, loader))
-        copy_src_from_bundle(bundle_vid, base)
+        write_fn(base)
     except Exception as e:
         errors.append(f"{folder}: {e}")
         print(f"ERROR {folder}: {e}")

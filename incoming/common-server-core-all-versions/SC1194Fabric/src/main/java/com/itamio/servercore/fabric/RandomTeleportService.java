@@ -1,19 +1,19 @@
 package com.itamio.servercore.fabric;
 
 import java.util.Random;
-import net.minecraft.class_1937;
-import net.minecraft.class_2246;
-import net.minecraft.class_2248;
-import net.minecraft.class_2266;
-import net.minecraft.class_2338;
-import net.minecraft.class_2358;
-import net.minecraft.class_2413;
-import net.minecraft.class_2680;
-import net.minecraft.class_2784;
-import net.minecraft.class_3218;
-import net.minecraft.class_3222;
-import net.minecraft.class_2902.class_2903;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CactusBlock;
+import net.minecraft.world.level.block.FireBlock;
+import net.minecraft.world.level.block.MagmaBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.level.levelgen.Heightmap.Types;
 
 public final class RandomTeleportService {
    public static final int SQUARE_RADIUS = 10000;
@@ -27,24 +27,22 @@ public final class RandomTeleportService {
       return INSTANCE;
    }
 
-   public RandomTeleportService.RtpResult teleport(class_3222 player, String dimensionKey) {
-      if (player != null && player.method_5682() != null) {
-         MinecraftServer server = player.method_5682();
-         class_3218 world = TeleportUtil.resolveWorld(server, dimensionKey);
-         if (world == null) {
+   public RandomTeleportService.RtpResult teleport(ServerPlayer player, String dimensionKey) {
+      MinecraftServer server = ServerCoreAccess.getServer(player);
+      if (player != null && server != null) {
+         ServerLevel level = TeleportUtil.resolveLevel(server, dimensionKey);
+         if (level == null) {
             return RandomTeleportService.RtpResult.failure("Target dimension is not loaded.");
          } else {
             int attempts = 30;
 
             for (int i = 0; i < attempts; i++) {
-               class_2338 candidate = this.generateCandidate(world);
+               BlockPos candidate = this.generateCandidate(level);
                if (candidate != null) {
-                  class_2338 safe = this.findSafePosition(world, candidate.method_10263(), candidate.method_10260());
+                  BlockPos safe = this.findSafePosition(level, candidate.getX(), candidate.getZ());
                   if (safe != null) {
-                     TeleportUtil.teleport(
-                        player, world, safe.method_10263() + 0.5, safe.method_10264(), safe.method_10260() + 0.5, player.method_36454(), player.method_36455()
-                     );
-                     return RandomTeleportService.RtpResult.success(safe, "Teleported to random location in " + this.dimensionName(world) + ".");
+                     TeleportUtil.teleport(player, level, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, player.getYRot(), player.getXRot());
+                     return RandomTeleportService.RtpResult.success(safe, "Teleported to random location in " + this.dimensionName(level) + ".");
                   }
                }
             }
@@ -56,16 +54,16 @@ public final class RandomTeleportService {
       }
    }
 
-   private class_2338 generateCandidate(class_3218 world) {
-      class_2784 border = world.method_8621();
+   private BlockPos generateCandidate(ServerLevel level) {
+      WorldBorder border = level.getWorldBorder();
       int minX = -10000;
       int maxX = 10000;
       int minZ = -10000;
       int maxZ = 10000;
-      int borderMinX = (int)Math.ceil(border.method_11976());
-      int borderMaxX = (int)Math.floor(border.method_11963());
-      int borderMinZ = (int)Math.ceil(border.method_11958());
-      int borderMaxZ = (int)Math.floor(border.method_11977());
+      int borderMinX = (int)Math.ceil(border.getMinX());
+      int borderMaxX = (int)Math.floor(border.getMaxX());
+      int borderMinZ = (int)Math.ceil(border.getMinZ());
+      int borderMaxZ = (int)Math.floor(border.getMaxZ());
       if (borderMinX > minX) {
          minX = borderMinX;
       }
@@ -85,7 +83,7 @@ public final class RandomTeleportService {
       if (minX <= maxX && minZ <= maxZ) {
          int x = this.randomBetween(minX, maxX);
          int z = this.randomBetween(minZ, maxZ);
-         return new class_2338(x, world.method_8615(), z);
+         return new BlockPos(x, level.getSeaLevel(), z);
       } else {
          return null;
       }
@@ -95,14 +93,14 @@ public final class RandomTeleportService {
       return max <= min ? min : min + this.random.nextInt(max - min + 1);
    }
 
-   private class_2338 findSafePosition(class_3218 world, int x, int z) {
-      int top = world.method_8624(class_2903.field_13203, x, z);
-      int maxY = Math.min(top, world.method_31600());
-      int minY = world.method_31607() + 1;
+   private BlockPos findSafePosition(ServerLevel level, int x, int z) {
+      int top = level.getHeight(Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+      int maxY = Math.min(top, ServerCoreAccess.getMaxBuildHeight(level) - 2);
+      int minY = ServerCoreAccess.getMinBuildHeight(level) + 1;
 
       for (int y = maxY; y >= minY; y--) {
-         class_2338 feet = new class_2338(x, y, z);
-         if (this.isSafeStandPosition(world, feet)) {
+         BlockPos feet = new BlockPos(x, y, z);
+         if (this.isSafeStandPosition(level, feet)) {
             return feet;
          }
       }
@@ -110,57 +108,53 @@ public final class RandomTeleportService {
       return null;
    }
 
-   private boolean isSafeStandPosition(class_3218 world, class_2338 feet) {
-      class_2338 head = feet.method_10084();
-      class_2338 ground = feet.method_10074();
-      class_2680 feetState = world.method_8320(feet);
-      class_2680 headState = world.method_8320(head);
-      class_2680 groundState = world.method_8320(ground);
+   private boolean isSafeStandPosition(ServerLevel level, BlockPos feet) {
+      BlockPos head = feet.above();
+      BlockPos ground = feet.below();
+      BlockState feetState = level.getBlockState(feet);
+      BlockState headState = level.getBlockState(head);
+      BlockState groundState = level.getBlockState(ground);
       return this.isPassable(feetState) && this.isPassable(headState) && this.isSolidGround(groundState);
    }
 
-   private boolean isPassable(class_2680 state) {
-      return !state.method_26227().method_15769() ? false : state.method_26215();
+   private boolean isPassable(BlockState state) {
+      return !state.getFluidState().isEmpty() ? false : state.isAir();
    }
 
-   private boolean isSolidGround(class_2680 state) {
-      if (!state.method_26227().method_15769()) {
+   private boolean isSolidGround(BlockState state) {
+      if (!state.getFluidState().isEmpty()) {
          return false;
       } else {
-         return state.method_26215() ? false : !this.isDangerous(state.method_26204());
+         return state.isAir() ? false : !this.isDangerous(state.getBlock());
       }
    }
 
-   private boolean isDangerous(class_2248 block) {
-      return block == class_2246.field_10164
-         || block == class_2246.field_10036
-         || block instanceof class_2358
-         || block instanceof class_2266
-         || block instanceof class_2413;
+   private boolean isDangerous(Block block) {
+      return block == Blocks.LAVA || block == Blocks.FIRE || block instanceof FireBlock || block instanceof CactusBlock || block instanceof MagmaBlock;
    }
 
-   private String dimensionName(class_3218 world) {
-      if (world.method_27983().equals(class_1937.field_25179)) {
+   private String dimensionName(ServerLevel level) {
+      if (level.dimension().equals(Level.OVERWORLD)) {
          return "the Overworld";
-      } else if (world.method_27983().equals(class_1937.field_25180)) {
+      } else if (level.dimension().equals(Level.NETHER)) {
          return "the Nether";
       } else {
-         return world.method_27983().equals(class_1937.field_25181) ? "the End" : world.method_27983().method_29177().toString();
+         return level.dimension().equals(Level.END) ? "the End" : level.dimension().location().toString();
       }
    }
 
    public static final class RtpResult {
       private final boolean success;
-      private final class_2338 location;
+      private final BlockPos location;
       private final String message;
 
-      private RtpResult(boolean success, class_2338 location, String message) {
+      private RtpResult(boolean success, BlockPos location, String message) {
          this.success = success;
          this.location = location;
          this.message = message;
       }
 
-      public static RandomTeleportService.RtpResult success(class_2338 location, String message) {
+      public static RandomTeleportService.RtpResult success(BlockPos location, String message) {
          return new RandomTeleportService.RtpResult(true, location, message);
       }
 
@@ -172,7 +166,7 @@ public final class RandomTeleportService {
          return this.success;
       }
 
-      public class_2338 getLocation() {
+      public BlockPos getLocation() {
          return this.location;
       }
 

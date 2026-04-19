@@ -28,8 +28,8 @@ public final class RandomTeleportService {
    }
 
    public RandomTeleportService.RtpResult teleport(ServerPlayer player, String dimensionKey) {
-      if (player != null && player.m_20194_() != null) {
-         MinecraftServer server = player.m_20194_();
+      MinecraftServer server = ServerCoreAccess.getServer(player);
+      if (player != null && server != null) {
          ServerLevel level = TeleportUtil.resolveLevel(server, dimensionKey);
          if (level == null) {
             return RandomTeleportService.RtpResult.failure("Target dimension is not loaded.");
@@ -39,11 +39,9 @@ public final class RandomTeleportService {
             for (int i = 0; i < attempts; i++) {
                BlockPos candidate = this.generateCandidate(level);
                if (candidate != null) {
-                  BlockPos safe = this.findSafePosition(level, candidate.m_123341_(), candidate.m_123343_());
+                  BlockPos safe = this.findSafePosition(level, candidate.getX(), candidate.getZ());
                   if (safe != null) {
-                     TeleportUtil.teleport(
-                        player, level, safe.m_123341_() + 0.5, safe.m_123342_(), safe.m_123343_() + 0.5, player.m_146908_(), player.m_146909_()
-                     );
+                     TeleportUtil.teleport(player, level, safe.getX() + 0.5, safe.getY(), safe.getZ() + 0.5, player.getYRot(), player.getXRot());
                      return RandomTeleportService.RtpResult.success(safe, "Teleported to random location in " + this.dimensionName(level) + ".");
                   }
                }
@@ -57,15 +55,15 @@ public final class RandomTeleportService {
    }
 
    private BlockPos generateCandidate(ServerLevel level) {
-      WorldBorder border = level.m_6857_();
+      WorldBorder border = level.getWorldBorder();
       int minX = -10000;
       int maxX = 10000;
       int minZ = -10000;
       int maxZ = 10000;
-      int borderMinX = (int)Math.ceil(border.m_61955_());
-      int borderMaxX = (int)Math.floor(border.m_61957_());
-      int borderMinZ = (int)Math.ceil(border.m_61956_());
-      int borderMaxZ = (int)Math.floor(border.m_61958_());
+      int borderMinX = (int)Math.ceil(border.getMinX());
+      int borderMaxX = (int)Math.floor(border.getMaxX());
+      int borderMinZ = (int)Math.ceil(border.getMinZ());
+      int borderMaxZ = (int)Math.floor(border.getMaxZ());
       if (borderMinX > minX) {
          minX = borderMinX;
       }
@@ -85,7 +83,7 @@ public final class RandomTeleportService {
       if (minX <= maxX && minZ <= maxZ) {
          int x = this.randomBetween(minX, maxX);
          int z = this.randomBetween(minZ, maxZ);
-         return new BlockPos(x, level.m_5736_(), z);
+         return new BlockPos(x, level.getSeaLevel(), z);
       } else {
          return null;
       }
@@ -96,9 +94,9 @@ public final class RandomTeleportService {
    }
 
    private BlockPos findSafePosition(ServerLevel level, int x, int z) {
-      int top = level.m_6924_(Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-      int maxY = Math.min(top, level.m_151558_() - 2);
-      int minY = level.m_141937_() + 1;
+      int top = level.getHeight(Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+      int maxY = Math.min(top, ServerCoreAccess.getMaxBuildHeight(level) - 2);
+      int minY = ServerCoreAccess.getMinBuildHeight(level) + 1;
 
       for (int y = maxY; y >= minY; y--) {
          BlockPos feet = new BlockPos(x, y, z);
@@ -111,37 +109,37 @@ public final class RandomTeleportService {
    }
 
    private boolean isSafeStandPosition(ServerLevel level, BlockPos feet) {
-      BlockPos head = feet.m_7494_();
-      BlockPos ground = feet.m_7495_();
-      BlockState feetState = level.m_8055_(feet);
-      BlockState headState = level.m_8055_(head);
-      BlockState groundState = level.m_8055_(ground);
+      BlockPos head = feet.above();
+      BlockPos ground = feet.below();
+      BlockState feetState = level.getBlockState(feet);
+      BlockState headState = level.getBlockState(head);
+      BlockState groundState = level.getBlockState(ground);
       return this.isPassable(feetState) && this.isPassable(headState) && this.isSolidGround(groundState);
    }
 
    private boolean isPassable(BlockState state) {
-      return !state.m_60819_().m_76178_() ? false : state.m_60795_();
+      return !state.getFluidState().isEmpty() ? false : state.isAir();
    }
 
    private boolean isSolidGround(BlockState state) {
-      if (!state.m_60819_().m_76178_()) {
+      if (!state.getFluidState().isEmpty()) {
          return false;
       } else {
-         return state.m_60795_() ? false : !this.isDangerous(state.m_60734_());
+         return state.isAir() ? false : !this.isDangerous(state.getBlock());
       }
    }
 
    private boolean isDangerous(Block block) {
-      return block == Blocks.f_49991_ || block == Blocks.f_50083_ || block instanceof FireBlock || block instanceof CactusBlock || block instanceof MagmaBlock;
+      return block == Blocks.LAVA || block == Blocks.FIRE || block instanceof FireBlock || block instanceof CactusBlock || block instanceof MagmaBlock;
    }
 
    private String dimensionName(ServerLevel level) {
-      if (level.m_46472_().equals(Level.f_46428_)) {
+      if (level.dimension().equals(Level.OVERWORLD)) {
          return "the Overworld";
-      } else if (level.m_46472_().equals(Level.f_46429_)) {
+      } else if (level.dimension().equals(Level.NETHER)) {
          return "the Nether";
       } else {
-         return level.m_46472_().equals(Level.f_46430_) ? "the End" : level.m_46472_().m_135782_().toString();
+         return level.dimension().equals(Level.END) ? "the End" : level.dimension().location().toString();
       }
    }
 

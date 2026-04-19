@@ -7,8 +7,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 
 public final class HomeService {
    private static final Pattern HOME_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{1,32}$");
@@ -21,27 +22,18 @@ public final class HomeService {
       return INSTANCE;
    }
 
-   public synchronized HomeRecord setHome(MinecraftServer server, ServerPlayerEntity player, String rawName) {
+   public synchronized HomeRecord setHome(MinecraftServer server, ServerPlayer player, String rawName) {
       String homeName = sanitizeHomeName(rawName);
       if (server != null && player != null && homeName != null) {
          String key = normalizeKey(homeName);
-         String dimension = TeleportUtil.dimensionKey(PlayerUtil.getServerWorld(player));
-         HomeRecord record = new HomeRecord(
-            key,
-            homeName,
-            dimension,
-            PlayerUtil.getX(player),
-            PlayerUtil.getY(player),
-            PlayerUtil.getZ(player),
-            RotationUtil.getYaw(player),
-            RotationUtil.getPitch(player)
-         );
-         UUID uuid = PlayerUtil.getUuid(player);
-         if (uuid == null) {
+         ServerLevel level = ServerCoreAccess.getServerLevel(player);
+         if (level == null) {
             return null;
          } else {
+            String dimension = TeleportUtil.dimensionKey(level);
+            HomeRecord record = new HomeRecord(key, homeName, dimension, player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
             ServerCoreData data = ServerCoreData.get(server);
-            data.putHome(uuid, record);
+            data.putHome(player.getUUID(), record);
             return record;
          }
       } else {

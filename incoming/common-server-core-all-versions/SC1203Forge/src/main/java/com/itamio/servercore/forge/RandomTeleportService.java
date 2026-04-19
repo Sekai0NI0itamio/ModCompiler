@@ -28,8 +28,8 @@ public final class RandomTeleportService {
    }
 
    public RandomTeleportService.RtpResult teleport(ServerPlayer player, String dimensionKey) {
-      if (player != null && player.getServer() != null) {
-         MinecraftServer server = player.getServer();
+      MinecraftServer server = ServerCoreAccess.getServer(player);
+      if (player != null && server != null) {
          ServerLevel level = TeleportUtil.resolveLevel(server, dimensionKey);
          if (level == null) {
             return RandomTeleportService.RtpResult.failure("Target dimension is not loaded.");
@@ -95,8 +95,8 @@ public final class RandomTeleportService {
 
    private BlockPos findSafePosition(ServerLevel level, int x, int z) {
       int top = level.getHeight(Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-      int maxY = Math.min(top, level.getMaxBuildHeight() - 2);
-      int minY = level.getMinBuildHeight() + 1;
+      int maxY = Math.min(top, ServerCoreAccess.getMaxBuildHeight(level) - 2);
+      int minY = ServerCoreAccess.getMinBuildHeight(level) + 1;
 
       for (int y = maxY; y >= minY; y--) {
          BlockPos feet = new BlockPos(x, y, z);

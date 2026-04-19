@@ -105,57 +105,63 @@ public final class ServerCoreData extends SavedData {
       }
    }
 
-   private static Object createSavedDataFactory(Object dataFixTypes) {
-      try {
-         Class<?> factoryClass = Class.forName("net.minecraft.world.level.saveddata.SavedData$Factory");
-         if (dataFixTypes != null) {
+   private static Object tryCreateWithFactory(Class<?> savedDataTypeClass, Object factory, Object dataFixTypes) {
+      if (dataFixTypes != null) {
+         try {
+            Constructor<?> ctor = savedDataTypeClass.getConstructor(String.class, factory.getClass(), dataFixTypes.getClass());
+            return ctor.newInstance("servercore", factory, dataFixTypes);
+         } catch (ReflectiveOperationException var7) {
             try {
-               Constructor<?> ctor = factoryClass.getConstructor(Supplier.class, Function.class, dataFixTypes.getClass());
-               return ctor.newInstance(ServerCoreData::new, ServerCoreData::load, dataFixTypes);
-            } catch (ReflectiveOperationException var4) {
+               Method method = savedDataTypeClass.getMethod("create", String.class, factory.getClass(), dataFixTypes.getClass());
+               return method.invoke(null, "servercore", factory, dataFixTypes);
+            } catch (ReflectiveOperationException var6) {
             }
          }
+      }
 
+      try {
+         Constructor<?> ctor = savedDataTypeClass.getConstructor(String.class, factory.getClass());
+         return ctor.newInstance("servercore", factory);
+      } catch (ReflectiveOperationException var5) {
          try {
-            Constructor<?> ctor = factoryClass.getConstructor(Supplier.class, Function.class);
-            return ctor.newInstance(ServerCoreData::new, ServerCoreData::load);
-         } catch (ReflectiveOperationException var3) {
+            Method method = savedDataTypeClass.getMethod("create", String.class, factory.getClass());
+            return method.invoke(null, "servercore", factory);
+         } catch (ReflectiveOperationException var4) {
             return null;
          }
-      } catch (ClassNotFoundException var5) {
-         return null;
       }
    }
 
-   private static Object tryCreateWithFactory(Class<?> savedDataTypeClass, Object factory, Object dataFixTypes) {
-      if (factory == null) {
-         return null;
-      } else {
-         if (dataFixTypes != null) {
-            try {
-               Constructor<?> ctor = savedDataTypeClass.getConstructor(String.class, factory.getClass(), dataFixTypes.getClass());
-               return ctor.newInstance("servercore", factory, dataFixTypes);
-            } catch (ReflectiveOperationException var7) {
-               try {
-                  Method method = savedDataTypeClass.getMethod("create", String.class, factory.getClass(), dataFixTypes.getClass());
-                  return method.invoke(null, "servercore", factory, dataFixTypes);
-               } catch (ReflectiveOperationException var6) {
+   private static Object createSavedDataFactory(Object dataFixTypes) {
+      try {
+         Class<?> factoryClass = Class.forName("net.minecraft.world.level.saveddata.SavedData$Factory");
+         Function<CompoundTag, ServerCoreData> loader = ServerCoreData::load;
+         Supplier<ServerCoreData> supplier = ServerCoreData::new;
+
+         for (Constructor<?> ctor : factoryClass.getConstructors()) {
+            Class<?>[] params = ctor.getParameterTypes();
+            if (params.length == 2 && isSupplier(params[0]) && isFunction(params[1])) {
+               return ctor.newInstance(supplier, loader);
+            }
+
+            if (params.length == 2 && isFunction(params[0]) && isSupplier(params[1])) {
+               return ctor.newInstance(loader, supplier);
+            }
+
+            if (params.length == 3 && dataFixTypes != null && params[2].isInstance(dataFixTypes)) {
+               if (isSupplier(params[0]) && isFunction(params[1])) {
+                  return ctor.newInstance(supplier, loader, dataFixTypes);
+               }
+
+               if (isFunction(params[0]) && isSupplier(params[1])) {
+                  return ctor.newInstance(loader, supplier, dataFixTypes);
                }
             }
          }
-
-         try {
-            Constructor<?> ctor = savedDataTypeClass.getConstructor(String.class, factory.getClass());
-            return ctor.newInstance("servercore", factory);
-         } catch (ReflectiveOperationException var5) {
-            try {
-               Method method = savedDataTypeClass.getMethod("create", String.class, factory.getClass());
-               return method.invoke(null, "servercore", factory);
-            } catch (ReflectiveOperationException var4) {
-               return null;
-            }
-         }
+      } catch (ReflectiveOperationException var9) {
       }
+
+      return null;
    }
 
    private static Object getDataFixTypes() {

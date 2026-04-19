@@ -26,14 +26,16 @@ public final class HomeService {
       String homeName = sanitizeHomeName(rawName);
       if (server != null && player != null && homeName != null) {
          String key = normalizeKey(homeName);
-         ServerLevel level = player.m_183503_();
-         String dimension = TeleportUtil.dimensionKey(level);
-         HomeRecord record = new HomeRecord(
-            key, homeName, dimension, player.m_20185_(), player.m_20186_(), player.m_20189_(), player.m_146908_(), player.m_146909_()
-         );
-         ServerCoreData data = ServerCoreData.get(server);
-         data.putHome(player.m_142081_(), record);
-         return record;
+         ServerLevel level = ServerCoreAccess.getServerLevel(player);
+         if (level == null) {
+            return null;
+         } else {
+            String dimension = TeleportUtil.dimensionKey(level);
+            HomeRecord record = new HomeRecord(key, homeName, dimension, player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
+            ServerCoreData data = ServerCoreData.get(server);
+            data.putHome(player.getUUID(), record);
+            return record;
+         }
       } else {
          return null;
       }

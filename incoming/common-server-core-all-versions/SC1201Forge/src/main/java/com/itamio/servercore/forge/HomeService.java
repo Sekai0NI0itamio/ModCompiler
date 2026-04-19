@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class HomeService {
@@ -25,11 +26,16 @@ public final class HomeService {
       String homeName = sanitizeHomeName(rawName);
       if (server != null && player != null && homeName != null) {
          String key = normalizeKey(homeName);
-         String dimension = TeleportUtil.dimensionKey(player.serverLevel());
-         HomeRecord record = new HomeRecord(key, homeName, dimension, player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
-         ServerCoreData data = ServerCoreData.get(server);
-         data.putHome(player.getUUID(), record);
-         return record;
+         ServerLevel level = ServerCoreAccess.getServerLevel(player);
+         if (level == null) {
+            return null;
+         } else {
+            String dimension = TeleportUtil.dimensionKey(level);
+            HomeRecord record = new HomeRecord(key, homeName, dimension, player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
+            ServerCoreData data = ServerCoreData.get(server);
+            data.putHome(player.getUUID(), record);
+            return record;
+         }
       } else {
          return null;
       }

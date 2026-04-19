@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CactusBlock;
@@ -133,15 +134,12 @@ public final class RandomTeleportService {
    }
 
    private String dimensionName(ServerLevel level) {
-      String dimensionKey = TeleportUtil.dimensionKey(level);
-      if ("minecraft:overworld".equals(dimensionKey)) {
+      if (level.dimension().equals(Level.OVERWORLD)) {
          return "the Overworld";
-      } else if ("minecraft:the_nether".equals(dimensionKey)) {
+      } else if (level.dimension().equals(Level.NETHER)) {
          return "the Nether";
-      } else if ("minecraft:the_end".equals(dimensionKey)) {
-         return "the End";
       } else {
-         return dimensionKey == null ? "unknown dimension" : dimensionKey;
+         return level.dimension().equals(Level.END) ? "the End" : level.dimension().location().toString();
       }
    }
 

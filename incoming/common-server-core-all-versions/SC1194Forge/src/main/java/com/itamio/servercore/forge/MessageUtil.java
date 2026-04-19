@@ -11,7 +11,7 @@ public final class MessageUtil {
 
    public static void send(ServerPlayer player, String message) {
       if (player != null) {
-         Component component = Component.m_237113_(message);
+         Component component = Component.literal(message);
 
          try {
             Method method = player.getClass().getMethod("sendSystemMessage", Component.class);
@@ -19,7 +19,7 @@ public final class MessageUtil {
          } catch (ReflectiveOperationException var6) {
             try {
                Method methodx = player.getClass().getMethod("sendMessage", Component.class, UUID.class);
-               methodx.invoke(player, component, player.m_20148_());
+               methodx.invoke(player, component, player.getUUID());
             } catch (ReflectiveOperationException var5) {
                try {
                   Method methodxx = player.getClass().getMethod("sendMessage", Component.class);

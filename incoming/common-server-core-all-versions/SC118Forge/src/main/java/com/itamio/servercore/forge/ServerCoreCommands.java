@@ -20,63 +20,63 @@ public final class ServerCoreCommands {
 
    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("tpa").requires(source -> source.m_81373_() instanceof ServerPlayer))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpa").requires(source -> source.getEntity() instanceof ServerPlayer))
             .then(
-               Commands.m_82129_("player", EntityArgument.m_91466_())
-                  .executes(ctx -> handleTpa(ctx, EntityArgument.m_91474_(ctx, "player"), TeleportRequestService.RequestType.TPA))
+               Commands.argument("player", EntityArgument.player())
+                  .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), TeleportRequestService.RequestType.TPA))
             )
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("tpahere").requires(source -> source.m_81373_() instanceof ServerPlayer))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpahere").requires(source -> source.getEntity() instanceof ServerPlayer))
             .then(
-               Commands.m_82129_("player", EntityArgument.m_91466_())
-                  .executes(ctx -> handleTpa(ctx, EntityArgument.m_91474_(ctx, "player"), TeleportRequestService.RequestType.TPAHERE))
+               Commands.argument("player", EntityArgument.player())
+                  .executes(ctx -> handleTpa(ctx, EntityArgument.getPlayer(ctx, "player"), TeleportRequestService.RequestType.TPAHERE))
             )
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("tpaccept")
-                  .requires(source -> source.m_81373_() instanceof ServerPlayer))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpaccept")
+                  .requires(source -> source.getEntity() instanceof ServerPlayer))
                .executes(ctx -> handleTpaccept(ctx, null)))
-            .then(Commands.m_82129_("player", StringArgumentType.word()).executes(ctx -> handleTpaccept(ctx, StringArgumentType.getString(ctx, "player"))))
+            .then(Commands.argument("player", StringArgumentType.word()).executes(ctx -> handleTpaccept(ctx, StringArgumentType.getString(ctx, "player"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("tpacceptall").requires(source -> source.m_81373_() instanceof ServerPlayer))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpacceptall").requires(source -> source.getEntity() instanceof ServerPlayer))
             .executes(ServerCoreCommands::handleTpacceptAll)
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("tpadeny")
-                  .requires(source -> source.m_81373_() instanceof ServerPlayer))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpadeny")
+                  .requires(source -> source.getEntity() instanceof ServerPlayer))
                .executes(ctx -> handleTpadeny(ctx, null)))
-            .then(Commands.m_82129_("player", StringArgumentType.word()).executes(ctx -> handleTpadeny(ctx, StringArgumentType.getString(ctx, "player"))))
+            .then(Commands.argument("player", StringArgumentType.word()).executes(ctx -> handleTpadeny(ctx, StringArgumentType.getString(ctx, "player"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("tpadenyall").requires(source -> source.m_81373_() instanceof ServerPlayer))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpadenyall").requires(source -> source.getEntity() instanceof ServerPlayer))
             .executes(ServerCoreCommands::handleTpadenyAll)
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("tpacancel").requires(source -> source.m_81373_() instanceof ServerPlayer))
-            .then(Commands.m_82129_("player", StringArgumentType.word()).executes(ctx -> handleTpacancel(ctx, StringArgumentType.getString(ctx, "player"))))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("tpacancel").requires(source -> source.getEntity() instanceof ServerPlayer))
+            .then(Commands.argument("player", StringArgumentType.word()).executes(ctx -> handleTpacancel(ctx, StringArgumentType.getString(ctx, "player"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("sethome").requires(source -> source.m_81373_() instanceof ServerPlayer))
-            .then(Commands.m_82129_("name", StringArgumentType.word()).executes(ctx -> handleSetHome(ctx, StringArgumentType.getString(ctx, "name"))))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("sethome").requires(source -> source.getEntity() instanceof ServerPlayer))
+            .then(Commands.argument("name", StringArgumentType.word()).executes(ctx -> handleSetHome(ctx, StringArgumentType.getString(ctx, "name"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("home")
-                  .requires(source -> source.m_81373_() instanceof ServerPlayer))
-               .then(Commands.m_82127_("list").executes(ServerCoreCommands::handleHomeList)))
-            .then(Commands.m_82129_("name", StringArgumentType.word()).executes(ctx -> handleHomeTeleport(ctx, StringArgumentType.getString(ctx, "name"))))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("home")
+                  .requires(source -> source.getEntity() instanceof ServerPlayer))
+               .then(Commands.literal("list").executes(ServerCoreCommands::handleHomeList)))
+            .then(Commands.argument("name", StringArgumentType.word()).executes(ctx -> handleHomeTeleport(ctx, StringArgumentType.getString(ctx, "name"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("delhome").requires(source -> source.m_81373_() instanceof ServerPlayer))
-            .then(Commands.m_82129_("name", StringArgumentType.word()).executes(ctx -> handleDelHome(ctx, StringArgumentType.getString(ctx, "name"))))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("delhome").requires(source -> source.getEntity() instanceof ServerPlayer))
+            .then(Commands.argument("name", StringArgumentType.word()).executes(ctx -> handleDelHome(ctx, StringArgumentType.getString(ctx, "name"))))
       );
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.m_82127_("rtp")
-                     .requires(source -> source.m_81373_() instanceof ServerPlayer))
-                  .then(Commands.m_82127_("overworld").executes(ctx -> handleRtp(ctx, Level.f_46428_.m_135782_().toString()))))
-               .then(Commands.m_82127_("nether").executes(ctx -> handleRtp(ctx, Level.f_46429_.m_135782_().toString()))))
-            .then(Commands.m_82127_("end").executes(ctx -> handleRtp(ctx, Level.f_46430_.m_135782_().toString())))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("rtp")
+                     .requires(source -> source.getEntity() instanceof ServerPlayer))
+                  .then(Commands.literal("overworld").executes(ctx -> handleRtp(ctx, Level.OVERWORLD.location().toString()))))
+               .then(Commands.literal("nether").executes(ctx -> handleRtp(ctx, Level.NETHER.location().toString()))))
+            .then(Commands.literal("end").executes(ctx -> handleRtp(ctx, Level.END.location().toString())))
       );
    }
 
@@ -84,31 +84,31 @@ public final class ServerCoreCommands {
       ServerPlayer sender = requirePlayer(ctx);
       if (sender == null) {
          return 0;
-      } else if (sender.m_142081_().equals(target.m_142081_())) {
+      } else if (sender.getUUID().equals(target.getUUID())) {
          MessageUtil.send(sender, "You cannot teleport to yourself.");
          return 0;
       } else {
          TeleportRequestService.getInstance()
-            .upsertRequest(sender.m_142081_(), sender.m_36316_().getName(), target.m_142081_(), target.m_36316_().getName(), type);
-         MessageUtil.send(sender, "Teleport request sent to " + target.m_36316_().getName() + ".");
+            .upsertRequest(sender.getUUID(), ServerCoreAccess.getPlayerName(sender), target.getUUID(), ServerCoreAccess.getPlayerName(target), type);
+         MessageUtil.send(sender, "Teleport request sent to " + ServerCoreAccess.getPlayerName(target) + ".");
          if (type == TeleportRequestService.RequestType.TPA) {
             MessageUtil.send(
                target,
-               sender.m_36316_().getName()
+               ServerCoreAccess.getPlayerName(sender)
                   + " wants to teleport to you. Use /tpaccept "
-                  + sender.m_36316_().getName()
+                  + ServerCoreAccess.getPlayerName(sender)
                   + " or /tpadeny "
-                  + sender.m_36316_().getName()
+                  + ServerCoreAccess.getPlayerName(sender)
                   + "."
             );
          } else {
             MessageUtil.send(
                target,
-               sender.m_36316_().getName()
+               ServerCoreAccess.getPlayerName(sender)
                   + " wants you to teleport to them. Use /tpaccept "
-                  + sender.m_36316_().getName()
+                  + ServerCoreAccess.getPlayerName(sender)
                   + " or /tpadeny "
-                  + sender.m_36316_().getName()
+                  + ServerCoreAccess.getPlayerName(sender)
                   + "."
             );
          }
@@ -125,9 +125,9 @@ public final class ServerCoreCommands {
          TeleportRequestService service = TeleportRequestService.getInstance();
          TeleportRequestService.TeleportRequest request;
          if (requesterName != null && !requesterName.isEmpty()) {
-            request = service.popIncoming(target.m_142081_(), requesterName);
+            request = service.popIncoming(target.getUUID(), requesterName);
          } else {
-            request = service.popAllIncoming(target.m_142081_()).stream().findFirst().orElse(null);
+            request = service.popAllIncoming(target.getUUID()).stream().findFirst().orElse(null);
          }
 
          if (request == null) {
@@ -146,7 +146,7 @@ public final class ServerCoreCommands {
       } else {
          int success = 0;
 
-         for (TeleportRequestService.TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.m_142081_())) {
+         for (TeleportRequestService.TeleportRequest request : TeleportRequestService.getInstance().popAllIncoming(target.getUUID())) {
             success += completeTeleport(target, request);
          }
 
@@ -166,9 +166,9 @@ public final class ServerCoreCommands {
          TeleportRequestService service = TeleportRequestService.getInstance();
          TeleportRequestService.TeleportRequest request;
          if (requesterName != null && !requesterName.isEmpty()) {
-            request = service.popIncoming(target.m_142081_(), requesterName);
+            request = service.popIncoming(target.getUUID(), requesterName);
          } else {
-            request = service.popAllIncoming(target.m_142081_()).stream().findFirst().orElse(null);
+            request = service.popAllIncoming(target.getUUID()).stream().findFirst().orElse(null);
          }
 
          if (request == null) {
@@ -186,7 +186,7 @@ public final class ServerCoreCommands {
       if (target == null) {
          return 0;
       } else {
-         int denied = TeleportRequestService.getInstance().popAllIncoming(target.m_142081_()).size();
+         int denied = TeleportRequestService.getInstance().popAllIncoming(target.getUUID()).size();
          MessageUtil.send(target, denied == 0 ? "No pending teleport requests." : "Denied " + denied + " requests.");
          return denied;
       }
@@ -197,38 +197,41 @@ public final class ServerCoreCommands {
       if (requester == null) {
          return 0;
       } else {
-         int removed = TeleportRequestService.getInstance().cancelOutgoing(requester.m_142081_(), targetNameOrAll);
+         int removed = TeleportRequestService.getInstance().cancelOutgoing(requester.getUUID(), targetNameOrAll);
          MessageUtil.send(requester, removed == 0 ? "No pending outgoing requests." : "Cancelled " + removed + " request(s).");
          return removed;
       }
    }
 
    private static int completeTeleport(ServerPlayer target, TeleportRequestService.TeleportRequest request) {
-      MinecraftServer server = target.m_20194_();
+      MinecraftServer server = ServerCoreAccess.getServer(target);
       if (server == null) {
          MessageUtil.send(target, "Server unavailable.");
          return 0;
       } else {
-         ServerPlayer requester = server.m_6846_().m_11259_(request.getRequesterUuid());
+         ServerPlayer requester = server.getPlayerList().getPlayer(request.getRequesterUuid());
          if (requester == null) {
             MessageUtil.send(target, "Requester is offline.");
             return 0;
          } else {
-            if (request.getType() == TeleportRequestService.RequestType.TPA) {
-               TeleportUtil.teleport(
-                  requester, target.m_183503_(), target.m_20185_(), target.m_20186_(), target.m_20189_(), target.m_146908_(), target.m_146909_()
-               );
-               MessageUtil.send(requester, "Teleporting to " + target.m_36316_().getName() + ".");
-               MessageUtil.send(target, "Accepted teleport request from " + requester.m_36316_().getName() + ".");
-            } else {
-               TeleportUtil.teleport(
-                  target, requester.m_183503_(), requester.m_20185_(), requester.m_20186_(), requester.m_20189_(), requester.m_146908_(), requester.m_146909_()
-               );
-               MessageUtil.send(target, "Teleporting to " + requester.m_36316_().getName() + ".");
-               MessageUtil.send(requester, target.m_36316_().getName() + " accepted your request.");
-            }
+            ServerLevel targetLevel = ServerCoreAccess.getServerLevel(target);
+            ServerLevel requesterLevel = ServerCoreAccess.getServerLevel(requester);
+            if (targetLevel != null && requesterLevel != null) {
+               if (request.getType() == TeleportRequestService.RequestType.TPA) {
+                  TeleportUtil.teleport(requester, targetLevel, target.getX(), target.getY(), target.getZ(), target.getYRot(), target.getXRot());
+                  MessageUtil.send(requester, "Teleporting to " + ServerCoreAccess.getPlayerName(target) + ".");
+                  MessageUtil.send(target, "Accepted teleport request from " + ServerCoreAccess.getPlayerName(requester) + ".");
+               } else {
+                  TeleportUtil.teleport(target, requesterLevel, requester.getX(), requester.getY(), requester.getZ(), requester.getYRot(), requester.getXRot());
+                  MessageUtil.send(target, "Teleporting to " + ServerCoreAccess.getPlayerName(requester) + ".");
+                  MessageUtil.send(requester, ServerCoreAccess.getPlayerName(target) + " accepted your request.");
+               }
 
-            return 1;
+               return 1;
+            } else {
+               MessageUtil.send(target, "Target level unavailable.");
+               return 0;
+            }
          }
       }
    }
@@ -238,7 +241,7 @@ public final class ServerCoreCommands {
       if (player == null) {
          return 0;
       } else {
-         HomeRecord record = HomeService.getInstance().setHome(((CommandSourceStack)ctx.getSource()).m_81377_(), player, name);
+         HomeRecord record = HomeService.getInstance().setHome(((CommandSourceStack)ctx.getSource()).getServer(), player, name);
          if (record == null) {
             MessageUtil.send(player, "Invalid home name.");
             return 0;
@@ -254,7 +257,7 @@ public final class ServerCoreCommands {
       if (player == null) {
          return 0;
       } else {
-         List<HomeRecord> homes = HomeService.getInstance().listHomes(((CommandSourceStack)ctx.getSource()).m_81377_(), player.m_142081_());
+         List<HomeRecord> homes = HomeService.getInstance().listHomes(((CommandSourceStack)ctx.getSource()).getServer(), player.getUUID());
          if (homes.isEmpty()) {
             MessageUtil.send(player, "You have no homes.");
             return 0;
@@ -280,12 +283,12 @@ public final class ServerCoreCommands {
       if (player == null) {
          return 0;
       } else {
-         HomeRecord record = HomeService.getInstance().getHome(((CommandSourceStack)ctx.getSource()).m_81377_(), player.m_142081_(), name);
+         HomeRecord record = HomeService.getInstance().getHome(((CommandSourceStack)ctx.getSource()).getServer(), player.getUUID(), name);
          if (record == null) {
             MessageUtil.send(player, "Home not found.");
             return 0;
          } else {
-            ServerLevel level = TeleportUtil.resolveLevel(((CommandSourceStack)ctx.getSource()).m_81377_(), record.getDimension());
+            ServerLevel level = TeleportUtil.resolveLevel(((CommandSourceStack)ctx.getSource()).getServer(), record.getDimension());
             if (level == null) {
                MessageUtil.send(player, "Target dimension is not available.");
                return 0;
@@ -303,7 +306,7 @@ public final class ServerCoreCommands {
       if (player == null) {
          return 0;
       } else {
-         boolean removed = HomeService.getInstance().deleteHome(((CommandSourceStack)ctx.getSource()).m_81377_(), player.m_142081_(), name);
+         boolean removed = HomeService.getInstance().deleteHome(((CommandSourceStack)ctx.getSource()).getServer(), player.getUUID(), name);
          MessageUtil.send(player, removed ? "Home deleted." : "Home not found.");
          return removed ? 1 : 0;
       }
@@ -322,7 +325,7 @@ public final class ServerCoreCommands {
 
    private static ServerPlayer requirePlayer(CommandContext<CommandSourceStack> ctx) {
       try {
-         return ((CommandSourceStack)ctx.getSource()).m_81375_();
+         return ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
       } catch (CommandSyntaxException var2) {
          return null;
       }
