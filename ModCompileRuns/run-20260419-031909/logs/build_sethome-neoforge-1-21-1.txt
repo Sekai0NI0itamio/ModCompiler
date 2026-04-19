@@ -1,0 +1,376 @@
+build (sethome-neoforge-1-21-1)	Set up job	﻿2026-04-19T03:19:29.7998317Z Current runner version: '2.333.1'
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8025046Z ##[group]Runner Image Provisioner
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8026292Z Hosted Compute Agent
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8026994Z Version: 20260213.493
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8027601Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8028286Z Build Date: 2026-02-13T00:28:41Z
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8029005Z Worker ID: {bdafb422-fea7-46ad-b683-947c1c6101d3}
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8029692Z Azure Region: northcentralus
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8030232Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8031868Z ##[group]Operating System
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8032449Z Ubuntu
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8032924Z 24.04.4
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8033409Z LTS
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8033932Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8034397Z ##[group]Runner Image
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8035021Z Image: ubuntu-24.04
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8035551Z Version: 20260413.86.1
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8036777Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8038447Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8039333Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8040459Z ##[group]GITHUB_TOKEN Permissions
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8042593Z Contents: read
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8043112Z Metadata: read
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8043721Z Packages: read
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8044457Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8046829Z Secret source: Actions
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8047845Z Prepare workflow directory
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8397102Z Prepare all required actions
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:29.8434835Z Getting action download info
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:30.2361028Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:30.7293196Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:30.9400053Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:31.4590556Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:31.6563577Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:32.0861096Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build (sethome-neoforge-1-21-1)	Set up job	2026-04-19T03:19:32.4019181Z Complete job name: build (sethome-neoforge-1-21-1)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	﻿2026-04-19T03:19:32.4727628Z ##[group]Run actions/checkout@v4
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4728422Z with:
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4729001Z   repository: Sekai0NI0itamio/ModCompiler
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4729668Z   token: ***
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4730009Z   ssh-strict: true
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4730478Z   ssh-user: git
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4730841Z   persist-credentials: true
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4731257Z   clean: true
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4731724Z   sparse-checkout-cone-mode: true
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4732179Z   fetch-depth: 1
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4732605Z   fetch-tags: false
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4733057Z   show-progress: true
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4733454Z   lfs: false
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4733779Z   submodules: false
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4734249Z   set-safe-directory: true
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.4734907Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5822190Z Syncing repository: Sekai0NI0itamio/ModCompiler
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5824213Z ##[group]Getting Git version info
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5824885Z Working directory is '/home/runner/work/ModCompiler/ModCompiler'
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5826251Z [command]/usr/bin/git version
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5857345Z git version 2.53.0
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5883656Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5899560Z Temporarily overriding HOME='/home/runner/work/_temp/87a68a8c-7281-402a-8a5d-f4b9312ec577' before making global git config changes
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5901708Z Adding repository directory to the temporary git global config as a safe directory
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5913327Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5944922Z Deleting the contents of '/home/runner/work/ModCompiler/ModCompiler'
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5949181Z ##[group]Initializing the repository
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.5953681Z [command]/usr/bin/git init /home/runner/work/ModCompiler/ModCompiler
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6029890Z hint: Using 'master' as the name for the initial branch. This default branch name
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6031384Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6032517Z hint: to use in all of your new repositories, which will suppress this warning,
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6033161Z hint: call:
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6033653Z hint:
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6034121Z hint: 	git config --global init.defaultBranch <name>
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6034655Z hint:
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6035175Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6036449Z hint: 'development'. The just-created branch can be renamed via this command:
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6037382Z hint:
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6037875Z hint: 	git branch -m <name>
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6038329Z hint:
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6038880Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6039988Z Initialized empty Git repository in /home/runner/work/ModCompiler/ModCompiler/.git/
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6041966Z [command]/usr/bin/git remote add origin https://github.com/Sekai0NI0itamio/ModCompiler
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6070807Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6071538Z ##[group]Disabling automatic garbage collection
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6074554Z [command]/usr/bin/git config --local gc.auto 0
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6101412Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6102104Z ##[group]Setting up auth
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6108287Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6137167Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6406391Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6435956Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6648672Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6678504Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6903499Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6937025Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6938022Z ##[group]Fetching the repository
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:32.6944687Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +25b940513f781f5d6356e340b099c129db578b0b:refs/remotes/origin/main
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.5994542Z From https://github.com/Sekai0NI0itamio/ModCompiler
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.5995498Z  * [new ref]         25b940513f781f5d6356e340b099c129db578b0b -> origin/main
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.6026433Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.6027992Z ##[group]Determining the checkout info
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.6029019Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.6036355Z [command]/usr/bin/git sparse-checkout disable
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.6076553Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.6104024Z ##[group]Checking out the ref
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:36.6107735Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.6750205Z Updating files:  56% (5054/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.6805458Z Updating files:  57% (5135/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.6857871Z Updating files:  58% (5225/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.6934445Z Updating files:  59% (5315/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.6989255Z Updating files:  60% (5405/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7043109Z Updating files:  61% (5495/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7093575Z Updating files:  62% (5585/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7141711Z Updating files:  63% (5676/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7200378Z Updating files:  64% (5766/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7236329Z Updating files:  65% (5856/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7270292Z Updating files:  66% (5946/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7336106Z Updating files:  67% (6036/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7377995Z Updating files:  68% (6126/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7441025Z Updating files:  69% (6216/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7498685Z Updating files:  70% (6306/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7541873Z Updating files:  71% (6396/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7599759Z Updating files:  72% (6486/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7649907Z Updating files:  73% (6576/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7696082Z Updating files:  74% (6666/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7742201Z Updating files:  75% (6756/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7790092Z Updating files:  76% (6847/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7879204Z Updating files:  77% (6937/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.7936570Z Updating files:  78% (7027/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8014352Z Updating files:  79% (7117/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8089350Z Updating files:  80% (7207/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8161522Z Updating files:  81% (7297/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8235011Z Updating files:  82% (7387/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8309596Z Updating files:  83% (7477/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8393773Z Updating files:  84% (7567/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8485885Z Updating files:  85% (7657/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8540800Z Updating files:  86% (7747/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8592204Z Updating files:  87% (7837/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8657292Z Updating files:  88% (7928/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8726414Z Updating files:  89% (8018/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8800777Z Updating files:  90% (8108/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.8895417Z Updating files:  91% (8198/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.9030971Z Updating files:  92% (8288/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.9178809Z Updating files:  93% (8378/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.9223237Z Updating files:  94% (8468/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.9266576Z Updating files:  95% (8558/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.9311314Z Updating files:  96% (8648/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.9385739Z Updating files:  97% (8738/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:37.9478703Z Updating files:  98% (8828/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:38.1766251Z Updating files:  99% (8918/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:38.1766818Z Updating files: 100% (9008/9008)
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:38.1767594Z Updating files: 100% (9008/9008), done.
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:38.1910544Z Switched to a new branch 'main'
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:38.1913276Z branch 'main' set up to track 'origin/main'.
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:38.1999899Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:38.2038699Z [command]/usr/bin/git log -1 --format=%H
+build (sethome-neoforge-1-21-1)	Run actions/checkout@v4	2026-04-19T03:19:38.2059563Z 25b940513f781f5d6356e340b099c129db578b0b
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	﻿2026-04-19T03:19:38.2284166Z ##[group]Run actions/setup-python@v5
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.2284449Z with:
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.2284635Z   python-version: 3.12
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.2284872Z   check-latest: false
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.2285215Z   token: ***
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.2285410Z   update-environment: true
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.2285908Z   allow-prereleases: false
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.2286142Z   freethreaded: false
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.2286338Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.3908418Z ##[group]Installed versions
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.4423052Z Successfully set up CPython (3.12.13)
+build (sethome-neoforge-1-21-1)	Run actions/setup-python@v5	2026-04-19T03:19:38.4423699Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	﻿2026-04-19T03:19:38.4578597Z ##[group]Run actions/setup-java@v4
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4578866Z with:
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4579045Z   distribution: temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4579255Z   java-version: 8
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	16
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	17
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	21
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4579469Z   java-package: jdk
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4579663Z   check-latest: false
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4579852Z   server-id: github
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4580047Z   server-username: GITHUB_ACTOR
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4580279Z   server-password: GITHUB_TOKEN
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4580508Z   overwrite-settings: true
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4580714Z   job-status: success
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4581231Z   token: ***
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4581412Z env:
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4581647Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4582077Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4582488Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4582853Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4583255Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4583631Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.4583934Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6597555Z ##[group]Installed distributions
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6900300Z Resolved Java 8.0.482+8 from tool-cache
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6900925Z Setting Java 8.0.482+8 as the default
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6914722Z Creating toolchains.xml for JDK version 8 from temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6992321Z Writing to /home/runner/.m2/toolchains.xml
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6992777Z 
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6992937Z Java configuration:
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6993911Z   Distribution: temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6994448Z   Version: 8.0.482+8
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6995460Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.6996437Z 
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.7013735Z Trying to resolve the latest version from remote
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.8858023Z Resolved latest version as 16.0.2+7
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.8858858Z Trying to download...
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:38.8860620Z Downloading Java 16.0.2+7 (Temurin-Hotspot) from https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_linux_hotspot_16.0.2_7.tar.gz ...
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:40.2486638Z Extracting Java archive...
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:40.2603442Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/0e7d8777-3955-42d7-8fd3-10407f5319c3 -f /home/runner/work/_temp/1ec3a454-ea26-49d8-9d05-ef99f04374d2
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9803982Z Java 16.0.2+7 was downloaded
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9804465Z Setting Java 16.0.2+7 as the default
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9808223Z Creating toolchains.xml for JDK version 16 from temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9846595Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9850855Z 
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9851364Z Java configuration:
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9851897Z   Distribution: temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9852373Z   Version: 16.0.2+7
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9853092Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9853719Z 
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9858522Z Resolved Java 17.0.18+8 from tool-cache
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9859140Z Setting Java 17.0.18+8 as the default
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9863020Z Creating toolchains.xml for JDK version 17 from temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:42.9884175Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0330231Z 
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0330453Z Java configuration:
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0330831Z   Distribution: temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0331229Z   Version: 17.0.18+8
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0331746Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0332222Z 
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0343445Z Resolved Java 21.0.10+7 from tool-cache
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0343913Z Setting Java 21.0.10+7 as the default
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0344438Z Creating toolchains.xml for JDK version 21 from temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0371362Z Overwriting existing file /home/runner/.m2/toolchains.xml
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0796359Z 
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0796761Z Java configuration:
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0797296Z   Distribution: temurin
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0797840Z   Version: 21.0.10+7
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0798583Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0799248Z 
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0800434Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0811997Z Creating settings.xml with server-id: github
+build (sethome-neoforge-1-21-1)	Run actions/setup-java@v4	2026-04-19T03:19:43.0815060Z Writing to /home/runner/.m2/settings.xml
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	﻿2026-04-19T03:19:44.6607430Z ##[group]Run actions/cache@v4
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6607897Z with:
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6608112Z   path: ~/.gradle/caches
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	~/.gradle/wrapper
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6608569Z   key: gradle-Linux-76abed80bf8f6a385406a31bac13182dfb49526a1da128dd8ea69e55f282023b
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6609018Z   restore-keys: gradle-Linux-
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6609265Z   enableCrossOsArchive: false
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6609503Z   fail-on-cache-miss: false
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6609719Z   lookup-only: false
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6609912Z   save-always: false
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6610100Z env:
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6610336Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6610757Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6611158Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6611540Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6611915Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6612319Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6612734Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6613189Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6613663Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6614127Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6614588Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.6614939Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:44.9053368Z Cache hit for: gradle-Linux-76abed80bf8f6a385406a31bac13182dfb49526a1da128dd8ea69e55f282023b
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:46.0166219Z Received 134217728 of 1495142205 (9.0%), 128.0 MBs/sec
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:47.0578880Z Received 402653184 of 1495142205 (26.9%), 188.1 MBs/sec
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:48.0616629Z Received 671088640 of 1495142205 (44.9%), 210.3 MBs/sec
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:49.0742372Z Received 939524096 of 1495142205 (62.8%), 220.8 MBs/sec
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:50.1009010Z Received 1207959552 of 1495142205 (80.8%), 226.6 MBs/sec
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:51.1017329Z Received 1495142205 of 1495142205 (100.0%), 234.3 MBs/sec
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:51.1020210Z Cache Size: ~1426 MB (1495142205 B)
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:51.1066372Z [command]/usr/bin/tar -xf /home/runner/work/_temp/ef242d51-f321-4cb6-91d2-a884e11cfbb9/cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --use-compress-program unzstd
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:54.8080468Z Cache restored successfully
+build (sethome-neoforge-1-21-1)	Run actions/cache@v4	2026-04-19T03:19:54.8866849Z Cache restored from key: gradle-Linux-76abed80bf8f6a385406a31bac13182dfb49526a1da128dd8ea69e55f282023b
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	﻿2026-04-19T03:19:54.9257975Z ##[group]Run actions/download-artifact@v4
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9258306Z with:
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9258522Z   name: prepared-inputs
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9258784Z   path: .workflow_state/prepared
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9259055Z   merge-multiple: false
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9259318Z   repository: Sekai0NI0itamio/ModCompiler
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9259628Z   run-id: 24619885565
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9259834Z env:
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9260110Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9260599Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9261076Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9261500Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9261927Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9262364Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9262844Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9263425Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9263928Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9264398Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9265049Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:54.9265403Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.1212913Z Downloading single artifact
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.2749781Z Preparing to download the following artifacts:
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.2751337Z - prepared-inputs (ID: 6515307239, Size: 48343, Expected Digest: sha256:8d047ccb5112e62932ec3909252cb8d05d85628a1dc16697819e334d084041e0)
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.3677836Z Redirecting to blob download url: https://productionresultssa9.blob.core.windows.net/actions-results/090bf9f7-d1fb-41fd-bcb4-83d3110c0f03/workflow-job-run-ea5d6dcf-d552-5ce4-9652-0102f362aa2e/artifacts/cf3e420318736ca90418bfbff1860f5e9bbdd565b9909d72c83a81eabeb90983.zip
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.3706505Z Starting download of artifact to: /home/runner/work/ModCompiler/ModCompiler/.workflow_state/prepared
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.4723937Z (node:2345) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.4725061Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.5287411Z SHA256 digest of downloaded artifact is 8d047ccb5112e62932ec3909252cb8d05d85628a1dc16697819e334d084041e0
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.5288413Z Artifact download completed successfully.
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.5288910Z Total of 1 artifact(s) downloaded
+build (sethome-neoforge-1-21-1)	Run actions/download-artifact@v4	2026-04-19T03:19:55.5294872Z Download artifact has finished successfully
+build (sethome-neoforge-1-21-1)	Build one mod	﻿2026-04-19T03:19:55.5416202Z ##[group]Run python build_mods.py build-one \
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5416637Z [36;1mpython build_mods.py build-one \[0m
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5417026Z [36;1m  --plan .workflow_state/prepared/build-plan.json \[0m
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5417411Z [36;1m  --manifest version-manifest.json \[0m
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5417761Z [36;1m  --prepared-dir .workflow_state/prepared \[0m
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5418118Z [36;1m  --slug "sethome-neoforge-1-21-1" \[0m
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5418540Z [36;1m  --artifact-dir ".workflow_artifacts/per-mod/sethome-neoforge-1-21-1"[0m
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5496244Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5496606Z env:
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5496878Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5497332Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5497784Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5498176Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5498617Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5499013Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5499449Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5499931Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5500429Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5500916Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5501404Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Build one mod	2026-04-19T03:19:55.5501772Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	﻿2026-04-19T03:20:29.6779668Z ##[group]Run actions/upload-artifact@v4
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6779980Z with:
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6780183Z   name: mod-sethome-neoforge-1-21-1
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6780525Z   path: .workflow_artifacts/per-mod/sethome-neoforge-1-21-1
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6780861Z   if-no-files-found: warn
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6781089Z   compression-level: 6
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6781306Z   overwrite: false
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6781518Z   include-hidden-files: false
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6781741Z env:
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6781989Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6782421Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6783033Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6783413Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6783802Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6784179Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6784643Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6785116Z   JAVA_HOME_8_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/8.0.482-8/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6785591Z   JAVA_HOME_16_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/16.0.2-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6786254Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6786733Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.6787098Z ##[endgroup]
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.9015473Z With the provided path, there will be 4 files uploaded
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.9022007Z Artifact name is valid!
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:29.9023099Z Root directory input is valid!
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:30.0582991Z Beginning upload of artifact content to blob storage
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:30.1988217Z Uploaded bytes 9624
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:30.2322828Z Finished uploading artifact content to blob storage!
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:30.2326002Z SHA256 digest of uploaded artifact zip is 6495bbe9faeb3391c17c3b7e4cf8a3d865e7366541c8f5bb460ac144216a8fba
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:30.2327748Z Finalizing artifact upload
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:30.3648267Z Artifact mod-sethome-neoforge-1-21-1.zip successfully finalized. Artifact ID 6515312722
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:30.3649519Z Artifact mod-sethome-neoforge-1-21-1 has been successfully uploaded! Final size is 9624 bytes. Artifact ID is 6515312722
+build (sethome-neoforge-1-21-1)	Run actions/upload-artifact@v4	2026-04-19T03:20:30.3655817Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/24619885565/artifacts/6515312722
+build (sethome-neoforge-1-21-1)	Post Run actions/cache@v4	﻿2026-04-19T03:20:31.9515108Z Post job cleanup.
+build (sethome-neoforge-1-21-1)	Post Run actions/cache@v4	2026-04-19T03:20:32.0803389Z Cache hit occurred on the primary key gradle-Linux-76abed80bf8f6a385406a31bac13182dfb49526a1da128dd8ea69e55f282023b, not saving cache.
+build (sethome-neoforge-1-21-1)	Post Run actions/setup-java@v4	﻿2026-04-19T03:20:32.0906856Z Post job cleanup.
+build (sethome-neoforge-1-21-1)	Post Run actions/setup-python@v5	﻿2026-04-19T03:20:32.2652276Z Post job cleanup.
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	﻿2026-04-19T03:20:32.4321571Z Post job cleanup.
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5298210Z [command]/usr/bin/git version
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5334854Z git version 2.53.0
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5382817Z Temporarily overriding HOME='/home/runner/work/_temp/20775ada-a13a-4a02-9baf-53dfe59cd0b5' before making global git config changes
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5384204Z Adding repository directory to the temporary git global config as a safe directory
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5394960Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5429049Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5461208Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5691950Z fatal: No url found for submodule path 'C05LocalAi' in .gitmodules
+build (sethome-neoforge-1-21-1)	Post Run actions/checkout@v4	2026-04-19T03:20:32.5740118Z ##[warning]The process '/usr/bin/git' failed with exit code 128
+build (sethome-neoforge-1-21-1)	Complete job	﻿2026-04-19T03:20:32.5823666Z Cleaning up orphan processes
+build (sethome-neoforge-1-21-1)	Complete job	2026-04-19T03:20:32.6119654Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v4, actions/download-artifact@v4, actions/setup-java@v4, actions/setup-python@v5, actions/upload-artifact@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
