@@ -2,49 +2,48 @@ package asd.itamio.togglesprint;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_310;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
 
 @Environment(EnvType.CLIENT)
 public final class ToggleSprintController {
     private boolean sprintLocked;
     private boolean sprintKeyWasDown;
 
-    public void onClientTick(class_310 client) {
-        if (client == null || client.field_1690 == null) {
+    public void onClientTick(MinecraftClient client) {
+        if (client == null || client.options == null) {
             sprintLocked = false;
             sprintKeyWasDown = false;
             return;
         }
-        if (client.field_1724 == null) {
+        if (client.player == null) {
             sprintLocked = false;
             sprintKeyWasDown = false;
             return;
         }
-        if (client.method_1493()) {
-            sprintKeyWasDown = client.field_1690.field_1867.method_1434();
+        if (client.isPaused()) {
+            sprintKeyWasDown = client.options.sprintKey.isPressed();
             return;
         }
-        boolean sprintKeyDown = client.field_1690.field_1867.method_1434();
+        boolean sprintKeyDown = client.options.sprintKey.isPressed();
         if (sprintKeyDown && !sprintKeyWasDown) {
             sprintLocked = !sprintLocked;
-            client.field_1690.field_1867.method_23481(false);
-            client.field_1724.method_5728(false);
-            client.field_1724.method_7353(
-                class_2561.method_43470("Toggle Sprint: " + (sprintLocked ? "ON" : "OFF")), true);
+            client.player.setSprinting(false);
+            client.player.sendMessage(
+                Text.of("Toggle Sprint: " + (sprintLocked ? "ON" : "OFF")), true);
         }
         sprintKeyWasDown = sprintKeyDown;
         if (sprintLocked) {
-            client.field_1724.method_5728(shouldKeepSprinting(client));
+            client.player.setSprinting(shouldKeepSprinting(client));
         }
     }
 
-    private boolean shouldKeepSprinting(class_310 client) {
-        if (client.field_1755 != null) return false;
-        if (client.field_1724 == null) return false;
-        if (client.field_1724.method_7325() || client.field_1724.method_5765()) return false;
-        if (client.field_1724.method_5715() || client.field_1724.method_6115()) return false;
-        return client.field_1690.field_1894.method_1434()
-            && !client.field_1690.field_1881.method_1434();
+    private boolean shouldKeepSprinting(MinecraftClient client) {
+        if (client.currentScreen != null) return false;
+        if (client.player == null) return false;
+        if (client.player.isSpectator() || client.player.hasVehicle()) return false;
+        if (client.player.isSneaking() || client.player.isUsingItem()) return false;
+        return client.options.forwardKey.isPressed()
+            && !client.options.backKey.isPressed();
     }
 }

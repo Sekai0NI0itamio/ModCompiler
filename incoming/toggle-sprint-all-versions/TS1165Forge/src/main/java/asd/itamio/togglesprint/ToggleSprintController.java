@@ -1,7 +1,7 @@
 package asd.itamio.togglesprint;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
+import net.minecraft.util.text.StringTextComponent;
 
 public final class ToggleSprintController {
     private boolean sprintLocked;
@@ -28,7 +28,7 @@ public final class ToggleSprintController {
             client.options.keySprint.setDown(false);
             client.player.setSprinting(false);
             client.player.displayClientMessage(
-                Component.literal("Toggle Sprint: " + (sprintLocked ? "ON" : "OFF")), true);
+                new StringTextComponent("Toggle Sprint: " + (sprintLocked ? "ON" : "OFF")), true);
         }
         sprintKeyWasDown = sprintKeyDown;
         if (sprintLocked) {
