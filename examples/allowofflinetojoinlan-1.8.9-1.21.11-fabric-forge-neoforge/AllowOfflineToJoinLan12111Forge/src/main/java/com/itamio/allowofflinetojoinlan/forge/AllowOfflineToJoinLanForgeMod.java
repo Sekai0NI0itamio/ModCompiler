@@ -1,8 +1,8 @@
 package com.itamio.allowofflinetojoinlan.forge;
 
 import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,18 +15,13 @@ public final class AllowOfflineToJoinLanForgeMod {
     private static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
 
     public AllowOfflineToJoinLanForgeMod() {
+        MinecraftForge.EVENT_BUS.register(this);
     }
 
-    @Mod.EventBusSubscriber(modid = MOD_ID)
-    public static final class ForgeEvents {
-        private ForgeEvents() {
-        }
-
-        @SubscribeEvent
-        public static void onServerStarting(ServerStartingEvent event) {
-            MinecraftServer server = event.getServer();
-            AllowOfflineToJoinLanConfig.load(LOGGER);
-            OnlineModeHelper.apply(server, AllowOfflineToJoinLanConfig.requireMojangAuthentication, LOGGER);
-        }
+    // No @SubscribeEvent — register(this) dispatches by method signature in Forge 1.21.6+
+    public void onServerStarting(ServerStartingEvent event) {
+        MinecraftServer server = event.getServer();
+        AllowOfflineToJoinLanConfig.load(LOGGER);
+        OnlineModeHelper.apply(server, AllowOfflineToJoinLanConfig.requireMojangAuthentication, LOGGER);
     }
 }
