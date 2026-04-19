@@ -1,4 +1,4 @@
-package com.itamio.allowofflinetojoinlan.fabric;
+package com.itamio.allowofflinetojoinlan.forge;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 public final class AllowOfflineToJoinLanConfig {
     private static final Path CONFIG_DIR = Paths.get("config", "allowofflinetojoinlan");
