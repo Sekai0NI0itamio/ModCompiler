@@ -6,7 +6,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
@@ -31,10 +30,12 @@ public class SetHomeMod {
     }
     public SetHomeMod() {
         // config uses defaults
-        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
     }
 
-    public void onRegisterCommands(RegisterCommandsEvent e) {
+    @net.neoforged.fml.common.Mod.EventBusSubscriber(modid = MODID, bus = net.neoforged.fml.common.Mod.EventBusSubscriber.Bus.FORGE)
+    public static class ForgeEvents {
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void onRegisterCommands(RegisterCommandsEvent e) {
         CommandDispatcher<CommandSourceStack> d = e.getDispatcher();
         d.register(Commands.literal("sethome")
             .then(Commands.argument("name", StringArgumentType.word())
@@ -134,5 +135,6 @@ public class SetHomeMod {
             boolean r = player(uuid).remove(name) != null; if (r) setDirty(); return r;
         }
         public Set<String> getHomes(String uuid) { return player(uuid).keySet(); }
+    }
     }
 }
