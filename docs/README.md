@@ -232,4 +232,17 @@ When adding new documentation:
 
 ---
 
+## Multi-Version Build Examples
+
+These documents record real build sessions — challenges encountered, fixes applied, and lessons learned. Read them before starting a new multi-version port.
+
+- **[SET_HOME_ANYWHERE_ALL_VERSIONS.md](examples/SET_HOME_ANYWHERE_ALL_VERSIONS.md)** — Complex SavedData API across 7 eras, 21 build runs, 39/39 ✓
+- **[SORT_CHEST_ALL_VERSIONS.md](examples/SORT_CHEST_ALL_VERSIONS.md)** — Sorting mod, multiple loader/version combinations
+- **[TOGGLE_SPRINT_ALL_VERSIONS.md](examples/TOGGLE_SPRINT_ALL_VERSIONS.md)** — Client-only mod, Fabric presplit vs split, 42 new versions ✓
+- **[CRAFTABLE_SLIME_BALLS_ALL_VERSIONS.md](examples/CRAFTABLE_SLIME_BALLS_ALL_VERSIONS.md)** — Recipe-only mod, 61 versions, zero failures ✓
+- **[COMMON_SERVER_CORE_ALL_VERSIONS.md](examples/COMMON_SERVER_CORE_ALL_VERSIONS.md)** — Server-side utility mod
+- **[ALLOW_OFFLINE_LAN_JOIN_ALL_VERSIONS.md](examples/ALLOW_OFFLINE_LAN_JOIN_ALL_VERSIONS.md)** — Reflection-based server mod, 72 versions, Forge event API across all eras ✓
+
+---
+
 **Remember**: One mod at a time in the workspace. Clean between mods. Save completed work to ModCollection.
