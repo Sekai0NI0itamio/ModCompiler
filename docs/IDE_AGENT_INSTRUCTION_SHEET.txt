@@ -913,6 +913,32 @@ On a 39-target build where 33 pass and 6 fail, --failed-only cuts the
 next build from 39 jobs down to 6 jobs.
 
 ------------------------------------------------------------------------
+!! CRITICAL RULE: Issue ONE shell command at a time — NEVER chain commands
+------------------------------------------------------------------------
+
+The IDE terminal does NOT support command chaining or multiple commands
+in a single executeBash call. Issuing more than one command at a time
+will cause the IDE to error.
+
+BAD (do not do this — IDE will error):
+  gh run download 24631339167 --name mod-1-16-5 --dir /tmp/a 2>&1
+  gh run download 24631339167 --name mod-1-17-1 --dir /tmp/b 2>&1
+
+BAD (do not do this — && is also not supported):
+  mkdir /tmp/out && cat /tmp/out/build.log
+
+GOOD (always do this — one command per executeBash call):
+  # Call 1:
+  gh run download 24631339167 --name mod-1-16-5 --dir /tmp/a 2>&1
+  # Call 2 (separate executeBash):
+  gh run download 24631339167 --name mod-1-17-1 --dir /tmp/b 2>&1
+  # Call 3 (separate executeBash):
+  cat /tmp/a/build.log
+
+This applies to ALL shell commands — downloads, file reads, git commands,
+python scripts, etc. One command per call, always.
+
+------------------------------------------------------------------------
 RULE: Never use long inline python3 -c "..." commands
 ------------------------------------------------------------------------
 
