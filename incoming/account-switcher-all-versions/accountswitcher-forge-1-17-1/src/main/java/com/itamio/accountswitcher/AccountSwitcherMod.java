@@ -28,7 +28,8 @@ public class AccountSwitcherMod {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
             if (!(mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen)) return;
             net.minecraft.client.gui.Font font = mc.font;
-            com.mojang.blaze3d.vertex.PoseStack ps = event.getPoseStack();
+            // 1.17.1: GuiScreenEvent uses getMatrixStack(), not getPoseStack()
+            com.mojang.blaze3d.vertex.PoseStack ps = event.getMatrixStack();
             String prefix = "Account: ";
             String account = currentAccount;
             net.minecraft.client.gui.GuiComponent.drawString(ps, font, prefix, 10, 10, 0xFFFFFF);

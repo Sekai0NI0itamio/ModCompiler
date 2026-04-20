@@ -26,13 +26,21 @@ public class AccountSwitcherMod {
     public void onRenderScreen(GuiScreenEvent.DrawScreenEvent.Post event) {
         try {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            if (!(mc.currentScreen instanceof net.minecraft.client.gui.screen.TitleScreen)) return;
-            net.minecraft.client.gui.FontRenderer font = mc.fontRenderer;
+            // 1.16.5 uses SRG field names — use reflection to avoid obfuscation issues
+            Object screen = mc.getClass().getField("field_71462_r").get(mc);
+            if (screen == null || !screen.getClass().getSimpleName().contains("TitleScreen")) return;
+            Object font = mc.getClass().getField("field_71466_p").get(mc);
             com.mojang.blaze3d.matrix.MatrixStack ms = event.getMatrixStack();
             String prefix = "Account: ";
             String account = currentAccount;
-            font.drawStringWithShadow(ms, prefix, 10, 10, 0xFFFFFF);
-            font.drawStringWithShadow(ms, account, 10 + font.getStringWidth(prefix), 10, 0x00FF00);
+            // drawString(MatrixStack, String, float, float, int)
+            font.getClass().getMethod("drawString",
+                com.mojang.blaze3d.matrix.MatrixStack.class, String.class, float.class, float.class, int.class)
+                .invoke(font, ms, prefix, 10f, 10f, 0xFFFFFF);
+            int prefixWidth = (int) font.getClass().getMethod("width", String.class).invoke(font, prefix);
+            font.getClass().getMethod("drawString",
+                com.mojang.blaze3d.matrix.MatrixStack.class, String.class, float.class, float.class, int.class)
+                .invoke(font, ms, account, 10f + prefixWidth, 10f, 0x00FF00);
         } catch (Exception e) { LOGGER.error("Render error", e); }
     }
 
