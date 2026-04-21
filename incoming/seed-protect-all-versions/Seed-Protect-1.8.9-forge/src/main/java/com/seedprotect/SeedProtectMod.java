@@ -1,8 +1,10 @@
 package com.seedprotect;
 
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.BlockEvent.FarmlandTrampleEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
 @Mod(
@@ -11,16 +13,18 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
     version = SeedProtectMod.VERSION,
     acceptedMinecraftVersions = "[1.8.9]"
 )
-@EventBusSubscriber(modid = SeedProtectMod.MOD_ID)
 public final class SeedProtectMod {
     public static final String MOD_ID = "seedprotect";
     public static final String NAME = "Seed Protect";
     public static final String VERSION = "1.0.0";
 
-    private SeedProtectMod() {}
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(this);
+    }
 
     @SubscribeEvent
-    public static void onFarmlandTrample(FarmlandTrampleEvent event) {
+    public void onFarmlandTrample(FarmlandTrampleEvent event) {
         event.setCanceled(true);
     }
 }

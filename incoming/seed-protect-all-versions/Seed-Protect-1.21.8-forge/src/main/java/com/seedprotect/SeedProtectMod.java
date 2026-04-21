@@ -1,9 +1,9 @@
 package com.seedprotect;
 
 import net.minecraftforge.event.level.BlockEvent.FarmlandTrampleEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 @Mod(SeedProtectMod.MOD_ID)
 @EventBusSubscriber(modid = SeedProtectMod.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
@@ -16,6 +16,6 @@ public final class SeedProtectMod {
 
     @SubscribeEvent
     public static void onFarmlandTrample(FarmlandTrampleEvent event) {
-        event.setCanceled(true);
+        event.cancel();
     }
 }
