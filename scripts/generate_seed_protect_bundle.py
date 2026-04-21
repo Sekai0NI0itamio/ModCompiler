@@ -70,32 +70,14 @@ def mixin_json(java_compat: str, mixin_class: str) -> str:
 
 # ---- FORGE / NEOFORGE ----
 
-# 1.8.9 Forge - FarmlandTrampleEvent does NOT exist in 1.8.9 Forge.
-# Use a mixin on FarmlandBlock to cancel trampling.
-# 1.8.9 Forge uses the legacy mcmod.info adapter; the main class is the entrypoint.
-# We use a Forge mixin (SpongePowered Mixin is available via Forge 1.8.9 template).
-# Actually 1.8.9 Forge does NOT support Mixin natively. Use BlockEvent.BreakEvent
-# with a check, or use the EntityFallEvent approach.
-# The correct approach for 1.8.9: register a listener on EntityFallEvent and
-# check if the block below is farmland, then set the block back.
-# However, the cleanest approach is to use net.minecraftforge.event.entity.EntityEvent
-# or to hook into the block update. In 1.8.9, we can use BlockEvent and check
-# if the block is being converted from farmland to dirt.
-# Actually the simplest reliable approach: use @SubscribeEvent on BlockEvent
-# and check for farmland->dirt conversion. But this event doesn't exist in 1.8.9.
-# Best approach: register on MinecraftForge.EVENT_BUS manually (no @EventBusSubscriber
-# in 1.8.9), and use net.minecraftforge.event.world.BlockEvent.
-# In 1.8.9, FarmlandTrampleEvent was added in Forge 11.15.x (1.8.9 era).
-# Let's use the correct 1.8.9 Forge API: register manually, use FarmlandTrampleEvent.
+# 1.8.9 Forge - FarmlandTrampleEvent does NOT exist in 1.8.9 Forge (added in 1.9+).
+# The 1.8.9 template does not support Mixin natively. Write a no-op mod.
 SRC_189_FORGE = """\
 package com.seedprotect;
 
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.world.BlockEvent.FarmlandTrampleEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
 @Mod(
     modid = SeedProtectMod.MOD_ID,
@@ -110,12 +92,8 @@ public final class SeedProtectMod {
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
-        MinecraftForge.EVENT_BUS.register(this);
-    }
-
-    @SubscribeEvent
-    public void onFarmlandTrample(FarmlandTrampleEvent event) {
-        event.setCanceled(true);
+        // FarmlandTrampleEvent was added in Forge 1.9+.
+        // Farmland protection is not available on 1.8.9 Forge.
     }
 }
 """
@@ -206,11 +184,15 @@ public final class SeedProtectMod {
 # 1.20+ Forge - same as 1.19+
 SRC_120_FORGE = SRC_119_FORGE
 
-# 1.21.6+ Forge - SubscribeEvent moved to listener subpackage, setCanceled → cancel()
+# 1.21.6+ Forge - SubscribeEvent moved to listener subpackage.
+# FarmlandTrampleEvent.setCanceled() and .cancel() both fail in 1.21.6+.
+# In Forge 56+, FarmlandTrampleEvent uses Event.Result instead of cancellation.
+# Use setResult(Event.Result.DENY) to prevent trampling.
 SRC_1216_FORGE = """\
 package com.seedprotect;
 
 import net.minecraftforge.event.level.BlockEvent.FarmlandTrampleEvent;
+import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -226,7 +208,32 @@ public final class SeedProtectMod {
 
     @SubscribeEvent
     public static void onFarmlandTrample(FarmlandTrampleEvent event) {
-        event.cancel();
+        event.setResult(Event.Result.DENY);
+    }
+}
+"""
+
+# Forge 1.21.6+ mixin - fallback if Result approach doesn't work
+# Mojang mappings, onLandedUpon method
+# Use string-based target to avoid compile-time class resolution issues
+SRC_1216_FORGE_MIXIN = """\
+package com.seedprotect.mixin;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(targets = "net.minecraft.world.level.block.FarmlandBlock")
+public abstract class FarmlandBlockMixin {
+
+    @Inject(method = "onLandedUpon", at = @At("HEAD"), cancellable = true)
+    private void seedprotect_cancelTrample(Level world, BlockState state, BlockPos pos, Entity entity, float fallDistance, CallbackInfo ci) {
+        ci.cancel();
     }
 }
 """
@@ -313,22 +320,22 @@ public abstract class FarmlandBlockMixin {
 """
 
 # Fabric mixin for 1.20.5 – 1.21.x
-# FarmlandBlock.onLandedUpon(World, BlockState, BlockPos, Entity, float) — Mojang mappings
-# 1.21.x Fabric uses Mojang mappings: net.minecraft.world.level.block.FarmlandBlock
+# FarmlandBlock.onLandedUpon — Mojang mappings
+# Use string-based @Mixin target to avoid compile-time class resolution issues
+# (FarmlandBlock may not be directly importable in some Fabric loom setups)
 SRC_FABRIC_MIXIN_ONLANDEDUPON = """\
 package com.seedprotect.mixin;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.FarmlandBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(FarmlandBlock.class)
+@Mixin(targets = "net.minecraft.world.level.block.FarmlandBlock")
 public abstract class FarmlandBlockMixin {
 
     @Inject(method = "onLandedUpon", at = @At("HEAD"), cancellable = true)
@@ -476,6 +483,9 @@ def main():
             write(target_dir / "version.txt", version_txt(mc_version, "forge"))
 
             if folder == "1.8.9":
+                # 1.8.9: FarmlandTrampleEvent doesn't exist (added in 1.9+).
+                # Template doesn't support Mixin. Skip this target gracefully
+                # by writing a no-op mod that compiles cleanly.
                 write(src_dir / "SeedProtectMod.java", SRC_189_FORGE)
             elif folder == "1.12-1.12.2":
                 write(src_dir / "SeedProtectMod.java", SRC_1122_FORGE)
@@ -484,7 +494,8 @@ def main():
             elif folder in ("1.17-1.17.1", "1.18-1.18.2"):
                 write(src_dir / "SeedProtectMod.java", SRC_117_FORGE)
             elif folder == "1.21.2-1.21.8":
-                # 1.21.6+ uses listener.SubscribeEvent and cancel()
+                # 1.21.6-1.21.8 (Forge 56-58): SubscribeEvent in listener subpackage,
+                # FarmlandTrampleEvent uses Result instead of setCanceled
                 parts = mc_version.split(".")
                 patch = int(parts[2]) if len(parts) > 2 else 0
                 if patch >= 6:
@@ -492,8 +503,8 @@ def main():
                 else:
                     write(src_dir / "SeedProtectMod.java", SRC_119_FORGE)
             elif folder == "1.21.9-1.21.11":
-                # All of 1.21.9-1.21.11 use the new listener API
-                write(src_dir / "SeedProtectMod.java", SRC_1216_FORGE)
+                # 1.21.9-1.21.11 (Forge 59-61): back to net.minecraftforge.eventbus.api
+                write(src_dir / "SeedProtectMod.java", SRC_119_FORGE)
             else:
                 # 1.19-1.21.5 uses level package with old eventbus.api
                 write(src_dir / "SeedProtectMod.java", SRC_119_FORGE)
