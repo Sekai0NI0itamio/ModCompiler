@@ -5,8 +5,14 @@ Run: python3 scripts/generate_seed_protect_bundle.py
 
 Seed Protect mod: Prevents farmland and planted crops from being trampled by players and mobs.
 Original version: 1.12.2 Forge
+
+Fabric approach: Uses a mixin on FarmlandBlock to cancel the fallOn / onLandedUpon method.
+  - 1.16.5 – 1.20.4: FarmlandBlock.fallOn(World, BlockPos, Entity, float) → cancel via @Inject
+  - 1.20.5+:         FarmlandBlock.onLandedUpon(World, BlockState, BlockPos, Entity, float) → cancel
+  - The mixin file is placed at src/main/resources/seedprotect.mixins.json and is auto-detected
+    by the build adapter (it scans for *.mixins.json in src/main/resources/).
 """
-import argparse, json, shutil, subprocess, zipfile
+import argparse, json, shutil, zipfile
 from pathlib import Path
 
 ROOT   = Path(__file__).resolve().parents[1]
@@ -22,7 +28,8 @@ LICENSE     = "LicenseRef-All-Rights-Reserved"
 HOMEPAGE    = "https://modrinth.com/mod/seed-protect"
 ENTRYPOINT  = f"{GROUP}.SeedProtectMod"
 PKG         = GROUP.replace('.', '/')
-JAVA_MAIN   = f"src/main/java/{PKG}/SeedProtectMod.java"
+MIXIN_PKG   = f"{GROUP}.mixin"
+MIXIN_PKG_PATH = MIXIN_PKG.replace('.', '/')
 
 def write(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,8 +45,30 @@ def version_txt(mc: str, loader: str) -> str:
     return f"minecraft_version={mc}\nloader={loader}\n"
 
 # ============================================================
+# MIXIN JSON — placed in src/main/resources/seedprotect.mixins.json
+# The build adapter auto-detects *.mixins.json files and adds them to fabric.mod.json
+# ============================================================
+
+def mixin_json(java_compat: str, mixin_class: str) -> str:
+    return (
+        '{\n'
+        '  "required": true,\n'
+        f'  "package": "{MIXIN_PKG}",\n'
+        f'  "compatibilityLevel": "{java_compat}",\n'
+        '  "mixins": [\n'
+        f'    "{mixin_class}"\n'
+        '  ],\n'
+        '  "injectors": {\n'
+        '    "defaultRequire": 1\n'
+        '  }\n'
+        '}\n'
+    )
+
+# ============================================================
 # SOURCE CODE FOR DIFFERENT VERSIONS
 # ============================================================
+
+# ---- FORGE / NEOFORGE ----
 
 # 1.8.9 Forge - FarmlandTrampleEvent exists in 1.8.9
 SRC_189_FORGE = """\
@@ -61,10 +90,9 @@ public final class SeedProtectMod {
     public static final String MOD_ID = "seedprotect";
     public static final String NAME = "Seed Protect";
     public static final String VERSION = "1.0.0";
-    
-    private SeedProtectMod() {
-    }
-    
+
+    private SeedProtectMod() {}
+
     @SubscribeEvent
     public static void onFarmlandTrample(FarmlandTrampleEvent event) {
         event.setCanceled(true);
@@ -85,17 +113,16 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
     modid = SeedProtectMod.MOD_ID,
     name = SeedProtectMod.NAME,
     version = SeedProtectMod.VERSION,
-    acceptedMinecraftVersions = "[1.12.2]"
+    acceptedMinecraftVersions = "[1.12,1.12.2]"
 )
 @EventBusSubscriber(modid = SeedProtectMod.MOD_ID)
 public final class SeedProtectMod {
     public static final String MOD_ID = "seedprotect";
     public static final String NAME = "Seed Protect";
     public static final String VERSION = "1.0.0";
-    
-    private SeedProtectMod() {
-    }
-    
+
+    private SeedProtectMod() {}
+
     @SubscribeEvent
     public static void onFarmlandTrample(FarmlandTrampleEvent event) {
         event.setCanceled(true);
@@ -103,7 +130,7 @@ public final class SeedProtectMod {
 }
 """
 
-# 1.16.5 Forge - FarmlandTrampleEvent still exists
+# 1.16.5 Forge - FarmlandTrampleEvent still in world package
 SRC_1165_FORGE = """\
 package com.seedprotect;
 
@@ -118,10 +145,9 @@ public final class SeedProtectMod {
     public static final String MOD_ID = "seedprotect";
     public static final String NAME = "Seed Protect";
     public static final String VERSION = "1.0.0";
-    
-    public SeedProtectMod() {
-    }
-    
+
+    public SeedProtectMod() {}
+
     @SubscribeEvent
     public static void onFarmlandTrample(FarmlandTrampleEvent event) {
         event.setCanceled(true);
@@ -129,71 +155,8 @@ public final class SeedProtectMod {
 }
 """
 
-# 1.16.5 Fabric - Need to use mixin for Fabric
-SRC_1165_FABRIC = """\
-package com.seedprotect;
-
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.FarmlandBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-
-public class SeedProtectMod implements ModInitializer {
-    public static final String MOD_ID = "seedprotect";
-    public static final String NAME = "Seed Protect";
-    public static final String VERSION = "1.0.0";
-    
-    @Override
-    public void onInitialize() {
-        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-            if (!world.isClient) {
-                BlockPos pos = hitResult.getBlockPos();
-                BlockState state = world.getBlockState(pos);
-                
-                // Check if block is farmland
-                if (state.getBlock() instanceof FarmlandBlock) {
-                    // Check if entity is trying to trample
-                    // In Fabric, we need to prevent the trample by returning FAIL
-                    // This is a simplified approach - actual trample logic is more complex
-                    return ActionResult.FAIL;
-                }
-            }
-            return ActionResult.PASS;
-        });
-    }
-}
-"""
-
-# 1.17+ Forge - FarmlandTrampleEvent still exists
-SRC_117_FORGE = """\
-package com.seedprotect;
-
-import net.minecraftforge.event.world.BlockEvent.FarmlandTrampleEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-
-@Mod(SeedProtectMod.MOD_ID)
-@EventBusSubscriber(modid = SeedProtectMod.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
-public final class SeedProtectMod {
-    public static final String MOD_ID = "seedprotect";
-    public static final String NAME = "Seed Protect";
-    public static final String VERSION = "1.0.0";
-    
-    public SeedProtectMod() {
-    }
-    
-    @SubscribeEvent
-    public static void onFarmlandTrample(FarmlandTrampleEvent event) {
-        event.setCanceled(true);
-    }
-}
-"""
+# 1.17-1.18 Forge - FarmlandTrampleEvent still in world package
+SRC_117_FORGE = SRC_1165_FORGE
 
 # 1.19+ Forge - Package changed from world to level
 SRC_119_FORGE = """\
@@ -210,10 +173,9 @@ public final class SeedProtectMod {
     public static final String MOD_ID = "seedprotect";
     public static final String NAME = "Seed Protect";
     public static final String VERSION = "1.0.0";
-    
-    public SeedProtectMod() {
-    }
-    
+
+    public SeedProtectMod() {}
+
     @SubscribeEvent
     public static void onFarmlandTrample(FarmlandTrampleEvent event) {
         event.setCanceled(true);
@@ -221,16 +183,10 @@ public final class SeedProtectMod {
 }
 """
 
-# 1.17+ Fabric - Similar to 1.16.5 Fabric
-SRC_117_FABRIC = SRC_1165_FABRIC
-
-# 1.20+ Forge - FarmlandTrampleEvent still exists (uses level package)
+# 1.20+ Forge - same as 1.19+
 SRC_120_FORGE = SRC_119_FORGE
 
-# 1.20+ Fabric - Similar to 1.16.5 Fabric
-SRC_120_FABRIC = SRC_1165_FABRIC
-
-# 1.20+ NeoForge - Similar to Forge but with NeoForge event bus
+# 1.20+ NeoForge
 SRC_120_NEOFORGE = """\
 package com.seedprotect;
 
@@ -243,11 +199,11 @@ public final class SeedProtectMod {
     public static final String MOD_ID = "seedprotect";
     public static final String NAME = "Seed Protect";
     public static final String VERSION = "1.0.0";
-    
+
     public SeedProtectMod() {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(this);
     }
-    
+
     @SubscribeEvent
     public void onFarmlandTrample(FarmlandTrampleEvent event) {
         event.setCanceled(true);
@@ -255,122 +211,288 @@ public final class SeedProtectMod {
 }
 """
 
-# 1.21+ Forge - FarmlandTrampleEvent still exists
-SRC_121_FORGE = SRC_119_FORGE
+# ---- FABRIC ----
+# Fabric has no FarmlandTrampleEvent. We use a mixin on FarmlandBlock.
+#
+# 1.16.5 – 1.20.4: method is fallOn(World, BlockPos, Entity, float)
+#   Yarn names: fallOn(net.minecraft.world.World, net.minecraft.util.math.BlockPos,
+#                      net.minecraft.entity.Entity, float)
+#   We inject at HEAD and cancel via CallbackInfo.cancel().
+#
+# 1.20.5+: method renamed to onLandedUpon(ServerWorld, BlockState, BlockPos, Entity, float)
+#   Yarn names differ; use Mojang-mapped names for 1.20.5+ (fabric_split adapter uses Mojang).
+#   Actually fabric_split still uses Yarn for 1.20.x. Check: 1.20.5 uses Yarn mappings.
+#   Method: onLandedUpon(net.minecraft.world.World, net.minecraft.block.BlockState,
+#                        net.minecraft.util.math.BlockPos, net.minecraft.entity.Entity, float)
+#
+# Main mod class just registers nothing — the mixin does all the work.
 
-# 1.21+ Fabric - Similar to 1.16.5 Fabric
-SRC_121_FABRIC = SRC_1165_FABRIC
+# Fabric main class (same for all Fabric versions)
+SRC_FABRIC_MAIN = """\
+package com.seedprotect;
 
-# 1.21+ NeoForge - Similar to 1.20+ NeoForge
-SRC_121_NEOFORGE = SRC_120_NEOFORGE
+import net.fabricmc.api.ModInitializer;
+
+public final class SeedProtectMod implements ModInitializer {
+    public static final String MOD_ID = "seedprotect";
+
+    @Override
+    public void onInitialize() {
+        // Farmland protection is handled by FarmlandBlockMixin
+    }
+}
+"""
+
+# Fabric mixin for 1.16.5 – 1.20.4
+# FarmlandBlock.fallOn(World, BlockPos, Entity, float) — Yarn mappings
+SRC_FABRIC_MIXIN_FALLON = """\
+package com.seedprotect.mixin;
+
+import net.minecraft.block.FarmlandBlock;
+import net.minecraft.entity.Entity;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(FarmlandBlock.class)
+public abstract class FarmlandBlockMixin {
+
+    @Inject(method = "fallOn", at = @At("HEAD"), cancellable = true)
+    private void seedprotect_cancelTrample(World world, BlockPos pos, Entity entity, float fallDistance, CallbackInfo ci) {
+        ci.cancel();
+    }
+}
+"""
+
+# Fabric mixin for 1.20.5 – 1.21.x
+# FarmlandBlock.onLandedUpon(World, BlockState, BlockPos, Entity, float) — Yarn mappings
+SRC_FABRIC_MIXIN_ONLANDEDUPON = """\
+package com.seedprotect.mixin;
+
+import net.minecraft.block.BlockState;
+import net.minecraft.block.FarmlandBlock;
+import net.minecraft.entity.Entity;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(FarmlandBlock.class)
+public abstract class FarmlandBlockMixin {
+
+    @Inject(method = "onLandedUpon", at = @At("HEAD"), cancellable = true)
+    private void seedprotect_cancelTrample(World world, BlockState state, BlockPos pos, Entity entity, float fallDistance, CallbackInfo ci) {
+        ci.cancel();
+    }
+}
+"""
+
+
+def write_fabric_target(target_dir: Path, mc_version: str, use_landed_upon: bool, java_compat: str):
+    """Write a complete Fabric target folder with mixin."""
+    # Main mod class
+    write(target_dir / "src/main/java" / PKG / "SeedProtectMod.java", SRC_FABRIC_MAIN)
+
+    # Mixin class
+    mixin_src = SRC_FABRIC_MIXIN_ONLANDEDUPON if use_landed_upon else SRC_FABRIC_MIXIN_FALLON
+    write(target_dir / "src/main/java" / MIXIN_PKG_PATH / "FarmlandBlockMixin.java", mixin_src)
+
+    # Mixin JSON — auto-detected by the build adapter
+    write(
+        target_dir / "src/main/resources/seedprotect.mixins.json",
+        mixin_json(java_compat, "FarmlandBlockMixin"),
+    )
+
+    # mod.txt and version.txt
+    write(target_dir / "mod.txt", mod_txt())
+    write(target_dir / "version.txt", version_txt(mc_version, "fabric"))
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--failed-only", action="store_true", help="Only regenerate targets that failed in the last run")
+    parser.add_argument("--failed-only", action="store_true",
+                        help="Only regenerate targets that failed in the last run")
     args = parser.parse_args()
-    
+
     # Clean bundle directory
     if BUNDLE.exists():
         shutil.rmtree(BUNDLE)
     BUNDLE.mkdir(parents=True)
-    
-    # Get version manifest
+
+    # Load version manifest
     manifest_path = ROOT / "version-manifest.json"
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
-    
-    # Track which targets to build
-    targets = []
-    
-    # For now, let's build for all Forge and NeoForge versions
-    # Fabric will need more work (mixins)
+
+    # Build full target list
+    targets = []  # (target_dir, mc_version, loader, folder)
+
     for range_info in manifest["ranges"]:
         folder = range_info["folder"]
-        min_version = range_info["min_version"]
-        max_version = range_info["max_version"]
-        
-        # Determine which exact versions to build
-        if "supported_versions" in range_info.get("loaders", {}).get("forge", {}):
-            exact_versions = range_info["loaders"]["forge"]["supported_versions"]
-        else:
-            # Build for the anchor version
-            anchor = range_info["loaders"]["forge"]["anchor_version"]
-            exact_versions = [anchor]
-        
-        # Forge targets
-        if "forge" in range_info["loaders"]:
-            for mc_version in exact_versions:
-                target_name = f"Seed-Protect-{mc_version}-forge"
-                target_dir = BUNDLE / target_name
-                targets.append((target_dir, mc_version, "forge", folder))
-        
-        # NeoForge targets (if available)
-        if "neoforge" in range_info["loaders"]:
-            if "supported_versions" in range_info["loaders"]["neoforge"]:
-                neo_versions = range_info["loaders"]["neoforge"]["supported_versions"]
+        loaders = range_info.get("loaders", {})
+
+        # --- Forge ---
+        if "forge" in loaders:
+            forge_info = loaders["forge"]
+            if "supported_versions" in forge_info:
+                forge_versions = forge_info["supported_versions"]
             else:
-                neo_anchor = range_info["loaders"]["neoforge"]["anchor_version"]
-                neo_versions = [neo_anchor]
-            
-            for mc_version in neo_versions:
-                target_name = f"Seed-Protect-{mc_version}-neoforge"
-                target_dir = BUNDLE / target_name
-                targets.append((target_dir, mc_version, "neoforge", folder))
-    
-    print(f"Generating {len(targets)} targets...")
-    
-    for target_dir, mc_version, loader, folder in targets:
+                forge_versions = [forge_info["anchor_version"]]
+            for mc in forge_versions:
+                name = f"Seed-Protect-{mc}-forge"
+                targets.append((BUNDLE / name, mc, "forge", folder))
+
+        # --- NeoForge ---
+        if "neoforge" in loaders:
+            neo_info = loaders["neoforge"]
+            if "supported_versions" in neo_info:
+                neo_versions = neo_info["supported_versions"]
+            else:
+                neo_versions = [neo_info["anchor_version"]]
+            for mc in neo_versions:
+                name = f"Seed-Protect-{mc}-neoforge"
+                targets.append((BUNDLE / name, mc, "neoforge", folder))
+
+        # --- Fabric ---
+        if "fabric" in loaders:
+            fab_info = loaders["fabric"]
+            if "supported_versions" in fab_info:
+                fab_versions = fab_info["supported_versions"]
+            else:
+                fab_versions = [fab_info["anchor_version"]]
+            for mc in fab_versions:
+                name = f"Seed-Protect-{mc}-fabric"
+                targets.append((BUNDLE / name, mc, "fabric", folder))
+
+    # --failed-only: filter to only targets that failed in the last run
+    active_targets = targets
+    if args.failed_only:
+        runs_root = ROOT / "ModCompileRuns"
+        run_dir = None
+        if runs_root.exists():
+            candidates = sorted(runs_root.iterdir())
+            if candidates:
+                run_dir = candidates[-1]
+
+        if run_dir is None:
+            print("WARNING: --failed-only requested but no run dir found. Using all targets.")
+        else:
+            art = run_dir / "artifacts" / "all-mod-builds" / "mods"
+            if not art.exists():
+                print(f"WARNING: No mods artifact at {art}. Using all targets.")
+            else:
+                failed_slugs = set()
+                for mod_dir in art.iterdir():
+                    if not mod_dir.is_dir():
+                        continue
+                    result_file = mod_dir / "result.json"
+                    if result_file.exists():
+                        try:
+                            result = json.loads(result_file.read_text(encoding="utf-8"))
+                            if result.get("status") != "success":
+                                failed_slugs.add(mod_dir.name)
+                        except Exception:
+                            failed_slugs.add(mod_dir.name)
+                    else:
+                        failed_slugs.add(mod_dir.name)
+
+                if failed_slugs:
+                    def slug_for(mc: str, loader: str) -> str:
+                        return f"{MOD_ID}-{loader}-{mc.replace('.', '-')}".lower()
+
+                    active_targets = [
+                        t for t in targets if slug_for(t[1], t[2]) in failed_slugs
+                    ]
+                    skipped = len(targets) - len(active_targets)
+                    print(f"Failed-only mode: {len(active_targets)} targets to rebuild "
+                          f"(skipping {skipped} already-green)")
+                    for t in active_targets:
+                        print(f"  → {t[0].name}")
+                else:
+                    print("No failed targets found — all targets already green!")
+                    active_targets = []
+
+    print(f"Generating {len(active_targets)} targets...")
+
+    for target_dir, mc_version, loader, folder in active_targets:
         print(f"  {mc_version} {loader}")
-        
-        # Create directory structure
-        src_dir = target_dir / "src" / "main" / "java" / PKG
-        src_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Write mod.txt
-        write(target_dir / "mod.txt", mod_txt())
-        
-        # Write version.txt
-        write(target_dir / "version.txt", version_txt(mc_version, loader))
-        
-        # Write appropriate source code
-        java_file = src_dir / "SeedProtectMod.java"
-        
-        # Select source based on version and loader
+        target_dir.mkdir(parents=True, exist_ok=True)
+
         if loader == "forge":
+            src_dir = target_dir / "src/main/java" / PKG
+            src_dir.mkdir(parents=True, exist_ok=True)
+            write(target_dir / "mod.txt", mod_txt())
+            write(target_dir / "version.txt", version_txt(mc_version, "forge"))
+
             if folder == "1.8.9":
-                write(java_file, SRC_189_FORGE)
+                write(src_dir / "SeedProtectMod.java", SRC_189_FORGE)
             elif folder == "1.12-1.12.2":
-                write(java_file, SRC_1122_FORGE)
+                write(src_dir / "SeedProtectMod.java", SRC_1122_FORGE)
             elif folder == "1.16.5":
-                write(java_file, SRC_1165_FORGE)
-            elif folder in ["1.17-1.17.1", "1.18-1.18.2"]:
-                write(java_file, SRC_117_FORGE)
-            else:  # 1.19+ Forge
-                write(java_file, SRC_119_FORGE)
+                write(src_dir / "SeedProtectMod.java", SRC_1165_FORGE)
+            elif folder in ("1.17-1.17.1", "1.18-1.18.2"):
+                write(src_dir / "SeedProtectMod.java", SRC_117_FORGE)
+            else:
+                # 1.19+ uses level package
+                write(src_dir / "SeedProtectMod.java", SRC_119_FORGE)
+
         elif loader == "neoforge":
-            write(java_file, SRC_120_NEOFORGE)
+            src_dir = target_dir / "src/main/java" / PKG
+            src_dir.mkdir(parents=True, exist_ok=True)
+            write(target_dir / "mod.txt", mod_txt())
+            write(target_dir / "version.txt", version_txt(mc_version, "neoforge"))
+            write(src_dir / "SeedProtectMod.java", SRC_120_NEOFORGE)
+
         elif loader == "fabric":
-            if folder == "1.16.5":
-                write(java_file, SRC_1165_FABRIC)
-            else:  # 1.17+ Fabric
-                write(java_file, SRC_117_FABRIC)
-    
-    # Create zip file
+            # Determine Java compat level and which mixin method to use
+            # 1.16.5 – 1.17.x: Java 16
+            # 1.18+: Java 17
+            # 1.20.5+: Java 21
+            # Method rename: fallOn → onLandedUpon in 1.20.5+
+            parts = mc_version.split(".")
+            major = int(parts[0])
+            minor = int(parts[1]) if len(parts) > 1 else 0
+            patch = int(parts[2]) if len(parts) > 2 else 0
+
+            if folder in ("1.16.5", "1.17-1.17.1"):
+                java_compat = "JAVA_16"
+            elif folder in ("1.18-1.18.2", "1.19-1.19.4"):
+                java_compat = "JAVA_17"
+            elif folder == "1.20-1.20.6":
+                # 1.20.5+ uses Java 21
+                if minor == 20 and patch >= 5:
+                    java_compat = "JAVA_21"
+                else:
+                    java_compat = "JAVA_17"
+            else:
+                # 1.21+
+                java_compat = "JAVA_21"
+
+            # onLandedUpon was introduced in 1.20.5
+            use_landed_upon = (
+                folder == "1.20-1.20.6" and minor == 20 and patch >= 5
+            ) or folder in ("1.21-1.21.1", "1.21.2-1.21.8", "1.21.9-1.21.11")
+
+            write_fabric_target(target_dir, mc_version, use_landed_upon, java_compat)
+
+    # Create zip
     zip_path = ROOT / "incoming" / "seed-protect-all-versions.zip"
+    print(f"\nCreating zip: {zip_path}")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for target_dir, _, _, _ in targets:
-            for file_path in target_dir.rglob("*"):
-                if file_path.is_file():
-                    arcname = file_path.relative_to(BUNDLE)
-                    zf.write(file_path, arcname)
-    
-    print(f"\nBundle created: {zip_path}")
-    print(f"Targets generated: {len(targets)}")
-    
-    # Show summary
-    print("\nTargets:")
-    for target_dir, mc_version, loader, _ in targets:
-        print(f"  - {mc_version} {loader}")
+        total = 0
+        for fpath in sorted(BUNDLE.rglob("*")):
+            if fpath.is_file():
+                arcname = str(fpath.relative_to(BUNDLE))
+                zf.write(fpath, arcname)
+                total += 1
+    print(f"Wrote {zip_path} ({total} files)")
+    print(f"\nDone. {len(active_targets)} targets generated.")
+
 
 if __name__ == "__main__":
     main()
