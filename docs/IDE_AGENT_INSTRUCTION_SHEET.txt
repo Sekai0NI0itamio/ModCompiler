@@ -636,10 +636,19 @@ documented:
    - Demonstrates Optional getter changes in 1.21.5+
    - Result: 25/39 versions working (1.8.9 through 1.21.1)
 
-Read both documents before starting any new multi-version port. They will save
-significant time by showing:
+3. Seed Protect mod (docs/examples/SEED_PROTECT_ALL_VERSIONS.md)
+   - First real-world use of the AI Source Search workflow to resolve a mixin error
+   - Documents the Fabric yarn vs Mojang mappings split and why class names differ
+   - Shows exactly how to use ai_source_search.py to find the correct class name
+   - Covers the AI Source Search workflow fix (Fabric sources jar extraction)
+   - Documents the Forge 1.21.6+ broken EventBus API issue
+   - Result: 6 missing Fabric versions (1.18–1.19.3) published in 2 build runs
+
+Read all three documents before starting any new multi-version port. They will
+save significant time by showing:
 - Exactly which API names to use per version
-- How to use the source code search workflow instead of guessing
+- How to use the AI Source Search workflow instead of guessing
+- Why Fabric yarn mappings differ from Forge/Mojang mappings
 - Common pitfalls when APIs change between mod loaders
 - The importance of verifying APIs with actual source code
 
