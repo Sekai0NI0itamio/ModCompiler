@@ -1,0 +1,22 @@
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        maven {
+            name = 'ModMuss50'
+            url = 'https://maven.modmuss50.me/'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            def pid = requested.id.id
+            if (pid == 'fabric-loom' || pid == 'net.fabricmc.fabric-loom' || pid == 'net.fabricmc.fabric-loom-remap') {
+                useModule("net.fabricmc:fabric-loom:${requested.version}")
+            }
+        }
+    }
+}
