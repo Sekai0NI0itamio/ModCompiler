@@ -200,45 +200,99 @@ jobs:
           echo "=== Gradle done ==="
 
       # -------------------------------------------------------
-      # Find decompiled .java files
+      # Find and extract decompiled .java files
+      # Fabric Loom: genSources produces a *-sources.jar inside
+      #   $WORKSPACE/.gradle/loom-cache/  (or build/loom-cache/)
+      # ForgeGradle: genSources produces extracted .java files under
+      #   $HOME/.gradle/caches/forge_gradle/ or net.minecraftforge/
+      # NeoForge: sources land in $HOME/.gradle/caches/neoforge/
       # -------------------------------------------------------
-      - name: Locate decompiled sources
+      - name: Locate and extract decompiled sources
         id: locate
         run: |
-          SEARCH_ROOTS=(
-            "$WORKSPACE/.gradle/loom-cache"
-            "$WORKSPACE/build/loom-cache"
-            "$HOME/.gradle/caches/fabric-loom"
-            "$HOME/.gradle/caches/forge_gradle"
-            "$HOME/.gradle/caches/net.minecraftforge"
-            "$HOME/.gradle/caches/minecraft"
-            "$HOME/.gradle/caches/neoforge"
-            "$HOME/.gradle/caches/modules-2"
-            "$HOME/.gradle/caches"
-            "$WORKSPACE/.gradle"
-          )
+          LOADER="${{ inputs.loader }}"
+          EXTRACTED_DIR="/tmp/extracted-sources"
+          mkdir -p "$EXTRACTED_DIR"
 
-          BEST_ROOT=""
-          BEST_COUNT=0
+          # ---- FABRIC: find the sources jar and unzip it ----
+          if [[ "$LOADER" == "fabric" ]]; then
+            echo "=== Fabric: searching for sources jar ==="
 
-          for ROOT in "${SEARCH_ROOTS[@]}"; do
-            if [ -d "$ROOT" ]; then
-              COUNT=$(find "$ROOT" -name "*.java" -type f 2>/dev/null | wc -l)
-              if [ "$COUNT" -gt "$BEST_COUNT" ]; then
-                BEST_COUNT=$COUNT
-                BEST_ROOT="$ROOT"
-              fi
+            # Fabric Loom puts sources jars in the workspace .gradle/loom-cache
+            # The jar is named like: minecraft-project-@-merged-named-sources.jar
+            # or: minecraft-1.18.2-named-sources.jar
+            SOURCES_JAR=$(find "$WORKSPACE/.gradle" "$HOME/.gradle/caches" \
+              -name "*-sources.jar" -o -name "*named-sources.jar" \
+              2>/dev/null | grep -v "\.lock" | head -1)
+
+            if [ -z "$SOURCES_JAR" ]; then
+              # Broader search: any sources jar in loom cache
+              SOURCES_JAR=$(find "$WORKSPACE" "$HOME/.gradle" \
+                -name "*sources*.jar" \
+                2>/dev/null | grep -v "\.lock" | grep -v "test" | head -1)
             fi
-          done
 
-          if [ "$BEST_COUNT" -eq 0 ]; then
-            BEST_ROOT="$HOME/.gradle"
-            BEST_COUNT=$(find "$HOME/.gradle" -name "*.java" -type f 2>/dev/null | wc -l)
+            if [ -n "$SOURCES_JAR" ]; then
+              echo "Found sources jar: $SOURCES_JAR"
+              unzip -q "$SOURCES_JAR" "*.java" -d "$EXTRACTED_DIR" 2>/dev/null || \
+              unzip -q "$SOURCES_JAR" -d "$EXTRACTED_DIR" 2>/dev/null || true
+              echo "Extracted to $EXTRACTED_DIR"
+            else
+              echo "WARNING: No sources jar found. Listing all jars in loom-cache:"
+              find "$WORKSPACE/.gradle" -name "*.jar" 2>/dev/null | head -20
+              find "$HOME/.gradle/caches" -name "*.jar" 2>/dev/null | grep -i "loom\|fabric\|minecraft" | head -20
+            fi
+
+          # ---- FORGE / NEOFORGE: .java files already extracted ----
+          else
+            echo "=== Forge/NeoForge: searching for extracted .java files ==="
+            SEARCH_ROOTS=(
+              "$HOME/.gradle/caches/forge_gradle"
+              "$HOME/.gradle/caches/net.minecraftforge"
+              "$HOME/.gradle/caches/neoforge"
+              "$HOME/.gradle/caches/minecraft"
+              "$HOME/.gradle/caches/modules-2"
+              "$HOME/.gradle/caches"
+              "$WORKSPACE/.gradle"
+            )
+
+            BEST_ROOT=""
+            BEST_COUNT=0
+            for ROOT in "${SEARCH_ROOTS[@]}"; do
+              if [ -d "$ROOT" ]; then
+                COUNT=$(find "$ROOT" -name "*.java" -type f 2>/dev/null | wc -l)
+                if [ "$COUNT" -gt "$BEST_COUNT" ]; then
+                  BEST_COUNT=$COUNT
+                  BEST_ROOT="$ROOT"
+                fi
+              fi
+            done
+
+            if [ "$BEST_COUNT" -gt 0 ]; then
+              # Copy to extracted dir for uniform handling
+              echo "Found $BEST_COUNT .java files in $BEST_ROOT — copying..."
+              find "$BEST_ROOT" -name "*.java" -type f | while read -r F; do
+                REL="${F#$BEST_ROOT/}"
+                DEST="$EXTRACTED_DIR/$REL"
+                mkdir -p "$(dirname "$DEST")"
+                cp "$F" "$DEST"
+              done
+            fi
           fi
 
-          echo "source_root=$BEST_ROOT" >> $GITHUB_OUTPUT
-          echo "java_count=$BEST_COUNT" >> $GITHUB_OUTPUT
-          echo "Found $BEST_COUNT .java files in $BEST_ROOT"
+          # Count what we have
+          JAVA_COUNT=$(find "$EXTRACTED_DIR" -name "*.java" -type f 2>/dev/null | wc -l)
+          echo "source_root=$EXTRACTED_DIR" >> $GITHUB_OUTPUT
+          echo "java_count=$JAVA_COUNT" >> $GITHUB_OUTPUT
+          echo "Found $JAVA_COUNT .java files in $EXTRACTED_DIR"
+
+          # Debug: show top-level dirs if nothing found
+          if [ "$JAVA_COUNT" -eq 0 ]; then
+            echo "=== DEBUG: workspace .gradle contents ==="
+            find "$WORKSPACE/.gradle" -maxdepth 4 2>/dev/null | head -40
+            echo "=== DEBUG: home .gradle/caches contents ==="
+            find "$HOME/.gradle/caches" -maxdepth 3 2>/dev/null | head -40
+          fi
 
       # -------------------------------------------------------
       # Run all queries and collect results

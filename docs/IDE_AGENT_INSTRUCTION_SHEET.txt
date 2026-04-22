@@ -748,114 +748,84 @@ Only use Jar Decompile when you have a local jar that is not on Modrinth.
 
 Searching Minecraft/Forge/NeoForge API source code
 ---------------------------------------------------
-!! CRITICAL: Decompiled Minecraft sources are stored IN THE REPOSITORY !!
+!! CRITICAL: NEVER guess class names or method signatures. !!
+!! ALWAYS use the AI Source Search workflow to look them up. !!
 
-The repository contains pre-decompiled Minecraft source code for ALL supported
-versions and loaders in the `decompiled-minecraft/` directory. This is the
-PRIMARY resource for understanding Minecraft APIs.
+When you hit a compile error caused by an unknown class name, wrong package,
+or missing method, use the AI Source Search workflow to find the correct API
+for that exact Minecraft version and loader.
 
-DO NOT download or decompile sources locally. DO NOT use the AI Source Search
-workflow unless the version you need is missing from the repository.
-
-Location: `decompiled-minecraft/`
-
-Structure:
-  decompiled-minecraft/
-    ├── 1.8.9-forge/
-    ├── 1.12.2-forge/
-    ├── 1.16.5-forge/
-    ├── 1.16.5-fabric/
-    ├── 1.17.1-forge/
-    ├── 1.17.1-fabric/
-    ├── 1.18.2-forge/
-    ├── 1.18.2-fabric/
-    ├── 1.19.4-forge/
-    ├── 1.19.4-fabric/
-    ├── 1.20.1-forge/
-    ├── 1.20.1-fabric/
-    ├── 1.20.1-neoforge/
-    ├── 1.20.6-forge/
-    ├── 1.20.6-fabric/
-    ├── 1.20.6-neoforge/
-    ├── 1.21.1-forge/
-    ├── 1.21.1-fabric/
-    ├── 1.21.1-neoforge/
-    ├── 1.21.8-forge/
-    ├── 1.21.8-fabric/
-    ├── 1.21.8-neoforge/
-    ├── 1.21.11-forge/
-    ├── 1.21.11-fabric/
-    ├── 1.21.11-neoforge/
-    ├── README.md
-    └── SUMMARY.md
-
-Each version directory contains:
-  - Decompiled .java files in their package structure
-  - metadata.json with version info and file count
+Workflow: `AI Source Search`
+Script:   `scripts/ai_source_search.py`
+File:     `.github/workflows/ai-source-search.yml`
 
 How to use (from IDE agent):
 
-1. Identify the Minecraft version and loader from the compilation error
-2. Use grepSearch to find the class or method in the decompiled sources:
+  python3 scripts/ai_source_search.py \
+      --version <minecraft_version> \
+      --loader <forge|fabric|neoforge> \
+      --queries "<ClassName>" "<methodName>" \
+      --files "*<ClassName>*.java"
 
-   Example: Find FarmBlock class in Fabric 1.18.2:
-   grepSearch(
-     query="class FarmBlock",
-     includePattern="decompiled-minecraft/1.18.2-fabric/**/*.java"
-   )
+The script:
+  1. Triggers the GitHub Actions workflow
+  2. Waits for it to complete (~2-5 minutes)
+  3. Downloads the results artifact
+  4. Prints all matches and full class files to stdout
 
-3. Read the full class file to understand the API:
+You get the exact class names, package paths, and method signatures for that
+specific Minecraft version and loader — no guessing required.
 
-   readFile(
-     path="decompiled-minecraft/1.18.2-fabric/path/to/FarmBlock.java",
-     explanation="Reading FarmBlock to understand the fallOn method signature"
-   )
+Example: Find the farmland block class in Fabric 1.18.2:
 
-4. Use the actual API signature from the decompiled source to fix your mod code
+  python3 scripts/ai_source_search.py \
+      --version 1.18.2 \
+      --loader fabric \
+      --queries "FarmlandBlock" "fallOn" "trample" \
+      --files "*.java"
 
-Common search patterns:
+Example: Find SavedData API in Forge 1.21.5:
 
-  # Find a specific class
-  grepSearch(
-    query="class FarmBlock",
-    includePattern="decompiled-minecraft/1.18.2-fabric/**/*.java"
-  )
+  python3 scripts/ai_source_search.py \
+      --version 1.21.5 \
+      --loader forge \
+      --queries "computeIfAbsent" "SavedDataType" "DimensionDataStorage" \
+      --files "*DimensionDataStorage*.java" "*SavedData*.java"
 
-  # Find a method signature
-  grepSearch(
-    query="void fallOn\\(",
-    includePattern="decompiled-minecraft/1.18.2-fabric/**/*.java"
-  )
+What the results contain:
+  - search-info.txt       — version, loader, query params, match count
+  - queries/<query>.txt   — grep matches with context lines
+  - full-classes/*.java   — full content of every matched class file
+  - all-java-files.txt    — complete list of all .java files found
+  - gradle-output.log     — Gradle output (useful if sources are missing)
 
-  # Find event classes
-  grepSearch(
-    query="class.*TrampleEvent",
-    includePattern="decompiled-minecraft/1.21.6-forge/**/*.java"
-  )
+RULE: Run this workflow BEFORE writing any version-specific code.
+RULE: Read the full class file from full-classes/ — not just the grep snippet.
+RULE: Use the exact class name and package from the search results in your code.
+RULE: Do NOT run this locally. It runs entirely on GitHub Actions.
 
-  # Find all classes in a package
-  grepSearch(
-    query="package net\\.minecraft\\.world\\.level\\.block",
-    includePattern="decompiled-minecraft/1.18.2-fabric/**/*.java"
-  )
+How the workflow finds sources:
+  - Fabric: runs `genSources` via Fabric Loom, which produces a sources jar
+    inside the workspace .gradle/loom-cache/. The workflow unzips it.
+  - Forge: runs `genSources` via ForgeGradle, which extracts .java files
+    into ~/.gradle/caches/forge_gradle/ or net.minecraftforge/.
+  - NeoForge: runs `dependencies` + `genSources`, sources land in
+    ~/.gradle/caches/neoforge/.
 
-RULE: ALWAYS search the decompiled-minecraft/ directory FIRST before attempting
-any code fix. The sources are already in the repository - do not decompile them
-again.
+Example: Solving the Seed Protect Fabric 1.18-1.19.3 issue
 
-RULE: When you find the class, read the FULL file to understand all method
-signatures, not just the one line from the search result.
+  The mod failed because `net.minecraft.world.level.block.FarmlandBlock`
+  could not be found. Fabric uses yarn mappings, so the class name differs
+  from the Mojang/Forge name. Use the search workflow to find the real name:
 
-RULE: If a version is missing from decompiled-minecraft/, check SUMMARY.md to
-see if it failed to decompile, then use the closest working version as reference.
+  python3 scripts/ai_source_search.py \
+      --version 1.18.2 \
+      --loader fabric \
+      --queries "FarmlandBlock" "fallOn" "trample" \
+      --files "*.java"
 
-Updating decompiled sources (if needed):
-  If you need to regenerate all decompiled sources:
-  
-  gh workflow run decompile-all-minecraft-versions.yml --field commit_to_repo=yes
-  
-  This takes ~2 hours and commits updated sources to the repository.
-  Only do this if sources are outdated or a new Minecraft version was added.
+  Then read the full class from full-classes/ to get the exact @Mixin target,
+  method signature, and parameter types. Use those in the mixin source.
 
 Agent checklist before doing work
 ---------------------------------
