@@ -1,11 +1,11 @@
 // Fabric template for Minecraft 26.1+
-// IMPORTANT CHANGES vs 1.21.x:
+// Based on official FabricMC/fabric-example-mod 26.1 branch.
+// Key differences from 1.21.x:
 //   - Minecraft 26.1 removed obfuscation. Yarn mappings are no longer used.
-//   - Use the net.fabricmc.fabric-loom plugin (NOT fabric-loom-remap).
+//   - Use the net.fabricmc.fabric-loom plugin (no remapping).
 //   - modImplementation -> implementation (no remapping needed).
-//   - remapJar -> jar.
-//   - Java 25 required.
-//   - Gradle 9.4+ required.
+//   - Property name: fabric_api_version (not fabric_version).
+//   - Java 25 required. Gradle 9.4+ required.
 
 plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
@@ -14,10 +14,6 @@ plugins {
 
 version = project.mod_version
 group = project.maven_group
-
-base {
-    archivesName = project.archives_base_name
-}
 
 repositories {
     // Loom adds the essential maven repositories automatically.
@@ -37,12 +33,11 @@ loom {
 dependencies {
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    // No mappings needed — Minecraft 26.1+ uses official unobfuscated names directly.
-    // modImplementation -> implementation (no remapping in 26.1+)
+
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
     // Fabric API
-    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 processResources {
@@ -65,17 +60,16 @@ java {
 }
 
 jar {
-    inputs.property "archivesName", project.base.archivesName
+    inputs.property "projectName", project.name
 
     from("LICENSE") {
-        rename { "${it}_${inputs.properties.archivesName}" }
+        rename { "${it}_${project.name}" }
     }
 }
 
 publishing {
     publications {
         create("mavenJava", MavenPublication) {
-            artifactId = project.archives_base_name
             from components.java
         }
     }

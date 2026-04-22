@@ -225,6 +225,7 @@ public abstract class FarmlandBlockMixin {
             "fabricloader": ">=0.14.0",
             "minecraft": f"~{mc_version}",
             "java": java_req,
+            "fabric-api": "*",
         }
     }
     (res_dir / "fabric.mod.json").write_text(json.dumps(fabric_mod, indent=2))
@@ -307,9 +308,20 @@ public final class SeedProtectMod {{
 }}
 """
     elif is_modern:
+        # Forge 1.17 uses net.minecraftforge.event.world (not event.level)
+        # Forge 1.18+ uses net.minecraftforge.event.level
+        def ver_tuple_v(v):
+            parts = []
+            for p in v.split("."):
+                try: parts.append(int(p))
+                except ValueError: parts.append(0)
+            return tuple(parts)
+        vt2 = ver_tuple_v(mc_version)
+        event_pkg = "net.minecraftforge.event.world" if vt2 < (1, 18) else "net.minecraftforge.event.level"
+
         main_src = f"""package com.seedprotect;
 
-import net.minecraftforge.event.level.BlockEvent;
+import {event_pkg}.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -465,6 +477,7 @@ def create_neoforge(mc_version: str):
 
     # ── Main class ────────────────────────────────────────────────────────────
     # NeoForge uses its own event package throughout all versions
+    # Bus.FORGE is the correct bus name for game events in NeoForge
     main_src = f"""package com.seedprotect;
 
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -472,7 +485,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 
 @Mod("{MOD_ID}")
-@Mod.EventBusSubscriber(modid = "{MOD_ID}", bus = Mod.EventBusSubscriber.Bus.GAME)
+@Mod.EventBusSubscriber(modid = "{MOD_ID}", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class SeedProtectMod {{
     public static final String MOD_ID = "{MOD_ID}";
 
