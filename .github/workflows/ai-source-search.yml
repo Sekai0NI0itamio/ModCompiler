@@ -206,10 +206,12 @@ jobs:
         id: locate
         run: |
           SEARCH_ROOTS=(
+            "$WORKSPACE/.gradle/loom-cache"
+            "$WORKSPACE/build/loom-cache"
+            "$HOME/.gradle/caches/fabric-loom"
             "$HOME/.gradle/caches/forge_gradle"
             "$HOME/.gradle/caches/net.minecraftforge"
             "$HOME/.gradle/caches/minecraft"
-            "$HOME/.gradle/caches/fabric-loom"
             "$HOME/.gradle/caches/neoforge"
             "$HOME/.gradle/caches/modules-2"
             "$HOME/.gradle/caches"
