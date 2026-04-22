@@ -147,10 +147,13 @@ public final class SeedProtectMod implements ModInitializer {{
 """)
 
     # ── Mixin ─────────────────────────────────────────────────────────────────
-    # 1.17 uses yarn mappings: net.minecraft.block.FarmlandBlock / onLandedUpon
-    # 1.20+ uses Mojang mappings: net.minecraft.world.level.block.FarmBlock / fallOn
-    # 26.1 uses Mojang mappings (same as 1.20+) but Java 25 and new loom plugin
-    is_yarn = mc_version.startswith("1.17")
+    # Fabric mapping eras:
+    #   1.17.x        → yarn: net.minecraft.block.FarmlandBlock / onLandedUpon
+    #   1.18.x–1.20.x → yarn: net.minecraft.block.FarmlandBlock / onLandedUpon
+    #   1.21+         → Mojang: net.minecraft.world.level.block.FarmBlock / fallOn
+    #   26.1+         → Mojang (no obfuscation): net.minecraft.world.level.block.FarmBlock / fallOn
+    is_yarn = mc_version.startswith("1.17") or mc_version.startswith("1.18") or \
+              mc_version.startswith("1.19") or mc_version.startswith("1.20")
     is_26   = mc_version.startswith("26.")
 
     if is_yarn:
