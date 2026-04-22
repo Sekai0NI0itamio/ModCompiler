@@ -748,18 +748,30 @@ Only use Jar Decompile when you have a local jar that is not on Modrinth.
 
 Searching Minecraft/Forge/NeoForge API source code
 ---------------------------------------------------
-!! CRITICAL: NEVER guess class names or method signatures. !!
-!! ALWAYS use the AI Source Search workflow to look them up. !!
+!! MANDATORY: You MUST use the AI Source Search workflow any time you are    !!
+!! unsure of a class name, package, or method signature. This is not         !!
+!! optional. Guessing is forbidden. Run the search first, then write code.   !!
 
-When you hit a compile error caused by an unknown class name, wrong package,
-or missing method, use the AI Source Search workflow to find the correct API
-for that exact Minecraft version and loader.
+This applies to ALL of the following situations:
+  - You get a "class not found" or "cannot find symbol" compile error
+  - You are unsure which package a class lives in for a given version/loader
+  - You are unsure what a method is called in a specific version
+  - Fabric yarn mappings differ from Forge/Mojang mappings (they always do)
+  - You are porting a mod to a new version and the API may have changed
+  - You are writing a mixin and need the exact target class and method name
+  - You have any doubt at all about what the correct class or method is
+
+DO NOT attempt to fix a compile error by guessing a different class name.
+DO NOT assume Fabric uses the same class names as Forge. It does not.
+DO NOT skip this step because you think you know the answer. Run the search.
 
 Workflow: `AI Source Search`
 Script:   `scripts/ai_source_search.py`
 File:     `.github/workflows/ai-source-search.yml`
 
-How to use (from IDE agent):
+------------------------------------------------------------------------
+How to use
+------------------------------------------------------------------------
 
   python3 scripts/ai_source_search.py \
       --version <minecraft_version> \
@@ -776,15 +788,79 @@ The script:
 You get the exact class names, package paths, and method signatures for that
 specific Minecraft version and loader — no guessing required.
 
-Example: Find the farmland block class in Fabric 1.18.2:
+------------------------------------------------------------------------
+What the results contain
+------------------------------------------------------------------------
+
+  - search-info.txt       — version, loader, query params, match count
+  - queries/<query>.txt   — grep matches with context lines around each hit
+  - full-classes/*.java   — full content of every matched class file
+  - all-java-files.txt    — complete list of all .java files found
+  - gradle-output.log     — Gradle output (useful if sources are missing)
+
+RULE: Read the full class file from full-classes/ — not just the grep snippet.
+RULE: Use the exact class name and package from the search results in your code.
+RULE: Do NOT run this locally. It runs entirely on GitHub Actions.
+
+------------------------------------------------------------------------
+Mandatory pattern: "class not found" or "cannot find symbol" errors
+------------------------------------------------------------------------
+
+When a build fails with a class-not-found or cannot-find-symbol error:
+
+  STEP 1 — Stop. Do not guess a different class name.
+
+  STEP 2 — Run the AI Source Search for that version and loader:
+
+    python3 scripts/ai_source_search.py \
+        --version <failing_version> \
+        --loader <failing_loader> \
+        --queries "<ClassName that failed>" \
+        --files "*.java"
+
+  STEP 3 — Read all-java-files.txt to find the correct path.
+           Read the full class from full-classes/<ClassName>.java.
+
+  STEP 4 — Use the exact package and class name from the source.
+           Update the mod code. Then rebuild.
+
+This is the ONLY acceptable way to resolve a class-not-found error.
+
+------------------------------------------------------------------------
+Why Fabric class names differ from Forge
+------------------------------------------------------------------------
+
+Fabric uses yarn mappings. Forge and NeoForge use Mojang (official) mappings.
+The same Minecraft class can have a completely different name and package
+depending on the loader:
+
+  Forge/NeoForge (Mojang mappings):
+    net.minecraft.world.level.block.FarmBlock
+    method: fallOn(...)
+
+  Fabric (yarn mappings):
+    net.minecraft.block.FarmlandBlock
+    method: onLandedUpon(...)
+
+These are the SAME class in the same Minecraft version. The names are
+entirely different because the mapping systems are different.
+
+You cannot port a Forge mixin to Fabric by changing the package prefix.
+You must look up the actual yarn-mapped name using the AI Source Search.
+
+------------------------------------------------------------------------
+Examples
+------------------------------------------------------------------------
+
+Find the farmland block class in Fabric 1.18.2 (yarn mappings):
 
   python3 scripts/ai_source_search.py \
       --version 1.18.2 \
       --loader fabric \
-      --queries "FarmlandBlock" "fallOn" "trample" \
+      --queries "FarmlandBlock" "onLandedUpon" \
       --files "*.java"
 
-Example: Find SavedData API in Forge 1.21.5:
+Find SavedData API in Forge 1.21.5:
 
   python3 scripts/ai_source_search.py \
       --version 1.21.5 \
@@ -792,40 +868,54 @@ Example: Find SavedData API in Forge 1.21.5:
       --queries "computeIfAbsent" "SavedDataType" "DimensionDataStorage" \
       --files "*DimensionDataStorage*.java" "*SavedData*.java"
 
-What the results contain:
-  - search-info.txt       — version, loader, query params, match count
-  - queries/<query>.txt   — grep matches with context lines
-  - full-classes/*.java   — full content of every matched class file
-  - all-java-files.txt    — complete list of all .java files found
-  - gradle-output.log     — Gradle output (useful if sources are missing)
-
-RULE: Run this workflow BEFORE writing any version-specific code.
-RULE: Read the full class file from full-classes/ — not just the grep snippet.
-RULE: Use the exact class name and package from the search results in your code.
-RULE: Do NOT run this locally. It runs entirely on GitHub Actions.
-
-How the workflow finds sources:
-  - Fabric: runs `genSources` via Fabric Loom, which produces a sources jar
-    inside the workspace .gradle/loom-cache/. The workflow unzips it.
-  - Forge: runs `genSources` via ForgeGradle, which extracts .java files
-    into ~/.gradle/caches/forge_gradle/ or net.minecraftforge/.
-  - NeoForge: runs `dependencies` + `genSources`, sources land in
-    ~/.gradle/caches/neoforge/.
-
-Example: Solving the Seed Protect Fabric 1.18-1.19.3 issue
-
-  The mod failed because `net.minecraft.world.level.block.FarmlandBlock`
-  could not be found. Fabric uses yarn mappings, so the class name differs
-  from the Mojang/Forge name. Use the search workflow to find the real name:
+Find an event class in NeoForge 1.21.9:
 
   python3 scripts/ai_source_search.py \
-      --version 1.18.2 \
-      --loader fabric \
-      --queries "FarmlandBlock" "fallOn" "trample" \
+      --version 1.21.9 \
+      --loader neoforge \
+      --queries "FarmlandTrampleEvent" \
       --files "*.java"
 
-  Then read the full class from full-classes/ to get the exact @Mixin target,
-  method signature, and parameter types. Use those in the mixin source.
+Broad search when you don't know the class name at all:
+
+  python3 scripts/ai_source_search.py \
+      --version 1.19.4 \
+      --loader fabric \
+      --queries "trample" "farmland" \
+      --files "*.java" \
+      --context 30
+
+------------------------------------------------------------------------
+Real-world example: Seed Protect Fabric 1.18-1.19.3
+------------------------------------------------------------------------
+
+The mod failed with:
+  error: Mixin target net.minecraft.world.level.block.FarmlandBlock could not be found
+
+Three guesses at different class names all failed. The fix was to stop
+guessing and run the AI Source Search:
+
+  python3 scripts/ai_source_search.py \
+      --version 1.18.2 --loader fabric \
+      --queries "FarmlandBlock" "fallOn" "trample" --files "*.java"
+
+The search returned the actual FarmlandBlock.java source, which showed:
+  - Package: net.minecraft.block  (NOT net.minecraft.world.level.block)
+  - Method:  onLandedUpon(...)    (NOT fallOn)
+
+The mixin was fixed with the correct names and all 6 versions compiled
+on the first attempt. See SEED_PROTECT_SOLUTION_SUMMARY.md for full details.
+
+------------------------------------------------------------------------
+How the workflow finds sources (technical detail)
+------------------------------------------------------------------------
+
+  Fabric:    runs `genSources` via Fabric Loom → produces a sources jar
+             inside the workspace .gradle/loom-cache/ → workflow unzips it
+  Forge:     runs `genSources` via ForgeGradle → extracts .java files into
+             ~/.gradle/caches/forge_gradle/ or net.minecraftforge/
+  NeoForge:  runs `dependencies` + `genSources` → sources land in
+             ~/.gradle/caches/neoforge/
 
 Agent checklist before doing work
 ---------------------------------
