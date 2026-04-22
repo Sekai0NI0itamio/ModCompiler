@@ -1,0 +1,694 @@
+name: Profile Diagnosis
+
+# ---------------------------------------------------------------------------
+# Purpose
+# -------
+# Fetches every public project owned by a Modrinth user, then for each
+# project in parallel:
+#   1. Downloads all published versions (latest per loader+MC pair)
+#   2. Decompiles each jar with Vineflower
+#   3. Runs a full diagnosis:
+#        - Shell detection (jar < 5 KB or 0 classes)
+#        - Identifies the original (oldest working) version
+#        - Finds the latest working version per loader
+#        - Computes missing versions vs what this repo can build
+#   4. Produces a per-project report.txt and bundle zip
+#   5. Assembles a combined master report.txt across all projects
+#
+# Jobs
+# ----
+#   list-projects   - Fetches all public projects for the user, emits matrix
+#   diagnose        - Matrix job (one runner per project), full diagnosis
+#   assemble-report - Merges all per-project reports into one master report
+#
+# Artifacts
+# ---------
+#   diagnosis-<slug>          per-project bundle (report.txt + all version data)
+#   profile-diagnosis-report  master report.txt covering all projects
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      modrinth_username:
+        description: 'Modrinth username to diagnose'
+        required: false
+        default: 'Itamio'
+        type: string
+
+permissions:
+  contents: read
+
+# ---------------------------------------------------------------------------
+# Job 1 — list all public projects for the user
+# ---------------------------------------------------------------------------
+jobs:
+  list-projects:
+    name: List projects for ${{ inputs.modrinth_username }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.emit.outputs.matrix }}
+      project_count: ${{ steps.emit.outputs.project_count }}
+
+    steps:
+      - name: Fetch user projects from Modrinth API
+        id: emit
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          USERNAME: ${{ inputs.modrinth_username }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, time, urllib.error, urllib.parse, urllib.request
+
+          API      = "https://api.modrinth.com/v2"
+          TOKEN    = os.environ.get("MODRINTH_TOKEN", "")
+          USERNAME = os.environ.get("USERNAME", "Itamio").strip()
+
+          def headers():
+              h = {"User-Agent": "ModCompilerProfileDiagnosis/1.0", "Accept": "application/json"}
+              if TOKEN:
+                  h["Authorization"] = TOKEN
+              return h
+
+          def get(path):
+              url = API + path
+              req = urllib.request.Request(url, headers=headers())
+              for attempt in range(1, 6):
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          return json.loads(r.read().decode())
+                  except urllib.error.HTTPError as e:
+                      if e.code == 404:
+                          sys.exit(f"User not found: {USERNAME}")
+                      if e.code in {429,500,502,503,504} and attempt < 5:
+                          time.sleep(2**attempt); continue
+                      sys.exit(f"HTTP {e.code}: {url}")
+                  except urllib.error.URLError as e:
+                      if attempt < 5:
+                          time.sleep(2**attempt); continue
+                      sys.exit(f"Network error: {e.reason}")
+
+          print(f"Fetching projects for user: {USERNAME}")
+          projects = get(f"/user/{urllib.parse.quote(USERNAME, safe='')}/projects") or []
+          print(f"Found {len(projects)} projects")
+
+          entries = []
+          for p in projects:
+              slug  = p.get("slug", p.get("id", "unknown"))
+              title = p.get("title", slug)
+              pid   = p.get("id", "")
+              ptype = p.get("project_type", "mod")
+              print(f"  {slug}  ({title})  type={ptype}")
+              entries.append({"slug": slug, "title": title, "project_id": pid, "project_type": ptype})
+
+          matrix = json.dumps({"include": entries})
+          count  = str(len(entries))
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"matrix={matrix}\n")
+              f.write(f"project_count={count}\n")
+
+          print(f"Matrix emitted: {count} projects")
+          PY
+
+# ---------------------------------------------------------------------------
+# Job 2 — diagnose each project (matrix, one runner per project)
+# ---------------------------------------------------------------------------
+  diagnose:
+    name: Diagnose ${{ matrix.slug }}
+    needs: list-projects
+    if: ${{ needs.list-projects.outputs.project_count != '0' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJson(needs.list-projects.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # ── Download Vineflower ──────────────────────────────────────────────
+      - name: Download Vineflower
+        shell: bash
+        run: |
+          mkdir -p .workflow_tools
+          curl -fsSL \
+            https://repo1.maven.org/maven2/org/vineflower/vineflower/1.11.0/vineflower-1.11.0.jar \
+            -o .workflow_tools/vineflower.jar
+
+      # ── Fetch all versions + jars for this project ───────────────────────
+      - name: Fetch project versions and jars
+        id: fetch
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          SLUG: ${{ matrix.slug }}
+          TITLE: ${{ matrix.title }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, time, urllib.error, urllib.parse, urllib.request
+          from pathlib import Path
+
+          API   = "https://api.modrinth.com/v2"
+          TOKEN = os.environ.get("MODRINTH_TOKEN", "")
+          SLUG  = os.environ.get("SLUG", "").strip()
+
+          def headers():
+              h = {"User-Agent": "ModCompilerProfileDiagnosis/1.0", "Accept": "application/json"}
+              if TOKEN:
+                  h["Authorization"] = TOKEN
+              return h
+
+          def get(path):
+              url = API + path
+              req = urllib.request.Request(url, headers=headers())
+              for attempt in range(1, 6):
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          return json.loads(r.read().decode())
+                  except urllib.error.HTTPError as e:
+                      if e.code == 404:
+                          return None
+                      if e.code in {429,500,502,503,504} and attempt < 5:
+                          time.sleep(2**attempt); continue
+                      sys.exit(f"HTTP {e.code}: {url}")
+                  except urllib.error.URLError as e:
+                      if attempt < 5:
+                          time.sleep(2**attempt); continue
+                      sys.exit(f"Network error: {e.reason}")
+
+          def download(url, dest):
+              dest = Path(dest)
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              req = urllib.request.Request(url, headers=headers())
+              for attempt in range(1, 4):
+                  try:
+                      with urllib.request.urlopen(req, timeout=60) as r:
+                          dest.write_bytes(r.read())
+                      return dest.stat().st_size
+                  except Exception:
+                      if attempt < 3:
+                          time.sleep(2**attempt)
+              return 0
+
+          out = Path(f".diag/{SLUG}")
+          out.mkdir(parents=True, exist_ok=True)
+
+          project = get(f"/project/{urllib.parse.quote(SLUG, safe='')}")
+          if not project:
+              sys.exit(f"Project not found: {SLUG}")
+
+          (out / "project.json").write_text(json.dumps(project, indent=2), encoding="utf-8")
+
+          versions = get(f"/project/{urllib.parse.quote(project['id'], safe='')}/version") or []
+          (out / "all_versions.json").write_text(json.dumps(versions, indent=2), encoding="utf-8")
+          print(f"{SLUG}: {len(versions)} versions on Modrinth")
+
+          # Download ALL versions (not just latest) so we can detect shells
+          for v in versions:
+              vid  = v["id"]
+              vdir = out / "versions" / vid
+              vdir.mkdir(parents=True, exist_ok=True)
+              (vdir / "version.json").write_text(json.dumps(v, indent=2), encoding="utf-8")
+
+              primary = next((f for f in v.get("files", []) if f.get("primary")), None)
+              if not primary and v.get("files"):
+                  primary = v["files"][0]
+
+              if primary:
+                  size = download(primary["url"], vdir / primary["filename"])
+                  print(f"  [{vid}] {v.get('version_number','')} {v.get('loaders',[])} {v.get('game_versions',[])} → {primary['filename']} ({size:,}B)")
+              else:
+                  print(f"  [{vid}] no primary file")
+
+          print(f"Done fetching {SLUG}")
+          PY
+
+      # ── Decompile every jar ───────────────────────────────────────────────
+      - name: Decompile all jars
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, sys
+          from pathlib import Path
+
+          SLUG = os.environ.get("SLUG", "").strip()
+          base = Path(f".diag/{SLUG}/versions")
+          if not base.exists():
+              print("No versions directory, skipping decompile")
+              sys.exit(0)
+
+          for vdir in sorted(base.iterdir()):
+              if not vdir.is_dir():
+                  continue
+              vid = vdir.name
+              jars = list(vdir.glob("*.jar"))
+              if not jars:
+                  continue
+              jar = jars[0]
+
+              # Copy to "To Be Decompiled/" for the CLI
+              tbd = Path("To Be Decompiled")
+              tbd.mkdir(exist_ok=True)
+              dest_jar = tbd / jar.name
+              import shutil
+              shutil.copy(jar, dest_jar)
+
+              artifact_dir = vdir / "decompiled"
+              artifact_dir.mkdir(exist_ok=True)
+
+              print(f"  Decompiling {jar.name} ({jar.stat().st_size:,}B)...")
+              result = subprocess.run(
+                  [
+                      "python3", "build_mods.py", "decompile-jar",
+                      "--jar-path", jar.name,
+                      "--manifest", "version-manifest.json",
+                      "--decompiler-jar", ".workflow_tools/vineflower.jar",
+                      "--artifact-dir", str(artifact_dir),
+                  ],
+                  capture_output=True, text=True
+              )
+              if result.returncode != 0:
+                  print(f"    FAILED: {result.stderr[:300]}")
+                  (artifact_dir / "decompile_error.txt").write_text(
+                      result.stdout + "\n" + result.stderr, encoding="utf-8"
+                  )
+              else:
+                  print(f"    OK")
+
+              # Extract decompiled zip if present
+              for zf in artifact_dir.glob("*.zip"):
+                  import zipfile
+                  with zipfile.ZipFile(zf) as z:
+                      z.extractall(artifact_dir / "src")
+                  zf.unlink()
+
+              dest_jar.unlink(missing_ok=True)
+
+          print("Decompile pass complete")
+          PY
+
+      # ── Run diagnosis and produce report.txt ─────────────────────────────
+      - name: Run diagnosis
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+          TITLE: ${{ matrix.title }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, zipfile
+          from pathlib import Path
+          from datetime import datetime
+
+          SLUG  = os.environ.get("SLUG", "").strip()
+          TITLE = os.environ.get("TITLE", SLUG).strip()
+          base  = Path(f".diag/{SLUG}")
+
+          # ── Load project metadata ────────────────────────────────────────
+          project = json.loads((base / "project.json").read_text(encoding="utf-8"))
+          all_versions = json.loads((base / "all_versions.json").read_text(encoding="utf-8"))
+
+          # ── Load version-manifest to know what this repo can build ───────
+          manifest = json.loads(Path("version-manifest.json").read_text(encoding="utf-8"))
+
+          # Build a flat set of (mc_version, loader) pairs the repo supports
+          repo_capabilities = set()
+          for rng in manifest["ranges"]:
+              folder = rng["folder"]
+              for loader, lcfg in rng["loaders"].items():
+                  supported = lcfg.get("supported_versions", [])
+                  if not supported:
+                      # single-version range
+                      supported = [rng["min_version"]]
+                  for sv in supported:
+                      repo_capabilities.add((sv, loader))
+                  # also add min/max as anchors
+                  repo_capabilities.add((rng["min_version"], loader))
+                  repo_capabilities.add((rng["max_version"], loader))
+
+          # ── Analyse each version ─────────────────────────────────────────
+          SHELL_SIZE_THRESHOLD = 5000   # bytes
+          SHELL_CLASS_THRESHOLD = 1     # fewer than this many .class files = shell
+
+          def count_classes_in_jar(jar_path):
+              try:
+                  with zipfile.ZipFile(jar_path) as z:
+                      return sum(1 for n in z.namelist() if n.endswith(".class"))
+              except Exception:
+                  return -1
+
+          def read_mod_info(vdir):
+              mi = vdir / "decompiled" / "mod_info.txt"
+              if not mi.exists():
+                  return {}
+              info = {}
+              for line in mi.read_text(encoding="utf-8", errors="replace").splitlines():
+                  if "=" in line:
+                      k, _, v = line.partition("=")
+                      info[k.strip()] = v.strip()
+              return info
+
+          version_records = []
+          for v in all_versions:
+              vid  = v["id"]
+              vdir = base / "versions" / vid
+              jars = list(vdir.glob("*.jar")) if vdir.exists() else []
+
+              jar_size    = jars[0].stat().st_size if jars else 0
+              class_count = count_classes_in_jar(jars[0]) if jars else -1
+              mod_info    = read_mod_info(vdir)
+
+              is_shell = (
+                  not jars
+                  or jar_size < SHELL_SIZE_THRESHOLD
+                  or (class_count >= 0 and class_count < SHELL_CLASS_THRESHOLD)
+              )
+
+              version_records.append({
+                  "id":             vid,
+                  "version_number": v.get("version_number", vid),
+                  "name":           v.get("name", ""),
+                  "version_type":   v.get("version_type", ""),
+                  "date_published": v.get("date_published", ""),
+                  "game_versions":  v.get("game_versions", []),
+                  "loaders":        v.get("loaders", []),
+                  "jar_name":       jars[0].name if jars else "",
+                  "jar_size":       jar_size,
+                  "class_count":    class_count,
+                  "is_shell":       is_shell,
+                  "mod_info":       mod_info,
+              })
+
+          # Sort oldest first
+          version_records.sort(key=lambda r: r["date_published"])
+
+          # ── Find original version (oldest working) ───────────────────────
+          working = [r for r in version_records if not r["is_shell"]]
+          shells  = [r for r in version_records if r["is_shell"]]
+          original = working[0] if working else None
+
+          # ── Find latest working version per loader ───────────────────────
+          latest_per_loader = {}
+          for r in working:  # already sorted oldest→newest
+              for loader in r["loaders"]:
+                  latest_per_loader[loader] = r
+
+          # ── Compute published (mc_version, loader) pairs ─────────────────
+          published_pairs = set()
+          for r in working:
+              for loader in r["loaders"]:
+                  for gv in r["game_versions"]:
+                      published_pairs.add((gv, loader))
+
+          # ── Compute missing versions ─────────────────────────────────────
+          # What the repo CAN build but is NOT yet published as a working version
+          missing_pairs = repo_capabilities - published_pairs
+
+          # Group missing by loader for readability
+          missing_by_loader = {}
+          for (gv, loader) in sorted(missing_pairs):
+              missing_by_loader.setdefault(loader, []).append(gv)
+
+          # ── Write report.txt ─────────────────────────────────────────────
+          lines = []
+          SEP = "=" * 72
+
+          lines += [
+              SEP,
+              f"PROJECT: {TITLE}",
+              f"SLUG:    {SLUG}",
+              f"URL:     https://modrinth.com/mod/{SLUG}",
+              f"ID:      {project.get('id', '?')}",
+              f"TYPE:    {project.get('project_type', 'mod')}",
+              f"LICENSE: {project.get('license', {}).get('id', '?')}",
+              f"DOWNLOADS: {project.get('downloads', 0):,}",
+              f"CLIENT SIDE: {project.get('client_side', '?')}",
+              f"SERVER SIDE: {project.get('server_side', '?')}",
+              f"CATEGORIES: {', '.join(project.get('categories', []))}",
+              f"LOADERS: {', '.join(project.get('loaders', []))}",
+              f"MC VERSIONS (Modrinth): {', '.join(project.get('game_versions', []))}",
+              SEP,
+              "",
+              "── SUMMARY ──────────────────────────────────────────────────────────",
+              f"  Total versions on Modrinth : {len(all_versions)}",
+              f"  Working versions           : {len(working)}",
+              f"  Shell versions             : {len(shells)}",
+              f"  Missing (repo can build)   : {len(missing_pairs)}",
+              "",
+          ]
+
+          # Original version
+          lines.append("── ORIGINAL VERSION (oldest working) ────────────────────────────────")
+          if original:
+              lines += [
+                  f"  Version number : {original['version_number']}",
+                  f"  Published      : {original['date_published'][:10]}",
+                  f"  Loaders        : {', '.join(original['loaders'])}",
+                  f"  MC versions    : {', '.join(original['game_versions'])}",
+                  f"  Jar            : {original['jar_name']} ({original['jar_size']:,} bytes, {original['class_count']} classes)",
+              ]
+              if original["mod_info"]:
+                  lines.append(f"  mod_id         : {original['mod_info'].get('mod_id', '?')}")
+                  lines.append(f"  group          : {original['mod_info'].get('group', '?')}")
+                  lines.append(f"  entrypoint     : {original['mod_info'].get('entrypoint_class', '?')}")
+          else:
+              lines.append("  No working versions found.")
+          lines.append("")
+
+          # Latest working per loader
+          lines.append("── LATEST WORKING VERSION PER LOADER ────────────────────────────────")
+          if latest_per_loader:
+              for loader, r in sorted(latest_per_loader.items()):
+                  lines += [
+                      f"  [{loader}]",
+                      f"    Version number : {r['version_number']}",
+                      f"    Published      : {r['date_published'][:10]}",
+                      f"    MC versions    : {', '.join(r['game_versions'])}",
+                      f"    Jar            : {r['jar_name']} ({r['jar_size']:,} bytes, {r['class_count']} classes)",
+                  ]
+          else:
+              lines.append("  No working versions found.")
+          lines.append("")
+
+          # All versions table
+          lines.append("── ALL VERSIONS ─────────────────────────────────────────────────────")
+          lines.append(f"  {'Version':<20} {'Date':<12} {'Loaders':<20} {'MC versions':<30} {'Status':<10} {'Jar size':>10} {'Classes':>8}")
+          lines.append(f"  {'-'*20} {'-'*12} {'-'*20} {'-'*30} {'-'*10} {'-'*10} {'-'*8}")
+          for r in version_records:
+              status = "SHELL" if r["is_shell"] else "working"
+              loaders_str = ",".join(r["loaders"])[:18]
+              gv_str = ",".join(r["game_versions"])[:28]
+              lines.append(
+                  f"  {r['version_number']:<20} {r['date_published'][:10]:<12} "
+                  f"{loaders_str:<20} {gv_str:<30} {status:<10} "
+                  f"{r['jar_size']:>10,} {r['class_count']:>8}"
+              )
+          lines.append("")
+
+          # Missing versions
+          lines.append("── MISSING VERSIONS (repo can build, not yet published) ─────────────")
+          if missing_pairs:
+              for loader in sorted(missing_by_loader.keys()):
+                  mc_list = sorted(missing_by_loader[loader])
+                  lines.append(f"  [{loader}]  {', '.join(mc_list)}")
+          else:
+              lines.append("  None — all repo-buildable versions are already published!")
+          lines.append("")
+
+          # Shell versions detail
+          if shells:
+              lines.append("── SHELL VERSIONS (< 5 KB or 0 classes) ────────────────────────────")
+              for r in shells:
+                  lines.append(
+                      f"  {r['version_number']:<20} {r['date_published'][:10]}  "
+                      f"loaders={','.join(r['loaders'])}  "
+                      f"mc={','.join(r['game_versions'])}  "
+                      f"size={r['jar_size']:,}B  classes={r['class_count']}"
+                  )
+              lines.append("")
+
+          lines += [
+              f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+              SEP,
+          ]
+
+          report_text = "\n".join(lines) + "\n"
+          (base / "report.txt").write_text(report_text, encoding="utf-8")
+          print(report_text)
+
+          # Also write a machine-readable diagnosis.json
+          diagnosis = {
+              "slug":            SLUG,
+              "title":           TITLE,
+              "project_id":      project.get("id"),
+              "total_versions":  len(all_versions),
+              "working_count":   len(working),
+              "shell_count":     len(shells),
+              "missing_count":   len(missing_pairs),
+              "original":        original,
+              "latest_per_loader": {k: v for k, v in latest_per_loader.items()},
+              "missing_pairs":   [{"mc_version": gv, "loader": l} for gv, l in sorted(missing_pairs)],
+              "version_records": version_records,
+          }
+          (base / "diagnosis.json").write_text(json.dumps(diagnosis, indent=2, default=str), encoding="utf-8")
+          print(f"Report written for {SLUG}")
+          PY
+
+      # ── Upload per-project bundle ─────────────────────────────────────────
+      - name: Upload project bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnosis-${{ matrix.slug }}
+          path: .diag/${{ matrix.slug }}/
+          if-no-files-found: warn
+
+# ---------------------------------------------------------------------------
+# Job 3 — assemble master report across all projects
+# ---------------------------------------------------------------------------
+  assemble-report:
+    name: Assemble master report
+    needs: [list-projects, diagnose]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download all project bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: diagnosis-*
+          path: .diag-downloads
+
+      - name: Build master report
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          from datetime import datetime
+
+          downloads = Path(".diag-downloads")
+          out       = Path(".master-report")
+          out.mkdir(exist_ok=True)
+
+          SEP = "=" * 72
+          THIN = "-" * 72
+
+          all_reports = []
+          all_diagnoses = []
+
+          for bundle_dir in sorted(downloads.iterdir()):
+              if not bundle_dir.is_dir():
+                  continue
+              # artifact name is "diagnosis-<slug>", dir inside is the slug content
+              report_file = bundle_dir / "report.txt"
+              diag_file   = bundle_dir / "diagnosis.json"
+
+              if report_file.exists():
+                  all_reports.append(report_file.read_text(encoding="utf-8"))
+              if diag_file.exists():
+                  all_diagnoses.append(json.loads(diag_file.read_text(encoding="utf-8")))
+
+          # ── Master summary table ─────────────────────────────────────────
+          header_lines = [
+              SEP,
+              "MODRINTH PROFILE DIAGNOSIS — MASTER REPORT",
+              f"User:      Itamio  (https://modrinth.com/user/Itamio)",
+              f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+              f"Projects:  {len(all_diagnoses)}",
+              SEP,
+              "",
+              "── OVERVIEW TABLE ───────────────────────────────────────────────────",
+              f"  {'Project':<35} {'Total':>6} {'Working':>8} {'Shells':>7} {'Missing':>8}",
+              f"  {'-'*35} {'-'*6} {'-'*8} {'-'*7} {'-'*8}",
+          ]
+
+          total_working = 0
+          total_shells  = 0
+          total_missing = 0
+
+          for d in sorted(all_diagnoses, key=lambda x: x.get("slug", "")):
+              slug    = d.get("slug", "?")
+              title   = d.get("title", slug)[:33]
+              total   = d.get("total_versions", 0)
+              working = d.get("working_count", 0)
+              shells  = d.get("shell_count", 0)
+              missing = d.get("missing_count", 0)
+              total_working += working
+              total_shells  += shells
+              total_missing += missing
+              header_lines.append(
+                  f"  {title:<35} {total:>6} {working:>8} {shells:>7} {missing:>8}"
+              )
+
+          header_lines += [
+              f"  {'TOTAL':<35} {'':>6} {total_working:>8} {total_shells:>7} {total_missing:>8}",
+              "",
+              "── PROJECTS WITH MISSING VERSIONS ───────────────────────────────────",
+          ]
+
+          for d in sorted(all_diagnoses, key=lambda x: x.get("slug", "")):
+              if d.get("missing_count", 0) > 0:
+                  slug    = d.get("slug", "?")
+                  missing = d.get("missing_pairs", [])
+                  by_loader = {}
+                  for mp in missing:
+                      by_loader.setdefault(mp["loader"], []).append(mp["mc_version"])
+                  header_lines.append(f"  {slug}:")
+                  for loader in sorted(by_loader.keys()):
+                      mc_list = sorted(by_loader[loader])
+                      header_lines.append(f"    [{loader}]  {', '.join(mc_list)}")
+
+          header_lines += [
+              "",
+              "── PROJECTS WITH SHELL VERSIONS ─────────────────────────────────────",
+          ]
+          for d in sorted(all_diagnoses, key=lambda x: x.get("slug", "")):
+              if d.get("shell_count", 0) > 0:
+                  slug   = d.get("slug", "?")
+                  shells = d.get("shell_count", 0)
+                  header_lines.append(f"  {slug}: {shells} shell version(s)")
+
+          header_lines += ["", SEP, "", "── PER-PROJECT DETAILS ──────────────────────────────────────────────", ""]
+
+          master = "\n".join(header_lines) + "\n\n"
+          master += "\n\n".join(all_reports)
+
+          (out / "report.txt").write_text(master, encoding="utf-8")
+          print(master[:3000])
+          print(f"\n... (full report written to report.txt)")
+          PY
+
+      - name: Write step summary
+        if: always()
+        shell: bash
+        run: |
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          head -80 .master-report/report.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload master report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile-diagnosis-report
+          path: .master-report/report.txt
+          if-no-files-found: error
