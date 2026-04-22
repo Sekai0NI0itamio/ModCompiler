@@ -75,11 +75,31 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Determine Java version
+        id: java_version
+        run: |
+          VERSION="${{ inputs.minecraft_version }}"
+          
+          # Determine Java version based on Minecraft version
+          if [[ "$VERSION" =~ ^1\.(8|12|16) ]]; then
+            JAVA_VER=8
+          elif [[ "$VERSION" =~ ^1\.(17|18|19) ]]; then
+            JAVA_VER=17
+          elif [[ "$VERSION" =~ ^1\.20\.[0-4]$ ]] || [[ "$VERSION" == "1.20" ]]; then
+            JAVA_VER=17
+          else
+            # 1.20.5+ requires Java 21
+            JAVA_VER=21
+          fi
+          
+          echo "java_version=$JAVA_VER" >> $GITHUB_OUTPUT
+          echo "Using Java $JAVA_VER for Minecraft $VERSION"
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: ${{ steps.java_version.outputs.java_version }}
 
       # -------------------------------------------------------
       # Map version → repo folder
