@@ -308,7 +308,7 @@ jobs:
           TITLE: ${{ matrix.title }}
         run: |
           python3 - <<'PY'
-          import json, os, re, zipfile
+          import json, os, zipfile
           from pathlib import Path
           from datetime import datetime
 
@@ -326,28 +326,56 @@ jobs:
           # Build a flat set of (mc_version, loader) pairs the repo supports
           repo_capabilities = set()
           for rng in manifest["ranges"]:
-              folder = rng["folder"]
               for loader, lcfg in rng["loaders"].items():
                   supported = lcfg.get("supported_versions", [])
                   if not supported:
-                      # single-version range
                       supported = [rng["min_version"]]
                   for sv in supported:
                       repo_capabilities.add((sv, loader))
-                  # also add min/max as anchors
                   repo_capabilities.add((rng["min_version"], loader))
                   repo_capabilities.add((rng["max_version"], loader))
 
-          # ── Analyse each version ─────────────────────────────────────────
-          SHELL_SIZE_THRESHOLD = 5000   # bytes
-          SHELL_CLASS_THRESHOLD = 1     # fewer than this many .class files = shell
+          # ── Shell detection ──────────────────────────────────────────────
+          # The authoritative check is the decompile result.json produced by
+          # build_mods.py decompile-jar, which calls jar_has_class_files().
+          #
+          # result.json status values:
+          #   "skipped"  → jar contained ZERO .class files → definitive shell
+          #   "success"  → jar had classes AND decompiler produced Java source
+          #   "failed"   → jar had classes but decompiler failed (not a shell)
+          #
+          # We also fall back to directly inspecting the jar for .class files
+          # if result.json is missing (e.g. decompile step was skipped).
+
+          def jar_has_class_files(jar_path):
+              """Return True if the jar contains at least one .class file."""
+              try:
+                  with zipfile.ZipFile(jar_path) as z:
+                      return any(
+                          e.filename.endswith(".class")
+                          for e in z.infolist()
+                          if not e.is_dir()
+                      )
+              except Exception:
+                  return None  # can't tell — treat as unknown
 
           def count_classes_in_jar(jar_path):
               try:
                   with zipfile.ZipFile(jar_path) as z:
-                      return sum(1 for n in z.namelist() if n.endswith(".class"))
+                      return sum(1 for e in z.infolist()
+                                 if not e.is_dir() and e.filename.endswith(".class"))
               except Exception:
                   return -1
+
+          def read_decompile_result(vdir):
+              """Read result.json written by build_mods.py decompile-jar."""
+              rj = vdir / "decompiled" / "result.json"
+              if rj.exists():
+                  try:
+                      return json.loads(rj.read_text(encoding="utf-8"))
+                  except Exception:
+                      pass
+              return None
 
           def read_mod_info(vdir):
               mi = vdir / "decompiled" / "mod_info.txt"
@@ -370,25 +398,51 @@ jobs:
               class_count = count_classes_in_jar(jars[0]) if jars else -1
               mod_info    = read_mod_info(vdir)
 
-              is_shell = (
-                  not jars
-                  or jar_size < SHELL_SIZE_THRESHOLD
-                  or (class_count >= 0 and class_count < SHELL_CLASS_THRESHOLD)
-              )
+              # Primary: use the decompile result.json status
+              decompile_result = read_decompile_result(vdir)
+              decompile_status = decompile_result.get("status", "unknown") if decompile_result else "unknown"
+
+              if decompile_status == "skipped":
+                  # build_mods.py confirmed zero .class files → definitive shell
+                  is_shell = True
+                  shell_reason = "no .class files (decompile status=skipped)"
+              elif decompile_status in ("success", "failed"):
+                  # Jar had class files — not a shell regardless of size
+                  is_shell = False
+                  shell_reason = ""
+              else:
+                  # result.json missing — fall back to direct jar inspection
+                  if not jars:
+                      is_shell = True
+                      shell_reason = "no jar downloaded"
+                  else:
+                      has_classes = jar_has_class_files(jars[0])
+                      if has_classes is None:
+                          # Can't open jar — treat as unknown/not shell
+                          is_shell = False
+                          shell_reason = "jar unreadable"
+                      elif not has_classes:
+                          is_shell = True
+                          shell_reason = "no .class files in jar (direct check)"
+                      else:
+                          is_shell = False
+                          shell_reason = ""
 
               version_records.append({
-                  "id":             vid,
-                  "version_number": v.get("version_number", vid),
-                  "name":           v.get("name", ""),
-                  "version_type":   v.get("version_type", ""),
-                  "date_published": v.get("date_published", ""),
-                  "game_versions":  v.get("game_versions", []),
-                  "loaders":        v.get("loaders", []),
-                  "jar_name":       jars[0].name if jars else "",
-                  "jar_size":       jar_size,
-                  "class_count":    class_count,
-                  "is_shell":       is_shell,
-                  "mod_info":       mod_info,
+                  "id":               vid,
+                  "version_number":   v.get("version_number", vid),
+                  "name":             v.get("name", ""),
+                  "version_type":     v.get("version_type", ""),
+                  "date_published":   v.get("date_published", ""),
+                  "game_versions":    v.get("game_versions", []),
+                  "loaders":          v.get("loaders", []),
+                  "jar_name":         jars[0].name if jars else "",
+                  "jar_size":         jar_size,
+                  "class_count":      class_count,
+                  "decompile_status": decompile_status,
+                  "is_shell":         is_shell,
+                  "shell_reason":     shell_reason,
+                  "mod_info":         mod_info,
               })
 
           # Sort oldest first
@@ -484,7 +538,7 @@ jobs:
 
           # All versions table
           lines.append("── ALL VERSIONS ─────────────────────────────────────────────────────")
-          lines.append(f"  {'Version':<20} {'Date':<12} {'Loaders':<20} {'MC versions':<30} {'Status':<10} {'Jar size':>10} {'Classes':>8}")
+          lines.append(f"  {'Version':<20} {'Date':<12} {'Loaders':<20} {'MC versions':<30} {'Status':<10} {'Decompile':<10} {'Classes':>8}")
           lines.append(f"  {'-'*20} {'-'*12} {'-'*20} {'-'*30} {'-'*10} {'-'*10} {'-'*8}")
           for r in version_records:
               status = "SHELL" if r["is_shell"] else "working"
@@ -493,7 +547,7 @@ jobs:
               lines.append(
                   f"  {r['version_number']:<20} {r['date_published'][:10]:<12} "
                   f"{loaders_str:<20} {gv_str:<30} {status:<10} "
-                  f"{r['jar_size']:>10,} {r['class_count']:>8}"
+                  f"{r['decompile_status']:<10} {r['class_count']:>8}"
               )
           lines.append("")
 
@@ -509,13 +563,13 @@ jobs:
 
           # Shell versions detail
           if shells:
-              lines.append("── SHELL VERSIONS (< 5 KB or 0 classes) ────────────────────────────")
+              lines.append("── SHELL VERSIONS (zero .class files in jar) ────────────────────────")
               for r in shells:
                   lines.append(
                       f"  {r['version_number']:<20} {r['date_published'][:10]}  "
                       f"loaders={','.join(r['loaders'])}  "
                       f"mc={','.join(r['game_versions'])}  "
-                      f"size={r['jar_size']:,}B  classes={r['class_count']}"
+                      f"reason={r['shell_reason']}"
                   )
               lines.append("")
 
@@ -665,7 +719,7 @@ jobs:
               if d.get("shell_count", 0) > 0:
                   slug   = d.get("slug", "?")
                   shells = d.get("shell_count", 0)
-                  header_lines.append(f"  {slug}: {shells} shell version(s)")
+                  header_lines.append(f"  {slug}: {shells} shell version(s) (zero .class files)")
 
           header_lines += ["", SEP, "", "── PER-PROJECT DETAILS ──────────────────────────────────────────────", ""]
 
