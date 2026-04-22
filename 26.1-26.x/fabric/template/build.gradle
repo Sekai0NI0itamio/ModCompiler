@@ -1,0 +1,82 @@
+// Fabric template for Minecraft 26.1+
+// IMPORTANT CHANGES vs 1.21.x:
+//   - Minecraft 26.1 removed obfuscation. Yarn mappings are no longer used.
+//   - Use the net.fabricmc.fabric-loom plugin (NOT fabric-loom-remap).
+//   - modImplementation -> implementation (no remapping needed).
+//   - remapJar -> jar.
+//   - Java 25 required.
+//   - Gradle 9.4+ required.
+
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    // Loom adds the essential maven repositories automatically.
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "modid" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+dependencies {
+    // To change the versions see the gradle.properties file
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    // No mappings needed — Minecraft 26.1+ uses official unobfuscated names directly.
+    // modImplementation -> implementation (no remapping in 26.1+)
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    // Fabric API
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 25
+}
+
+java {
+    withSourcesJar()
+
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+    inputs.property "archivesName", project.base.archivesName
+
+    from("LICENSE") {
+        rename { "${it}_${inputs.properties.archivesName}" }
+    }
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+}
