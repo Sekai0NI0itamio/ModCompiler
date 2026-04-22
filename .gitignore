@@ -9,3 +9,33 @@ tmp_downloads/
 .workflow_state/
 .workflow_artifacts/
 .workflow_downloads/
+
+# Local build run output — never commit these
+ModCompileRuns/
+MinecraftSourceSearch/
+
+# Extracted build artifacts downloaded locally
+all-mod-builds/
+modrinth-publish/
+modrinth-downloads/
+layouts_artifacts/
+template-verify-bundle/
+
+# Temporary working folders created during mod builds
+mod-*/
+prepared-inputs/
+prepared_seed_protect/
+ai-mod-*/
+templatecreatemod/
+
+# Seed Protect work files (mod is published; bundles no longer needed)
+incoming/seed-protect-*/
+scripts/generate_seedprotect_bundle.py
+scripts/generate_seed_protect_bundle.py
+scripts/_check_seed_protect_coverage.py
+SEED_PROTECT_UPDATE_SUMMARY.md
+SEED_PROTECT_SOLUTION_SUMMARY.md
+
+# One-off helper scripts (prefixed with _)
+scripts/_check_*.py
+scripts/_list_*.py
