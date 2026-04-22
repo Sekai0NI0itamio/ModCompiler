@@ -124,15 +124,17 @@ public final class SeedProtectMod implements ModInitializer {{
 """
     (java_dir / "SeedProtectMod.java").write_text(main_class)
     
-    # Mixin class - use FarmlandBlock (not FarmBlock)
+    # Mixin class - target the class directly using Minecraft's class
+    # In Fabric, FarmBlock is the yarn mapping name for farmland
     mixin_class = """package com.seedprotect.mixin;
 
+import net.minecraft.world.level.block.FarmBlock;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(targets = "net.minecraft.world.level.block.FarmlandBlock")
+@Mixin(FarmBlock.class)
 public abstract class FarmlandBlockMixin {
     @Inject(method = "fallOn", at = @At("HEAD"), cancellable = true)
     private void seedprotect_cancelTrample(CallbackInfo ci) {
