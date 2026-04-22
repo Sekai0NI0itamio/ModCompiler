@@ -383,38 +383,28 @@ jobs:
               echo "---"
             } > "$OUT"
 
-            # Build glob args for rg
-            GLOB_ARGS=()
+            # Build find -name args for file pattern filtering
+            FIND_NAME_ARGS=()
             for P in "${CLEAN_PATTERNS[@]}"; do
-              GLOB_ARGS+=(--glob "$P")
+              [ ${#FIND_NAME_ARGS[@]} -gt 0 ] && FIND_NAME_ARGS+=(-o)
+              FIND_NAME_ARGS+=(-name "$P")
             done
 
-            rg \
-              --type java \
-              --context "$CONTEXT" \
-              --heading \
-              --line-number \
-              --color never \
-              "${GLOB_ARGS[@]}" \
-              "$QUERY" \
-              "$SOURCE_ROOT" \
-              >> "$OUT" 2>&1 || true
+            # Use grep -r (available everywhere) instead of rg
+            # Find matching files first, then grep with context
+            while IFS= read -r JFILE; do
+              MATCHES=$(grep -n "$QUERY" "$JFILE" 2>/dev/null || true)
+              if [ -n "$MATCHES" ]; then
+                echo "" >> "$OUT"
+                echo "=== $JFILE ===" >> "$OUT"
+                grep -n --context="$CONTEXT" "$QUERY" "$JFILE" >> "$OUT" 2>/dev/null || true
+                MATCHED_FILES+=("$JFILE")
+              fi
+            done < <(find "$SOURCE_ROOT" \( "${FIND_NAME_ARGS[@]}" \) -type f 2>/dev/null)
 
-            MATCH_COUNT=$(grep -c "^[0-9]" "$OUT" 2>/dev/null || echo "0")
-            echo "  → $MATCH_COUNT matches"
+            MATCH_COUNT=$(grep -c "^===" "$OUT" 2>/dev/null || echo "0")
+            echo "  → $MATCH_COUNT matching files"
             TOTAL_MATCHES=$((TOTAL_MATCHES + MATCH_COUNT))
-
-            # Collect matched file paths for full-class dump
-            if [[ "$DUMP_FULL" == "yes" ]]; then
-              while IFS= read -r FPATH; do
-                MATCHED_FILES+=("$FPATH")
-              done < <(rg \
-                --type java \
-                --files-with-matches \
-                "${GLOB_ARGS[@]}" \
-                "$QUERY" \
-                "$SOURCE_ROOT" 2>/dev/null || true)
-            fi
           done
 
           # Dump full content of matched class files
