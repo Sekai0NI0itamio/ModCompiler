@@ -210,12 +210,66 @@ jobs:
 
           (out / "project.json").write_text(json.dumps(project, indent=2), encoding="utf-8")
 
-          versions = get(f"/project/{urllib.parse.quote(project['id'], safe='')}/version") or []
-          (out / "all_versions.json").write_text(json.dumps(versions, indent=2), encoding="utf-8")
-          print(f"{SLUG}: {len(versions)} versions on Modrinth")
+          all_versions = get(f"/project/{urllib.parse.quote(project['id'], safe='')}/version") or []
+          (out / "all_versions.json").write_text(json.dumps(all_versions, indent=2), encoding="utf-8")
+          print(f"{SLUG}: {len(all_versions)} total versions on Modrinth")
 
-          # Download ALL versions (not just latest) so we can detect shells
-          for v in versions:
+          # ── Select only the latest version per (loader, mc_version) pair ──
+          # This mirrors the logic in fetch-modrinth-project.yml so we only
+          # download and decompile one representative jar per slot, not every
+          # historical upload.
+          def parse_version_number(version_str):
+              import re as _re
+              parts = []
+              for token in _re.split(r"[.\-_]", str(version_str).strip()):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  elif token:
+                      parts.append(token)
+              return tuple(parts) if parts else (0,)
+
+          def select_latest_per_loader_mc(versions):
+              best = {}
+              for v in versions:
+                  loaders = [str(l) for l in v.get("loaders", []) if str(l).strip()]
+                  game_versions = [str(g) for g in v.get("game_versions", []) if str(g).strip()]
+                  if not loaders or not game_versions:
+                      continue
+                  vnum = str(v.get("version_number") or "").strip()
+                  vkey = parse_version_number(vnum)
+                  published = v.get("date_published", "") or ""
+                  for loader in loaders:
+                      for gv in game_versions:
+                          key = (loader, gv)
+                          current = best.get(key)
+                          if current is None:
+                              best[key] = {"version": v, "vkey": vkey, "published": published}
+                              continue
+                          try:
+                              is_newer = vkey > current["vkey"]
+                          except TypeError:
+                              is_newer = str(vkey) > str(current["vkey"])
+                          if is_newer or (vkey == current["vkey"] and published > current["published"]):
+                              best[key] = {"version": v, "vkey": vkey, "published": published}
+              seen_ids = set()
+              selected = []
+              for entry in best.values():
+                  vid = entry["version"]["id"]
+                  if vid not in seen_ids:
+                      seen_ids.add(vid)
+                      selected.append(entry["version"])
+              selected.sort(key=lambda v: v.get("date_published", ""), reverse=True)
+              return selected
+
+          selected_versions = select_latest_per_loader_mc(all_versions)
+          selected_ids = {v["id"] for v in selected_versions}
+          skipped_count = len(all_versions) - len(selected_versions)
+
+          (out / "selected_versions.json").write_text(json.dumps(selected_versions, indent=2), encoding="utf-8")
+          print(f"{SLUG}: {len(selected_versions)} selected (latest per loader+MC), {skipped_count} older skipped")
+
+          # Download only the selected (latest per slot) versions
+          for v in selected_versions:
               vid  = v["id"]
               vdir = out / "versions" / vid
               vdir.mkdir(parents=True, exist_ok=True)
@@ -320,6 +374,16 @@ jobs:
           project = json.loads((base / "project.json").read_text(encoding="utf-8"))
           all_versions = json.loads((base / "all_versions.json").read_text(encoding="utf-8"))
 
+          # Use selected_versions (latest per loader+MC) for shell/working analysis.
+          # all_versions is kept only for the total count in the summary.
+          selected_path = base / "selected_versions.json"
+          if selected_path.exists():
+              analysis_versions = json.loads(selected_path.read_text(encoding="utf-8"))
+          else:
+              # Fallback: if selected_versions.json is missing, use all
+              analysis_versions = all_versions
+          skipped_count = len(all_versions) - len(analysis_versions)
+
           # ── Load version-manifest to know what this repo can build ───────
           manifest = json.loads(Path("version-manifest.json").read_text(encoding="utf-8"))
 
@@ -389,7 +453,7 @@ jobs:
               return info
 
           version_records = []
-          for v in all_versions:
+          for v in analysis_versions:
               vid  = v["id"]
               vdir = base / "versions" / vid
               jars = list(vdir.glob("*.jar")) if vdir.exists() else []
@@ -497,6 +561,7 @@ jobs:
               "",
               "── SUMMARY ──────────────────────────────────────────────────────────",
               f"  Total versions on Modrinth : {len(all_versions)}",
+              f"  Analysed (latest per slot) : {len(analysis_versions)}  ({skipped_count} older versions skipped)",
               f"  Working versions           : {len(working)}",
               f"  Shell versions             : {len(shells)}",
               f"  Missing (repo can build)   : {len(missing_pairs)}",
@@ -584,17 +649,19 @@ jobs:
 
           # Also write a machine-readable diagnosis.json
           diagnosis = {
-              "slug":            SLUG,
-              "title":           TITLE,
-              "project_id":      project.get("id"),
-              "total_versions":  len(all_versions),
-              "working_count":   len(working),
-              "shell_count":     len(shells),
-              "missing_count":   len(missing_pairs),
-              "original":        original,
+              "slug":              SLUG,
+              "title":             TITLE,
+              "project_id":        project.get("id"),
+              "total_versions":    len(all_versions),
+              "analysed_versions": len(analysis_versions),
+              "skipped_versions":  skipped_count,
+              "working_count":     len(working),
+              "shell_count":       len(shells),
+              "missing_count":     len(missing_pairs),
+              "original":          original,
               "latest_per_loader": {k: v for k, v in latest_per_loader.items()},
-              "missing_pairs":   [{"mc_version": gv, "loader": l} for gv, l in sorted(missing_pairs)],
-              "version_records": version_records,
+              "missing_pairs":     [{"mc_version": gv, "loader": l} for gv, l in sorted(missing_pairs)],
+              "version_records":   version_records,
           }
           (base / "diagnosis.json").write_text(json.dumps(diagnosis, indent=2, default=str), encoding="utf-8")
           print(f"Report written for {SLUG}")
@@ -668,11 +735,13 @@ jobs:
               f"User:      Itamio  (https://modrinth.com/user/Itamio)",
               f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
               f"Projects:  {len(all_diagnoses)}",
+              f"Note:      Only the latest version per (loader, MC version) slot is",
+              f"           analysed. Older/superseded uploads are counted but skipped.",
               SEP,
               "",
               "── OVERVIEW TABLE ───────────────────────────────────────────────────",
-              f"  {'Project':<35} {'Total':>6} {'Working':>8} {'Shells':>7} {'Missing':>8}",
-              f"  {'-'*35} {'-'*6} {'-'*8} {'-'*7} {'-'*8}",
+              f"  {'Project':<35} {'Total':>6} {'Analysed':>9} {'Working':>8} {'Shells':>7} {'Missing':>8}",
+              f"  {'-'*35} {'-'*6} {'-'*9} {'-'*8} {'-'*7} {'-'*8}",
           ]
 
           total_working = 0
@@ -680,21 +749,22 @@ jobs:
           total_missing = 0
 
           for d in sorted(all_diagnoses, key=lambda x: x.get("slug", "")):
-              slug    = d.get("slug", "?")
-              title   = d.get("title", slug)[:33]
-              total   = d.get("total_versions", 0)
-              working = d.get("working_count", 0)
-              shells  = d.get("shell_count", 0)
-              missing = d.get("missing_count", 0)
+              slug     = d.get("slug", "?")
+              title    = d.get("title", slug)[:33]
+              total    = d.get("total_versions", 0)
+              analysed = d.get("analysed_versions", total)
+              working  = d.get("working_count", 0)
+              shells   = d.get("shell_count", 0)
+              missing  = d.get("missing_count", 0)
               total_working += working
               total_shells  += shells
               total_missing += missing
               header_lines.append(
-                  f"  {title:<35} {total:>6} {working:>8} {shells:>7} {missing:>8}"
+                  f"  {title:<35} {total:>6} {analysed:>9} {working:>8} {shells:>7} {missing:>8}"
               )
 
           header_lines += [
-              f"  {'TOTAL':<35} {'':>6} {total_working:>8} {total_shells:>7} {total_missing:>8}",
+              f"  {'TOTAL':<35} {'':>6} {'':>9} {total_working:>8} {total_shells:>7} {total_missing:>8}",
               "",
               "── PROJECTS WITH MISSING VERSIONS ───────────────────────────────────",
           ]
