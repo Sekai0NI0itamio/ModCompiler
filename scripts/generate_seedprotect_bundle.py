@@ -71,20 +71,20 @@ if failed_only:
     targets_to_build = failed_targets
 else:
     targets_to_build = {
-        # Fabric
-        ("1.17",   "fabric"),
-        ("1.20",   "fabric"),
-        ("1.21",   "fabric"),
-        ("1.21.2", "fabric"),
-        ("1.21.9", "fabric"),
+        # Fabric — use exact versions from manifest supported_versions
+        ("1.17.1", "fabric"),   # 1.17-1.17.1 range, anchor=1.17.1
+        ("1.20.1", "fabric"),   # 1.20-1.20.6 range, first supported
+        ("1.21",   "fabric"),   # 1.21-1.21.1 range, min_version
+        ("1.21.2", "fabric"),   # 1.21.2-1.21.8 range, min_version
+        ("1.21.9", "fabric"),   # 1.21.9-1.21.11 range, min_version
         ("26.1",   "fabric"),
         ("26.1.1", "fabric"),
         ("26.1.2", "fabric"),
-        # Forge
-        ("1.12",    "forge"),
-        ("1.17",    "forge"),
-        ("1.20",    "forge"),
-        ("1.21.2",  "forge"),
+        # Forge — use exact versions from manifest supported_versions
+        ("1.12",    "forge"),   # 1.12-1.12.2 range, min_version
+        ("1.17.1",  "forge"),   # 1.17-1.17.1 range, only supported version
+        ("1.20.1",  "forge"),   # 1.20-1.20.6 range, first supported
+        ("1.21.3",  "forge"),   # 1.21.2-1.21.8 range, first supported (1.21.2 not in list)
         ("1.21.6",  "forge"),
         ("1.21.7",  "forge"),
         ("1.21.8",  "forge"),
@@ -94,11 +94,11 @@ else:
         ("26.1",    "forge"),
         ("26.1.1",  "forge"),
         ("26.1.2",  "forge"),
-        # NeoForge
-        ("1.20",   "neoforge"),
-        ("26.1",   "neoforge"),
-        ("26.1.1", "neoforge"),
-        ("26.1.2", "neoforge"),
+        # NeoForge — use exact versions from manifest supported_versions
+        ("1.20.2",  "neoforge"),  # 1.20-1.20.6 range, first neoforge supported
+        ("26.1",    "neoforge"),
+        ("26.1.1",  "neoforge"),
+        ("26.1.2",  "neoforge"),
     }
     print(f"Building {len(targets_to_build)} missing targets")
 
