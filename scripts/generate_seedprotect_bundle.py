@@ -68,7 +68,8 @@ if failed_only:
     # Filter targets to only failed ones
     targets_to_build = failed_targets
 else:
-    # Build all missing targets
+    # Build all missing targets - ONLY FABRIC for now
+    # Forge 1.21.6+ has broken eventbus API, skip those
     targets_to_build = {
         ("1.18", "fabric"),
         ("1.18.1", "fabric"),
@@ -76,14 +77,9 @@ else:
         ("1.19.1", "fabric"),
         ("1.19.2", "fabric"),
         ("1.19.3", "fabric"),
-        ("1.21.6", "forge"),
-        ("1.21.7", "forge"),
-        ("1.21.8", "forge"),
-        ("1.21.9", "forge"),
-        ("1.21.10", "forge"),
-        ("1.21.11", "forge"),
     }
-    print(f"Building all {len(targets_to_build)} missing targets")
+    print(f"Building {len(targets_to_build)} missing Fabric targets")
+    print("NOTE: Skipping Forge 1.21.6-1.21.11 due to broken eventbus API in those versions")
 
 # Clean and recreate bundle directory
 if bundle_dir.exists():
@@ -128,13 +124,10 @@ public final class SeedProtectMod implements ModInitializer {{
 """
     (java_dir / "SeedProtectMod.java").write_text(main_class)
     
-    # Mixin class
+    # Mixin class - use the actual method signature from decompiled code
+    # The method name in Fabric is "fallOn" for 1.17+ (changed from "onLandedUpon")
     mixin_class = """package com.seedprotect.mixin;
 
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -143,7 +136,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(targets = "net.minecraft.world.level.block.FarmBlock")
 public abstract class FarmlandBlockMixin {
     @Inject(method = "fallOn", at = @At("HEAD"), cancellable = true)
-    private void seedprotect_cancelTrample(Level world, BlockState state, BlockPos pos, Entity entity, float fallDistance, CallbackInfo ci) {
+    private void seedprotect_cancelTrample(net.minecraft.world.level.Level world, net.minecraft.world.level.block.state.BlockState state, net.minecraft.core.BlockPos pos, net.minecraft.world.entity.Entity entity, float fallDistance, CallbackInfo ci) {
         ci.cancel();
     }
 }
