@@ -3,7 +3,6 @@ import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -89,7 +88,7 @@ public class VeinMinerHandler {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+                tool.hurtAndBreak(1, player, p -> {});
                 if (tool.isEmpty()) break;
             }
         }

@@ -3,13 +3,13 @@ import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.event.level.BlockEvent.BreakEvent;
 public class VeinMinerHandler {
     private Map<UUID, Long> cooldowns = new HashMap<>();
@@ -21,7 +21,7 @@ public class VeinMinerHandler {
         BlockPos pos = event.getPos();
         BlockState state = event.getState();
         Block block = state.getBlock();
-        if (world.isClientSide) return;
+        if (!(world instanceof ServerLevel)) return;
         if (player.isCreative()) return;
         if (VeinMinerMod.config.requireSneak && !player.isCrouching()) return;
         if (VeinMinerMod.config.cooldownTicks > 0) {
@@ -31,7 +31,7 @@ public class VeinMinerHandler {
             cooldowns.put(player.getUUID(), now);
         }
         if (!isVeinMineable(block)) return;
-        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandItem())) return;
+        if (VeinMinerMod.config.limitToCorrectTool && !player.getMainHandItem().isCorrectToolForDrops(state)) return;
         Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
         if (vein.size() > 1) mineVein(world, player, vein, state, pos);
     }
@@ -48,14 +48,6 @@ public class VeinMinerHandler {
         if (VeinMinerMod.config.mineEndStone && n.equals("minecraft:end_stone")) return true;
         if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
         return false;
-    }
-    private boolean isCorrectTool(Block b, ItemStack tool) {
-        if (tool.isEmpty()) return false;
-        String n = BuiltInRegistries.BLOCK.getKey(b).toString();
-        if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;
-        if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;
-        if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;
-        return true;
     }
     private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
         Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
@@ -79,7 +71,7 @@ public class VeinMinerHandler {
     private void mineVein(Level world, Player player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
         ItemStack tool = player.getMainHandItem();
         List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
-        net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) world;
+        ServerLevel sl = (ServerLevel) world;
         for (BlockPos pos : vein) {
             if (pos.equals(origin)) continue;
             BlockState state = world.getBlockState(pos);
@@ -87,7 +79,7 @@ public class VeinMinerHandler {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+                tool.hurtAndBreak(1, player, p -> {});
                 if (tool.isEmpty()) break;
             }
         }
