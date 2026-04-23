@@ -7,6 +7,8 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.client.KeyMapping;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 @Environment(EnvType.CLIENT)
 public class VeinMinerKeyHandler implements ClientModInitializer {
@@ -14,12 +16,12 @@ public class VeinMinerKeyHandler implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-            "Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner"
+            "Toggle Vein Miner", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, "Vein Miner"
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (toggleKey.consumeClick()) {
                 VeinMinerMod.veinMinerEnabled = !VeinMinerMod.veinMinerEnabled;
-                String msg = VeinMinerMod.veinMinerEnabled ? "\u00a7aVein Miner: ENABLED" : "\u00a7cVein Miner: DISABLED";
+                String msg = VeinMinerMod.veinMinerEnabled ? "§aVein Miner: ENABLED" : "§cVein Miner: DISABLED";
                 if (client.player != null) client.player.displayClientMessage(Component.literal(msg), false);
             }
         });
