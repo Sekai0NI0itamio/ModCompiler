@@ -1,7 +1,6 @@
 package asd.itamio.veinminer;
 import java.util.*;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Registry;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -11,6 +10,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.level.BlockEvent.BreakEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.registries.ForgeRegistries;
 public class VeinMinerHandler {
     private Map<UUID, Long> cooldowns = new HashMap<>();
     @SubscribeEvent
@@ -18,7 +18,7 @@ public class VeinMinerHandler {
         if (!VeinMinerMod.config.enableVeinMiner) return;
         if (!VeinMinerKeyHandler.veinMinerEnabled) return;
         Player player = event.getPlayer();
-        Level world = (Level) event.getWorld();
+        Level world = (Level) event.getLevel();
         BlockPos pos = event.getPos();
         BlockState state = event.getState();
         Block block = state.getBlock();
@@ -37,7 +37,7 @@ public class VeinMinerHandler {
         if (vein.size() > 1) mineVein(world, player, vein, state, pos);
     }
     private boolean isVeinMineable(Block b) {
-        String n = Registry.BLOCK.getKey(b).toString();
+        String n = ForgeRegistries.BLOCKS.getKey(b).toString();
         if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.equals("minecraft:deepslate_coal_ore")||n.equals("minecraft:deepslate_iron_ore")||n.equals("minecraft:deepslate_gold_ore")||n.equals("minecraft:deepslate_diamond_ore")||n.equals("minecraft:deepslate_emerald_ore")||n.equals("minecraft:deepslate_lapis_ore")||n.equals("minecraft:deepslate_redstone_ore"))) return true;
         if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
         if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
@@ -52,7 +52,7 @@ public class VeinMinerHandler {
     }
     private boolean isCorrectTool(Block b, ItemStack tool) {
         if (tool.isEmpty()) return false;
-        String n = Registry.BLOCK.getKey(b).toString();
+        String n = ForgeRegistries.BLOCKS.getKey(b).toString();
         if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;
         if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;
         if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;
@@ -61,7 +61,7 @@ public class VeinMinerHandler {
     private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
         Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
         queue.add(start); vein.add(start);
-        String sn = Registry.BLOCK.getKey(target).toString();
+        String sn = ForgeRegistries.BLOCKS.getKey(target).toString();
         boolean isLog = sn.contains("_log")||sn.contains("_wood");
         while (!queue.isEmpty()&&vein.size()<max) {
             BlockPos cur = queue.poll();
@@ -96,7 +96,7 @@ public class VeinMinerHandler {
         if (VeinMinerMod.config.dropAtOneLocation) {
             Map<String,ItemStack> combined = new HashMap<>();
             for (ItemStack d : allDrops) {
-                String key = Registry.ITEM.getKey(d.getItem())+":"+d.getDamageValue();
+                String key = ForgeRegistries.ITEMS.getKey(d.getItem())+":"+d.getDamageValue();
                 if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.getCount()+d.getCount(); ex.setCount(Math.min(nc,ex.getMaxStackSize())); if(nc>ex.getMaxStackSize()){ItemStack ov=d.copy();ov.setCount(nc-ex.getMaxStackSize());combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
             }
             for (ItemStack s : combined.values()) if (!s.isEmpty()) { ItemEntity ei=new ItemEntity(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickUpDelay(); world.addFreshEntity(ei); }

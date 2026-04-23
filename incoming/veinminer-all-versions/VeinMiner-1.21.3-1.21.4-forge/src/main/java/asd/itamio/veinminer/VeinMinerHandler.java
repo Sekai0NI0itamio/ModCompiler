@@ -1,7 +1,6 @@
 package asd.itamio.veinminer;
 import java.util.*;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -11,6 +10,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.level.BlockEvent.BreakEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
 public class VeinMinerHandler {
     private Map<UUID, Long> cooldowns = new HashMap<>();
     @SubscribeEvent
@@ -18,7 +18,7 @@ public class VeinMinerHandler {
         if (!VeinMinerMod.config.enableVeinMiner) return;
         if (!VeinMinerKeyHandler.veinMinerEnabled) return;
         Player player = event.getPlayer();
-        Level world = (Level) event.getWorld();
+        Level world = (Level) event.getLevel();
         BlockPos pos = event.getPos();
         BlockState state = event.getState();
         Block block = state.getBlock();

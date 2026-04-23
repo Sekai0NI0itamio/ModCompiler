@@ -5,9 +5,14 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.bus.api.SubscribeEvent;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 public class VeinMinerKeyHandler {
-    public static KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
+    public static KeyMapping toggleKey = new KeyMapping(
+        "Toggle Vein Miner",
+        InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_V),
+        "Vein Miner"
+    );
     public static boolean veinMinerEnabled = true;
     public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
     @SubscribeEvent

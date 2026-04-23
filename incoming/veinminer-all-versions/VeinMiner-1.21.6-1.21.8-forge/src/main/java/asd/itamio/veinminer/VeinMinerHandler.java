@@ -10,6 +10,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.level.BlockEvent.BreakEvent;
+import net.minecraft.world.entity.EquipmentSlot;
 public class VeinMinerHandler {
     private Map<UUID, Long> cooldowns = new HashMap<>();
     public void onBlockBreak(BreakEvent event) {
@@ -78,7 +79,7 @@ public class VeinMinerHandler {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, p -> {});
+                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
                 if (tool.isEmpty()) break;
             }
         }
