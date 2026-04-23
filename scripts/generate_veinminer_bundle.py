@@ -1896,7 +1896,7 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
     }
 
     private boolean isVeinMineable(Block b) {
-        String n = net.minecraft.util.registry.Registry.BLOCK.getId(b).toString();
+        String n = net.minecraft.util.registry.Registries.BLOCK.getId(b).toString();
         if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore"))) return true;
         if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
         if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone"))) return true;
@@ -1926,7 +1926,7 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
         Set<BlockPos> vein = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
         queue.add(start); vein.add(start);
-        String startName = net.minecraft.util.registry.Registry.BLOCK.getId(target).toString();
+        String startName = net.minecraft.util.registry.Registries.BLOCK.getId(target).toString();
         boolean isLog = startName.contains("_log") || startName.contains("_wood");
         while (!queue.isEmpty() && vein.size() < max) {
             BlockPos cur = queue.poll();
@@ -1966,7 +1966,7 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
         if (VeinMinerMod.config.dropAtOneLocation) {
             Map<String,ItemStack> combined = new HashMap<>();
             for (ItemStack d : allDrops) {
-                String key = net.minecraft.util.registry.Registry.ITEM.getId(d.getItem())+":"+d.getDamage();
+                String key = net.minecraft.util.registry.Registries.ITEM.getId(d.getItem())+":"+d.getDamage();
                 if (combined.containsKey(key)) {
                     ItemStack ex = combined.get(key);
                     int nc = ex.getCount()+d.getCount();
@@ -2112,7 +2112,7 @@ import net.minecraft.item.ShovelItem;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.registry.Registries;
 import net.minecraft.world.World;
 
 public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
@@ -2895,35 +2895,32 @@ public class VeinMinerHandler {
 # Forge 1.17.1: ClientRegistry removed -> RegisterKeyMappingsEvent
 #               hurtAndBreak uses Consumer lambda (not EquipmentSlot)
 # ---------------------------------------------------------------------------
-FORGE_117_KEY_FIXED = """\
-package asd.itamio.veinminer;
+FORGE_117_KEY_FIXED = """package asd.itamio.veinminer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.client.registry.ClientRegistry;
 import org.lwjgl.glfw.GLFW;
 @OnlyIn(Dist.CLIENT)
 public class VeinMinerKeyHandler {
-    public static KeyMapping toggleKey;
+    public static final KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
     public static boolean veinMinerEnabled = true;
-    public VeinMinerKeyHandler() {
-        toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
-        ClientRegistry.registerKeyBinding(toggleKey);
-    }
+    public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
     @SubscribeEvent
     public void onKeyInput(InputEvent.KeyInputEvent event) {
         if (toggleKey.consumeClick()) {
             veinMinerEnabled = !veinMinerEnabled;
-            String msg = veinMinerEnabled ? "\\u00a7aVein Miner: ENABLED" : "\\u00a7cVein Miner: DISABLED";
+            String msg = veinMinerEnabled ? "\u00a7aVein Miner: ENABLED" : "\u00a7cVein Miner: DISABLED";
             Minecraft.getInstance().player.displayClientMessage(new TextComponent(msg), false);
         }
     }
 }
 """
+
 
 # Forge 1.17.1 handler: event.world, Registry (not BuiltInRegistries), Consumer lambda
 FORGE_117_HANDLER_FIXED = """\
@@ -3035,18 +3032,20 @@ public class VeinMinerHandler {
 }
 """
 
-FORGE_117_MOD_FIXED = """\
-package asd.itamio.veinminer;
+FORGE_117_MOD_FIXED = """package asd.itamio.veinminer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 @Mod("veinminer")
 public class VeinMinerMod {
     public static final String MODID = "veinminer";
     public static VeinMinerConfig config = new VeinMinerConfig();
     public VeinMinerMod() {
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
+        var bus = FMLJavaModLoadingContext.get().getModEventBus();
+        bus.addListener(this::setup);
+        bus.addListener(VeinMinerKeyHandler::register);
     }
     private void setup(FMLCommonSetupEvent event) {
         MinecraftForge.EVENT_BUS.register(new VeinMinerHandler());
@@ -3054,6 +3053,7 @@ public class VeinMinerMod {
     }
 }
 """
+
 
 
 # ---------------------------------------------------------------------------
@@ -3388,7 +3388,10 @@ public class VeinMinerMod {
 # ---------------------------------------------------------------------------
 # Forge 1.20.6: BuiltInRegistries, event.level, Consumer lambda
 # ---------------------------------------------------------------------------
-FORGE_1206_HANDLER_FIXED = FORGE_120_HANDLER_FIXED
+FORGE_1206_HANDLER_FIXED = FORGE_120_HANDLER_FIXED.replace(
+    "tool.hurtAndBreak(1, player, p -> {});",
+    "tool.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.MAINHAND);"
+)
 FORGE_1206_KEY_FIXED = FORGE_119_KEY_FIXED
 FORGE_1206_MOD_FIXED = FORGE_119_MOD_FIXED
 
@@ -3407,6 +3410,7 @@ package asd.itamio.veinminer;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -3485,7 +3489,7 @@ public class VeinMinerHandler {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, p -> {});
+                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
                 if (tool.isEmpty()) break;
             }
         }
@@ -3539,9 +3543,9 @@ public class VeinMinerKeyHandler {
 }
 """
 
-FORGE_1216_MOD_FIXED = """\
-package asd.itamio.veinminer;
+FORGE_1216_MOD_FIXED = """package asd.itamio.veinminer;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -3550,10 +3554,9 @@ import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 public class VeinMinerMod {
     public static final String MODID = "veinminer";
     public static VeinMinerConfig config = new VeinMinerConfig();
-    public VeinMinerMod(FMLJavaModLoadingContext context) {
-        var bus = context.getModEventBus();
-        bus.addListener(this::setup);
-        bus.addListener(VeinMinerKeyHandler::register);
+    public VeinMinerMod(IEventBus modEventBus) {
+        modEventBus.addListener(this::setup);
+        modEventBus.addListener(VeinMinerKeyHandler::register);
     }
     private void setup(FMLCommonSetupEvent event) {
         MinecraftForge.EVENT_BUS.register(new VeinMinerHandler());
@@ -3561,6 +3564,7 @@ public class VeinMinerMod {
     }
 }
 """
+
 
 # ---------------------------------------------------------------------------
 # Forge 1.21.9-1.21.11: isClientSide private -> instanceof ServerLevel,
@@ -3579,14 +3583,9 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.settings.KeyConflictContext;
-import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 public class VeinMinerKeyHandler {
-    public static final KeyMapping toggleKey = new KeyMapping(
-        "Toggle Vein Miner", KeyConflictContext.IN_GAME,
-        InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_V), "Vein Miner"
-    );
+    public static final KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
     public static boolean veinMinerEnabled = true;
     public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
     public void onKeyInput(InputEvent.Key event) {
@@ -3600,7 +3599,8 @@ public class VeinMinerKeyHandler {
 """
 
 
-FORGE_1219_MOD_FIXED = FORGE_1216_MOD_FIXED
+
+FORGE_1219_MOD_FIXED = FORGE_1216_MOD_FIXED  # same IEventBus injection
 
 
 # ===========================================================================
@@ -3896,7 +3896,11 @@ FABRIC_1215_HANDLER_FIXED = FABRIC_121_HANDLER_FIXED.replace(
 ).replace(
     "        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandItem())) return true;",
     "        if (VeinMinerMod.config.limitToCorrectTool && !player.getMainHandItem().isCorrectToolForDrops(state)) return true;"
+).replace(
+    "    private boolean isCorrectTool(Block b, ItemStack tool) {\n        if (tool.isEmpty()) return false;\n        String n = BuiltInRegistries.BLOCK.getKey(b).toString();\n        if (n.contains(\"_ore\")||n.equals(\"minecraft:stone\")||n.equals(\"minecraft:cobblestone\")||n.equals(\"minecraft:deepslate\")||n.equals(\"minecraft:netherrack\")||n.equals(\"minecraft:end_stone\")||n.equals(\"minecraft:glowstone\")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;\n        if (n.contains(\"_log\")||n.contains(\"_wood\")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;\n        if (n.equals(\"minecraft:dirt\")||n.equals(\"minecraft:grass_block\")||n.equals(\"minecraft:gravel\")||n.equals(\"minecraft:sand\")||n.equals(\"minecraft:clay\")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;\n        return true;\n    }",
+    "    private boolean isCorrectTool(Block b, ItemStack tool) { return true; } // unused - replaced by isCorrectToolForDrops"
 )
+
 
 # Fabric 1.21 key: reads VeinMinerMod.veinMinerEnabled
 FABRIC_121_KEY_FIXED = """\
@@ -3941,14 +3945,9 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 public class VeinMinerKeyHandler {
-    public static KeyMapping toggleKey = new KeyMapping(
-        "Toggle Vein Miner",
-        InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_V),
-        "Vein Miner"
-    );
+    public static KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
     public static boolean veinMinerEnabled = true;
     public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
     @SubscribeEvent
@@ -3961,6 +3960,7 @@ public class VeinMinerKeyHandler {
     }
 }
 """
+
 
 
 # ===========================================================================
@@ -4089,7 +4089,12 @@ NEOFORGE_1215_HANDLER_FIXED = NEOFORGE_1205_HANDLER_FIXED.replace(
 ).replace(
     "        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandItem())) return;",
     "        if (VeinMinerMod.config.limitToCorrectTool && !player.getMainHandItem().isCorrectToolForDrops(state)) return;"
+).replace(
+    "    private boolean isCorrectTool(Block b, ItemStack tool) {\n        if (tool.isEmpty()) return false;\n        String n = BuiltInRegistries.BLOCK.getKey(b).toString();\n        if (n.contains(\"_ore\")||n.equals(\"minecraft:stone\")||n.equals(\"minecraft:cobblestone\")||n.equals(\"minecraft:deepslate\")||n.equals(\"minecraft:netherrack\")||n.equals(\"minecraft:end_stone\")||n.equals(\"minecraft:glowstone\")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;\n        if (n.contains(\"_log\")||n.contains(\"_wood\")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;\n        if (n.equals(\"minecraft:dirt\")||n.equals(\"minecraft:grass_block\")||n.equals(\"minecraft:gravel\")||n.equals(\"minecraft:sand\")||n.equals(\"minecraft:clay\")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;\n        return true;\n    }",
+    "    private boolean isCorrectTool(Block b, ItemStack tool) { return true; }"
 )
+
+
 
 # ===========================================================================
 # BUNDLE DEFINITIONS
