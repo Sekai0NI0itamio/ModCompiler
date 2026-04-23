@@ -2611,15 +2611,18 @@ def _neoforge_files(mod, handler, key, config=CONFIG_SRC):
 # FIXED SOURCE STRINGS
 # ===========================================================================
 
-# --- Shared state class for Fabric split adapter ---
-VEINMINER_STATE_SRC = """\
-package asd.itamio.veinminer;
-public class VeinMinerState {
-    public static boolean veinMinerEnabled = true;
-}
-"""
+# ---------------------------------------------------------------------------
+# Shared: hurtAndBreak helper comment
+# In Forge 1.17-1.20.4 and NeoForge 1.20.2-1.20.4:
+#   hurtAndBreak(int, LivingEntity, Consumer<LivingEntity>) — lambda form
+# In Forge 1.20.5+ and NeoForge 1.20.5+:
+#   hurtAndBreak(int, LivingEntity, EquipmentSlot) — slot form
+# ---------------------------------------------------------------------------
 
-# --- Forge 1.8.9: Java 6 — no diamond operator ---
+# ---------------------------------------------------------------------------
+# Forge 1.8.9 — Java 6, isCreative() = capabilities.isCreativeMode,
+#               BlockPos.add uses new BlockPos(x+dx,y+dy,z+dz)
+# ---------------------------------------------------------------------------
 FORGE_189_HANDLER_FIXED = """\
 package asd.itamio.veinminer;
 import java.util.*;
@@ -2643,7 +2646,7 @@ public class VeinMinerHandler {
         BlockPos pos = event.pos;
         Block block = world.getBlockState(pos).getBlock();
         if (world.isRemote) return;
-        if (player.isCreative()) return;
+        if (player.capabilities.isCreativeMode) return;
         if (VeinMinerMod.config.requireSneak && !player.isSneaking()) return;
         if (VeinMinerMod.config.cooldownTicks > 0) {
             long now = world.getTotalWorldTime();
@@ -2689,7 +2692,7 @@ public class VeinMinerHandler {
             BlockPos cur = queue.poll();
             for (int dx=-1;dx<=1;dx++) for (int dy=-1;dy<=1;dy++) for (int dz=-1;dz<=1;dz++) {
                 if (dx==0&&dy==0&&dz==0) continue;
-                BlockPos nb = cur.add(dx,dy,dz);
+                BlockPos nb = new BlockPos(cur.getX()+dx, cur.getY()+dy, cur.getZ()+dz);
                 if (vein.contains(nb)||vein.size()>=max) continue;
                 Block nb_block = world.getBlockState(nb).getBlock();
                 if (nb_block != target) continue;
@@ -2711,8 +2714,7 @@ public class VeinMinerHandler {
             net.minecraft.block.state.IBlockState state = world.getBlockState(pos);
             List<ItemStack> drops = state.getBlock().getDrops(world, pos, state, player.experienceLevel);
             for (ItemStack d : drops) allDrops.add(d.copy());
-            world.setBlockToAir(pos);
-            mined++;
+            world.setBlockToAir(pos); mined++;
             if (VeinMinerMod.config.consumeDurability && tool != null && tool.stackSize > 0) {
                 tool.damageItem(1, player);
                 if (tool.getItemDamage() >= tool.getMaxDamage()) { tool.stackSize = 0; break; }
@@ -2722,26 +2724,19 @@ public class VeinMinerHandler {
             Map<String,ItemStack> combined = new HashMap<String,ItemStack>();
             for (ItemStack d : allDrops) {
                 String key = d.getItem().getRegistryName()+":"+d.getItemDamage();
-                if (combined.containsKey(key)) {
-                    ItemStack ex = combined.get(key);
-                    int nc = ex.stackSize+d.stackSize;
-                    ex.stackSize = Math.min(nc, ex.getMaxStackSize());
-                    if (nc>ex.getMaxStackSize()) { ItemStack ov=d.copy(); ov.stackSize=nc-ex.getMaxStackSize(); combined.put(key+"_"+combined.size(),ov); }
-                } else { combined.put(key, d.copy()); }
+                if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.stackSize+d.stackSize; ex.stackSize=Math.min(nc,ex.getMaxStackSize()); if(nc>ex.getMaxStackSize()){ItemStack ov=d.copy();ov.stackSize=nc-ex.getMaxStackSize();combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
             }
-            for (ItemStack s : combined.values()) {
-                if (s!=null&&s.stackSize>0) {
-                    EntityItem ei = new EntityItem(world, origin.getX()+0.5, origin.getY()+0.5, origin.getZ()+0.5, s);
-                    ei.setDefaultPickupDelay(); world.spawnEntityInWorld(ei);
-                }
-            }
+            for (ItemStack s : combined.values()) if (s!=null&&s.stackSize>0) { EntityItem ei=new EntityItem(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickupDelay(); world.spawnEntityInWorld(ei); }
         }
         if (VeinMinerMod.config.consumeHunger) player.addExhaustion(0.005f*mined*VeinMinerMod.config.hungerMultiplier);
     }
 }
 """
 
-# --- Forge 1.16.5 key: remove fml.relauncher, use @OnlyIn(Dist.CLIENT) ---
+# ---------------------------------------------------------------------------
+# Forge 1.16.5 key: @OnlyIn(Dist.CLIENT), no fml.relauncher
+# Forge 1.16.5 handler: getToolClasses removed -> use instanceof
+# ---------------------------------------------------------------------------
 FORGE_1165_KEY_FIXED = """\
 package asd.itamio.veinminer;
 import net.minecraft.client.Minecraft;
@@ -2772,19 +2767,17 @@ public class VeinMinerKeyHandler {
 }
 """
 
-# --- Forge 1.17.1 handler: event.world (not event.level), hurtAndBreak with EquipmentSlot ---
-FORGE_117_HANDLER_FIXED = """\
+FORGE_1165_HANDLER_FIXED = """\
 package asd.itamio.veinminer;
 import java.util.*;
-import net.minecraft.core.BlockPos;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.entity.item.ItemEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import net.minecraftforge.event.world.BlockEvent.BreakEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 public class VeinMinerHandler {
@@ -2793,8 +2786,8 @@ public class VeinMinerHandler {
     public void onBlockBreak(BreakEvent event) {
         if (!VeinMinerMod.config.enableVeinMiner) return;
         if (!VeinMinerKeyHandler.veinMinerEnabled) return;
-        Player player = event.getPlayer();
-        Level world = (Level) event.getWorld();
+        PlayerEntity player = event.getPlayer();
+        World world = (World) event.getWorld();
         BlockPos pos = event.getPos();
         BlockState state = event.getState();
         Block block = state.getBlock();
@@ -2814,9 +2807,9 @@ public class VeinMinerHandler {
     }
     private boolean isVeinMineable(Block b) {
         String n = b.getRegistryName()==null?"":b.getRegistryName().toString();
-        if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.contains("deepslate")&&n.contains("_ore"))) return true;
+        if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore"))) return true;
         if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
-        if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
+        if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone"))) return true;
         if (VeinMinerMod.config.mineDirt && (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block"))) return true;
         if (VeinMinerMod.config.mineGravel && n.equals("minecraft:gravel")) return true;
         if (VeinMinerMod.config.mineSand && n.equals("minecraft:sand")) return true;
@@ -2829,12 +2822,12 @@ public class VeinMinerHandler {
     private boolean isCorrectTool(Block b, ItemStack tool) {
         if (tool.isEmpty()) return false;
         String n = b.getRegistryName()==null?"":b.getRegistryName().toString();
-        if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;
-        if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;
-        if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;
+        if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.item.PickaxeItem;
+        if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.item.AxeItem;
+        if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.item.ShovelItem;
         return true;
     }
-    private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
+    private Set<BlockPos> findVein(World world, BlockPos start, Block target, BlockState startState, int max) {
         Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
         queue.add(start); vein.add(start);
         String sn = target.getRegistryName()==null?"":target.getRegistryName().toString();
@@ -2853,22 +2846,22 @@ public class VeinMinerHandler {
         }
         return vein;
     }
-    private void mineVein(Level world, Player player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
+    private void mineVein(World world, PlayerEntity player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
         ItemStack tool = player.getMainHandItem();
         List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
-        net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) world;
+        net.minecraft.world.server.ServerWorld sl = (net.minecraft.world.server.ServerWorld) world;
         for (BlockPos pos : vein) {
             if (pos.equals(origin)) continue;
             BlockState state = world.getBlockState(pos);
-            List<ItemStack> drops = Block.getDrops(state, sl, pos, world.getBlockEntity(pos), player, tool);
+            List<ItemStack> drops = net.minecraft.block.Block.getDrops(state, sl, pos, world.getBlockEntity(pos));
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+                tool.hurtAndBreak(1, player, p -> {});
                 if (tool.isEmpty()) break;
             }
         }
-        if (!VeinMinerMod.config.disableSound) world.playSound(null, origin, origState.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
+        if (!VeinMinerMod.config.disableSound) world.playSound(null, origin, origState.getSoundType().getBreakSound(), SoundCategory.BLOCKS, 1.0f, 1.0f);
         if (VeinMinerMod.config.dropAtOneLocation) {
             Map<String,ItemStack> combined = new HashMap<>();
             for (ItemStack d : allDrops) {
@@ -2882,7 +2875,11 @@ public class VeinMinerHandler {
 }
 """
 
-# Forge 1.17.1 key: TextComponent (not Component.literal), ClientRegistry still exists
+
+# ---------------------------------------------------------------------------
+# Forge 1.17.1: ClientRegistry removed -> RegisterKeyMappingsEvent
+#               hurtAndBreak uses Consumer lambda (not EquipmentSlot)
+# ---------------------------------------------------------------------------
 FORGE_117_KEY_FIXED = """\
 package asd.itamio.veinminer;
 import net.minecraft.client.Minecraft;
@@ -2891,17 +2888,14 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.client.registry.ClientRegistry;
 import org.lwjgl.glfw.GLFW;
 @OnlyIn(Dist.CLIENT)
 public class VeinMinerKeyHandler {
-    public static KeyMapping toggleKey;
+    public static final KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
     public static boolean veinMinerEnabled = true;
-    public VeinMinerKeyHandler() {
-        toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
-        ClientRegistry.registerKeyBinding(toggleKey);
-    }
+    public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
     @SubscribeEvent
     public void onKeyInput(InputEvent.KeyInputEvent event) {
         if (toggleKey.consumeClick()) {
@@ -2913,15 +2907,13 @@ public class VeinMinerKeyHandler {
 }
 """
 
-
-# --- Forge 1.18.x handler: event.world (not event.level), EquipmentSlot ---
-# event.level was introduced in 1.19; 1.18 still uses event.world
-FORGE_118_HANDLER_FIXED = """\
+# Forge 1.17.1 handler: event.world, Registry (not BuiltInRegistries), Consumer lambda
+FORGE_117_HANDLER_FIXED = """\
 package asd.itamio.veinminer;
 import java.util.*;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -2956,7 +2948,7 @@ public class VeinMinerHandler {
         if (vein.size() > 1) mineVein(world, player, vein, state, pos);
     }
     private boolean isVeinMineable(Block b) {
-        String n = net.minecraft.core.Registry.BLOCK.getKey(b).toString();
+        String n = Registry.BLOCK.getKey(b).toString();
         if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.equals("minecraft:deepslate_coal_ore")||n.equals("minecraft:deepslate_iron_ore")||n.equals("minecraft:deepslate_gold_ore")||n.equals("minecraft:deepslate_diamond_ore")||n.equals("minecraft:deepslate_emerald_ore")||n.equals("minecraft:deepslate_lapis_ore")||n.equals("minecraft:deepslate_redstone_ore"))) return true;
         if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
         if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
@@ -2971,7 +2963,7 @@ public class VeinMinerHandler {
     }
     private boolean isCorrectTool(Block b, ItemStack tool) {
         if (tool.isEmpty()) return false;
-        String n = net.minecraft.core.Registry.BLOCK.getKey(b).toString();
+        String n = Registry.BLOCK.getKey(b).toString();
         if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;
         if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;
         if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;
@@ -2980,7 +2972,7 @@ public class VeinMinerHandler {
     private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
         Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
         queue.add(start); vein.add(start);
-        String sn = net.minecraft.core.Registry.BLOCK.getKey(target).toString();
+        String sn = Registry.BLOCK.getKey(target).toString();
         boolean isLog = sn.contains("_log")||sn.contains("_wood");
         while (!queue.isEmpty()&&vein.size()<max) {
             BlockPos cur = queue.poll();
@@ -3007,7 +2999,7 @@ public class VeinMinerHandler {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+                tool.hurtAndBreak(1, player, p -> {});
                 if (tool.isEmpty()) break;
             }
         }
@@ -3015,7 +3007,7 @@ public class VeinMinerHandler {
         if (VeinMinerMod.config.dropAtOneLocation) {
             Map<String,ItemStack> combined = new HashMap<>();
             for (ItemStack d : allDrops) {
-                String key = net.minecraft.core.Registry.ITEM.getKey(d.getItem())+":"+d.getDamageValue();
+                String key = Registry.ITEM.getKey(d.getItem())+":"+d.getDamageValue();
                 if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.getCount()+d.getCount(); ex.setCount(Math.min(nc,ex.getMaxStackSize())); if(nc>ex.getMaxStackSize()){ItemStack ov=d.copy();ov.setCount(nc-ex.getMaxStackSize());combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
             }
             for (ItemStack s : combined.values()) if (!s.isEmpty()) { ItemEntity ei=new ItemEntity(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickUpDelay(); world.addFreshEntity(ei); }
@@ -3025,7 +3017,169 @@ public class VeinMinerHandler {
 }
 """
 
-# Forge 1.18.x key: TextComponent, ClientRegistry still exists
+FORGE_117_MOD_FIXED = """\
+package asd.itamio.veinminer;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+@Mod("veinminer")
+public class VeinMinerMod {
+    public static final String MODID = "veinminer";
+    public static VeinMinerConfig config = new VeinMinerConfig();
+    public VeinMinerMod() {
+        var bus = FMLJavaModLoadingContext.get().getModEventBus();
+        bus.addListener(this::setup);
+        bus.addListener(VeinMinerKeyHandler::register);
+    }
+    private void setup(FMLCommonSetupEvent event) {
+        MinecraftForge.EVENT_BUS.register(new VeinMinerHandler());
+        MinecraftForge.EVENT_BUS.register(new VeinMinerKeyHandler());
+    }
+}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Forge 1.18-1.20.4: event.world, Registry (not BuiltInRegistries), Consumer lambda
+# ---------------------------------------------------------------------------
+def _forge_handler_with_registry(registry_import, registry_class, event_pkg):
+    """Generate a Forge handler with the correct registry and event package."""
+    return f"""\
+package asd.itamio.veinminer;
+import java.util.*;
+import net.minecraft.core.BlockPos;
+import {registry_import};
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import {event_pkg}.BlockEvent.BreakEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+public class VeinMinerHandler {{
+    private Map<UUID, Long> cooldowns = new HashMap<>();
+    @SubscribeEvent
+    public void onBlockBreak(BreakEvent event) {{
+        if (!VeinMinerMod.config.enableVeinMiner) return;
+        if (!VeinMinerKeyHandler.veinMinerEnabled) return;
+        Player player = event.getPlayer();
+        Level world = (Level) event.getWorld();
+        BlockPos pos = event.getPos();
+        BlockState state = event.getState();
+        Block block = state.getBlock();
+        if (world.isClientSide) return;
+        if (player.isCreative()) return;
+        if (VeinMinerMod.config.requireSneak && !player.isCrouching()) return;
+        if (VeinMinerMod.config.cooldownTicks > 0) {{
+            long now = world.getGameTime();
+            Long last = cooldowns.get(player.getUUID());
+            if (last != null && now - last < VeinMinerMod.config.cooldownTicks) return;
+            cooldowns.put(player.getUUID(), now);
+        }}
+        if (!isVeinMineable(block)) return;
+        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandItem())) return;
+        Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
+        if (vein.size() > 1) mineVein(world, player, vein, state, pos);
+    }}
+    private boolean isVeinMineable(Block b) {{
+        String n = {registry_class}.BLOCK.getKey(b).toString();
+        if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.equals("minecraft:deepslate_coal_ore")||n.equals("minecraft:deepslate_iron_ore")||n.equals("minecraft:deepslate_gold_ore")||n.equals("minecraft:deepslate_diamond_ore")||n.equals("minecraft:deepslate_emerald_ore")||n.equals("minecraft:deepslate_lapis_ore")||n.equals("minecraft:deepslate_redstone_ore"))) return true;
+        if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
+        if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
+        if (VeinMinerMod.config.mineDirt && (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block"))) return true;
+        if (VeinMinerMod.config.mineGravel && n.equals("minecraft:gravel")) return true;
+        if (VeinMinerMod.config.mineSand && n.equals("minecraft:sand")) return true;
+        if (VeinMinerMod.config.mineClay && n.equals("minecraft:clay")) return true;
+        if (VeinMinerMod.config.mineNetherrack && n.equals("minecraft:netherrack")) return true;
+        if (VeinMinerMod.config.mineEndStone && n.equals("minecraft:end_stone")) return true;
+        if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
+        return false;
+    }}
+    private boolean isCorrectTool(Block b, ItemStack tool) {{
+        if (tool.isEmpty()) return false;
+        String n = {registry_class}.BLOCK.getKey(b).toString();
+        if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;
+        if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;
+        if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;
+        return true;
+    }}
+    private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {{
+        Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
+        queue.add(start); vein.add(start);
+        String sn = {registry_class}.BLOCK.getKey(target).toString();
+        boolean isLog = sn.contains("_log")||sn.contains("_wood");
+        while (!queue.isEmpty()&&vein.size()<max) {{
+            BlockPos cur = queue.poll();
+            for (int dx=-1;dx<=1;dx++) for (int dy=-1;dy<=1;dy++) for (int dz=-1;dz<=1;dz++) {{
+                if (dx==0&&dy==0&&dz==0) continue;
+                BlockPos nb = cur.offset(dx,dy,dz);
+                if (vein.contains(nb)||vein.size()>=max) continue;
+                BlockState nbs = world.getBlockState(nb);
+                if (nbs.getBlock()!=target) continue;
+                if (isLog&&nbs!=startState) continue;
+                vein.add(nb); queue.add(nb);
+            }}
+        }}
+        return vein;
+    }}
+    private void mineVein(Level world, Player player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {{
+        ItemStack tool = player.getMainHandItem();
+        List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
+        net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) world;
+        for (BlockPos pos : vein) {{
+            if (pos.equals(origin)) continue;
+            BlockState state = world.getBlockState(pos);
+            List<ItemStack> drops = Block.getDrops(state, sl, pos, world.getBlockEntity(pos), player, tool);
+            for (ItemStack d : drops) allDrops.add(d.copy());
+            world.removeBlock(pos, false); mined++;
+            if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {{
+                tool.hurtAndBreak(1, player, p -> {{}});
+                if (tool.isEmpty()) break;
+            }}
+        }}
+        if (!VeinMinerMod.config.disableSound) world.playSound(null, origin, origState.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
+        if (VeinMinerMod.config.dropAtOneLocation) {{
+            Map<String,ItemStack> combined = new HashMap<>();
+            for (ItemStack d : allDrops) {{
+                String key = {registry_class}.ITEM.getKey(d.getItem())+":"+d.getDamageValue();
+                if (combined.containsKey(key)) {{ ItemStack ex=combined.get(key); int nc=ex.getCount()+d.getCount(); ex.setCount(Math.min(nc,ex.getMaxStackSize())); if(nc>ex.getMaxStackSize()){{ItemStack ov=d.copy();ov.setCount(nc-ex.getMaxStackSize());combined.put(key+"_"+combined.size(),ov);}} }} else combined.put(key,d.copy());
+            }}
+            for (ItemStack s : combined.values()) if (!s.isEmpty()) {{ ItemEntity ei=new ItemEntity(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickUpDelay(); world.addFreshEntity(ei); }}
+        }}
+        if (VeinMinerMod.config.consumeHunger) player.causeFoodExhaustion(0.005f*mined*VeinMinerMod.config.hungerMultiplier);
+    }}
+}}
+"""
+
+# Forge 1.18.x: event.world, net.minecraft.core.Registry, Consumer lambda
+FORGE_118_HANDLER_FIXED = _forge_handler_with_registry(
+    "net.minecraft.core.Registry",
+    "Registry",
+    "net.minecraftforge.event.world"
+)
+
+# Forge 1.19.x: event.level, net.minecraft.core.Registry (BuiltInRegistries not yet), Consumer lambda
+FORGE_119_HANDLER_FIXED = _forge_handler_with_registry(
+    "net.minecraft.core.Registry",
+    "Registry",
+    "net.minecraftforge.event.level"
+)
+
+# Forge 1.20.1-1.20.4: event.level, BuiltInRegistries, Consumer lambda
+FORGE_120_HANDLER_FIXED = _forge_handler_with_registry(
+    "net.minecraft.core.registries.BuiltInRegistries",
+    "BuiltInRegistries",
+    "net.minecraftforge.event.level"
+)
+
+
+# ---------------------------------------------------------------------------
+# Forge 1.18-1.20.4 key: TextComponent (1.18) or Component.literal (1.19+)
+# ---------------------------------------------------------------------------
 FORGE_118_KEY_FIXED = """\
 package asd.itamio.veinminer;
 import net.minecraft.client.Minecraft;
@@ -3034,8 +3188,8 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.client.ClientRegistry;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 @OnlyIn(Dist.CLIENT)
 public class VeinMinerKeyHandler {
@@ -3056,120 +3210,6 @@ public class VeinMinerKeyHandler {
 }
 """
 
-
-# --- Forge 1.19-1.20.4 handler: event.level, EquipmentSlot, BuiltInRegistries ---
-# event.level introduced in 1.19; ClientRegistry removed in 1.19 -> RegisterKeyMappingsEvent
-FORGE_119_HANDLER_FIXED = """\
-package asd.itamio.veinminer;
-import java.util.*;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.level.BlockEvent.BreakEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-public class VeinMinerHandler {
-    private Map<UUID, Long> cooldowns = new HashMap<>();
-    @SubscribeEvent
-    public void onBlockBreak(BreakEvent event) {
-        if (!VeinMinerMod.config.enableVeinMiner) return;
-        if (!VeinMinerKeyHandler.veinMinerEnabled) return;
-        Player player = event.getPlayer();
-        Level world = (Level) event.getLevel();
-        BlockPos pos = event.getPos();
-        BlockState state = event.getState();
-        Block block = state.getBlock();
-        if (world.isClientSide) return;
-        if (player.isCreative()) return;
-        if (VeinMinerMod.config.requireSneak && !player.isCrouching()) return;
-        if (VeinMinerMod.config.cooldownTicks > 0) {
-            long now = world.getGameTime();
-            Long last = cooldowns.get(player.getUUID());
-            if (last != null && now - last < VeinMinerMod.config.cooldownTicks) return;
-            cooldowns.put(player.getUUID(), now);
-        }
-        if (!isVeinMineable(block)) return;
-        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandItem())) return;
-        Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
-        if (vein.size() > 1) mineVein(world, player, vein, state, pos);
-    }
-    private boolean isVeinMineable(Block b) {
-        String n = BuiltInRegistries.BLOCK.getKey(b).toString();
-        if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.equals("minecraft:deepslate_coal_ore")||n.equals("minecraft:deepslate_iron_ore")||n.equals("minecraft:deepslate_gold_ore")||n.equals("minecraft:deepslate_diamond_ore")||n.equals("minecraft:deepslate_emerald_ore")||n.equals("minecraft:deepslate_lapis_ore")||n.equals("minecraft:deepslate_redstone_ore"))) return true;
-        if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
-        if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
-        if (VeinMinerMod.config.mineDirt && (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block"))) return true;
-        if (VeinMinerMod.config.mineGravel && n.equals("minecraft:gravel")) return true;
-        if (VeinMinerMod.config.mineSand && n.equals("minecraft:sand")) return true;
-        if (VeinMinerMod.config.mineClay && n.equals("minecraft:clay")) return true;
-        if (VeinMinerMod.config.mineNetherrack && n.equals("minecraft:netherrack")) return true;
-        if (VeinMinerMod.config.mineEndStone && n.equals("minecraft:end_stone")) return true;
-        if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
-        return false;
-    }
-    private boolean isCorrectTool(Block b, ItemStack tool) {
-        if (tool.isEmpty()) return false;
-        String n = BuiltInRegistries.BLOCK.getKey(b).toString();
-        if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;
-        if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;
-        if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;
-        return true;
-    }
-    private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
-        Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
-        queue.add(start); vein.add(start);
-        String sn = BuiltInRegistries.BLOCK.getKey(target).toString();
-        boolean isLog = sn.contains("_log")||sn.contains("_wood");
-        while (!queue.isEmpty()&&vein.size()<max) {
-            BlockPos cur = queue.poll();
-            for (int dx=-1;dx<=1;dx++) for (int dy=-1;dy<=1;dy++) for (int dz=-1;dz<=1;dz++) {
-                if (dx==0&&dy==0&&dz==0) continue;
-                BlockPos nb = cur.offset(dx,dy,dz);
-                if (vein.contains(nb)||vein.size()>=max) continue;
-                BlockState nbs = world.getBlockState(nb);
-                if (nbs.getBlock()!=target) continue;
-                if (isLog&&nbs!=startState) continue;
-                vein.add(nb); queue.add(nb);
-            }
-        }
-        return vein;
-    }
-    private void mineVein(Level world, Player player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
-        ItemStack tool = player.getMainHandItem();
-        List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
-        net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) world;
-        for (BlockPos pos : vein) {
-            if (pos.equals(origin)) continue;
-            BlockState state = world.getBlockState(pos);
-            List<ItemStack> drops = Block.getDrops(state, sl, pos, world.getBlockEntity(pos), player, tool);
-            for (ItemStack d : drops) allDrops.add(d.copy());
-            world.removeBlock(pos, false); mined++;
-            if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
-                if (tool.isEmpty()) break;
-            }
-        }
-        if (!VeinMinerMod.config.disableSound) world.playSound(null, origin, origState.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
-        if (VeinMinerMod.config.dropAtOneLocation) {
-            Map<String,ItemStack> combined = new HashMap<>();
-            for (ItemStack d : allDrops) {
-                String key = BuiltInRegistries.ITEM.getKey(d.getItem())+":"+d.getDamageValue();
-                if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.getCount()+d.getCount(); ex.setCount(Math.min(nc,ex.getMaxStackSize())); if(nc>ex.getMaxStackSize()){ItemStack ov=d.copy();ov.setCount(nc-ex.getMaxStackSize());combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
-            }
-            for (ItemStack s : combined.values()) if (!s.isEmpty()) { ItemEntity ei=new ItemEntity(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickUpDelay(); world.addFreshEntity(ei); }
-        }
-        if (VeinMinerMod.config.consumeHunger) player.causeFoodExhaustion(0.005f*mined*VeinMinerMod.config.hungerMultiplier);
-    }
-}
-"""
-
-# Forge 1.19-1.20.4 key: RegisterKeyMappingsEvent (ClientRegistry removed), Component.literal
 FORGE_119_KEY_FIXED = """\
 package asd.itamio.veinminer;
 import net.minecraft.client.Minecraft;
@@ -3197,13 +3237,13 @@ public class VeinMinerKeyHandler {
 }
 """
 
-# Forge 1.19-1.20.4 mod: register key mappings event
 FORGE_119_MOD_FIXED = """\
 package asd.itamio.veinminer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 @Mod("veinminer")
 public class VeinMinerMod {
     public static final String MODID = "veinminer";
@@ -3220,20 +3260,29 @@ public class VeinMinerMod {
 }
 """
 
+# ---------------------------------------------------------------------------
+# Forge 1.20.6: BuiltInRegistries, event.level, Consumer lambda
+# ---------------------------------------------------------------------------
+FORGE_1206_HANDLER_FIXED = FORGE_120_HANDLER_FIXED
+FORGE_1206_KEY_FIXED = FORGE_119_KEY_FIXED
+FORGE_1206_MOD_FIXED = FORGE_119_MOD_FIXED
 
-# --- Forge 1.21-1.21.5: RegisterKeyMappingsEvent, EquipmentSlot ---
+# ---------------------------------------------------------------------------
+# Forge 1.21-1.21.4: BuiltInRegistries, event.level, Consumer lambda
+# ---------------------------------------------------------------------------
+FORGE_121_HANDLER_FIXED = FORGE_120_HANDLER_FIXED
 FORGE_121_KEY_FIXED = FORGE_119_KEY_FIXED
 FORGE_121_MOD_FIXED = FORGE_119_MOD_FIXED
-FORGE_121_HANDLER_FIXED = FORGE_119_HANDLER_FIXED
 
-# --- Forge 1.21.6+: EventBus 7, no @SubscribeEvent, EquipmentSlot ---
-FORGE_1216_HANDLER_FIXED = """\
+# ---------------------------------------------------------------------------
+# Forge 1.21.5: PickaxeItem removed -> isCorrectToolForDrops, Consumer lambda
+# ---------------------------------------------------------------------------
+FORGE_1215_HANDLER_FIXED = """\
 package asd.itamio.veinminer;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -3241,8 +3290,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.level.BlockEvent.BreakEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 public class VeinMinerHandler {
     private Map<UUID, Long> cooldowns = new HashMap<>();
+    @SubscribeEvent
     public void onBlockBreak(BreakEvent event) {
         if (!VeinMinerMod.config.enableVeinMiner) return;
         if (!VeinMinerKeyHandler.veinMinerEnabled) return;
@@ -3261,7 +3312,7 @@ public class VeinMinerHandler {
             cooldowns.put(player.getUUID(), now);
         }
         if (!isVeinMineable(block)) return;
-        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandItem())) return;
+        if (VeinMinerMod.config.limitToCorrectTool && !player.getMainHandItem().isCorrectToolForDrops(state)) return;
         Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
         if (vein.size() > 1) mineVein(world, player, vein, state, pos);
     }
@@ -3278,14 +3329,6 @@ public class VeinMinerHandler {
         if (VeinMinerMod.config.mineEndStone && n.equals("minecraft:end_stone")) return true;
         if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
         return false;
-    }
-    private boolean isCorrectTool(Block b, ItemStack tool) {
-        if (tool.isEmpty()) return false;
-        String n = BuiltInRegistries.BLOCK.getKey(b).toString();
-        if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;
-        if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;
-        if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;
-        return true;
     }
     private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
         Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
@@ -3317,7 +3360,7 @@ public class VeinMinerHandler {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+                tool.hurtAndBreak(1, player, p -> {});
                 if (tool.isEmpty()) break;
             }
         }
@@ -3334,6 +3377,17 @@ public class VeinMinerHandler {
     }
 }
 """
+
+# ---------------------------------------------------------------------------
+# Forge 1.21.6-1.21.8: EventBus 7 (no @SubscribeEvent), isCorrectToolForDrops
+# ---------------------------------------------------------------------------
+FORGE_1216_HANDLER_FIXED = FORGE_1215_HANDLER_FIXED.replace(
+    "import net.minecraftforge.eventbus.api.SubscribeEvent;\n",
+    ""
+).replace(
+    "    @SubscribeEvent\n    public void onBlockBreak",
+    "    public void onBlockBreak"
+)
 
 FORGE_1216_KEY_FIXED = """\
 package asd.itamio.veinminer;
@@ -3380,12 +3434,141 @@ public class VeinMinerMod {
 }
 """
 
+# ---------------------------------------------------------------------------
+# Forge 1.21.9-1.21.11: isClientSide private -> instanceof ServerLevel,
+#                        KeyMapping Category constructor, isCorrectToolForDrops
+# ---------------------------------------------------------------------------
+FORGE_1219_HANDLER_FIXED = """\
+package asd.itamio.veinminer;
+import java.util.*;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraftforge.event.level.BlockEvent.BreakEvent;
+public class VeinMinerHandler {
+    private Map<UUID, Long> cooldowns = new HashMap<>();
+    public void onBlockBreak(BreakEvent event) {
+        if (!VeinMinerMod.config.enableVeinMiner) return;
+        if (!VeinMinerKeyHandler.veinMinerEnabled) return;
+        Player player = event.getPlayer();
+        Level world = (Level) event.getLevel();
+        BlockPos pos = event.getPos();
+        BlockState state = event.getState();
+        Block block = state.getBlock();
+        if (!(world instanceof ServerLevel)) return;
+        if (player.isCreative()) return;
+        if (VeinMinerMod.config.requireSneak && !player.isCrouching()) return;
+        if (VeinMinerMod.config.cooldownTicks > 0) {
+            long now = world.getGameTime();
+            Long last = cooldowns.get(player.getUUID());
+            if (last != null && now - last < VeinMinerMod.config.cooldownTicks) return;
+            cooldowns.put(player.getUUID(), now);
+        }
+        if (!isVeinMineable(block)) return;
+        if (VeinMinerMod.config.limitToCorrectTool && !player.getMainHandItem().isCorrectToolForDrops(state)) return;
+        Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
+        if (vein.size() > 1) mineVein(world, player, vein, state, pos);
+    }
+    private boolean isVeinMineable(Block b) {
+        String n = BuiltInRegistries.BLOCK.getKey(b).toString();
+        if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.equals("minecraft:deepslate_coal_ore")||n.equals("minecraft:deepslate_iron_ore")||n.equals("minecraft:deepslate_gold_ore")||n.equals("minecraft:deepslate_diamond_ore")||n.equals("minecraft:deepslate_emerald_ore")||n.equals("minecraft:deepslate_lapis_ore")||n.equals("minecraft:deepslate_redstone_ore"))) return true;
+        if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
+        if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
+        if (VeinMinerMod.config.mineDirt && (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block"))) return true;
+        if (VeinMinerMod.config.mineGravel && n.equals("minecraft:gravel")) return true;
+        if (VeinMinerMod.config.mineSand && n.equals("minecraft:sand")) return true;
+        if (VeinMinerMod.config.mineClay && n.equals("minecraft:clay")) return true;
+        if (VeinMinerMod.config.mineNetherrack && n.equals("minecraft:netherrack")) return true;
+        if (VeinMinerMod.config.mineEndStone && n.equals("minecraft:end_stone")) return true;
+        if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
+        return false;
+    }
+    private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
+        Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
+        queue.add(start); vein.add(start);
+        String sn = BuiltInRegistries.BLOCK.getKey(target).toString();
+        boolean isLog = sn.contains("_log")||sn.contains("_wood");
+        while (!queue.isEmpty()&&vein.size()<max) {
+            BlockPos cur = queue.poll();
+            for (int dx=-1;dx<=1;dx++) for (int dy=-1;dy<=1;dy++) for (int dz=-1;dz<=1;dz++) {
+                if (dx==0&&dy==0&&dz==0) continue;
+                BlockPos nb = cur.offset(dx,dy,dz);
+                if (vein.contains(nb)||vein.size()>=max) continue;
+                BlockState nbs = world.getBlockState(nb);
+                if (nbs.getBlock()!=target) continue;
+                if (isLog&&nbs!=startState) continue;
+                vein.add(nb); queue.add(nb);
+            }
+        }
+        return vein;
+    }
+    private void mineVein(Level world, Player player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
+        ItemStack tool = player.getMainHandItem();
+        List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
+        ServerLevel sl = (ServerLevel) world;
+        for (BlockPos pos : vein) {
+            if (pos.equals(origin)) continue;
+            BlockState state = world.getBlockState(pos);
+            List<ItemStack> drops = Block.getDrops(state, sl, pos, world.getBlockEntity(pos), player, tool);
+            for (ItemStack d : drops) allDrops.add(d.copy());
+            world.removeBlock(pos, false); mined++;
+            if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
+                tool.hurtAndBreak(1, player, p -> {});
+                if (tool.isEmpty()) break;
+            }
+        }
+        if (!VeinMinerMod.config.disableSound) world.playSound(null, origin, origState.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
+        if (VeinMinerMod.config.dropAtOneLocation) {
+            Map<String,ItemStack> combined = new HashMap<>();
+            for (ItemStack d : allDrops) {
+                String key = BuiltInRegistries.ITEM.getKey(d.getItem())+":"+d.getDamageValue();
+                if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.getCount()+d.getCount(); ex.setCount(Math.min(nc,ex.getMaxStackSize())); if(nc>ex.getMaxStackSize()){ItemStack ov=d.copy();ov.setCount(nc-ex.getMaxStackSize());combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
+            }
+            for (ItemStack s : combined.values()) if (!s.isEmpty()) { ItemEntity ei=new ItemEntity(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickUpDelay(); world.addFreshEntity(ei); }
+        }
+        if (VeinMinerMod.config.consumeHunger) player.causeFoodExhaustion(0.005f*mined*VeinMinerMod.config.hungerMultiplier);
+    }
+}
+"""
+
+# Forge 1.21.9+: KeyMapping Category constructor changed
+FORGE_1219_KEY_FIXED = """\
+package asd.itamio.veinminer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.network.chat.Component;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import org.lwjgl.glfw.GLFW;
+public class VeinMinerKeyHandler {
+    public static final KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
+    public static boolean veinMinerEnabled = true;
+    public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
+    public void onKeyInput(InputEvent.Key event) {
+        if (toggleKey.consumeClick()) {
+            veinMinerEnabled = !veinMinerEnabled;
+            String msg = veinMinerEnabled ? "\\u00a7aVein Miner: ENABLED" : "\\u00a7cVein Miner: DISABLED";
+            Minecraft.getInstance().player.displayClientMessage(Component.literal(msg), false);
+        }
+    }
+}
+"""
+
+FORGE_1219_MOD_FIXED = FORGE_1216_MOD_FIXED
+
 
 # ===========================================================================
 # FABRIC FIXES
 # ===========================================================================
 
-# --- Fabric 1.16.5 key: client.option (no 's') ---
+# Fabric 1.16.5 key: client.option (no 's')
 FABRIC_1165_KEY_FIXED = """\
 package asd.itamio.veinminer;
 import net.fabricmc.api.ClientModInitializer;
@@ -3417,7 +3600,7 @@ public class VeinMinerKeyHandler implements ClientModInitializer {
 }
 """
 
-# --- Fabric 1.19-1.20.x handler: net.minecraft.registry.Registries (moved in 1.19) ---
+# Fabric 1.19.x handler: net.minecraft.registry.Registries (moved in 1.19)
 FABRIC_119_HANDLER_FIXED = """\
 package asd.itamio.veinminer;
 import java.util.*;
@@ -3528,13 +3711,16 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
 }
 """
 
-# Fabric 1.19 key: Text.literal (LiteralText removed in 1.19)
-FABRIC_119_KEY_FIXED = FABRIC_119_KEY  # already uses Text.literal
+# Fabric 1.20.x handler: Registries (same as 1.19), but EquipmentSlot for 1.20.5+
+# 1.20.1-1.20.4: Consumer lambda; 1.20.5-1.20.6: EquipmentSlot
+FABRIC_120_HANDLER_FIXED = FABRIC_119_HANDLER_FIXED  # same Registries, Consumer lambda
 
+FABRIC_1205_HANDLER_FIXED = FABRIC_119_HANDLER_FIXED.replace(
+    "tool.damage(1, player, p -> {});",
+    "tool.damage(1, player, net.minecraft.entity.EquipmentSlot.MAINHAND);"
+)
 
-# --- Fabric 1.21-1.21.4 (Mojang mappings, split):
-# VeinMinerKeyHandler is in src/client/java — handler can't reference it directly.
-# Solution: put veinMinerEnabled in VeinMinerMod (main source tree), key reads from there.
+# Fabric 1.21 main: veinMinerEnabled in VeinMinerMod (shared with client)
 FABRIC_121_MAIN_FIXED = """\
 package asd.itamio.veinminer;
 import net.fabricmc.api.ModInitializer;
@@ -3552,7 +3738,7 @@ public class VeinMinerMod implements ModInitializer {
 }
 """
 
-# Fabric 1.21-1.21.4 handler: references VeinMinerMod.veinMinerEnabled, EquipmentSlot
+# Fabric 1.21-1.21.4 handler: Mojang mappings, EquipmentSlot, VeinMinerMod.veinMinerEnabled
 FABRIC_121_HANDLER_FIXED = """\
 package asd.itamio.veinminer;
 import java.util.*;
@@ -3661,7 +3847,16 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
 }
 """
 
-# Fabric 1.21 key: reads VeinMinerMod.veinMinerEnabled (in main source tree)
+# Fabric 1.21.5+: isCorrectToolForDrops, instanceof ServerLevel
+FABRIC_1215_HANDLER_FIXED = FABRIC_121_HANDLER_FIXED.replace(
+    "        if (world.isClientSide) return true;",
+    "        if (!(world instanceof ServerLevel)) return true;"
+).replace(
+    "        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandItem())) return true;",
+    "        if (VeinMinerMod.config.limitToCorrectTool && !player.getMainHandItem().isCorrectToolForDrops(state)) return true;"
+)
+
+# Fabric 1.21 key: reads VeinMinerMod.veinMinerEnabled
 FABRIC_121_KEY_FIXED = """\
 package asd.itamio.veinminer;
 import net.fabricmc.api.ClientModInitializer;
@@ -3692,125 +3887,44 @@ public class VeinMinerKeyHandler implements ClientModInitializer {
 }
 """
 
-# Fabric 1.21.5+ handler: PickaxeItem/AxeItem/ShovelItem removed -> use tag check
-# Also: isClientSide is accessible via world instanceof ServerLevel check
-FABRIC_1215_HANDLER_FIXED = """\
-package asd.itamio.veinminer;
-import java.util.*;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.server.level.ServerLevel;
-public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
-    private Map<UUID, Long> cooldowns = new HashMap<>();
-    @Override
-    public boolean beforeBlockBreak(Level world, Player player, BlockPos pos, BlockState state, BlockEntity be) {
-        if (!VeinMinerMod.config.enableVeinMiner) return true;
-        if (!VeinMinerMod.veinMinerEnabled) return true;
-        if (!(world instanceof ServerLevel)) return true;
-        if (player.isCreative()) return true;
-        if (VeinMinerMod.config.requireSneak && !player.isCrouching()) return true;
-        Block block = state.getBlock();
-        if (VeinMinerMod.config.cooldownTicks > 0) {
-            long now = world.getGameTime();
-            Long last = cooldowns.get(player.getUUID());
-            if (last != null && now - last < VeinMinerMod.config.cooldownTicks) return true;
-            cooldowns.put(player.getUUID(), now);
+# Fabric 1.21.9+: KeyMapping Category constructor changed
+# Use KeyBindingHelper which handles the Category internally
+FABRIC_1219_KEY_FIXED = FABRIC_121_KEY_FIXED  # KeyBindingHelper handles Category
+
+
+NEOFORGE_1219_KEY_FIXED = """package asd.itamio.veinminer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import org.lwjgl.glfw.GLFW;
+public class VeinMinerKeyHandler {
+    public static KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
+    public static boolean veinMinerEnabled = true;
+    public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
+    @SubscribeEvent
+    public void onKeyInput(InputEvent.Key event) {
+        if (toggleKey.consumeClick()) {
+            veinMinerEnabled = !veinMinerEnabled;
+            String msg = veinMinerEnabled ? "\u00a7aVein Miner: ENABLED" : "\u00a7cVein Miner: DISABLED";
+            Minecraft.getInstance().player.displayClientMessage(Component.literal(msg), false);
         }
-        if (!isVeinMineable(block)) return true;
-        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(state, player.getMainHandItem())) return true;
-        Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
-        if (vein.size() > 1) mineVein(world, player, vein, state, pos);
-        return true;
-    }
-    private boolean isVeinMineable(Block b) {
-        String n = BuiltInRegistries.BLOCK.getKey(b).toString();
-        if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.equals("minecraft:deepslate_coal_ore")||n.equals("minecraft:deepslate_iron_ore")||n.equals("minecraft:deepslate_gold_ore")||n.equals("minecraft:deepslate_diamond_ore")||n.equals("minecraft:deepslate_emerald_ore")||n.equals("minecraft:deepslate_lapis_ore")||n.equals("minecraft:deepslate_redstone_ore"))) return true;
-        if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
-        if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
-        if (VeinMinerMod.config.mineDirt && (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block"))) return true;
-        if (VeinMinerMod.config.mineGravel && n.equals("minecraft:gravel")) return true;
-        if (VeinMinerMod.config.mineSand && n.equals("minecraft:sand")) return true;
-        if (VeinMinerMod.config.mineClay && n.equals("minecraft:clay")) return true;
-        if (VeinMinerMod.config.mineNetherrack && n.equals("minecraft:netherrack")) return true;
-        if (VeinMinerMod.config.mineEndStone && n.equals("minecraft:end_stone")) return true;
-        if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
-        return false;
-    }
-    private boolean isCorrectTool(BlockState state, ItemStack tool) {
-        if (tool.isEmpty()) return false;
-        return tool.isCorrectToolForDrops(state);
-    }
-    private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
-        Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
-        queue.add(start); vein.add(start);
-        String sn = BuiltInRegistries.BLOCK.getKey(target).toString();
-        boolean isLog = sn.contains("_log")||sn.contains("_wood");
-        while (!queue.isEmpty()&&vein.size()<max) {
-            BlockPos cur = queue.poll();
-            for (int dx=-1;dx<=1;dx++) for (int dy=-1;dy<=1;dy++) for (int dz=-1;dz<=1;dz++) {
-                if (dx==0&&dy==0&&dz==0) continue;
-                BlockPos nb = cur.offset(dx,dy,dz);
-                if (vein.contains(nb)||vein.size()>=max) continue;
-                BlockState nbs = world.getBlockState(nb);
-                if (nbs.getBlock()!=target) continue;
-                if (isLog&&nbs!=startState) continue;
-                vein.add(nb); queue.add(nb);
-            }
-        }
-        return vein;
-    }
-    private void mineVein(Level world, Player player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
-        ItemStack tool = player.getMainHandItem();
-        List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
-        ServerLevel sl = (ServerLevel) world;
-        for (BlockPos pos : vein) {
-            if (pos.equals(origin)) continue;
-            BlockState state = world.getBlockState(pos);
-            List<ItemStack> drops = Block.getDrops(state, sl, pos, world.getBlockEntity(pos), player, tool);
-            for (ItemStack d : drops) allDrops.add(d.copy());
-            world.removeBlock(pos, false); mined++;
-            if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
-                if (tool.isEmpty()) break;
-            }
-        }
-        if (!VeinMinerMod.config.disableSound) world.playSound(null, origin, origState.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
-        if (VeinMinerMod.config.dropAtOneLocation) {
-            Map<String,ItemStack> combined = new HashMap<>();
-            for (ItemStack d : allDrops) {
-                String key = BuiltInRegistries.ITEM.getKey(d.getItem())+":"+d.getDamageValue();
-                if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.getCount()+d.getCount(); ex.setCount(Math.min(nc,ex.getMaxStackSize())); if(nc>ex.getMaxStackSize()){ItemStack ov=d.copy();ov.setCount(nc-ex.getMaxStackSize());combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
-            }
-            for (ItemStack s : combined.values()) if (!s.isEmpty()) { ItemEntity ei=new ItemEntity(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickUpDelay(); world.addFreshEntity(ei); }
-        }
-        if (VeinMinerMod.config.consumeHunger) player.causeFoodExhaustion(0.005f*mined*VeinMinerMod.config.hungerMultiplier);
     }
 }
 """
-
 
 # ===========================================================================
 # NEOFORGE FIXES
 # ===========================================================================
 
-# NeoForge 1.20.5-1.21.4: EquipmentSlot fix, PickaxeItem still exists
-NEOFORGE_120_HANDLER_FIXED = """\
-package asd.itamio.veinminer;
+# NeoForge 1.20.2-1.20.4: Consumer lambda
+NEOFORGE_120_HANDLER_FIXED = """package asd.itamio.veinminer;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -3896,7 +4010,7 @@ public class VeinMinerHandler {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+                tool.hurtAndBreak(1, player, p -> {});
                 if (tool.isEmpty()) break;
             }
         }
@@ -3914,142 +4028,23 @@ public class VeinMinerHandler {
 }
 """
 
-# NeoForge 1.21.5+: isClientSide private -> use instanceof ServerLevel, PickaxeItem removed -> isCorrectToolForDrops
-NEOFORGE_1215_HANDLER_FIXED = """\
-package asd.itamio.veinminer;
-import java.util.*;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.event.level.BlockEvent.BreakEvent;
-import net.neoforged.bus.api.SubscribeEvent;
-public class VeinMinerHandler {
-    private Map<UUID, Long> cooldowns = new HashMap<>();
-    @SubscribeEvent
-    public void onBlockBreak(BreakEvent event) {
-        if (!VeinMinerMod.config.enableVeinMiner) return;
-        if (!VeinMinerKeyHandler.veinMinerEnabled) return;
-        Player player = event.getPlayer();
-        Level world = (Level) event.getLevel();
-        BlockPos pos = event.getPos();
-        BlockState state = event.getState();
-        Block block = state.getBlock();
-        if (!(world instanceof ServerLevel)) return;
-        if (player.isCreative()) return;
-        if (VeinMinerMod.config.requireSneak && !player.isCrouching()) return;
-        if (VeinMinerMod.config.cooldownTicks > 0) {
-            long now = world.getGameTime();
-            Long last = cooldowns.get(player.getUUID());
-            if (last != null && now - last < VeinMinerMod.config.cooldownTicks) return;
-            cooldowns.put(player.getUUID(), now);
-        }
-        if (!isVeinMineable(block)) return;
-        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(state, player.getMainHandItem())) return;
-        Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
-        if (vein.size() > 1) mineVein(world, player, vein, state, pos);
-    }
-    private boolean isVeinMineable(Block b) {
-        String n = BuiltInRegistries.BLOCK.getKey(b).toString();
-        if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.equals("minecraft:deepslate_coal_ore")||n.equals("minecraft:deepslate_iron_ore")||n.equals("minecraft:deepslate_gold_ore")||n.equals("minecraft:deepslate_diamond_ore")||n.equals("minecraft:deepslate_emerald_ore")||n.equals("minecraft:deepslate_lapis_ore")||n.equals("minecraft:deepslate_redstone_ore"))) return true;
-        if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
-        if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
-        if (VeinMinerMod.config.mineDirt && (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block"))) return true;
-        if (VeinMinerMod.config.mineGravel && n.equals("minecraft:gravel")) return true;
-        if (VeinMinerMod.config.mineSand && n.equals("minecraft:sand")) return true;
-        if (VeinMinerMod.config.mineClay && n.equals("minecraft:clay")) return true;
-        if (VeinMinerMod.config.mineNetherrack && n.equals("minecraft:netherrack")) return true;
-        if (VeinMinerMod.config.mineEndStone && n.equals("minecraft:end_stone")) return true;
-        if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
-        return false;
-    }
-    private boolean isCorrectTool(BlockState state, ItemStack tool) {
-        if (tool.isEmpty()) return false;
-        return tool.isCorrectToolForDrops(state);
-    }
-    private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
-        Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
-        queue.add(start); vein.add(start);
-        String sn = BuiltInRegistries.BLOCK.getKey(target).toString();
-        boolean isLog = sn.contains("_log")||sn.contains("_wood");
-        while (!queue.isEmpty()&&vein.size()<max) {
-            BlockPos cur = queue.poll();
-            for (int dx=-1;dx<=1;dx++) for (int dy=-1;dy<=1;dy++) for (int dz=-1;dz<=1;dz++) {
-                if (dx==0&&dy==0&&dz==0) continue;
-                BlockPos nb = cur.offset(dx,dy,dz);
-                if (vein.contains(nb)||vein.size()>=max) continue;
-                BlockState nbs = world.getBlockState(nb);
-                if (nbs.getBlock()!=target) continue;
-                if (isLog&&nbs!=startState) continue;
-                vein.add(nb); queue.add(nb);
-            }
-        }
-        return vein;
-    }
-    private void mineVein(Level world, Player player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
-        ItemStack tool = player.getMainHandItem();
-        List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
-        ServerLevel sl = (ServerLevel) world;
-        for (BlockPos pos : vein) {
-            if (pos.equals(origin)) continue;
-            BlockState state = world.getBlockState(pos);
-            List<ItemStack> drops = Block.getDrops(state, sl, pos, world.getBlockEntity(pos), player, tool);
-            for (ItemStack d : drops) allDrops.add(d.copy());
-            world.removeBlock(pos, false); mined++;
-            if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
-                if (tool.isEmpty()) break;
-            }
-        }
-        if (!VeinMinerMod.config.disableSound) world.playSound(null, origin, origState.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 1.0f);
-        if (VeinMinerMod.config.dropAtOneLocation) {
-            Map<String,ItemStack> combined = new HashMap<>();
-            for (ItemStack d : allDrops) {
-                String key = BuiltInRegistries.ITEM.getKey(d.getItem())+":"+d.getDamageValue();
-                if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.getCount()+d.getCount(); ex.setCount(Math.min(nc,ex.getMaxStackSize())); if(nc>ex.getMaxStackSize()){ItemStack ov=d.copy();ov.setCount(nc-ex.getMaxStackSize());combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
-            }
-            for (ItemStack s : combined.values()) if (!s.isEmpty()) { ItemEntity ei=new ItemEntity(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickUpDelay(); world.addFreshEntity(ei); }
-        }
-        if (VeinMinerMod.config.consumeHunger) player.causeFoodExhaustion(0.005f*mined*VeinMinerMod.config.hungerMultiplier);
-    }
-}
-"""
+# NeoForge 1.20.5-1.21.4: EquipmentSlot
+NEOFORGE_1205_HANDLER_FIXED = NEOFORGE_120_HANDLER_FIXED.replace(
+    "tool.hurtAndBreak(1, player, p -> {});",
+    "tool.hurtAndBreak(1, player, net.minecraft.world.entity.EquipmentSlot.MAINHAND);"
+)
 
-# NeoForge 1.21.9+: KeyMapping category changed to Category object
-NEOFORGE_1219_KEY_FIXED = """\
-package asd.itamio.veinminer;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.KeyMapping;
-import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.bus.api.SubscribeEvent;
-import org.lwjgl.glfw.GLFW;
-public class VeinMinerKeyHandler {
-    public static KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
-    public static boolean veinMinerEnabled = true;
-    public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
-    @SubscribeEvent
-    public void onKeyInput(InputEvent.Key event) {
-        if (toggleKey.consumeClick()) {
-            veinMinerEnabled = !veinMinerEnabled;
-            String msg = veinMinerEnabled ? "\\u00a7aVein Miner: ENABLED" : "\\u00a7cVein Miner: DISABLED";
-            Minecraft.getInstance().player.displayClientMessage(Component.literal(msg), false);
-        }
-    }
-}
-"""
-
+# NeoForge 1.21.5+: isCorrectToolForDrops, instanceof ServerLevel, EquipmentSlot
+NEOFORGE_1215_HANDLER_FIXED = NEOFORGE_1205_HANDLER_FIXED.replace(
+    "        if (world.isClientSide) return;",
+    "        if (!(world instanceof net.minecraft.server.level.ServerLevel)) return;"
+).replace(
+    "        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandItem())) return;",
+    "        if (VeinMinerMod.config.limitToCorrectTool && !player.getMainHandItem().isCorrectToolForDrops(state)) return;"
+)
 
 # ===========================================================================
-# BUNDLE DEFINITIONS (FIXED)
+# BUNDLE DEFINITIONS
 # ===========================================================================
 
 PKG = "asd/itamio/veinminer"
@@ -4092,83 +4087,90 @@ def _neoforge_files(mod, handler, key, config=CONFIG_SRC):
 
 ALL_TARGETS = [
     # ---- Forge ----
-    ("VeinMiner-1.8.9-forge",       "1.8.9",        "forge",
+    ("VeinMiner-1.8.9-forge",        "1.8.9",         "forge",
      _forge_files(FORGE_189_MOD, FORGE_189_HANDLER_FIXED, FORGE_189_KEY)),
 
-    ("VeinMiner-1.12.2-forge",      "1.12.2",       "forge",
+    ("VeinMiner-1.12.2-forge",       "1.12.2",        "forge",
      _forge_files(FORGE_1122_MOD, FORGE_1122_HANDLER, FORGE_1122_KEY)),
 
-    ("VeinMiner-1.16.5-forge",      "1.16.5",       "forge",
-     _forge_files(FORGE_1165_MOD, FORGE_1165_HANDLER, FORGE_1165_KEY_FIXED)),
+    ("VeinMiner-1.16.5-forge",       "1.16.5",        "forge",
+     _forge_files(FORGE_1165_MOD, FORGE_1165_HANDLER_FIXED, FORGE_1165_KEY_FIXED)),
 
-    ("VeinMiner-1.17.1-forge",      "1.17.1",       "forge",
-     _forge_files(FORGE_117_MOD, FORGE_117_HANDLER_FIXED, FORGE_117_KEY_FIXED)),
+    ("VeinMiner-1.17.1-forge",       "1.17.1",        "forge",
+     _forge_files(FORGE_117_MOD_FIXED, FORGE_117_HANDLER_FIXED, FORGE_117_KEY_FIXED)),
 
-    ("VeinMiner-1.18-1.18.2-forge", "1.18-1.18.2",  "forge",
+    ("VeinMiner-1.18-1.18.2-forge",  "1.18-1.18.2",   "forge",
      _forge_files(FORGE_118_MOD, FORGE_118_HANDLER_FIXED, FORGE_118_KEY_FIXED)),
 
-    ("VeinMiner-1.19-1.19.4-forge", "1.19-1.19.4",  "forge",
+    ("VeinMiner-1.19-1.19.4-forge",  "1.19-1.19.4",   "forge",
      _forge_files(FORGE_119_MOD_FIXED, FORGE_119_HANDLER_FIXED, FORGE_119_KEY_FIXED)),
 
-    ("VeinMiner-1.20.1-forge",      "1.20.1",       "forge",
-     _forge_files(FORGE_119_MOD_FIXED, FORGE_119_HANDLER_FIXED, FORGE_119_KEY_FIXED)),
+    ("VeinMiner-1.20.1-forge",       "1.20.1",        "forge",
+     _forge_files(FORGE_119_MOD_FIXED, FORGE_120_HANDLER_FIXED, FORGE_119_KEY_FIXED)),
 
-    ("VeinMiner-1.20.4-forge",      "1.20.4",       "forge",
-     _forge_files(FORGE_119_MOD_FIXED, FORGE_119_HANDLER_FIXED, FORGE_119_KEY_FIXED)),
+    ("VeinMiner-1.20.4-forge",       "1.20.4",        "forge",
+     _forge_files(FORGE_119_MOD_FIXED, FORGE_120_HANDLER_FIXED, FORGE_119_KEY_FIXED)),
 
-    ("VeinMiner-1.20.6-forge",      "1.20.6",       "forge",
-     _forge_files(FORGE_119_MOD_FIXED, FORGE_119_HANDLER_FIXED, FORGE_119_KEY_FIXED)),
+    ("VeinMiner-1.20.6-forge",       "1.20.6",        "forge",
+     _forge_files(FORGE_1206_MOD_FIXED, FORGE_1206_HANDLER_FIXED, FORGE_1206_KEY_FIXED)),
 
-    ("VeinMiner-1.21-1.21.1-forge", "1.21-1.21.1",  "forge",
+    ("VeinMiner-1.21-1.21.1-forge",  "1.21-1.21.1",   "forge",
      _forge_files(FORGE_121_MOD_FIXED, FORGE_121_HANDLER_FIXED, FORGE_121_KEY_FIXED)),
 
-    ("VeinMiner-1.21.3-1.21.5-forge","1.21.3-1.21.5","forge",
+    ("VeinMiner-1.21.3-1.21.4-forge","1.21.3-1.21.4", "forge",
      _forge_files(FORGE_121_MOD_FIXED, FORGE_121_HANDLER_FIXED, FORGE_121_KEY_FIXED)),
 
-    ("VeinMiner-1.21.6-1.21.8-forge","1.21.6-1.21.8","forge",
+    ("VeinMiner-1.21.5-forge",       "1.21.5",        "forge",
+     _forge_files(FORGE_121_MOD_FIXED, FORGE_1215_HANDLER_FIXED, FORGE_121_KEY_FIXED)),
+
+    ("VeinMiner-1.21.6-1.21.8-forge","1.21.6-1.21.8", "forge",
      _forge_files(FORGE_1216_MOD_FIXED, FORGE_1216_HANDLER_FIXED, FORGE_1216_KEY_FIXED)),
 
     ("VeinMiner-1.21.9-1.21.11-forge","1.21.9-1.21.11","forge",
-     _forge_files(FORGE_1216_MOD_FIXED, FORGE_1216_HANDLER_FIXED, FORGE_1216_KEY_FIXED)),
+     _forge_files(FORGE_1219_MOD_FIXED, FORGE_1219_HANDLER_FIXED, FORGE_1219_KEY_FIXED)),
 
     # ---- Fabric ----
-    ("VeinMiner-1.16.5-fabric",     "1.16.5",       "fabric",
+    ("VeinMiner-1.16.5-fabric",      "1.16.5",        "fabric",
      _fabric_presplit_files(FABRIC_1165_MAIN, FABRIC_1165_HANDLER, FABRIC_1165_KEY_FIXED,
                             mod_json=FABRIC_1165_MOD_JSON_WITH_CLIENT)),
 
-    ("VeinMiner-1.17.1-fabric",     "1.17.1",       "fabric",
+    ("VeinMiner-1.17.1-fabric",      "1.17.1",        "fabric",
      _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_117_HANDLER, FABRIC_117_KEY,
                             mod_json=FABRIC_117_MOD_JSON)),
 
-    ("VeinMiner-1.18-1.18.2-fabric","1.18-1.18.2",  "fabric",
+    ("VeinMiner-1.18-1.18.2-fabric", "1.18-1.18.2",   "fabric",
      _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_117_HANDLER, FABRIC_117_KEY,
                             mod_json=FABRIC_117_MOD_JSON)),
 
-    ("VeinMiner-1.19-1.19.4-fabric","1.19-1.19.4",  "fabric",
+    ("VeinMiner-1.19-1.19.4-fabric", "1.19-1.19.4",   "fabric",
      _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_119_KEY,
                             mod_json=FABRIC_117_MOD_JSON)),
 
-    # Fabric 1.20.x: each version needs its own folder (cross-minor range not valid)
-    ("VeinMiner-1.20.1-fabric",     "1.20.1",       "fabric",
-     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
-                         mod_json=FABRIC_120_MOD_JSON)),
-    ("VeinMiner-1.20.2-fabric",     "1.20.2",       "fabric",
-     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
-                         mod_json=FABRIC_120_MOD_JSON)),
-    ("VeinMiner-1.20.3-fabric",     "1.20.3",       "fabric",
-     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
-                         mod_json=FABRIC_120_MOD_JSON)),
-    ("VeinMiner-1.20.4-fabric",     "1.20.4",       "fabric",
-     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
-                         mod_json=FABRIC_120_MOD_JSON)),
-    ("VeinMiner-1.20.5-fabric",     "1.20.5",       "fabric",
-     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
-                         mod_json=FABRIC_120_MOD_JSON)),
-    ("VeinMiner-1.20.6-fabric",     "1.20.6",       "fabric",
-     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
+    ("VeinMiner-1.20.1-fabric",      "1.20.1",        "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_120_HANDLER_FIXED, FABRIC_120_KEY,
                          mod_json=FABRIC_120_MOD_JSON)),
 
-    ("VeinMiner-1.21-1.21.1-fabric","1.21-1.21.1",  "fabric",
+    ("VeinMiner-1.20.2-fabric",      "1.20.2",        "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_120_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+
+    ("VeinMiner-1.20.3-fabric",      "1.20.3",        "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_120_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+
+    ("VeinMiner-1.20.4-fabric",      "1.20.4",        "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_120_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+
+    ("VeinMiner-1.20.5-fabric",      "1.20.5",        "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_1205_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+
+    ("VeinMiner-1.20.6-fabric",      "1.20.6",        "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_1205_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+
+    ("VeinMiner-1.21-1.21.1-fabric", "1.21-1.21.1",   "fabric",
      _fabric_split_files(FABRIC_121_MAIN_FIXED, FABRIC_121_HANDLER_FIXED, FABRIC_121_KEY_FIXED,
                          mod_json=FABRIC_121_MOD_JSON)),
 
@@ -4181,28 +4183,27 @@ ALL_TARGETS = [
                          mod_json=FABRIC_121_MOD_JSON)),
 
     ("VeinMiner-1.21.9-1.21.11-fabric","1.21.9-1.21.11","fabric",
-     _fabric_split_files(FABRIC_121_MAIN_FIXED, FABRIC_1215_HANDLER_FIXED, FABRIC_121_KEY_FIXED,
+     _fabric_split_files(FABRIC_121_MAIN_FIXED, FABRIC_1215_HANDLER_FIXED, FABRIC_1219_KEY_FIXED,
                          mod_json=FABRIC_121_MOD_JSON)),
 
     # ---- NeoForge ----
-    # Use exact versions to avoid 1.20.3 which is not in supported_versions
-    ("VeinMiner-1.20.2-neoforge",   "1.20.2",       "neoforge",
+    ("VeinMiner-1.20.2-neoforge",    "1.20.2",        "neoforge",
      _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_120_HANDLER_FIXED, NEOFORGE_120_KEY)),
 
-    ("VeinMiner-1.20.4-neoforge",   "1.20.4",       "neoforge",
+    ("VeinMiner-1.20.4-neoforge",    "1.20.4",        "neoforge",
      _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_120_HANDLER_FIXED, NEOFORGE_120_KEY)),
 
-    ("VeinMiner-1.20.5-neoforge",   "1.20.5",       "neoforge",
-     _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_120_HANDLER_FIXED, NEOFORGE_120_KEY)),
+    ("VeinMiner-1.20.5-neoforge",    "1.20.5",        "neoforge",
+     _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_1205_HANDLER_FIXED, NEOFORGE_120_KEY)),
 
-    ("VeinMiner-1.20.6-neoforge",   "1.20.6",       "neoforge",
-     _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_120_HANDLER_FIXED, NEOFORGE_120_KEY)),
+    ("VeinMiner-1.20.6-neoforge",    "1.20.6",        "neoforge",
+     _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_1205_HANDLER_FIXED, NEOFORGE_120_KEY)),
 
-    ("VeinMiner-1.21-1.21.1-neoforge","1.21-1.21.1","neoforge",
-     _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_120_HANDLER_FIXED, NEOFORGE_120_KEY)),
+    ("VeinMiner-1.21-1.21.1-neoforge","1.21-1.21.1",  "neoforge",
+     _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_1205_HANDLER_FIXED, NEOFORGE_120_KEY)),
 
     ("VeinMiner-1.21.2-1.21.4-neoforge","1.21.2-1.21.4","neoforge",
-     _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_120_HANDLER_FIXED, NEOFORGE_120_KEY)),
+     _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_1205_HANDLER_FIXED, NEOFORGE_120_KEY)),
 
     ("VeinMiner-1.21.5-1.21.8-neoforge","1.21.5-1.21.8","neoforge",
      _neoforge_files(NEOFORGE_120_MOD, NEOFORGE_1215_HANDLER_FIXED, NEOFORGE_120_KEY)),
@@ -4271,13 +4272,13 @@ def main():
             print("--failed-only: no failed targets found, rebuilding all")
 
     BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
-    # Clean stale target folders not in current targets
+    # Clean stale folders
     current_folders = {t[0] for t in targets}
-    if BUNDLE_DIR.exists():
-        import shutil
-        for d in list(BUNDLE_DIR.iterdir()):
-            if d.is_dir() and d.name not in current_folders:
-                shutil.rmtree(d)
+    import shutil
+    for d in list(BUNDLE_DIR.iterdir()):
+        if d.is_dir() and d.name not in current_folders:
+            shutil.rmtree(d)
+
     for folder, mc_version, loader, files in targets:
         print(f"  Writing {folder}")
         write_target(BUNDLE_DIR, folder, mc_version, loader, files)

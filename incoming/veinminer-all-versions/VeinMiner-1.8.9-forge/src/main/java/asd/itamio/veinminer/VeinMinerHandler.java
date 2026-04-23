@@ -20,7 +20,7 @@ public class VeinMinerHandler {
         BlockPos pos = event.pos;
         Block block = world.getBlockState(pos).getBlock();
         if (world.isRemote) return;
-        if (player.isCreative()) return;
+        if (player.capabilities.isCreativeMode) return;
         if (VeinMinerMod.config.requireSneak && !player.isSneaking()) return;
         if (VeinMinerMod.config.cooldownTicks > 0) {
             long now = world.getTotalWorldTime();
@@ -66,7 +66,7 @@ public class VeinMinerHandler {
             BlockPos cur = queue.poll();
             for (int dx=-1;dx<=1;dx++) for (int dy=-1;dy<=1;dy++) for (int dz=-1;dz<=1;dz++) {
                 if (dx==0&&dy==0&&dz==0) continue;
-                BlockPos nb = cur.add(dx,dy,dz);
+                BlockPos nb = new BlockPos(cur.getX()+dx, cur.getY()+dy, cur.getZ()+dz);
                 if (vein.contains(nb)||vein.size()>=max) continue;
                 Block nb_block = world.getBlockState(nb).getBlock();
                 if (nb_block != target) continue;
@@ -88,8 +88,7 @@ public class VeinMinerHandler {
             net.minecraft.block.state.IBlockState state = world.getBlockState(pos);
             List<ItemStack> drops = state.getBlock().getDrops(world, pos, state, player.experienceLevel);
             for (ItemStack d : drops) allDrops.add(d.copy());
-            world.setBlockToAir(pos);
-            mined++;
+            world.setBlockToAir(pos); mined++;
             if (VeinMinerMod.config.consumeDurability && tool != null && tool.stackSize > 0) {
                 tool.damageItem(1, player);
                 if (tool.getItemDamage() >= tool.getMaxDamage()) { tool.stackSize = 0; break; }
@@ -99,19 +98,9 @@ public class VeinMinerHandler {
             Map<String,ItemStack> combined = new HashMap<String,ItemStack>();
             for (ItemStack d : allDrops) {
                 String key = d.getItem().getRegistryName()+":"+d.getItemDamage();
-                if (combined.containsKey(key)) {
-                    ItemStack ex = combined.get(key);
-                    int nc = ex.stackSize+d.stackSize;
-                    ex.stackSize = Math.min(nc, ex.getMaxStackSize());
-                    if (nc>ex.getMaxStackSize()) { ItemStack ov=d.copy(); ov.stackSize=nc-ex.getMaxStackSize(); combined.put(key+"_"+combined.size(),ov); }
-                } else { combined.put(key, d.copy()); }
+                if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.stackSize+d.stackSize; ex.stackSize=Math.min(nc,ex.getMaxStackSize()); if(nc>ex.getMaxStackSize()){ItemStack ov=d.copy();ov.stackSize=nc-ex.getMaxStackSize();combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
             }
-            for (ItemStack s : combined.values()) {
-                if (s!=null&&s.stackSize>0) {
-                    EntityItem ei = new EntityItem(world, origin.getX()+0.5, origin.getY()+0.5, origin.getZ()+0.5, s);
-                    ei.setDefaultPickupDelay(); world.spawnEntityInWorld(ei);
-                }
-            }
+            for (ItemStack s : combined.values()) if (s!=null&&s.stackSize>0) { EntityItem ei=new EntityItem(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setDefaultPickupDelay(); world.spawnEntityInWorld(ei); }
         }
         if (VeinMinerMod.config.consumeHunger) player.addExhaustion(0.005f*mined*VeinMinerMod.config.hungerMultiplier);
     }

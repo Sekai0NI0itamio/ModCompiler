@@ -30,7 +30,7 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
             cooldowns.put(player.getUUID(), now);
         }
         if (!isVeinMineable(block)) return true;
-        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(state, player.getMainHandItem())) return true;
+        if (VeinMinerMod.config.limitToCorrectTool && !player.getMainHandItem().isCorrectToolForDrops(state)) return true;
         Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
         if (vein.size() > 1) mineVein(world, player, vein, state, pos);
         return true;
@@ -49,9 +49,13 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
         if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
         return false;
     }
-    private boolean isCorrectTool(BlockState state, ItemStack tool) {
+    private boolean isCorrectTool(Block b, ItemStack tool) {
         if (tool.isEmpty()) return false;
-        return tool.isCorrectToolForDrops(state);
+        String n = BuiltInRegistries.BLOCK.getKey(b).toString();
+        if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof net.minecraft.world.item.PickaxeItem;
+        if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof net.minecraft.world.item.AxeItem;
+        if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof net.minecraft.world.item.ShovelItem;
+        return true;
     }
     private Set<BlockPos> findVein(Level world, BlockPos start, Block target, BlockState startState, int max) {
         Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();

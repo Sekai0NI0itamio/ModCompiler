@@ -14,7 +14,7 @@ public class VeinMinerKeyHandler {
     public void onKeyInput(InputEvent.Key event) {
         if (toggleKey.consumeClick()) {
             veinMinerEnabled = !veinMinerEnabled;
-            String msg = veinMinerEnabled ? "\u00a7aVein Miner: ENABLED" : "\u00a7cVein Miner: DISABLED";
+            String msg = veinMinerEnabled ? "§aVein Miner: ENABLED" : "§cVein Miner: DISABLED";
             Minecraft.getInstance().player.displayClientMessage(Component.literal(msg), false);
         }
     }

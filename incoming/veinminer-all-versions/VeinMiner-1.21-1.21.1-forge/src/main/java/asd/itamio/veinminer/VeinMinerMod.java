@@ -3,6 +3,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 @Mod("veinminer")
 public class VeinMinerMod {
     public static final String MODID = "veinminer";

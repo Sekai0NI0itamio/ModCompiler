@@ -89,7 +89,7 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.damage(1, player, p -> {});
+                tool.damage(1, player, net.minecraft.entity.EquipmentSlot.MAINHAND);
                 if (tool.isEmpty()) break;
             }
         }
