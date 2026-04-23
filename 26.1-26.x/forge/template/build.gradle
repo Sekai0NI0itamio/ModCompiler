@@ -1,27 +1,33 @@
-// Minimal Forge mod workspace for Minecraft 26.1+
-// Minecraft 26.1 requires Java 25 and Gradle 9.4+.
-// Obfuscation was removed in 26.1 — official Mojang parameter names are available directly.
+// Forge template for Minecraft 26.1+
+// Source: Official Forge 26.1.2-64.0.4 MDK (downloaded from maven.minecraftforge.net)
+//
+// Key differences from 1.21.x:
+//   - NO mappings block — obfuscation removed in 26.1, official names available directly
+//   - ForgeGradle version range [7.0.17,8) — not pinned
+//   - EventBus 7: @SubscribeEvent from net.minecraftforge.eventbus.api.listener
+//   - Constructor: ExampleMod(FMLJavaModLoadingContext context) + context.getModBusGroup()
+//   - annotationProcessor 'net.minecraftforge:eventbus-validator:7.0.1' required
+//   - Java 25 required. Gradle 9.3.1+ required.
 
 plugins {
     id 'java'
     id 'idea'
     id 'eclipse'
-    // NOTE: Keep a fixed ForgeGradle version here. Ranges cause plugin resolution failures in CI.
-    id 'net.minecraftforge.gradle' version '7.0.6'
+    id 'net.minecraftforge.gradle' version '[7.0.17,8)'
 }
 
 version = '1.0.0'
 group = 'com.example.examplemod'
 
-// Minecraft 26.1+ ships Java 25 to end users.
+// Mojang ships Java 25 to end users in 26.1+, so your mod should target Java 25.
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 // Include generated resources
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 minecraft {
-    // No obfuscation in 26.1+: official Mojang mappings are used directly.
-    mappings channel: 'official', version: '26.1.2'
+    // No mappings block needed — obfuscation was removed in 26.1.
+    // Official Mojang parameter names are available directly.
 
     runs {
         configureEach {
@@ -42,13 +48,15 @@ minecraft {
         register('data') {
             workingDir = layout.projectDirectory.dir('run-data')
 
-            args '--mod', 'examplemod', '--all', '--output', layout.projectDirectory.dir('src/generated/resources'), '--existing', layout.projectDirectory.dir('src/main/resources')
+            args '--mod', 'examplemod', '--all',
+                 '--output', layout.projectDirectory.dir('src/generated/resources'),
+                 '--existing', layout.projectDirectory.dir('src/main/resources')
         }
     }
 }
 
 repositories {
-    minecraft.mavenizer(it)
+    minecraft.mavenizer(it) // In Kotlin, it = this
     maven fg.forgeMaven
     maven fg.minecraftLibsMaven
     mavenCentral()
@@ -56,6 +64,8 @@ repositories {
 
 dependencies {
     implementation minecraft.dependency('net.minecraftforge:forge:26.1.2-64.0.4')
+    // EventBus 7 compile-time validator — catches listener registration errors at build time
+    annotationProcessor 'net.minecraftforge:eventbus-validator:7.0.1'
 }
 
 tasks.withType(JavaCompile).configureEach {
