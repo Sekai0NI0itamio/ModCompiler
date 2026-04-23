@@ -1180,7 +1180,19 @@ TARGETS = [
      FORGE_1171_TO_1194_MOD,     FORGE_1171_TO_1194_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None),
 
-    ("DayCounter-1.20.1-1.20.4-forge", "1.20.1-1.20.4", "forge",
+    ("DayCounter-1.20.1-forge",   "1.20.1",  "forge",
+     FORGE_1201_TO_1204_MOD,     FORGE_1201_TO_1204_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.20.2-forge",   "1.20.2",  "forge",
+     FORGE_1201_TO_1204_MOD,     FORGE_1201_TO_1204_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.20.3-forge",   "1.20.3",  "forge",
+     FORGE_1201_TO_1204_MOD,     FORGE_1201_TO_1204_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.20.4-forge",   "1.20.4",  "forge",
      FORGE_1201_TO_1204_MOD,     FORGE_1201_TO_1204_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None),
 
@@ -1192,11 +1204,27 @@ TARGETS = [
      FORGE_121_MOD,              FORGE_121_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None),
 
-    ("DayCounter-1.21.3-1.21.5-forge", "1.21.3-1.21.5", "forge",
+    ("DayCounter-1.21.3-forge",   "1.21.3",  "forge",
      FORGE_1212_TO_1215_MOD,     FORGE_1212_TO_1215_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None),
 
-    ("DayCounter-1.21.6-1.21.8-forge", "1.21.6-1.21.8", "forge",
+    ("DayCounter-1.21.4-forge",   "1.21.4",  "forge",
+     FORGE_1212_TO_1215_MOD,     FORGE_1212_TO_1215_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.21.5-forge",   "1.21.5",  "forge",
+     FORGE_1212_TO_1215_MOD,     FORGE_1212_TO_1215_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.21.6-forge",   "1.21.6",  "forge",
+     FORGE_1216_PLUS_MOD,        FORGE_1216_PLUS_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.21.7-forge",   "1.21.7",  "forge",
+     FORGE_1216_PLUS_MOD,        FORGE_1216_PLUS_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.21.8-forge",   "1.21.8",  "forge",
      FORGE_1216_PLUS_MOD,        FORGE_1216_PLUS_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None),
 
@@ -1225,11 +1253,27 @@ TARGETS = [
      FABRIC_1171_TO_1194_MOD,    FABRIC_1171_TO_1194_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit),
 
-    ("DayCounter-1.20.1-1.20.4-fabric", "1.20.1-1.20.4", "fabric",
+    ("DayCounter-1.20.1-fabric",  "1.20.1",  "fabric",
      FABRIC_1201_TO_1204_MOD,    FABRIC_1201_TO_1204_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
 
-    ("DayCounter-1.20.5-1.20.6-fabric", "1.20.5-1.20.6", "fabric",
+    ("DayCounter-1.20.2-fabric",  "1.20.2",  "fabric",
+     FABRIC_1201_TO_1204_MOD,    FABRIC_1201_TO_1204_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+
+    ("DayCounter-1.20.3-fabric",  "1.20.3",  "fabric",
+     FABRIC_1201_TO_1204_MOD,    FABRIC_1201_TO_1204_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+
+    ("DayCounter-1.20.4-fabric",  "1.20.4",  "fabric",
+     FABRIC_1201_TO_1204_MOD,    FABRIC_1201_TO_1204_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+
+    ("DayCounter-1.20.5-fabric",  "1.20.5",  "fabric",
+     FABRIC_1205_TO_1206_MOD,    FABRIC_1205_TO_1206_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+
+    ("DayCounter-1.20.6-fabric",  "1.20.6",  "fabric",
      FABRIC_1205_TO_1206_MOD,    FABRIC_1205_TO_1206_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
 
@@ -1245,12 +1289,32 @@ TARGETS = [
      FABRIC_121_PLUS_MOD,        FABRIC_121_PLUS_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
 
-    ("DayCounter-26.1-26.x-fabric", "26.1-26.x", "fabric",
+    ("DayCounter-26.1-fabric",    "26.1",    "fabric",
+     FABRIC_261_MOD,             FABRIC_261_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+
+    ("DayCounter-26.1.1-fabric",  "26.1.1",  "fabric",
+     FABRIC_261_MOD,             FABRIC_261_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+
+    ("DayCounter-26.1.2-fabric",  "26.1.2",  "fabric",
      FABRIC_261_MOD,             FABRIC_261_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
 
     # ---- NeoForge ----
-    ("DayCounter-1.20.2-1.20.6-neoforge", "1.20.2-1.20.6", "neoforge",
+    ("DayCounter-1.20.2-neoforge", "1.20.2",  "neoforge",
+     NEO_1202_TO_1206_MOD,       NEO_1202_TO_1206_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.20.4-neoforge", "1.20.4",  "neoforge",
+     NEO_1202_TO_1206_MOD,       NEO_1202_TO_1206_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.20.5-neoforge", "1.20.5",  "neoforge",
+     NEO_1202_TO_1206_MOD,       NEO_1202_TO_1206_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-1.20.6-neoforge", "1.20.6",  "neoforge",
      NEO_1202_TO_1206_MOD,       NEO_1202_TO_1206_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None),
 
@@ -1266,7 +1330,15 @@ TARGETS = [
      NEO_121_MOD,                NEO_121_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None),
 
-    ("DayCounter-26.1-26.x-neoforge", "26.1-26.x", "neoforge",
+    ("DayCounter-26.1-neoforge",  "26.1",    "neoforge",
+     NEO_261_MOD,                NEO_261_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-26.1.1-neoforge", "26.1.1", "neoforge",
+     NEO_261_MOD,                NEO_261_CLIENT,
+     "asd.itamio.daycounter.DayCounterMod", None),
+
+    ("DayCounter-26.1.2-neoforge", "26.1.2", "neoforge",
      NEO_261_MOD,                NEO_261_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None),
 ]
