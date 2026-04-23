@@ -4148,7 +4148,23 @@ ALL_TARGETS = [
      _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_119_KEY,
                             mod_json=FABRIC_117_MOD_JSON)),
 
-    ("VeinMiner-1.20.1-1.20.6-fabric","1.20.1-1.20.6","fabric",
+    # Fabric 1.20.x: each version needs its own folder (cross-minor range not valid)
+    ("VeinMiner-1.20.1-fabric",     "1.20.1",       "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+    ("VeinMiner-1.20.2-fabric",     "1.20.2",       "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+    ("VeinMiner-1.20.3-fabric",     "1.20.3",       "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+    ("VeinMiner-1.20.4-fabric",     "1.20.4",       "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+    ("VeinMiner-1.20.5-fabric",     "1.20.5",       "fabric",
+     _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
+                         mod_json=FABRIC_120_MOD_JSON)),
+    ("VeinMiner-1.20.6-fabric",     "1.20.6",       "fabric",
      _fabric_split_files(FABRIC_120_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_120_KEY,
                          mod_json=FABRIC_120_MOD_JSON)),
 
@@ -4255,6 +4271,13 @@ def main():
             print("--failed-only: no failed targets found, rebuilding all")
 
     BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
+    # Clean stale target folders not in current targets
+    current_folders = {t[0] for t in targets}
+    if BUNDLE_DIR.exists():
+        import shutil
+        for d in list(BUNDLE_DIR.iterdir()):
+            if d.is_dir() and d.name not in current_folders:
+                shutil.rmtree(d)
     for folder, mc_version, loader, files in targets:
         print(f"  Writing {folder}")
         write_target(BUNDLE_DIR, folder, mc_version, loader, files)
