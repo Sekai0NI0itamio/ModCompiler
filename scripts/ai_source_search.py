@@ -178,15 +178,51 @@ def download(run_id: int, version: str, loader: str, output_dir: Path) -> bool:
                 else:
                     print(content)
 
+    # API overview — broad discovery even when queries find nothing
+    overview_dir = output_dir / "api-overview"
+    if overview_dir.exists():
+        print(f"\n{'=' * 60}")
+        print("API OVERVIEW (broad discovery)")
+        print("=" * 60)
+
+        for overview_file in ["event-classes.txt", "render-gui-classes.txt",
+                               "client-classes.txt", "modloader-api-classes.txt"]:
+            fp = overview_dir / overview_file
+            if fp.exists():
+                lines = fp.read_text().splitlines()
+                label = overview_file.replace(".txt", "").replace("-", " ").title()
+                print(f"\n--- {label} ({len(lines)} files) ---")
+                print("\n".join(lines[:60]))
+                if len(lines) > 60:
+                    print(f"... ({len(lines) - 60} more — read {fp})")
+
+        # Print full content of key API files from the overview
+        full_api_files = sorted(overview_dir.glob("full_*.java"))
+        if full_api_files:
+            print(f"\n--- Full API Source Files ({len(full_api_files)} files) ---")
+            for cf in full_api_files[:20]:  # show up to 20
+                print(f"\n{'─' * 50}")
+                print(f"FILE: {cf.name}")
+                print('─' * 50)
+                content = cf.read_text()
+                lines = content.splitlines()
+                if len(lines) > 200:
+                    print("\n".join(lines[:200]))
+                    print(f"\n... ({len(lines) - 200} more lines — read {cf})")
+                else:
+                    print(content)
+            if len(full_api_files) > 20:
+                print(f"\n... ({len(full_api_files) - 20} more API files in {overview_dir})")
+
     all_files = output_dir / "all-java-files.txt"
     if all_files.exists():
         lines = all_files.read_text().splitlines()
         print(f"\n{'=' * 60}")
-        print(f"ALL JAVA FILES ({len(lines)} total) — first 50:")
+        print(f"ALL JAVA FILES ({len(lines)} total) — first 100:")
         print("=" * 60)
-        print("\n".join(lines[:50]))
-        if len(lines) > 50:
-            print(f"... ({len(lines) - 50} more — read {all_files})")
+        print("\n".join(lines[:100]))
+        if len(lines) > 100:
+            print(f"... ({len(lines) - 100} more — read {all_files})")
 
     print(f"\nFull results saved to: {output_dir}")
     return info_file.exists()

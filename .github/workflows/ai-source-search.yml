@@ -179,19 +179,35 @@ jobs:
           echo "=== Downloading Minecraft sources for $LOADER ==="
 
           if [[ "$LOADER" == "forge" ]]; then
-            # ForgeGradle: genSources downloads + decompiles Minecraft with Vineflower
-            ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle.log || {
-              echo "genSources failed — trying compileJava to force dependency resolution..."
-              # Create a minimal stub so compileJava doesn't fail on missing source
-              mkdir -p src/main/java/com/stub
-              echo 'package com.stub; public class Stub {}' > src/main/java/com/stub/Stub.java
-              ./gradlew --no-daemon --stacktrace compileJava 2>&1 | tee -a /tmp/gradle.log || true
-            }
+            # ForgeGradle 7+ uses 'decompile' task (not genSources)
+            # Try decompile first, then fall back to genSources for older versions
+            if ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
+              echo "Using 'decompile' task (ForgeGradle 7+)"
+              ./gradlew --no-daemon --stacktrace decompile 2>&1 | tee /tmp/gradle.log || {
+                echo "decompile failed, trying downloadSources..."
+                ./gradlew --no-daemon --stacktrace downloadSources 2>&1 | tee -a /tmp/gradle.log || true
+              }
+            else
+              echo "Using 'genSources' task (ForgeGradle <7)"
+              ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle.log || {
+                echo "genSources failed — trying compileJava to force dependency resolution..."
+                mkdir -p src/main/java/com/stub
+                echo 'package com.stub; public class Stub {}' > src/main/java/com/stub/Stub.java
+                ./gradlew --no-daemon --stacktrace compileJava 2>&1 | tee -a /tmp/gradle.log || true
+              }
+            fi
           elif [[ "$LOADER" == "neoforge" ]]; then
-            # NeoForge UserDev Gradle: sources come via dependency resolution
-            ./gradlew --no-daemon --stacktrace dependencies 2>&1 | tee /tmp/gradle.log || true
-            # Also try genSources
-            ./gradlew --no-daemon genSources 2>&1 | tee -a /tmp/gradle.log || true
+            # NeoForge: try decompile, then genSources, then dependencies
+            if ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
+              echo "Using 'decompile' task"
+              ./gradlew --no-daemon --stacktrace decompile 2>&1 | tee /tmp/gradle.log || true
+            elif ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^genSources "; then
+              echo "Using 'genSources' task"
+              ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle.log || true
+            else
+              echo "Using 'dependencies' task"
+              ./gradlew --no-daemon --stacktrace dependencies 2>&1 | tee /tmp/gradle.log || true
+            fi
           elif [[ "$LOADER" == "fabric" ]]; then
             # Fabric Loom: genSources decompiles Minecraft
             ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle.log || {
@@ -204,11 +220,14 @@ jobs:
 
       # -------------------------------------------------------
       # Find and extract decompiled .java files
+      #
+      # ForgeGradle 7+ (Forge 1.20.6+): 'decompile' task produces a
+      #   *-sources.jar inside ~/.gradle/caches/minecraftforge/
+      # ForgeGradle <7 (Forge 1.12-1.20.4): 'genSources' extracts .java
+      #   files into ~/.gradle/caches/forge_gradle/ or net.minecraftforge/
+      # NeoForge: sources jar in ~/.gradle/caches/neoforge/ or similar
       # Fabric Loom: genSources produces a *-sources.jar inside
-      #   $WORKSPACE/.gradle/loom-cache/  (or build/loom-cache/)
-      # ForgeGradle: genSources produces extracted .java files under
-      #   $HOME/.gradle/caches/forge_gradle/ or net.minecraftforge/
-      # NeoForge: sources land in $HOME/.gradle/caches/neoforge/
+      #   $WORKSPACE/.gradle/loom-cache/ or ~/.gradle/caches/
       # -------------------------------------------------------
       - name: Locate and extract decompiled sources
         id: locate
@@ -217,62 +236,57 @@ jobs:
           EXTRACTED_DIR="/tmp/extracted-sources"
           mkdir -p "$EXTRACTED_DIR"
 
-          # ---- FABRIC: find the sources jar and unzip it ----
-          if [[ "$LOADER" == "fabric" ]]; then
-            echo "=== Fabric: searching for sources jar ==="
+          echo "=== Searching for decompiled sources (loader=$LOADER) ==="
 
-            # Fabric Loom puts sources jars in the workspace .gradle/loom-cache
-            # The jar is named like: minecraft-project-@-merged-named-sources.jar
-            # or: minecraft-1.18.2-named-sources.jar
-            SOURCES_JAR=$(find "$WORKSPACE/.gradle" "$HOME/.gradle/caches" \
-              -name "*-sources.jar" -o -name "*named-sources.jar" \
-              2>/dev/null | grep -v "\.lock" | head -1)
+          # -------------------------------------------------------
+          # Helper: find and extract the best sources jar
+          # -------------------------------------------------------
+          extract_sources_jar() {
+            local SEARCH_ROOTS=("$@")
+            local BEST_JAR=""
+            local BEST_SIZE=0
 
-            if [ -z "$SOURCES_JAR" ]; then
-              # Broader search: any sources jar in loom cache
-              SOURCES_JAR=$(find "$WORKSPACE" "$HOME/.gradle" \
-                -name "*sources*.jar" \
-                2>/dev/null | grep -v "\.lock" | grep -v "test" | head -1)
-            fi
-
-            if [ -n "$SOURCES_JAR" ]; then
-              echo "Found sources jar: $SOURCES_JAR"
-              unzip -q "$SOURCES_JAR" "*.java" -d "$EXTRACTED_DIR" 2>/dev/null || \
-              unzip -q "$SOURCES_JAR" -d "$EXTRACTED_DIR" 2>/dev/null || true
-              echo "Extracted to $EXTRACTED_DIR"
-            else
-              echo "WARNING: No sources jar found. Listing all jars in loom-cache:"
-              find "$WORKSPACE/.gradle" -name "*.jar" 2>/dev/null | head -20
-              find "$HOME/.gradle/caches" -name "*.jar" 2>/dev/null | grep -i "loom\|fabric\|minecraft" | head -20
-            fi
-
-          # ---- FORGE / NEOFORGE: .java files already extracted ----
-          else
-            echo "=== Forge/NeoForge: searching for extracted .java files ==="
-            SEARCH_ROOTS=(
-              "$HOME/.gradle/caches/forge_gradle"
-              "$HOME/.gradle/caches/net.minecraftforge"
-              "$HOME/.gradle/caches/neoforge"
-              "$HOME/.gradle/caches/minecraft"
-              "$HOME/.gradle/caches/modules-2"
-              "$HOME/.gradle/caches"
-              "$WORKSPACE/.gradle"
-            )
-
-            BEST_ROOT=""
-            BEST_COUNT=0
             for ROOT in "${SEARCH_ROOTS[@]}"; do
-              if [ -d "$ROOT" ]; then
-                COUNT=$(find "$ROOT" -name "*.java" -type f 2>/dev/null | wc -l)
-                if [ "$COUNT" -gt "$BEST_COUNT" ]; then
-                  BEST_COUNT=$COUNT
-                  BEST_ROOT="$ROOT"
+              [ -d "$ROOT" ] || continue
+              while IFS= read -r JAR; do
+                SIZE=$(stat -c%s "$JAR" 2>/dev/null || echo 0)
+                if [ "$SIZE" -gt "$BEST_SIZE" ]; then
+                  BEST_SIZE=$SIZE
+                  BEST_JAR=$JAR
                 fi
+              done < <(find "$ROOT" \
+                \( -name "*-sources.jar" -o -name "*named-sources.jar" \
+                   -o -name "*-sources-*.jar" -o -name "*decompiled*.jar" \) \
+                -not -name "*.lock" -type f 2>/dev/null)
+            done
+
+            if [ -n "$BEST_JAR" ]; then
+              echo "Found sources jar ($BEST_SIZE bytes): $BEST_JAR"
+              unzip -q "$BEST_JAR" "*.java" -d "$EXTRACTED_DIR" 2>/dev/null || \
+              unzip -q "$BEST_JAR" -d "$EXTRACTED_DIR" 2>/dev/null || true
+              return 0
+            fi
+            return 1
+          }
+
+          # -------------------------------------------------------
+          # Helper: find extracted .java files in cache dirs
+          # -------------------------------------------------------
+          find_java_files() {
+            local SEARCH_ROOTS=("$@")
+            local BEST_ROOT=""
+            local BEST_COUNT=0
+
+            for ROOT in "${SEARCH_ROOTS[@]}"; do
+              [ -d "$ROOT" ] || continue
+              COUNT=$(find "$ROOT" -name "*.java" -type f 2>/dev/null | wc -l)
+              if [ "$COUNT" -gt "$BEST_COUNT" ]; then
+                BEST_COUNT=$COUNT
+                BEST_ROOT=$ROOT
               fi
             done
 
             if [ "$BEST_COUNT" -gt 0 ]; then
-              # Copy to extracted dir for uniform handling
               echo "Found $BEST_COUNT .java files in $BEST_ROOT — copying..."
               find "$BEST_ROOT" -name "*.java" -type f | while read -r F; do
                 REL="${F#$BEST_ROOT/}"
@@ -280,6 +294,73 @@ jobs:
                 mkdir -p "$(dirname "$DEST")"
                 cp "$F" "$DEST"
               done
+              return 0
+            fi
+            return 1
+          }
+
+          # -------------------------------------------------------
+          # FABRIC
+          # -------------------------------------------------------
+          if [[ "$LOADER" == "fabric" ]]; then
+            echo "--- Fabric: searching for sources jar ---"
+            extract_sources_jar \
+              "$WORKSPACE/.gradle" \
+              "$HOME/.gradle/caches" \
+              "$WORKSPACE/build" \
+              || echo "WARNING: No Fabric sources jar found"
+
+          # -------------------------------------------------------
+          # FORGE
+          # -------------------------------------------------------
+          elif [[ "$LOADER" == "forge" ]]; then
+            echo "--- Forge: searching for sources jar first ---"
+
+            # ForgeGradle 7+ puts a sources jar in the mavenizer cache
+            # Path pattern: ~/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches/...
+            if extract_sources_jar \
+              "$HOME/.gradle/caches/minecraftforge" \
+              "$HOME/.gradle/caches/forge_gradle" \
+              "$HOME/.gradle/caches/net.minecraftforge" \
+              "$HOME/.gradle/caches/minecraft" \
+              "$HOME/.gradle/caches/modules-2" \
+              "$WORKSPACE/.gradle" \
+              "$HOME/.gradle/caches"; then
+              echo "Extracted from sources jar"
+            else
+              echo "--- Forge: no sources jar, searching for extracted .java files ---"
+              find_java_files \
+                "$HOME/.gradle/caches/minecraftforge" \
+                "$HOME/.gradle/caches/forge_gradle" \
+                "$HOME/.gradle/caches/net.minecraftforge" \
+                "$HOME/.gradle/caches/minecraft" \
+                "$HOME/.gradle/caches/modules-2" \
+                "$HOME/.gradle/caches" \
+                "$WORKSPACE/.gradle" \
+                || echo "WARNING: No Forge .java files found"
+            fi
+
+          # -------------------------------------------------------
+          # NEOFORGE
+          # -------------------------------------------------------
+          elif [[ "$LOADER" == "neoforge" ]]; then
+            echo "--- NeoForge: searching for sources jar ---"
+            if extract_sources_jar \
+              "$HOME/.gradle/caches/neoforge" \
+              "$HOME/.gradle/caches/net.neoforged" \
+              "$HOME/.gradle/caches/modules-2" \
+              "$HOME/.gradle/caches" \
+              "$WORKSPACE/.gradle"; then
+              echo "Extracted from sources jar"
+            else
+              echo "--- NeoForge: searching for extracted .java files ---"
+              find_java_files \
+                "$HOME/.gradle/caches/neoforge" \
+                "$HOME/.gradle/caches/net.neoforged" \
+                "$HOME/.gradle/caches/modules-2" \
+                "$HOME/.gradle/caches" \
+                "$WORKSPACE/.gradle" \
+                || echo "WARNING: No NeoForge .java files found"
             fi
           fi
 
@@ -289,16 +370,27 @@ jobs:
           echo "java_count=$JAVA_COUNT" >> $GITHUB_OUTPUT
           echo "Found $JAVA_COUNT .java files in $EXTRACTED_DIR"
 
-          # Debug: show top-level dirs if nothing found
+          # Debug: show cache structure if nothing found
           if [ "$JAVA_COUNT" -eq 0 ]; then
-            echo "=== DEBUG: workspace .gradle contents ==="
-            find "$WORKSPACE/.gradle" -maxdepth 4 2>/dev/null | head -40
-            echo "=== DEBUG: home .gradle/caches contents ==="
-            find "$HOME/.gradle/caches" -maxdepth 3 2>/dev/null | head -40
+            echo ""
+            echo "=== DEBUG: All jars in Gradle cache (looking for sources) ==="
+            find "$HOME/.gradle/caches" -name "*.jar" 2>/dev/null \
+              | grep -i "source\|decompile\|named\|mapped" \
+              | head -30 || true
+            echo ""
+            echo "=== DEBUG: workspace .gradle contents (depth 5) ==="
+            find "$WORKSPACE/.gradle" -maxdepth 5 2>/dev/null | head -50 || true
+            echo ""
+            echo "=== DEBUG: home .gradle/caches top dirs ==="
+            find "$HOME/.gradle/caches" -maxdepth 3 -type d 2>/dev/null | head -40 || true
+            echo ""
+            echo "=== DEBUG: All .java files anywhere in .gradle ==="
+            find "$HOME/.gradle" -name "*.java" 2>/dev/null | head -20 || true
           fi
 
       # -------------------------------------------------------
       # Run all queries and collect results
+      # Also produce a broad API overview even with no matches
       # -------------------------------------------------------
       - name: Run searches
         run: |
@@ -309,6 +401,7 @@ jobs:
 
           mkdir -p search-results/queries
           mkdir -p search-results/full-classes
+          mkdir -p search-results/api-overview
 
           # Write metadata
           cat > search-results/README.md << 'READMEEOF'
@@ -320,18 +413,21 @@ jobs:
 
           ## Files
 
-          - `search-info.txt`      — search parameters and statistics
-          - `all-java-files.txt`   — full list of every .java file found
-          - `queries/`             — one result file per search query
-          - `full-classes/`        — full content of files that matched queries
-          - `gradle-output.log`    — Gradle output (useful if sources are missing)
+          - `search-info.txt`         — search parameters and statistics
+          - `all-java-files.txt`      — full list of every .java file found
+          - `queries/`                — one result file per search query
+          - `full-classes/`           — full content of files that matched queries
+          - `api-overview/`           — broad API samples: event classes, render classes,
+                                        client classes, and a random 10% sample of all files
+          - `gradle-output.log`       — Gradle output (useful if sources are missing)
 
           ## How to use
 
           1. Read `search-info.txt` to confirm sources were found.
           2. Read `queries/<query>.txt` to see matches for each query.
           3. Read `full-classes/<ClassName>.java` for the complete class definition.
-          4. Use the API signatures you find to fix the mod source code.
+          4. Browse `api-overview/` for broad API discovery when you don't know the class name.
+          5. Use the API signatures you find to fix the mod source code.
           READMEEOF
 
           {
@@ -355,7 +451,6 @@ jobs:
 
           # Build list of file patterns
           IFS=',' read -ra PATTERNS <<< "${{ inputs.file_patterns }}"
-          # Trim whitespace from each pattern
           CLEAN_PATTERNS=()
           for P in "${PATTERNS[@]}"; do
             P="${P#"${P%%[![:space:]]*}"}"
@@ -375,7 +470,6 @@ jobs:
             QUERY="${QUERY%"${QUERY##*[![:space:]]}"}"
             [ -z "$QUERY" ] && continue
 
-            # Safe filename for the query
             SAFE_Q=$(echo "$QUERY" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]/_/g' | cut -c1-60)
             OUT="search-results/queries/${SAFE_Q}.txt"
 
@@ -386,15 +480,12 @@ jobs:
               echo "---"
             } > "$OUT"
 
-            # Build find -name args for file pattern filtering
             FIND_NAME_ARGS=()
             for P in "${CLEAN_PATTERNS[@]}"; do
               [ ${#FIND_NAME_ARGS[@]} -gt 0 ] && FIND_NAME_ARGS+=(-o)
               FIND_NAME_ARGS+=(-name "$P")
             done
 
-            # Use grep -r (available everywhere) instead of rg
-            # Find matching files first, then grep with context
             while IFS= read -r JFILE; do
               MATCHES=$(grep -n "$QUERY" "$JFILE" 2>/dev/null || true)
               if [ -n "$MATCHES" ]; then
@@ -412,12 +503,10 @@ jobs:
 
           # Dump full content of matched class files
           if [[ "$DUMP_FULL" == "yes" ]] && [ ${#MATCHED_FILES[@]} -gt 0 ]; then
-            # Deduplicate
             mapfile -t UNIQUE_FILES < <(printf '%s\n' "${MATCHED_FILES[@]}" | sort -u)
             echo "Dumping ${#UNIQUE_FILES[@]} matched class files..."
             for FPATH in "${UNIQUE_FILES[@]}"; do
               BASENAME=$(basename "$FPATH")
-              # Avoid overwriting if two files have the same name
               DEST="search-results/full-classes/$BASENAME"
               if [ -f "$DEST" ]; then
                 DEST="search-results/full-classes/$(echo "$FPATH" | md5sum | cut -c1-8)_$BASENAME"
@@ -426,8 +515,62 @@ jobs:
             done
           fi
 
+          # -------------------------------------------------------
+          # API OVERVIEW — broad samples for AI agent discovery
+          # Even if queries found nothing, these help the agent
+          # understand what's available in this version/loader
+          # -------------------------------------------------------
+          echo "=== Building API overview ==="
+
+          ALL_JAVA=$(find "$SOURCE_ROOT" -name "*.java" -type f 2>/dev/null | sort)
+          TOTAL=$(echo "$ALL_JAVA" | wc -l)
+
+          # 1. Event classes — most useful for mod development
+          echo "$ALL_JAVA" | grep -i "event" | head -200 \
+            > search-results/api-overview/event-classes.txt || true
+          EVENT_COUNT=$(wc -l < search-results/api-overview/event-classes.txt)
+          echo "  Event classes: $EVENT_COUNT"
+
+          # 2. Render/GUI classes — critical for HUD mods
+          echo "$ALL_JAVA" | grep -iE "render|gui|hud|screen|overlay|graphics" | head -200 \
+            > search-results/api-overview/render-gui-classes.txt || true
+          RENDER_COUNT=$(wc -l < search-results/api-overview/render-gui-classes.txt)
+          echo "  Render/GUI classes: $RENDER_COUNT"
+
+          # 3. Client classes
+          echo "$ALL_JAVA" | grep -i "client" | head -200 \
+            > search-results/api-overview/client-classes.txt || true
+
+          # 4. Forge/NeoForge/Fabric API classes (mod loader specific)
+          echo "$ALL_JAVA" | grep -iE "minecraftforge|neoforged|fabricmc" | head -200 \
+            > search-results/api-overview/modloader-api-classes.txt || true
+
+          # 5. Random 10% sample — gives broad coverage of what's available
+          SAMPLE_SIZE=$(( TOTAL / 10 + 1 ))
+          echo "$ALL_JAVA" | shuf | head "$SAMPLE_SIZE" \
+            > search-results/api-overview/random-10pct-sample.txt || true
+          echo "  Random 10% sample: $SAMPLE_SIZE of $TOTAL files"
+
+          # 6. Dump full content of key event files found in overview
+          # This is the most valuable part — actual source of render/event classes
+          echo "=== Dumping full content of render/event API files ==="
+          DUMP_COUNT=0
+          while IFS= read -r FPATH; do
+            [ -f "$FPATH" ] || continue
+            BASENAME=$(basename "$FPATH")
+            DEST="search-results/api-overview/full_${BASENAME}"
+            cp "$FPATH" "$DEST" 2>/dev/null || true
+            DUMP_COUNT=$((DUMP_COUNT + 1))
+            [ $DUMP_COUNT -ge 50 ] && break  # cap at 50 files
+          done < <(cat search-results/api-overview/render-gui-classes.txt \
+                       search-results/api-overview/event-classes.txt \
+                   | sort -u | head -50 | while read -r REL; do
+                       echo "$SOURCE_ROOT/$REL"
+                     done)
+          echo "  Dumped $DUMP_COUNT full API files to api-overview/"
+
           # Full class list
-          find "$SOURCE_ROOT" -name "*.java" -type f 2>/dev/null \
+          echo "$ALL_JAVA" \
             | sed "s|$SOURCE_ROOT/||" \
             | sort \
             > search-results/all-java-files.txt || true
@@ -437,6 +580,9 @@ jobs:
             echo ""
             echo "Total matches across all queries: $TOTAL_MATCHES"
             echo "Full class files dumped: $(ls search-results/full-classes/ 2>/dev/null | wc -l)"
+            echo "API overview files: $(ls search-results/api-overview/ 2>/dev/null | wc -l)"
+            echo "Event classes found: $EVENT_COUNT"
+            echo "Render/GUI classes found: $RENDER_COUNT"
           } >> search-results/search-info.txt
 
           # Save gradle log
