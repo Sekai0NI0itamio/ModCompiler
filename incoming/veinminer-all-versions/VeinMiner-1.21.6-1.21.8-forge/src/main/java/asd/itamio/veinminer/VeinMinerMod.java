@@ -1,5 +1,6 @@
 package asd.itamio.veinminer;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -8,10 +9,9 @@ import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 public class VeinMinerMod {
     public static final String MODID = "veinminer";
     public static VeinMinerConfig config = new VeinMinerConfig();
-    public VeinMinerMod(FMLJavaModLoadingContext context) {
-        var bus = context.getModEventBus();
-        bus.addListener(this::setup);
-        bus.addListener(VeinMinerKeyHandler::register);
+    public VeinMinerMod(IEventBus modEventBus) {
+        modEventBus.addListener(this::setup);
+        modEventBus.addListener(VeinMinerKeyHandler::register);
     }
     private void setup(FMLCommonSetupEvent event) {
         MinecraftForge.EVENT_BUS.register(new VeinMinerHandler());
