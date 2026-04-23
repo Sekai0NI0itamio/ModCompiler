@@ -47,6 +47,7 @@ import subprocess
 import sys
 import time
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -134,24 +135,15 @@ class Runner:
         # 2. Wait + stream progress
         conclusion = self._wait()
 
-        # 3. Download artifacts
-        print("\nDownloading artifacts...")
+        # 3. Download artifacts + logs concurrently
+        print("\nDownloading artifacts and logs concurrently...")
         artifacts_dir = self.out_root / "artifacts"
-        self._download_artifact(BUILD_ARTIFACT, artifacts_dir / BUILD_ARTIFACT)
-        if self.modrinth:
-            try:
-                self._download_artifact(PUBLISH_ARTIFACT, artifacts_dir / PUBLISH_ARTIFACT)
-            except RunError as exc:
-                print(f"  (modrinth-publish artifact not available: {exc})")
+        self._download_all(artifacts_dir)
 
-        # 4. Download logs
-        print("Downloading job logs...")
-        self._download_logs()
-
-        # 5. Write summary
+        # 4. Write summary
         self._write_summary(conclusion, run_url, artifacts_dir)
 
-        # 6. Print final status
+        # 5. Print final status
         summary_path = self.out_root / "SUMMARY.md"
         print(f"\nRun folder:  {self.out_root}")
         print(f"Summary:     {summary_path}")
@@ -265,6 +257,88 @@ class Runner:
         return data.get("jobs", [])
 
     # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    def _download_all(self, artifacts_dir: Path) -> None:
+        """Download all artifacts and per-job logs concurrently (max 30 threads)."""
+        MAX_WORKERS = 30
+        logs_dir = self.out_root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Collect jobs first (needed to build the per-job log task list)
+        try:
+            jobs = self._get_jobs()
+            (logs_dir / "jobs.json").write_text(
+                json.dumps(jobs, indent=2), encoding="utf-8")
+        except RunError:
+            jobs = []
+
+        # Build task list: (label, callable)
+        tasks: list[tuple[str, Any]] = []
+
+        # Artifact: all-mod-builds
+        tasks.append((
+            f"artifact:{BUILD_ARTIFACT}",
+            lambda: self._download_artifact(BUILD_ARTIFACT, artifacts_dir / BUILD_ARTIFACT),
+        ))
+
+        # Artifact: modrinth-publish (optional)
+        if self.modrinth:
+            def _dl_publish():
+                try:
+                    self._download_artifact(PUBLISH_ARTIFACT, artifacts_dir / PUBLISH_ARTIFACT)
+                except RunError as exc:
+                    print(f"  (modrinth-publish artifact not available: {exc})")
+            tasks.append((f"artifact:{PUBLISH_ARTIFACT}", _dl_publish))
+
+        # Log: full run overview
+        def _dl_run_log():
+            try:
+                raw_log = _gh([
+                    "run", "view", str(self.run_id), "-R", self.repo, "--log",
+                ], token=self.token)
+                (logs_dir / "run_overview.txt").write_text(raw_log, encoding="utf-8")
+                print(f"  ✓ run_overview.txt  ({len(raw_log):,} chars)")
+            except RunError as exc:
+                (logs_dir / "run_overview.txt").write_text(
+                    f"Could not fetch run log: {exc}\n", encoding="utf-8")
+        tasks.append(("log:run_overview", _dl_run_log))
+
+        # Logs: per-job
+        for job in jobs:
+            job_id   = job.get("databaseId") or job.get("id")
+            job_name = job.get("name", f"job-{job_id}")
+            safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", job_name).strip("_")
+            log_file = logs_dir / f"{safe_name}.txt"
+
+            if not job_id:
+                continue
+
+            def _make_job_log_task(jid=job_id, lf=log_file, sn=safe_name):
+                def _dl():
+                    try:
+                        job_log = _gh([
+                            "run", "view", str(self.run_id), "-R", self.repo,
+                            "--log", "--job", str(jid),
+                        ], token=self.token)
+                        lf.write_text(job_log, encoding="utf-8")
+                        print(f"  ✓ {sn}.txt  ({len(job_log):,} chars)")
+                    except RunError as exc:
+                        lf.write_text(f"Could not fetch log for job {jid}: {exc}\n",
+                                      encoding="utf-8")
+                return _dl
+
+            tasks.append((f"log:{safe_name}", _make_job_log_task()))
+
+        print(f"  Queuing {len(tasks)} download tasks (max {MAX_WORKERS} concurrent)...")
+        with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(tasks))) as pool:
+            futures = {pool.submit(fn): label for label, fn in tasks}
+            for fut in as_completed(futures):
+                label = futures[fut]
+                exc = fut.exception()
+                if exc:
+                    print(f"  ✗ {label}: {exc}")
+
+    # ------------------------------------------------------------------
     def _download_artifact(self, name: str, dest: Path) -> None:
         dest.mkdir(parents=True, exist_ok=True)
         last_err = ""
@@ -282,50 +356,6 @@ class Runner:
                 last_err = str(exc)
                 time.sleep(3 * attempt)
         raise RunError(f"Could not download artifact '{name}': {last_err}")
-
-    # ------------------------------------------------------------------
-    def _download_logs(self) -> None:
-        logs_dir = self.out_root / "logs"
-        logs_dir.mkdir(parents=True, exist_ok=True)
-
-        # 1. Save raw jobs list
-        try:
-            jobs = self._get_jobs()
-            (logs_dir / "jobs.json").write_text(
-                json.dumps(jobs, indent=2), encoding="utf-8")
-        except RunError:
-            jobs = []
-
-        # 2. Download the full run log zip via gh run view --log
-        try:
-            raw_log = _gh([
-                "run", "view", str(self.run_id), "-R", self.repo, "--log",
-            ], token=self.token)
-            (logs_dir / "run_overview.txt").write_text(raw_log, encoding="utf-8")
-            print(f"  ✓ run_overview.txt  ({len(raw_log):,} chars)")
-        except RunError as exc:
-            (logs_dir / "run_overview.txt").write_text(
-                f"Could not fetch run log: {exc}\n", encoding="utf-8")
-
-        # 3. Per-job logs
-        for job in jobs:
-            job_id   = job.get("databaseId") or job.get("id")
-            job_name = job.get("name", f"job-{job_id}")
-            safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", job_name).strip("_")
-            log_file = logs_dir / f"{safe_name}.txt"
-
-            if not job_id:
-                continue
-            try:
-                job_log = _gh([
-                    "run", "view", str(self.run_id), "-R", self.repo,
-                    "--log", "--job", str(job_id),
-                ], token=self.token)
-                log_file.write_text(job_log, encoding="utf-8")
-                print(f"  ✓ {safe_name}.txt  ({len(job_log):,} chars)")
-            except RunError as exc:
-                log_file.write_text(f"Could not fetch log for job {job_id}: {exc}\n",
-                                    encoding="utf-8")
 
     # ------------------------------------------------------------------
     def _write_summary(self, conclusion: str, run_url: str, artifacts_dir: Path) -> None:
