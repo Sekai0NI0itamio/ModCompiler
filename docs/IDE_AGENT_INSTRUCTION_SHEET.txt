@@ -478,9 +478,14 @@ Critical rules for Mod Version Update
 5. ALWAYS set modrinth_project_url in the Build Mods workflow input when the
    goal is to publish. This is what triggers auto-publish of successful jars.
 
-6. Fix only failed targets on each retry. Use `--failed-only` when regenerating
-   the bundle — never re-submit already-green targets. This saves significant
-   GitHub Actions time on large multi-version builds.
+6. !! CRITICAL: Fix only failed targets on each retry. NEVER re-submit already-
+   green targets. This is one of the most important rules in this entire system.
+   Rebuilding successful targets wastes GitHub Actions minutes, delays results,
+   and risks accidentally overwriting already-published Modrinth versions.
+   Use `--failed-only` when regenerating the bundle — it reads the last run
+   automatically and includes ONLY the targets that actually failed.
+   Already-successful targets should be published to Modrinth from the existing
+   run artifact using the `Publish Modrinth Bundle` workflow — NOT rebuilt.
 
 7. Preserve the original mod_id across all versions. Do not rename the mod
    or change its mod_id when porting to new versions.
@@ -1014,6 +1019,34 @@ multi-version build is:
       --modrinth https://modrinth.com/mod/set-home-anywhere
 
   # Repeat steps 4-8 until all targets pass
+
+------------------------------------------------------------------------
+!! CRITICAL RULE: NEVER rebuild already-green targets. EVER.
+------------------------------------------------------------------------
+
+Rebuilding targets that already succeeded is one of the most wasteful and
+harmful things you can do in this workflow. It:
+
+  - Wastes GitHub Actions minutes (each job takes 1-3 minutes)
+  - Delays the overall build by running unnecessary jobs
+  - Can cause the Modrinth publish step to skip already-uploaded versions
+    (the publish stage sees them as "already exists" and skips them)
+  - Risks rate-limiting or duplicate version errors on Modrinth
+
+The correct workflow after any partial success is:
+
+  1. Identify which targets FAILED (use `_check_veinminer_errors.py` or
+     read the build result.json files)
+  2. Fix ONLY those failing targets in the generator script
+  3. Use `--failed-only` to regenerate a zip containing ONLY those targets
+  4. Commit, push, and run `run_build.py` with `--modrinth` flag
+  5. The already-green targets from previous runs are already published —
+     do NOT include them in the new zip
+
+If you need to publish already-built jars from a previous run without
+rebuilding, use the `Publish Modrinth Bundle` workflow with the run ID
+of the successful run. This uploads the existing artifacts without
+triggering any new builds.
 
 ------------------------------------------------------------------------
 !! IMPORTANT: ALWAYS use --failed-only on every retry after the first run
