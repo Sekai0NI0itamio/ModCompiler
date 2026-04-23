@@ -252,4 +252,27 @@ This ensures future developers (human or AI) will follow the correct process and
 ✅ Workflow clarified  
 ✅ Tools provided  
 
+---
+
+## Lesson: Never Rebuild Already-Green Targets
+
+**Date**: April 23, 2026
+
+When iterating on a multi-version build, it is highly recommended to ONLY
+rebuild the targets that actually failed. Rebuilding already-successful targets:
+
+- Wastes GitHub Actions minutes
+- Delays results unnecessarily
+- Can cause Modrinth publish to skip already-uploaded versions
+
+**The correct approach:**
+
+1. After a partial build, identify only the failed targets
+2. Fix only those targets in the generator script
+3. Use `--failed-only` flag when regenerating the bundle
+4. Already-green targets from previous runs are already published — leave them alone
+
+If you need to publish already-built jars without rebuilding, use the
+`Publish Modrinth Bundle` workflow with the run ID of the successful run.
+
 **No further action required.**
