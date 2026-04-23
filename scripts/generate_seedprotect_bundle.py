@@ -77,9 +77,6 @@ else:
         ("1.21",   "fabric"),   # 1.21-1.21.1 range, min_version
         ("1.21.2", "fabric"),   # 1.21.2-1.21.8 range, min_version
         ("1.21.9", "fabric"),   # 1.21.9-1.21.11 range, min_version
-        ("26.1",   "fabric"),
-        ("26.1.1", "fabric"),
-        ("26.1.2", "fabric"),
         # Forge — use exact versions from manifest supported_versions
         # NOTE: Forge only released for MC 26.1.2 (not 26.1 or 26.1.1)
         ("1.12",    "forge"),   # 1.12-1.12.2 range, min_version
@@ -92,14 +89,13 @@ else:
         ("1.21.9",  "forge"),
         ("1.21.10", "forge"),
         ("1.21.11", "forge"),
-        ("26.1.2",  "forge"),   # Only 26.1.2 has a Forge release
         # NeoForge — use exact versions from manifest supported_versions
         ("1.20.2",  "neoforge"),  # 1.20-1.20.6 range, first neoforge supported
-        ("26.1",    "neoforge"),
-        ("26.1.1",  "neoforge"),
-        ("26.1.2",  "neoforge"),
+        # NOTE: 26.x versions (Fabric/Forge/NeoForge) are skipped — all loaders
+        # are in beta/unstable for 26.1.x. Add once ecosystem stabilizes.
     }
     print(f"Building {len(targets_to_build)} missing targets")
+    print("NOTE: 26.x versions skipped — all loaders still in beta/unstable for 26.1.x")
 
 # ── Clean bundle dir ──────────────────────────────────────────────────────────
 if bundle_dir.exists():
