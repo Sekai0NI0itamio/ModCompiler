@@ -81,7 +81,8 @@ public final class DayCounterFormatter {
 """
 
 # ---------------------------------------------------------------------------
-# DayCounterConfig — pure Java file I/O, identical across ALL versions
+# DayCounterConfig — pure Java file I/O
+# NOTE: 1.8.9 needs explicit types (no diamond operator in Java 6)
 # ---------------------------------------------------------------------------
 CONFIG_SRC = """\
 package asd.itamio.daycounter.config;
@@ -142,7 +143,7 @@ public class DayCounterConfig {
     }
 
     private void writeDefaultFile() {
-        List<String> lines = new ArrayList<>();
+        List<String> lines = new ArrayList<String>();
         lines.add("# Day Counter configuration");
         lines.add("# This file hot-reloads while the game is running.");
         lines.add("#");
@@ -317,6 +318,7 @@ public class DayCounterClientHandler {
     public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc == null || mc.thePlayer == null || mc.theWorld == null) return;
+        // 1.8.9: gameSettings.showDebugInfo
         if (mc.gameSettings.showDebugInfo) return;
         config.reloadIfChanged();
         String text = DayCounterFormatter.format(
@@ -524,6 +526,39 @@ public class DayCounterMod {
 }
 """
 
+# ---------------------------------------------------------------------------
+# Forge 1.17.1 - 1.19.4: RenderGameOverlayEvent.Text, getMatrixStack()
+# ---------------------------------------------------------------------------
+FORGE_1171_TO_1194_MOD = """\
+package asd.itamio.daycounter;
+
+import asd.itamio.daycounter.client.DayCounterClientHandler;
+import asd.itamio.daycounter.config.DayCounterConfig;
+import java.io.File;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLPaths;
+
+@Mod("daycounter")
+public class DayCounterMod {
+    public static final String MODID = "daycounter";
+    private static DayCounterConfig config;
+
+    public DayCounterMod() {
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::clientSetup);
+    }
+
+    private void clientSetup(FMLClientSetupEvent event) {
+        File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
+        config = new DayCounterConfig(configFile);
+        config.load();
+        MinecraftForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+    }
+}
+"""
+
 FORGE_1171_TO_1194_CLIENT = """\
 package asd.itamio.daycounter.client;
 
@@ -559,9 +594,9 @@ public class DayCounterClientHandler {
         int w = fr.width(text);
         int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
         int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-        event.getPoseStack().pushPose();
-        fr.drawShadow(event.getPoseStack(), text, (float) x, (float) y, 0xFFFFFF);
-        event.getPoseStack().popPose();
+        event.getMatrixStack().pushPose();
+        fr.drawShadow(event.getMatrixStack(), text, (float) x, (float) y, 0xFFFFFF);
+        event.getMatrixStack().popPose();
     }
 }
 """
@@ -624,7 +659,7 @@ public class DayCounterClientHandler {
         if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.renderDebug) return;
+        if (mc.options.hideGui) return;
         config.reloadIfChanged();
         String text = DayCounterFormatter.format(
             mc.level.getGameTime(),
@@ -645,7 +680,7 @@ public class DayCounterClientHandler {
 """
 
 # ---------------------------------------------------------------------------
-# Forge 1.20.6 — same as 1.20.1-1.20.4 but FMLJavaModLoadingContext changed
+# Forge 1.20.6 — FMLJavaModLoadingContext constructor injection
 # ---------------------------------------------------------------------------
 FORGE_1206_MOD = """\
 package asd.itamio.daycounter;
@@ -653,10 +688,12 @@ package asd.itamio.daycounter;
 import asd.itamio.daycounter.client.DayCounterClientHandler;
 import asd.itamio.daycounter.config.DayCounterConfig;
 import java.io.File;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 @Mod("daycounter")
@@ -669,6 +706,7 @@ public class DayCounterMod {
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
+        if (FMLEnvironment.dist != Dist.CLIENT) return;
         File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
         config = new DayCounterConfig(configFile);
         config.load();
@@ -677,25 +715,73 @@ public class DayCounterMod {
 }
 """
 
-# Forge 1.20.6 client handler is same as 1.20.1-1.20.4
+# Forge 1.20.6 client handler is same as 1.20.1-1.20.4 (hideGui, same overlay API)
 FORGE_1206_CLIENT = FORGE_1201_TO_1204_CLIENT
 
 # ---------------------------------------------------------------------------
-# Forge 1.21-1.21.1 — same as 1.20.6 (FMLJavaModLoadingContext constructor)
+# Forge 1.21-1.21.5 — RenderGuiOverlayEvent moved to net.minecraftforge.client.event
+# VanillaGuiOverlay moved to net.minecraftforge.client.event.RegisterGuiOverlaysEvent
+# Use a simpler approach: listen to RenderGuiEvent.Post (always fires after all overlays)
+# ---------------------------------------------------------------------------
+FORGE_121_TO_1215_CLIENT = """\
+package asd.itamio.daycounter.client;
+
+import asd.itamio.daycounter.config.DayCounterConfig;
+import asd.itamio.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
+public class DayCounterClientHandler {
+    private final DayCounterConfig config;
+
+    public DayCounterClientHandler(DayCounterConfig config) {
+        this.config = config;
+    }
+
+    @SubscribeEvent
+    public void onRenderGui(RenderGuiEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || mc.level == null) return;
+        if (mc.options.hideGui) return;
+        config.reloadIfChanged();
+        String text = DayCounterFormatter.format(
+            mc.level.getGameTime(),
+            mc.level.getDayTime(),
+            config.getDisplayMode()
+        );
+        if (text.isEmpty()) return;
+        Font fr = mc.font;
+        GuiGraphics graphics = event.getGuiGraphics();
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
+        int w = fr.width(text);
+        int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+        int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+        graphics.drawString(fr, text, x, y, 0xFFFFFF, true);
+    }
+}
+"""
+
+# ---------------------------------------------------------------------------
+# Forge 1.21-1.21.1 mod class — FMLJavaModLoadingContext constructor injection
 # ---------------------------------------------------------------------------
 FORGE_121_MOD = FORGE_1206_MOD
-FORGE_121_CLIENT = FORGE_1201_TO_1204_CLIENT
+FORGE_121_CLIENT = FORGE_121_TO_1215_CLIENT
 
 # ---------------------------------------------------------------------------
 # Forge 1.21.2-1.21.5 — same API as 1.21-1.21.1
 # ---------------------------------------------------------------------------
 FORGE_1212_TO_1215_MOD = FORGE_1206_MOD
-FORGE_1212_TO_1215_CLIENT = FORGE_1201_TO_1204_CLIENT
+FORGE_1212_TO_1215_CLIENT = FORGE_121_TO_1215_CLIENT
 
 # ---------------------------------------------------------------------------
 # Forge 1.21.6+ — EventBus 7: @SubscribeEvent import changed to
 # net.minecraftforge.eventbus.api.listener.SubscribeEvent
-# Also FMLJavaModLoadingContext constructor injection
+# Mod constructor: FMLJavaModLoadingContext context injection
+# Use RenderGuiEvent.Post (not RenderGuiOverlayEvent which moved/changed)
 # ---------------------------------------------------------------------------
 FORGE_1216_PLUS_MOD = """\
 package asd.itamio.daycounter;
@@ -703,10 +789,12 @@ package asd.itamio.daycounter;
 import asd.itamio.daycounter.client.DayCounterClientHandler;
 import asd.itamio.daycounter.config.DayCounterConfig;
 import java.io.File;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 @Mod("daycounter")
@@ -719,6 +807,7 @@ public class DayCounterMod {
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
+        if (FMLEnvironment.dist != Dist.CLIENT) return;
         File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
         config = new DayCounterConfig(configFile);
         config.load();
@@ -735,8 +824,7 @@ import asd.itamio.daycounter.util.DayCounterFormatter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 
 public class DayCounterClientHandler {
@@ -747,11 +835,10 @@ public class DayCounterClientHandler {
     }
 
     @SubscribeEvent
-    public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
+    public void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.renderDebug) return;
+        if (mc.options.hideGui) return;
         config.reloadIfChanged();
         String text = DayCounterFormatter.format(
             mc.level.getGameTime(),
@@ -772,11 +859,84 @@ public class DayCounterClientHandler {
 """
 
 # ---------------------------------------------------------------------------
-# Forge 26.1.x — EventBus 7, no mappings block, Java 25
-# Same event API as 1.21.6+ but constructor uses getModBusGroup()
+# Forge 26.1.x — EventBus 7, no mappings, Java 25
+# getDayTime() removed in 26.1 — derive from getGameTime() % 24000
+# RenderGuiEvent.Post with listener.SubscribeEvent
+# GuiGraphics is net.minecraft.client.gui.GuiGraphics (Mojang names, no obfuscation)
 # ---------------------------------------------------------------------------
-FORGE_261_MOD = FORGE_1216_PLUS_MOD
-FORGE_261_CLIENT = FORGE_1216_PLUS_CLIENT
+FORGE_261_MOD = """\
+package asd.itamio.daycounter;
+
+import asd.itamio.daycounter.client.DayCounterClientHandler;
+import asd.itamio.daycounter.config.DayCounterConfig;
+import java.io.File;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.loading.FMLPaths;
+
+@Mod("daycounter")
+public class DayCounterMod {
+    public static final String MODID = "daycounter";
+    private static DayCounterConfig config;
+
+    public DayCounterMod(FMLJavaModLoadingContext context) {
+        FMLClientSetupEvent.getBus(context.getModBusGroup()).addListener(this::clientSetup);
+    }
+
+    private void clientSetup(FMLClientSetupEvent event) {
+        if (FMLEnvironment.dist != Dist.CLIENT) return;
+        File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
+        config = new DayCounterConfig(configFile);
+        config.load();
+        MinecraftForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+    }
+}
+"""
+
+FORGE_261_CLIENT = """\
+package asd.itamio.daycounter.client;
+
+import asd.itamio.daycounter.config.DayCounterConfig;
+import asd.itamio.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+
+public class DayCounterClientHandler {
+    private final DayCounterConfig config;
+
+    public DayCounterClientHandler(DayCounterConfig config) {
+        this.config = config;
+    }
+
+    @SubscribeEvent
+    public void onRenderGui(RenderGuiEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || mc.level == null) return;
+        if (mc.options.hideGui) return;
+        config.reloadIfChanged();
+        long gameTime = mc.level.getGameTime();
+        // getDayTime() removed in 26.1 — derive from gameTime % 24000
+        long dayTime = gameTime % 24000L;
+        String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
+        if (text.isEmpty()) return;
+        Font fr = mc.font;
+        GuiGraphics graphics = event.getGuiGraphics();
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
+        int w = fr.width(text);
+        int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+        int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+        graphics.drawString(fr, text, x, y, 0xFFFFFF, true);
+    }
+}
+"""
 
 # ===========================================================================
 # FABRIC SOURCES
@@ -851,16 +1011,17 @@ FABRIC_1171_TO_1194_MOD = FABRIC_1165_MOD
 FABRIC_1171_TO_1194_CLIENT = FABRIC_1165_CLIENT
 
 # ---------------------------------------------------------------------------
-# Fabric 1.20.1-1.20.4 — split source dirs, HudRenderCallback still works
+# Fabric 1.20.1-1.20.4 — split source dirs, HudRenderCallback
+# CLIENT CODE MUST GO IN src/client/java/ for fabric_split adapter
 # yarn mappings: world.getTime() / world.getTimeOfDay()
 # ---------------------------------------------------------------------------
 FABRIC_1201_TO_1204_MOD = """\
 package asd.itamio.daycounter;
 
+import net.fabricmc.api.ClientModInitializer;
 import asd.itamio.daycounter.client.DayCounterClientHandler;
 import asd.itamio.daycounter.config.DayCounterConfig;
 import java.io.File;
-import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class DayCounterMod implements ClientModInitializer {
@@ -915,6 +1076,7 @@ public class DayCounterClientHandler {
 # ---------------------------------------------------------------------------
 # Fabric 1.20.5-1.20.6 — DrawContext, HudRenderCallback signature changed:
 # now (DrawContext context, RenderTickCounter tickCounter)
+# Still yarn mappings
 # ---------------------------------------------------------------------------
 FABRIC_1205_TO_1206_MOD = FABRIC_1201_TO_1204_MOD
 
@@ -955,27 +1117,118 @@ public class DayCounterClientHandler {
 """
 
 # ---------------------------------------------------------------------------
-# Fabric 1.21-1.21.11 — same as 1.20.5-1.20.6 (RenderTickCounter signature)
-# Mojang mappings now used (boundary at 1.21 for Fabric)
-# world.getTime() / world.getTimeOfDay() still valid in Mojang mappings
+# Fabric 1.21-1.21.11 — Mojang mappings (boundary at 1.21)
+# MinecraftClient → Minecraft, TextRenderer → Font, DrawContext → GuiGraphics
+# world.getTime() → level.getGameTime(), world.getTimeOfDay() → level.getDayTime()
+# HudRenderCallback signature: (GuiGraphics, RenderTickCounter)
+# CLIENT CODE IN src/client/java/ for fabric_split
 # ---------------------------------------------------------------------------
-FABRIC_121_PLUS_MOD = FABRIC_1201_TO_1204_MOD
-FABRIC_121_PLUS_CLIENT = FABRIC_1205_TO_1206_CLIENT
+FABRIC_121_PLUS_MOD = """\
+package asd.itamio.daycounter;
+
+import net.fabricmc.api.ClientModInitializer;
+import asd.itamio.daycounter.client.DayCounterClientHandler;
+import asd.itamio.daycounter.config.DayCounterConfig;
+import java.io.File;
+import net.fabricmc.loader.api.FabricLoader;
+
+public class DayCounterMod implements ClientModInitializer {
+    public static final String MODID = "daycounter";
+    private static DayCounterConfig config;
+
+    @Override
+    public void onInitializeClient() {
+        File configFile = FabricLoader.getInstance().getConfigDir().resolve("daycounter.txt").toFile();
+        config = new DayCounterConfig(configFile);
+        config.load();
+        DayCounterClientHandler.register(config);
+    }
+}
+"""
+
+FABRIC_121_PLUS_CLIENT = """\
+package asd.itamio.daycounter.client;
+
+import asd.itamio.daycounter.config.DayCounterConfig;
+import asd.itamio.daycounter.util.DayCounterFormatter;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderType;
+
+public class DayCounterClientHandler {
+    public static void register(DayCounterConfig config) {
+        HudRenderCallback.EVENT.register((guiGraphics, tickCounter) -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null || mc.level == null) return;
+            if (mc.options.hideGui) return;
+            config.reloadIfChanged();
+            String text = DayCounterFormatter.format(
+                mc.level.getGameTime(),
+                mc.level.getDayTime(),
+                config.getDisplayMode()
+            );
+            if (text.isEmpty()) return;
+            Font fr = mc.font;
+            int screenW = mc.getWindow().getGuiScaledWidth();
+            int screenH = mc.getWindow().getGuiScaledHeight();
+            int w = fr.width(text);
+            int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+            int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF, true);
+        });
+    }
+}
+"""
 
 # ---------------------------------------------------------------------------
 # Fabric 26.1.x — Java 25, no obfuscation, no yarn mappings
-# Same API as 1.21+ (Mojang mappings)
+# Same Mojang API as 1.21+ but getDayTime() may be removed — derive from gameTime
 # ---------------------------------------------------------------------------
-FABRIC_261_MOD = FABRIC_1201_TO_1204_MOD
-FABRIC_261_CLIENT = FABRIC_1205_TO_1206_CLIENT
+FABRIC_261_MOD = FABRIC_121_PLUS_MOD
+
+FABRIC_261_CLIENT = """\
+package asd.itamio.daycounter.client;
+
+import asd.itamio.daycounter.config.DayCounterConfig;
+import asd.itamio.daycounter.util.DayCounterFormatter;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+
+public class DayCounterClientHandler {
+    public static void register(DayCounterConfig config) {
+        HudRenderCallback.EVENT.register((guiGraphics, tickCounter) -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null || mc.level == null) return;
+            if (mc.options.hideGui) return;
+            config.reloadIfChanged();
+            long gameTime = mc.level.getGameTime();
+            long dayTime = gameTime % 24000L;
+            String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
+            if (text.isEmpty()) return;
+            Font fr = mc.font;
+            int screenW = mc.getWindow().getGuiScaledWidth();
+            int screenH = mc.getWindow().getGuiScaledHeight();
+            int w = fr.width(text);
+            int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+            int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF, true);
+        });
+    }
+}
+"""
 
 # ===========================================================================
 # NEOFORGE SOURCES
 # ===========================================================================
 
 # ---------------------------------------------------------------------------
-# NeoForge 1.20.2-1.20.6 — same event API as Forge 1.20.x
-# Uses FMLJavaModLoadingContext.get().getModEventBus()
+# NeoForge 1.20.2-1.20.6 — IEventBus constructor injection
+# RenderGuiEvent.Post (not RenderGuiOverlayEvent which has wrong package)
+# mc.options.hideGui (not renderDebug)
 # ---------------------------------------------------------------------------
 NEO_1202_TO_1206_MOD = """\
 package asd.itamio.daycounter;
@@ -983,9 +1236,11 @@ package asd.itamio.daycounter;
 import asd.itamio.daycounter.client.DayCounterClientHandler;
 import asd.itamio.daycounter.config.DayCounterConfig;
 import java.io.File;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -999,6 +1254,7 @@ public class DayCounterMod {
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
+        if (FMLEnvironment.dist != Dist.CLIENT) return;
         File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
         config = new DayCounterConfig(configFile);
         config.load();
@@ -1015,8 +1271,7 @@ import asd.itamio.daycounter.util.DayCounterFormatter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
-import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 
 public class DayCounterClientHandler {
@@ -1027,11 +1282,10 @@ public class DayCounterClientHandler {
     }
 
     @SubscribeEvent
-    public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
+    public void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.renderDebug) return;
+        if (mc.options.hideGui) return;
         config.reloadIfChanged();
         String text = DayCounterFormatter.format(
             mc.level.getGameTime(),
@@ -1059,7 +1313,7 @@ NEO_121_CLIENT = NEO_1202_TO_1206_CLIENT
 
 # ---------------------------------------------------------------------------
 # NeoForge 26.1.x — constructor injection (IEventBus, ModContainer)
-# FMLJavaModLoadingContext removed
+# FMLJavaModLoadingContext removed; getDayTime() removed — derive from gameTime
 # ---------------------------------------------------------------------------
 NEO_261_MOD = """\
 package asd.itamio.daycounter;
@@ -1067,10 +1321,12 @@ package asd.itamio.daycounter;
 import asd.itamio.daycounter.client.DayCounterClientHandler;
 import asd.itamio.daycounter.config.DayCounterConfig;
 import java.io.File;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -1084,6 +1340,7 @@ public class DayCounterMod {
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
+        if (FMLEnvironment.dist != Dist.CLIENT) return;
         File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
         config = new DayCounterConfig(configFile);
         config.load();
@@ -1092,7 +1349,45 @@ public class DayCounterMod {
 }
 """
 
-NEO_261_CLIENT = NEO_1202_TO_1206_CLIENT
+NEO_261_CLIENT = """\
+package asd.itamio.daycounter.client;
+
+import asd.itamio.daycounter.config.DayCounterConfig;
+import asd.itamio.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+
+public class DayCounterClientHandler {
+    private final DayCounterConfig config;
+
+    public DayCounterClientHandler(DayCounterConfig config) {
+        this.config = config;
+    }
+
+    @SubscribeEvent
+    public void onRenderGui(RenderGuiEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || mc.level == null) return;
+        if (mc.options.hideGui) return;
+        config.reloadIfChanged();
+        long gameTime = mc.level.getGameTime();
+        long dayTime = gameTime % 24000L;
+        String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
+        if (text.isEmpty()) return;
+        Font fr = mc.font;
+        GuiGraphics graphics = event.getGuiGraphics();
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
+        int w = fr.width(text);
+        int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+        int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+        graphics.drawString(fr, text, x, y, 0xFFFFFF, true);
+    }
+}
+"""
 
 # ===========================================================================
 # fabric.mod.json templates
@@ -1153,194 +1448,195 @@ def fabric_mod_json_split(entrypoint):
 # ===========================================================================
 
 # Each entry: (folder_name, minecraft_version, loader, mod_src, client_src,
-#              entrypoint_class, fabric_mod_json_fn_or_None)
+#              entrypoint_class, fabric_mod_json_fn_or_None, use_client_srcset)
 TARGETS = [
     # ---- Forge ----
     ("DayCounter-1.8.9-forge",    "1.8.9",   "forge",
      FORGE_189_MOD,              FORGE_189_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.12.2-forge",   "1.12.2",  "forge",
      FORGE_1122_MOD,             FORGE_1122_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.16.5-forge",   "1.16.5",  "forge",
      FORGE_1165_MOD,             FORGE_1165_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.17.1-forge",   "1.17.1",  "forge",
      FORGE_1171_TO_1194_MOD,     FORGE_1171_TO_1194_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.18-1.18.2-forge", "1.18-1.18.2", "forge",
      FORGE_1171_TO_1194_MOD,     FORGE_1171_TO_1194_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.19-1.19.4-forge", "1.19-1.19.4", "forge",
      FORGE_1171_TO_1194_MOD,     FORGE_1171_TO_1194_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.20.1-forge",   "1.20.1",  "forge",
      FORGE_1201_TO_1204_MOD,     FORGE_1201_TO_1204_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.20.2-forge",   "1.20.2",  "forge",
      FORGE_1201_TO_1204_MOD,     FORGE_1201_TO_1204_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.20.3-forge",   "1.20.3",  "forge",
      FORGE_1201_TO_1204_MOD,     FORGE_1201_TO_1204_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.20.4-forge",   "1.20.4",  "forge",
      FORGE_1201_TO_1204_MOD,     FORGE_1201_TO_1204_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.20.6-forge",   "1.20.6",  "forge",
      FORGE_1206_MOD,             FORGE_1206_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21-1.21.1-forge", "1.21-1.21.1", "forge",
      FORGE_121_MOD,              FORGE_121_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.3-forge",   "1.21.3",  "forge",
      FORGE_1212_TO_1215_MOD,     FORGE_1212_TO_1215_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.4-forge",   "1.21.4",  "forge",
      FORGE_1212_TO_1215_MOD,     FORGE_1212_TO_1215_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.5-forge",   "1.21.5",  "forge",
      FORGE_1212_TO_1215_MOD,     FORGE_1212_TO_1215_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.6-forge",   "1.21.6",  "forge",
      FORGE_1216_PLUS_MOD,        FORGE_1216_PLUS_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.7-forge",   "1.21.7",  "forge",
      FORGE_1216_PLUS_MOD,        FORGE_1216_PLUS_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.8-forge",   "1.21.8",  "forge",
      FORGE_1216_PLUS_MOD,        FORGE_1216_PLUS_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.9-1.21.11-forge", "1.21.9-1.21.11", "forge",
      FORGE_1216_PLUS_MOD,        FORGE_1216_PLUS_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-26.1.2-forge",   "26.1.2",  "forge",
      FORGE_261_MOD,              FORGE_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
-    # ---- Fabric ----
+    # ---- Fabric presplit (1.16.5-1.19.4): src/main/java/ ----
     ("DayCounter-1.16.5-fabric",  "1.16.5",  "fabric",
      FABRIC_1165_MOD,            FABRIC_1165_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit, False),
 
     ("DayCounter-1.17.1-fabric",  "1.17.1",  "fabric",
      FABRIC_1171_TO_1194_MOD,    FABRIC_1171_TO_1194_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit, False),
 
     ("DayCounter-1.18-1.18.2-fabric", "1.18-1.18.2", "fabric",
      FABRIC_1171_TO_1194_MOD,    FABRIC_1171_TO_1194_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit, False),
 
     ("DayCounter-1.19-1.19.4-fabric", "1.19-1.19.4", "fabric",
      FABRIC_1171_TO_1194_MOD,    FABRIC_1171_TO_1194_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_presplit, False),
 
+    # ---- Fabric split (1.20+): src/client/java/ for client code ----
     ("DayCounter-1.20.1-fabric",  "1.20.1",  "fabric",
      FABRIC_1201_TO_1204_MOD,    FABRIC_1201_TO_1204_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-1.20.2-fabric",  "1.20.2",  "fabric",
      FABRIC_1201_TO_1204_MOD,    FABRIC_1201_TO_1204_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-1.20.3-fabric",  "1.20.3",  "fabric",
      FABRIC_1201_TO_1204_MOD,    FABRIC_1201_TO_1204_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-1.20.4-fabric",  "1.20.4",  "fabric",
      FABRIC_1201_TO_1204_MOD,    FABRIC_1201_TO_1204_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-1.20.5-fabric",  "1.20.5",  "fabric",
      FABRIC_1205_TO_1206_MOD,    FABRIC_1205_TO_1206_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-1.20.6-fabric",  "1.20.6",  "fabric",
      FABRIC_1205_TO_1206_MOD,    FABRIC_1205_TO_1206_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-1.21-1.21.1-fabric", "1.21-1.21.1", "fabric",
      FABRIC_121_PLUS_MOD,        FABRIC_121_PLUS_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-1.21.2-1.21.8-fabric", "1.21.2-1.21.8", "fabric",
      FABRIC_121_PLUS_MOD,        FABRIC_121_PLUS_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-1.21.9-1.21.11-fabric", "1.21.9-1.21.11", "fabric",
      FABRIC_121_PLUS_MOD,        FABRIC_121_PLUS_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-26.1-fabric",    "26.1",    "fabric",
      FABRIC_261_MOD,             FABRIC_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-26.1.1-fabric",  "26.1.1",  "fabric",
      FABRIC_261_MOD,             FABRIC_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     ("DayCounter-26.1.2-fabric",  "26.1.2",  "fabric",
      FABRIC_261_MOD,             FABRIC_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split),
+     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
     # ---- NeoForge ----
     ("DayCounter-1.20.2-neoforge", "1.20.2",  "neoforge",
      NEO_1202_TO_1206_MOD,       NEO_1202_TO_1206_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.20.4-neoforge", "1.20.4",  "neoforge",
      NEO_1202_TO_1206_MOD,       NEO_1202_TO_1206_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.20.5-neoforge", "1.20.5",  "neoforge",
      NEO_1202_TO_1206_MOD,       NEO_1202_TO_1206_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.20.6-neoforge", "1.20.6",  "neoforge",
      NEO_1202_TO_1206_MOD,       NEO_1202_TO_1206_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21-1.21.1-neoforge", "1.21-1.21.1", "neoforge",
      NEO_121_MOD,                NEO_121_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.2-1.21.8-neoforge", "1.21.2-1.21.8", "neoforge",
      NEO_121_MOD,                NEO_121_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.9-1.21.11-neoforge", "1.21.9-1.21.11", "neoforge",
      NEO_121_MOD,                NEO_121_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-26.1-neoforge",  "26.1",    "neoforge",
      NEO_261_MOD,                NEO_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-26.1.1-neoforge", "26.1.1", "neoforge",
      NEO_261_MOD,                NEO_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-26.1.2-neoforge", "26.1.2", "neoforge",
      NEO_261_MOD,                NEO_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", None),
+     "asd.itamio.daycounter.DayCounterMod", None, False),
 ]
 
 # ===========================================================================
@@ -1379,36 +1675,74 @@ def get_failed_targets():
 
 
 def write_mod_folder(folder_path: Path, folder_name: str, mc_version: str, loader: str,
-                     mod_src: str, client_src: str, entrypoint: str, fabric_mod_json_fn):
-    """Write a single mod target folder with src/, mod.txt, version.txt."""
-    pkg_path = folder_path / "src" / "main" / "java" / "asd" / "itamio" / "daycounter"
-    pkg_path.mkdir(parents=True, exist_ok=True)
+                     mod_src: str, client_src: str, entrypoint: str, fabric_mod_json_fn,
+                     use_client_srcset: bool = False):
+    """Write a single mod target folder with src/, mod.txt, version.txt.
 
-    # Main mod class
-    (pkg_path / "DayCounterMod.java").write_text(mod_src, encoding="utf-8")
+    use_client_srcset=True: client code in src/client/java/ (fabric_split 1.20+)
+    use_client_srcset=False: everything in src/main/java/ (presplit, forge, neo)
+    """
+    import shutil
+    src_dir = folder_path / "src"
+    if src_dir.exists():
+        shutil.rmtree(src_dir)
+    if use_client_srcset:
+        # fabric_split: mod entrypoint goes in src/client/java/, config+util in src/main/java/
+        client_pkg = folder_path / "src" / "client" / "java" / "asd" / "itamio" / "daycounter"
+        main_pkg = folder_path / "src" / "main" / "java" / "asd" / "itamio" / "daycounter"
+        client_pkg.mkdir(parents=True, exist_ok=True)
+        main_pkg.mkdir(parents=True, exist_ok=True)
 
-    # Client handler
-    client_path = pkg_path / "client"
-    client_path.mkdir(exist_ok=True)
-    (client_path / "DayCounterClientHandler.java").write_text(client_src, encoding="utf-8")
+        # Main mod class (ClientModInitializer) in client srcset
+        (client_pkg / "DayCounterMod.java").write_text(mod_src, encoding="utf-8")
 
-    # Config class
-    config_path = pkg_path / "config"
-    config_path.mkdir(exist_ok=True)
-    (config_path / "DayCounterConfig.java").write_text(CONFIG_SRC, encoding="utf-8")
+        # Client handler in client srcset
+        client_handler_path = client_pkg / "client"
+        client_handler_path.mkdir(exist_ok=True)
+        (client_handler_path / "DayCounterClientHandler.java").write_text(client_src, encoding="utf-8")
 
-    # Formatter util
-    util_path = pkg_path / "util"
-    util_path.mkdir(exist_ok=True)
-    (util_path / "DayCounterFormatter.java").write_text(FORMATTER_SRC, encoding="utf-8")
+        # Config and util in main srcset (no MC API, pure Java)
+        config_path = main_pkg / "config"
+        config_path.mkdir(exist_ok=True)
+        (config_path / "DayCounterConfig.java").write_text(CONFIG_SRC, encoding="utf-8")
 
-    # fabric.mod.json for fabric targets
-    if loader == "fabric" and fabric_mod_json_fn is not None:
-        resources_path = folder_path / "src" / "main" / "resources"
-        resources_path.mkdir(parents=True, exist_ok=True)
-        (resources_path / "fabric.mod.json").write_text(
-            fabric_mod_json_fn(entrypoint), encoding="utf-8"
-        )
+        util_path = main_pkg / "util"
+        util_path.mkdir(exist_ok=True)
+        (util_path / "DayCounterFormatter.java").write_text(FORMATTER_SRC, encoding="utf-8")
+
+        # fabric.mod.json in main resources
+        if fabric_mod_json_fn is not None:
+            resources_path = folder_path / "src" / "main" / "resources"
+            resources_path.mkdir(parents=True, exist_ok=True)
+            (resources_path / "fabric.mod.json").write_text(
+                fabric_mod_json_fn(entrypoint), encoding="utf-8"
+            )
+    else:
+        # presplit / forge / neoforge: everything in src/main/java/
+        pkg_path = folder_path / "src" / "main" / "java" / "asd" / "itamio" / "daycounter"
+        pkg_path.mkdir(parents=True, exist_ok=True)
+
+        (pkg_path / "DayCounterMod.java").write_text(mod_src, encoding="utf-8")
+
+        client_path = pkg_path / "client"
+        client_path.mkdir(exist_ok=True)
+        (client_path / "DayCounterClientHandler.java").write_text(client_src, encoding="utf-8")
+
+        config_path = pkg_path / "config"
+        config_path.mkdir(exist_ok=True)
+        (config_path / "DayCounterConfig.java").write_text(CONFIG_SRC, encoding="utf-8")
+
+        util_path = pkg_path / "util"
+        util_path.mkdir(exist_ok=True)
+        (util_path / "DayCounterFormatter.java").write_text(FORMATTER_SRC, encoding="utf-8")
+
+        # fabric.mod.json for presplit fabric targets
+        if loader == "fabric" and fabric_mod_json_fn is not None:
+            resources_path = folder_path / "src" / "main" / "resources"
+            resources_path.mkdir(parents=True, exist_ok=True)
+            (resources_path / "fabric.mod.json").write_text(
+                fabric_mod_json_fn(entrypoint), encoding="utf-8"
+            )
 
     # mod.txt
     mod_txt = MOD_TXT_BASE + f"entrypoint_class={entrypoint}\n"
@@ -1454,13 +1788,13 @@ def main():
     BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
 
     targets_written = []
-    for (folder_name, mc_version, loader, mod_src, client_src, entrypoint, fabric_fn) in TARGETS:
+    for (folder_name, mc_version, loader, mod_src, client_src, entrypoint, fabric_fn, use_client_srcset) in TARGETS:
         if failed_set is not None and folder_name not in failed_set:
             continue
         folder_path = BUNDLE_DIR / folder_name
         folder_path.mkdir(parents=True, exist_ok=True)
         write_mod_folder(folder_path, folder_name, mc_version, loader,
-                         mod_src, client_src, entrypoint, fabric_fn)
+                         mod_src, client_src, entrypoint, fabric_fn, use_client_srcset)
         targets_written.append(folder_name)
         print(f"  wrote {folder_name}")
 

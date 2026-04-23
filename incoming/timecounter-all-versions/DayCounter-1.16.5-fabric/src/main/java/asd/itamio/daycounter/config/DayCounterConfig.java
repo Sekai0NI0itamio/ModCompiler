@@ -56,7 +56,7 @@ public class DayCounterConfig {
     }
 
     private void writeDefaultFile() {
-        List<String> lines = new ArrayList<>();
+        List<String> lines = new ArrayList<String>();
         lines.add("# Day Counter configuration");
         lines.add("# This file hot-reloads while the game is running.");
         lines.add("#");
