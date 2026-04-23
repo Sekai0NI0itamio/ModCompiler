@@ -6,7 +6,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
 
 public class DayCounterClientHandler {
     public static void register(DayCounterConfig config) {

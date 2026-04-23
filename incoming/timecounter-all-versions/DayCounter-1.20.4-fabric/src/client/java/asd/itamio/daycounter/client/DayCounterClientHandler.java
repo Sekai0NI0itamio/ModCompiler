@@ -12,7 +12,7 @@ public class DayCounterClientHandler {
         HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc == null || mc.player == null || mc.world == null) return;
-            if (mc.options.debugEnabled) return;
+            if (mc.options.hudHidden) return;
             config.reloadIfChanged();
             String text = DayCounterFormatter.format(
                 mc.world.getTime(),
