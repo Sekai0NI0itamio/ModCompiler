@@ -6,11 +6,10 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderTickCounter;
 
 public class DayCounterClientHandler {
     public static void register(DayCounterConfig config) {
-        HudRenderCallback.EVENT.register((DrawContext drawContext, RenderTickCounter tickCounter) -> {
+        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc == null || mc.player == null || mc.world == null) return;
             if (mc.options.hudHidden) return;
