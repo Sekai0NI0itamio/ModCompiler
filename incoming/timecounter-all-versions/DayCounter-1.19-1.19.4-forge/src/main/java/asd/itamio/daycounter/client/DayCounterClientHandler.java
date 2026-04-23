@@ -4,7 +4,9 @@ import asd.itamio.daycounter.config.DayCounterConfig;
 import asd.itamio.daycounter.util.DayCounterFormatter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public class DayCounterClientHandler {
@@ -15,10 +17,11 @@ public class DayCounterClientHandler {
     }
 
     @SubscribeEvent
-    public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
+    public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+        if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.renderDebug) return;
+        if (mc.options.hideGui) return;
         config.reloadIfChanged();
         String text = DayCounterFormatter.format(
             mc.level.getGameTime(),
@@ -27,13 +30,12 @@ public class DayCounterClientHandler {
         );
         if (text.isEmpty()) return;
         Font fr = mc.font;
+        GuiGraphics graphics = event.getGuiGraphics();
         int screenW = mc.getWindow().getGuiScaledWidth();
         int screenH = mc.getWindow().getGuiScaledHeight();
         int w = fr.width(text);
         int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
         int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-        event.getMatrixStack().pushPose();
-        fr.drawShadow(event.getMatrixStack(), text, (float) x, (float) y, 0xFFFFFF);
-        event.getMatrixStack().popPose();
+        graphics.drawString(fr, text, x, y, 0xFFFFFF, true);
     }
 }
