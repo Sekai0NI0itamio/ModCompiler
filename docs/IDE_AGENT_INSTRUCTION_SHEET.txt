@@ -92,6 +92,7 @@ The repository currently contains these active top-level version families:
 - `1.21.9-1.21.11`
 - `26.1-26.x`  ← Minecraft switched to calendar versioning in 26.1 (March 2026)
                   Java 25 required. Obfuscation removed. Yarn mappings no longer used.
+                  All three loaders verified working (build-tested April 2026).
 
 The agent should not guess supported targets. It should resolve them from `version-manifest.json`.
 
@@ -282,6 +283,9 @@ Step A-2: Identify all target versions and loaders.
     1.21.2-1.21.8  forge, fabric, neoforge
     1.21.9-1.21.11 forge, fabric, neoforge
     26.1-26.x      forge, fabric, neoforge  ← Java 25, no obfuscation, no yarn
+                                              Forge: EventBus 7, no mappings block
+                                              Fabric: loom 1.16-SNAPSHOT, fabric_api_version
+                                              NeoForge: ModDevGradle, IEventBus constructor
 
   Note which versions the mod already covers (from project.json game_versions).
   Target all versions NOT yet covered, plus any existing versions that need
