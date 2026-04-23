@@ -81,6 +81,7 @@ else:
         ("26.1.1", "fabric"),
         ("26.1.2", "fabric"),
         # Forge — use exact versions from manifest supported_versions
+        # NOTE: Forge only released for MC 26.1.2 (not 26.1 or 26.1.1)
         ("1.12",    "forge"),   # 1.12-1.12.2 range, min_version
         ("1.17.1",  "forge"),   # 1.17-1.17.1 range, only supported version
         ("1.20.1",  "forge"),   # 1.20-1.20.6 range, first supported
@@ -91,9 +92,7 @@ else:
         ("1.21.9",  "forge"),
         ("1.21.10", "forge"),
         ("1.21.11", "forge"),
-        ("26.1",    "forge"),
-        ("26.1.1",  "forge"),
-        ("26.1.2",  "forge"),
+        ("26.1.2",  "forge"),   # Only 26.1.2 has a Forge release
         # NeoForge — use exact versions from manifest supported_versions
         ("1.20.2",  "neoforge"),  # 1.20-1.20.6 range, first neoforge supported
         ("26.1",    "neoforge"),
@@ -479,9 +478,41 @@ def create_neoforge(mc_version: str):
     is_26 = mc_version.startswith("26.")
 
     # ── Main class ────────────────────────────────────────────────────────────
-    # NeoForge uses its own event package throughout all versions
-    # Bus.FORGE is the correct bus name for game events in NeoForge
-    main_src = f"""package com.seedprotect;
+    # NeoForge uses its own event package throughout all versions.
+    # NeoForge 26.1+ uses EventBus 7 — same pattern as Forge 26.1+:
+    #   FarmlandTrampleEvent.BUS.addListener(true, handler)
+    #   Listener returns boolean (true = cancel). No @EventBusSubscriber.
+    # NeoForge 1.20.x–1.21.x uses the old @EventBusSubscriber pattern.
+    is_neo_eb7 = mc_version.startswith("26.")
+
+    if is_neo_eb7:
+        main_src = f"""package com.seedprotect;
+
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
+
+// NeoForge 26.1+ uses EventBus 7.
+// Each event has its own static BUS field.
+// Cancellation is done by returning true from the listener.
+@Mod("{MOD_ID}")
+public final class SeedProtectMod {{
+    public static final String MOD_ID = "{MOD_ID}";
+
+    public SeedProtectMod(FMLJavaModLoadingContext context) {{
+        BlockEvent.FarmlandTrampleEvent.BUS.addListener(
+            /* alwaysCancelling = */ true,
+            SeedProtectMod::onFarmlandTrample
+        );
+    }}
+
+    private static boolean onFarmlandTrample(BlockEvent.FarmlandTrampleEvent event) {{
+        return true;
+    }}
+}}
+"""
+    else:
+        main_src = f"""package com.seedprotect;
 
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.bus.api.SubscribeEvent;
