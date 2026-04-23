@@ -1,5 +1,4 @@
 package asd.itamio.veinminer;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
@@ -7,15 +6,10 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
-
 public class VeinMinerKeyHandler {
     public static KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
     public static boolean veinMinerEnabled = true;
-
-    public static void register(RegisterKeyMappingsEvent event) {
-        event.register(toggleKey);
-    }
-
+    public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
     @SubscribeEvent
     public void onKeyInput(InputEvent.Key event) {
         if (toggleKey.consumeClick()) {

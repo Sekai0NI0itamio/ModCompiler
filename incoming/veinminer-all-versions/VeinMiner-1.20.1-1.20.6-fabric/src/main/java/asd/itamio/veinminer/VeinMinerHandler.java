@@ -1,5 +1,4 @@
 package asd.itamio.veinminer;
-
 import java.util.*;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.block.Block;
@@ -11,15 +10,13 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.PickaxeItem;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.ShovelItem;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
-
 public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
     private Map<UUID, Long> cooldowns = new HashMap<>();
-
     @Override
     public boolean beforeBlockBreak(World world, PlayerEntity player, BlockPos pos, BlockState state, BlockEntity be) {
         if (!VeinMinerMod.config.enableVeinMiner) return true;
@@ -35,16 +32,13 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
             cooldowns.put(player.getUuid(), now);
         }
         if (!isVeinMineable(block)) return true;
-        if (VeinMinerMod.config.limitToCorrectTool) {
-            if (!isCorrectTool(block, player.getMainHandStack())) return true;
-        }
+        if (VeinMinerMod.config.limitToCorrectTool && !isCorrectTool(block, player.getMainHandStack())) return true;
         Set<BlockPos> vein = findVein(world, pos, block, state, VeinMinerMod.config.maxBlocks);
         if (vein.size() > 1) mineVein(world, player, vein, state, pos);
         return true;
     }
-
     private boolean isVeinMineable(Block b) {
-        String n = Registry.BLOCK.getId(b).toString();
+        String n = Registries.BLOCK.getId(b).toString();
         if (VeinMinerMod.config.mineOres && (n.equals("minecraft:coal_ore")||n.equals("minecraft:iron_ore")||n.equals("minecraft:gold_ore")||n.equals("minecraft:diamond_ore")||n.equals("minecraft:emerald_ore")||n.equals("minecraft:lapis_ore")||n.equals("minecraft:redstone_ore")||n.equals("minecraft:nether_quartz_ore")||n.equals("minecraft:deepslate_coal_ore")||n.equals("minecraft:deepslate_iron_ore")||n.equals("minecraft:deepslate_gold_ore")||n.equals("minecraft:deepslate_diamond_ore")||n.equals("minecraft:deepslate_emerald_ore")||n.equals("minecraft:deepslate_lapis_ore")||n.equals("minecraft:deepslate_redstone_ore"))) return true;
         if (VeinMinerMod.config.mineLogs && (n.contains("_log")||n.contains("_wood"))) return true;
         if (VeinMinerMod.config.mineStone && (n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate"))) return true;
@@ -57,26 +51,20 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
         if (VeinMinerMod.config.mineGlowstone && n.equals("minecraft:glowstone")) return true;
         return false;
     }
-
     private boolean isCorrectTool(Block b, ItemStack tool) {
         if (tool.isEmpty()) return false;
-        String n = Registry.BLOCK.getId(b).toString();
-        boolean isPick = n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone");
-        boolean isAxe = n.contains("_log")||n.contains("_wood");
-        boolean isShovel = n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay");
-        if (isPick) return tool.getItem() instanceof PickaxeItem;
-        if (isAxe) return tool.getItem() instanceof AxeItem;
-        if (isShovel) return tool.getItem() instanceof ShovelItem;
+        String n = Registries.BLOCK.getId(b).toString();
+        if (n.contains("_ore")||n.equals("minecraft:stone")||n.equals("minecraft:cobblestone")||n.equals("minecraft:deepslate")||n.equals("minecraft:netherrack")||n.equals("minecraft:end_stone")||n.equals("minecraft:glowstone")) return tool.getItem() instanceof PickaxeItem;
+        if (n.contains("_log")||n.contains("_wood")) return tool.getItem() instanceof AxeItem;
+        if (n.equals("minecraft:dirt")||n.equals("minecraft:grass_block")||n.equals("minecraft:gravel")||n.equals("minecraft:sand")||n.equals("minecraft:clay")) return tool.getItem() instanceof ShovelItem;
         return true;
     }
-
     private Set<BlockPos> findVein(World world, BlockPos start, Block target, BlockState startState, int max) {
-        Set<BlockPos> vein = new HashSet<>();
-        Queue<BlockPos> queue = new LinkedList<>();
+        Set<BlockPos> vein = new HashSet<>(); Queue<BlockPos> queue = new LinkedList<>();
         queue.add(start); vein.add(start);
-        String startName = Registry.BLOCK.getId(target).toString();
-        boolean isLog = startName.contains("_log") || startName.contains("_wood");
-        while (!queue.isEmpty() && vein.size() < max) {
+        String sn = Registries.BLOCK.getId(target).toString();
+        boolean isLog = sn.contains("_log")||sn.contains("_wood");
+        while (!queue.isEmpty()&&vein.size()<max) {
             BlockPos cur = queue.poll();
             for (int dx=-1;dx<=1;dx++) for (int dy=-1;dy<=1;dy++) for (int dz=-1;dz<=1;dz++) {
                 if (dx==0&&dy==0&&dz==0) continue;
@@ -84,54 +72,36 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
                 if (vein.contains(nb)||vein.size()>=max) continue;
                 BlockState nbs = world.getBlockState(nb);
                 if (nbs.getBlock()!=target) continue;
-                if (isLog && nbs != startState) continue;
+                if (isLog&&nbs!=startState) continue;
                 vein.add(nb); queue.add(nb);
             }
         }
         return vein;
     }
-
     private void mineVein(World world, PlayerEntity player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
         ItemStack tool = player.getMainHandStack();
-        List<ItemStack> allDrops = new ArrayList<>();
-        int mined = 0;
+        List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
         ServerWorld sw = (ServerWorld) world;
         for (BlockPos pos : vein) {
             if (pos.equals(origin)) continue;
             BlockState state = world.getBlockState(pos);
             List<ItemStack> drops = Block.getDroppedStacks(state, sw, pos, world.getBlockEntity(pos), player, tool);
             for (ItemStack d : drops) allDrops.add(d.copy());
-            world.removeBlock(pos, false);
-            mined++;
+            world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
                 tool.damage(1, player, p -> {});
                 if (tool.isEmpty()) break;
             }
         }
-        if (!VeinMinerMod.config.disableSound) {
-            world.playSound(null, origin, origState.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 1.0f, 1.0f);
-        }
+        if (!VeinMinerMod.config.disableSound) world.playSound(null, origin, origState.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 1.0f, 1.0f);
         if (VeinMinerMod.config.dropAtOneLocation) {
             Map<String,ItemStack> combined = new HashMap<>();
             for (ItemStack d : allDrops) {
-                String key = Registry.ITEM.getId(d.getItem())+":"+d.getDamage();
-                if (combined.containsKey(key)) {
-                    ItemStack ex = combined.get(key);
-                    int nc = ex.getCount()+d.getCount();
-                    ex.setCount(Math.min(nc, ex.getMaxCount()));
-                    if (nc>ex.getMaxCount()) { ItemStack ov=d.copy(); ov.setCount(nc-ex.getMaxCount()); combined.put(key+"_"+combined.size(),ov); }
-                } else { combined.put(key, d.copy()); }
+                String key = Registries.ITEM.getId(d.getItem())+":"+d.getDamage();
+                if (combined.containsKey(key)) { ItemStack ex=combined.get(key); int nc=ex.getCount()+d.getCount(); ex.setCount(Math.min(nc,ex.getMaxCount())); if(nc>ex.getMaxCount()){ItemStack ov=d.copy();ov.setCount(nc-ex.getMaxCount());combined.put(key+"_"+combined.size(),ov);} } else combined.put(key,d.copy());
             }
-            for (ItemStack s : combined.values()) {
-                if (!s.isEmpty()) {
-                    ItemEntity ei = new ItemEntity(world, origin.getX()+0.5, origin.getY()+0.5, origin.getZ()+0.5, s);
-                    ei.setToDefaultPickupDelay();
-                    world.spawnEntity(ei);
-                }
-            }
+            for (ItemStack s : combined.values()) if (!s.isEmpty()) { ItemEntity ei=new ItemEntity(world,origin.getX()+0.5,origin.getY()+0.5,origin.getZ()+0.5,s); ei.setToDefaultPickupDelay(); world.spawnEntity(ei); }
         }
-        if (VeinMinerMod.config.consumeHunger) {
-            player.addExhaustion(0.005f * mined * VeinMinerMod.config.hungerMultiplier);
-        }
+        if (VeinMinerMod.config.consumeHunger) player.addExhaustion(0.005f*mined*VeinMinerMod.config.hungerMultiplier);
     }
 }
