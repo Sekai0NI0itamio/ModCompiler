@@ -7,6 +7,7 @@
 //   - FMLJavaModLoadingContext is REMOVED — use IEventBus/ModContainer directly
 //   - Java 25 required. Gradle 9.2.1+ required.
 //   - neo_version is still in beta format: 26.1.2.22-beta
+//   - neoforge.mods.toml is in src/main/resources/META-INF/ (written by build adapter)
 
 plugins {
     id 'java-library'
@@ -54,25 +55,6 @@ configurations {
 
 dependencies {
 }
-
-// Expand properties in neoforge.mods.toml template
-var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
-    var replaceProperties = [
-            minecraft_version      : minecraft_version,
-            minecraft_version_range: minecraft_version_range,
-            neo_version            : neo_version,
-            mod_id                 : mod_id,
-            mod_name               : mod_name,
-            mod_license            : mod_license,
-            mod_version            : mod_version,
-    ]
-    inputs.properties replaceProperties
-    expand replaceProperties
-    from "src/main/templates"
-    into "build/generated/sources/modMetadata"
-}
-sourceSets.main.resources.srcDir generateModMetadata
-neoForge.ideSyncTask generateModMetadata
 
 publishing {
     publications {
