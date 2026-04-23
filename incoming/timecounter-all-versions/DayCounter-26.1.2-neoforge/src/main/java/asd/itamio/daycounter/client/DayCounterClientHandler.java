@@ -5,8 +5,7 @@ import asd.itamio.daycounter.util.DayCounterFormatter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.neoforged.neoforge.client.event.RenderGuiOverlayEvent;
-import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 
 public class DayCounterClientHandler {
@@ -17,17 +16,14 @@ public class DayCounterClientHandler {
     }
 
     @SubscribeEvent
-    public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
-        if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
+    public void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.renderDebug) return;
+        if (mc.options.hideGui) return;
         config.reloadIfChanged();
-        String text = DayCounterFormatter.format(
-            mc.level.getGameTime(),
-            mc.level.getDayTime(),
-            config.getDisplayMode()
-        );
+        long gameTime = mc.level.getGameTime();
+        long dayTime = gameTime % 24000L;
+        String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
         if (text.isEmpty()) return;
         Font fr = mc.font;
         GuiGraphics graphics = event.getGuiGraphics();

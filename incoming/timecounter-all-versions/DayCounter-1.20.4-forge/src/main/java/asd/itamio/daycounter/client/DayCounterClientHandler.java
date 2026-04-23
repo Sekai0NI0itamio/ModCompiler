@@ -21,7 +21,7 @@ public class DayCounterClientHandler {
         if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.renderDebug) return;
+        if (mc.options.hideGui) return;
         config.reloadIfChanged();
         String text = DayCounterFormatter.format(
             mc.level.getGameTime(),

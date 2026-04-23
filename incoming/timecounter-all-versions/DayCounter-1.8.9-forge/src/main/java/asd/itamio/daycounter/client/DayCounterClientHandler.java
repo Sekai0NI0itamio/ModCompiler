@@ -22,6 +22,7 @@ public class DayCounterClientHandler {
     public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc == null || mc.thePlayer == null || mc.theWorld == null) return;
+        // 1.8.9: gameSettings.showDebugInfo
         if (mc.gameSettings.showDebugInfo) return;
         config.reloadIfChanged();
         String text = DayCounterFormatter.format(

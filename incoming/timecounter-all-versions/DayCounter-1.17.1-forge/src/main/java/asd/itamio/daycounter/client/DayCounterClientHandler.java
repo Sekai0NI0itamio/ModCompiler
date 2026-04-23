@@ -32,8 +32,8 @@ public class DayCounterClientHandler {
         int w = fr.width(text);
         int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
         int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-        event.getPoseStack().pushPose();
-        fr.drawShadow(event.getPoseStack(), text, (float) x, (float) y, 0xFFFFFF);
-        event.getPoseStack().popPose();
+        event.getMatrixStack().pushPose();
+        fr.drawShadow(event.getMatrixStack(), text, (float) x, (float) y, 0xFFFFFF);
+        event.getMatrixStack().popPose();
     }
 }
