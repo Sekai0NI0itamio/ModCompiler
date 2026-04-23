@@ -5,14 +5,17 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
 import org.lwjgl.glfw.GLFW;
 @OnlyIn(Dist.CLIENT)
 public class VeinMinerKeyHandler {
-    public static final KeyMapping toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
+    public static KeyMapping toggleKey;
     public static boolean veinMinerEnabled = true;
-    public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
+    public VeinMinerKeyHandler() {
+        toggleKey = new KeyMapping("Toggle Vein Miner", GLFW.GLFW_KEY_V, "Vein Miner");
+        ClientRegistry.registerKeyBinding(toggleKey);
+    }
     @SubscribeEvent
     public void onKeyInput(InputEvent.KeyInputEvent event) {
         if (toggleKey.consumeClick()) {
