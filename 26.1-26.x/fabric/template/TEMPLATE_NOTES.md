@@ -1,17 +1,17 @@
 # Template Notes
 
-These templates are verified by the template-verify workflow. Keep these rules:
-- Build with ./modcompiler-build.sh (fast build first, then full build if needed).
-- Template verify runs set MODCOMPILER_GRADLE_TASKS=jar for speed; Fabric uses dev jars in this mode.
-- Re-run template-verify after any template or dependency changes.
-- Fabric Loom versions are pinned to release numbers (no -SNAPSHOT) to avoid missing artifacts.
-- Keep version-specific API notes in the Java sources so future updates do not regress.
+Source: Official FabricMC/fabric-example-mod 26.1 branch
 
-Range-specific notes:
-- Minecraft 26.1+ requires Java 25 and Gradle 9.4+.
-- Obfuscation was removed in 26.1 — Yarn mappings are NO LONGER USED by Fabric.
-- Use the net.fabricmc.fabric-loom plugin (NOT fabric-loom-remap).
-- modImplementation -> implementation (no remapping needed in 26.1+).
-- remapJar -> jar.
-- Fabric API names updated to match official Mojang names (e.g. ItemGroupEvents -> CreativeModeTabEvents).
-- If your mod uses raw OpenGL calls, migrate to Blaze3D API (OpenGL planned for removal in 26.2+).
+These templates are verified by the template-verify workflow. Keep these rules:
+- Build with ./modcompiler-build.sh
+- Re-run template-verify after any template or dependency changes.
+
+Range-specific notes (Fabric 26.1+):
+- loom_version=1.16-SNAPSHOT — resolves from https://maven.fabricmc.net/ (declared in settings.gradle).
+- NO yarn mappings — Fabric 26.1 uses official Mojang names directly (no remapping).
+- modImplementation -> implementation (no remapping needed).
+- Property name: fabric_api_version (NOT fabric_version).
+- Minecraft classes are on the classpath via the 'minecraft' dependency + loom.
+- Java 25 required. Gradle 9.4+ required.
+- Fabric Loader 0.19.2+, Loom 1.16-SNAPSHOT.
+- Mixin class names use Mojang mappings: net.minecraft.world.level.block.FarmBlock / fallOn.

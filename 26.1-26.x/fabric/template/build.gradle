@@ -1,76 +1,79 @@
 // Fabric template for Minecraft 26.1+
-// Based on official FabricMC/fabric-example-mod 26.1 branch.
+// Source: https://github.com/FabricMC/fabric-example-mod/tree/26.1
+//
 // Key differences from 1.21.x:
 //   - Minecraft 26.1 removed obfuscation. Yarn mappings are no longer used.
 //   - Use the net.fabricmc.fabric-loom plugin (no remapping).
 //   - modImplementation -> implementation (no remapping needed).
 //   - Property name: fabric_api_version (not fabric_version).
 //   - Java 25 required. Gradle 9.4+ required.
+//   - loom_version=1.16-SNAPSHOT resolves from https://maven.fabricmc.net/
+//     (declared in settings.gradle).
 
 plugins {
-    id 'net.fabricmc.fabric-loom' version "${loom_version}"
-    id 'maven-publish'
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
 }
 
 version = project.mod_version
 group = project.maven_group
 
 repositories {
-    // Loom adds the essential maven repositories automatically.
+	// Loom adds the essential maven repositories to download Minecraft and libraries automatically.
 }
 
 loom {
-    splitEnvironmentSourceSets()
+	splitEnvironmentSourceSets()
 
-    mods {
-        "modid" {
-            sourceSet sourceSets.main
-            sourceSet sourceSets.client
-        }
-    }
+	mods {
+		"modid" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
 }
 
 dependencies {
-    // To change the versions see the gradle.properties file
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
-    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-    // Fabric API
-    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Fabric API. This is technically optional, but you probably want it anyway.
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 processResources {
-    inputs.property "version", project.version
+	inputs.property "version", project.version
 
-    filesMatching("fabric.mod.json") {
-        expand "version": inputs.properties.version
-    }
+	filesMatching("fabric.mod.json") {
+		expand "version": inputs.properties.version
+	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 25
+	it.options.release = 25
 }
 
 java {
-    withSourcesJar()
+	withSourcesJar()
 
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
-    inputs.property "projectName", project.name
+	inputs.property "projectName", project.name
 
-    from("LICENSE") {
-        rename { "${it}_${project.name}" }
-    }
+	from("LICENSE") {
+		rename { "${it}_${project.name}" }
+	}
 }
 
 publishing {
-    publications {
-        create("mavenJava", MavenPublication) {
-            from components.java
-        }
-    }
+	publications {
+		create("mavenJava", MavenPublication) {
+			from components.java
+		}
+	}
 }

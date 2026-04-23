@@ -1,11 +1,12 @@
 # Template Provenance
 
-- Source: `https://github.com/NeoForgeMDKs/MDK-26.1-ModDevGradle`
-- Snapshot: NeoForge 26.1.0.10 (April 2026)
-- Base guidance: NeoForge getting started + Mod Files documentation.
+- Source: `https://github.com/NeoForgeMDKs/MDK-26.1.2-ModDevGradle`
+- Snapshot: NeoForge 26.1.2.22-beta, ModDevGradle 2.0.141 (April 2026)
 - Java target: 25 (Minecraft 26.1+ requirement)
-- Gradle: 9.4.0+ (required for Java 25)
-- Notes: Minecraft 26.1 removed obfuscation. NeoForge now uses ModDevGradle (MDG) 2.0.141+.
-  NeoForge version format changed to four components: 26.1.0.10 = MC 26.1 hotfix 0, NeoForge build 10.
-  Parchment is no longer needed since official parameter names are available.
-
+- Gradle: 9.2.1
+- Notes:
+  - NeoForge 26.1 is still in beta (no stable release as of April 2026).
+  - Uses ModDevGradle (net.neoforged.moddev) not NeoGradle.
+  - FMLJavaModLoadingContext removed — use IEventBus + ModContainer constructor injection.
+  - neoforge.mods.toml uses template expansion via generateModMetadata task.
+  - settings.gradle uses foojay-resolver-convention for Java toolchain resolution.

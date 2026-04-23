@@ -1,33 +1,94 @@
+// NeoForge template for Minecraft 26.1+
+// Source: https://github.com/NeoForgeMDKs/MDK-26.1.2-ModDevGradle
+//
+// Key differences from 1.21.x:
+//   - Uses ModDevGradle (net.neoforged.moddev) not NeoGradle
+//   - Constructor injection: ExampleMod(IEventBus modEventBus, ModContainer modContainer)
+//   - FMLJavaModLoadingContext is REMOVED — use IEventBus/ModContainer directly
+//   - Java 25 required. Gradle 9.2.1+ required.
+//   - neo_version is still in beta format: 26.1.2.22-beta
+
 plugins {
-    id "java"
-    id "idea"
-    id "eclipse"
-    id "net.neoforged.moddev" version "2.0.141"
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.141'
+    id 'idea'
 }
 
-version = project.mod_version
-group = project.mod_group_id
+version = mod_version
+group = mod_group_id
 
 base {
-    archivesName = project.mod_id
+    archivesName = mod_id
 }
 
-// Minecraft 26.1+ requires Java 25.
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+// Mojang ships Java 25 to end users in 26.1+, so mods should target Java 25.
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+neoForge {
+    // Specify the version of NeoForge to use.
+    version = project.neo_version
+
+    runs {
+        server {
+            server()
+            programArgument '--nogui'
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
     }
 }
 
-neoForge {
-    version = project.neo_version
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
 }
 
-repositories {
-    mavenCentral()
-    maven { url = "https://maven.neoforged.net/releases" }
+dependencies {
+}
+
+// Expand properties in neoforge.mods.toml template
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.encoding = "UTF-8"
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
 }
