@@ -637,12 +637,15 @@ documented:
    - Result: 25/39 versions working (1.8.9 through 1.21.1)
 
 3. Seed Protect mod (docs/examples/SEED_PROTECT_ALL_VERSIONS.md)
+   - Two-phase port: Phase 1 fixed Fabric 1.18–1.19.3, Phase 2 added 16 more versions
    - First real-world use of the AI Source Search workflow to resolve a mixin error
-   - Documents the Fabric yarn vs Mojang mappings split and why class names differ
-   - Shows exactly how to use ai_source_search.py to find the correct class name
-   - Covers the AI Source Search workflow fix (Fabric sources jar extraction)
-   - Documents the Forge 1.21.6+ broken EventBus API issue
-   - Result: 6 missing Fabric versions (1.18–1.19.3) published in 2 build runs
+   - Documents the Fabric yarn vs Mojang mappings split (boundary at 1.21)
+   - Forge 1.17.x uses `event.world` package (not `event.level`)
+   - Forge 1.21.6+ EventBus 7 migration: `FarmlandTrampleEvent.BUS.addListener(true, ...)`
+   - NeoForge uses `Bus.FORGE` not `Bus.GAME` for game events
+   - Profile Diagnosis workflow used to discover all missing versions
+   - 26.x versions skipped — all loaders still in beta/unstable
+   - Result: 16 additional versions published across Fabric, Forge, NeoForge
 
 Read all three documents before starting any new multi-version port. They will
 save significant time by showing:
