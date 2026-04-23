@@ -8,8 +8,8 @@ import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 public class VeinMinerMod {
     public static final String MODID = "veinminer";
     public static VeinMinerConfig config = new VeinMinerConfig();
-    public VeinMinerMod() {
-        var bus = FMLJavaModLoadingContext.get().getModEventBus();
+    public VeinMinerMod(FMLJavaModLoadingContext context) {
+        var bus = context.getModEventBus();
         bus.addListener(this::setup);
         bus.addListener(VeinMinerKeyHandler::register);
     }

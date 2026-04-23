@@ -9,8 +9,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.event.level.BlockEvent.BreakEvent;
+import net.minecraft.world.entity.EquipmentSlot;
 public class VeinMinerHandler {
     private Map<UUID, Long> cooldowns = new HashMap<>();
     public void onBlockBreak(BreakEvent event) {
@@ -21,7 +21,7 @@ public class VeinMinerHandler {
         BlockPos pos = event.getPos();
         BlockState state = event.getState();
         Block block = state.getBlock();
-        if (!(world instanceof ServerLevel)) return;
+        if (!(world instanceof net.minecraft.server.level.ServerLevel)) return;
         if (player.isCreative()) return;
         if (VeinMinerMod.config.requireSneak && !player.isCrouching()) return;
         if (VeinMinerMod.config.cooldownTicks > 0) {
@@ -71,7 +71,7 @@ public class VeinMinerHandler {
     private void mineVein(Level world, Player player, Set<BlockPos> vein, BlockState origState, BlockPos origin) {
         ItemStack tool = player.getMainHandItem();
         List<ItemStack> allDrops = new ArrayList<>(); int mined = 0;
-        ServerLevel sl = (ServerLevel) world;
+        net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) world;
         for (BlockPos pos : vein) {
             if (pos.equals(origin)) continue;
             BlockState state = world.getBlockState(pos);
@@ -79,7 +79,7 @@ public class VeinMinerHandler {
             for (ItemStack d : drops) allDrops.add(d.copy());
             world.removeBlock(pos, false); mined++;
             if (VeinMinerMod.config.consumeDurability && !tool.isEmpty()) {
-                tool.hurtAndBreak(1, player, p -> {});
+                tool.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
                 if (tool.isEmpty()) break;
             }
         }
