@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 
 public class DayCounterClientHandler {
     public static void register(DayCounterConfig config) {
+        // HudRenderCallback is the standard Fabric API HUD hook
         HudRenderCallback.EVENT.register((guiGraphics, tickCounter) -> {
             Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.player == null || mc.level == null) return;

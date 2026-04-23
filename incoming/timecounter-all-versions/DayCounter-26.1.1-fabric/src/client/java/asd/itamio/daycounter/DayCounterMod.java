@@ -8,7 +8,7 @@ import net.fabricmc.loader.api.FabricLoader;
 
 public class DayCounterMod implements ClientModInitializer {
     public static final String MODID = "daycounter";
-    private static DayCounterConfig config;
+    public static DayCounterConfig config;
 
     @Override
     public void onInitializeClient() {
