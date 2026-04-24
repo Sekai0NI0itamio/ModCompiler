@@ -933,7 +933,7 @@ package asd.itamio.daycounter;
 import asd.itamio.daycounter.client.DayCounterClientHandler;
 import asd.itamio.daycounter.config.DayCounterConfig;
 import java.io.File;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -943,36 +943,42 @@ import net.minecraftforge.fml.loading.FMLPaths;
 public class DayCounterMod {
     public static final String MODID = "daycounter";
     private static DayCounterConfig config;
+    private static DayCounterClientHandler handler;
 
     public DayCounterMod(FMLJavaModLoadingContext context) {
         context.getModEventBus().addListener(this::clientSetup);
+        context.getModEventBus().addListener(this::registerLayers);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
         File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
         config = new DayCounterConfig(configFile);
         config.load();
-        MinecraftForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+        handler = new DayCounterClientHandler(config);
+    }
+
+    private void registerLayers(AddGuiOverlayLayersEvent event) {
+        if (handler != null) handler.registerLayer(event);
     }
 }
 """
 
 # ---------------------------------------------------------------------------
-# Forge 1.21-1.21.11 — Use ClientTickEvent + direct rendering via Minecraft.font
-# RegisterGuiOverlaysEvent package varies; use a simpler tick-based approach
-# that draws text directly on the screen each frame
+# Forge 1.21-1.21.11 — AddGuiOverlayLayersEvent on mod bus (RenderGuiEvent removed in 1.20.5)
+# ForgeLayeredDraw.add(ResourceLocation, Layer) to register HUD layer
 # ---------------------------------------------------------------------------
 FORGE_121_TO_1215_CLIENT = """\
 package asd.itamio.daycounter.client;
 
 import asd.itamio.daycounter.config.DayCounterConfig;
 import asd.itamio.daycounter.util.DayCounterFormatter;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraft.client.gui.LayeredDraw;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
+import net.minecraftforge.client.gui.overlay.ForgeLayeredDraw;
 
 public class DayCounterClientHandler {
     private final DayCounterConfig config;
@@ -981,26 +987,28 @@ public class DayCounterClientHandler {
         this.config = config;
     }
 
-    @SubscribeEvent
-    public void onRenderGui(RenderGuiEvent.Post event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.hideGui) return;
-        config.reloadIfChanged();
-        String text = DayCounterFormatter.format(
-            mc.level.getGameTime(),
-            mc.level.getDayTime(),
-            config.getDisplayMode()
-        );
-        if (text.isEmpty()) return;
-        Font fr = mc.font;
-        GuiGraphics graphics = event.getGuiGraphics();
-        int screenW = mc.getWindow().getGuiScaledWidth();
-        int screenH = mc.getWindow().getGuiScaledHeight();
-        int w = fr.width(text);
-        int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
-        int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-        graphics.drawString(fr, text, x, y, 0xFFFFFF, true);
+    public void registerLayer(AddGuiOverlayLayersEvent event) {
+        ForgeLayeredDraw draw = event.getLayeredDraw();
+        LayeredDraw.Layer layer = (guiGraphics, deltaTracker) -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null || mc.level == null) return;
+            if (mc.options.hideGui) return;
+            config.reloadIfChanged();
+            String text = DayCounterFormatter.format(
+                mc.level.getGameTime(),
+                mc.level.getDayTime(),
+                config.getDisplayMode()
+            );
+            if (text.isEmpty()) return;
+            Font fr = mc.font;
+            int screenW = mc.getWindow().getGuiScaledWidth();
+            int screenH = mc.getWindow().getGuiScaledHeight();
+            int w = fr.width(text);
+            int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+            int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF, true);
+        };
+        draw.add(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }
 """
@@ -1032,7 +1040,7 @@ package asd.itamio.daycounter;
 import asd.itamio.daycounter.client.DayCounterClientHandler;
 import asd.itamio.daycounter.config.DayCounterConfig;
 import java.io.File;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -1042,16 +1050,23 @@ import net.minecraftforge.fml.loading.FMLPaths;
 public class DayCounterMod {
     public static final String MODID = "daycounter";
     private static DayCounterConfig config;
+    private static DayCounterClientHandler handler;
 
     public DayCounterMod(FMLJavaModLoadingContext context) {
         FMLClientSetupEvent.getBus(context.getModBusGroup()).addListener(this::clientSetup);
+        AddGuiOverlayLayersEvent.getBus(context.getModBusGroup()).addListener(this::registerLayers);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
         File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
         config = new DayCounterConfig(configFile);
         config.load();
-        MinecraftForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+        handler = new DayCounterClientHandler(config);
+    }
+
+    private boolean registerLayers(AddGuiOverlayLayersEvent event) {
+        if (handler != null) handler.registerLayer(event);
+        return false;
     }
 }
 """
@@ -1070,7 +1085,7 @@ package asd.itamio.daycounter;
 import asd.itamio.daycounter.client.DayCounterClientHandler;
 import asd.itamio.daycounter.config.DayCounterConfig;
 import java.io.File;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -1080,16 +1095,23 @@ import net.minecraftforge.fml.loading.FMLPaths;
 public class DayCounterMod {
     public static final String MODID = "daycounter";
     private static DayCounterConfig config;
+    private static DayCounterClientHandler handler;
 
     public DayCounterMod(FMLJavaModLoadingContext context) {
         FMLClientSetupEvent.getBus(context.getModBusGroup()).addListener(this::clientSetup);
+        AddGuiOverlayLayersEvent.getBus(context.getModBusGroup()).addListener(this::registerLayers);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
         File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
         config = new DayCounterConfig(configFile);
         config.load();
-        MinecraftForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+        handler = new DayCounterClientHandler(config);
+    }
+
+    private boolean registerLayers(AddGuiOverlayLayersEvent event) {
+        if (handler != null) handler.registerLayer(event);
+        return false;
     }
 }
 """
@@ -1101,8 +1123,11 @@ import asd.itamio.daycounter.config.DayCounterConfig;
 import asd.itamio.daycounter.util.DayCounterFormatter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.LayeredDraw;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
+import net.minecraftforge.client.gui.overlay.ForgeLayeredDraw;
 
 public class DayCounterClientHandler {
     private final DayCounterConfig config;
@@ -1111,23 +1136,26 @@ public class DayCounterClientHandler {
         this.config = config;
     }
 
-    @SubscribeEvent
-    public void onRenderGui(RenderGuiEvent.Post event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.hideGui) return;
-        config.reloadIfChanged();
-        long gameTime = mc.level.getGameTime();
-        long dayTime = gameTime % 24000L;
-        String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
-        if (text.isEmpty()) return;
-        Font fr = mc.font;
-        int screenW = mc.getWindow().getGuiScaledWidth();
-        int screenH = mc.getWindow().getGuiScaledHeight();
-        int w = fr.width(text);
-        int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
-        int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-        event.getGuiGraphics().drawString(fr, text, x, y, 0xFFFFFF, true);
+    public void registerLayer(AddGuiOverlayLayersEvent event) {
+        ForgeLayeredDraw draw = event.getLayeredDraw();
+        LayeredDraw.Layer layer = (guiGraphics, deltaTracker) -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null || mc.level == null) return;
+            if (mc.options.hideGui) return;
+            config.reloadIfChanged();
+            long gameTime = mc.level.getGameTime();
+            long dayTime = gameTime % 24000L;
+            String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
+            if (text.isEmpty()) return;
+            Font fr = mc.font;
+            int screenW = mc.getWindow().getGuiScaledWidth();
+            int screenH = mc.getWindow().getGuiScaledHeight();
+            int w = fr.width(text);
+            int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+            int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF, true);
+        };
+        draw.add(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }
 """
@@ -1406,31 +1434,37 @@ package asd.itamio.daycounter.client;
 
 import asd.itamio.daycounter.config.DayCounterConfig;
 import asd.itamio.daycounter.util.DayCounterFormatter;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.VanillaHudElements;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 
 public class DayCounterClientHandler {
     public static void register(DayCounterConfig config) {
-        // HudRenderCallback is the standard Fabric API HUD hook
-        HudRenderCallback.EVENT.register((guiGraphics, tickCounter) -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc == null || mc.player == null || mc.level == null) return;
-            if (mc.options.hideGui) return;
-            config.reloadIfChanged();
-            long gameTime = mc.level.getGameTime();
-            long dayTime = gameTime % 24000L;
-            String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
-            if (text.isEmpty()) return;
-            Font fr = mc.font;
-            int screenW = mc.getWindow().getGuiScaledWidth();
-            int screenH = mc.getWindow().getGuiScaledHeight();
-            int w = fr.width(text);
-            int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
-            int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF, true);
-        });
+        HudElementRegistry.attachElementBefore(
+            VanillaHudElements.CHAT,
+            ResourceLocation.fromNamespaceAndPath("daycounter", "hud"),
+            (guiGraphics, deltaTracker) -> {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc == null || mc.player == null || mc.level == null) return;
+                if (mc.options.hideGui) return;
+                config.reloadIfChanged();
+                long gameTime = mc.level.getGameTime();
+                long dayTime = gameTime % 24000L;
+                String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
+                if (text.isEmpty()) return;
+                Font fr = mc.font;
+                int screenW = mc.getWindow().getGuiScaledWidth();
+                int screenH = mc.getWindow().getGuiScaledHeight();
+                int w = fr.width(text);
+                int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+                int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+                guiGraphics.drawString(fr, text, x, y, 0xFFFFFF);
+            }
+        );
     }
 }
 """
@@ -1567,22 +1601,29 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 @Mod("daycounter")
 public class DayCounterMod {
     public static final String MODID = "daycounter";
     private static DayCounterConfig config;
+    private static DayCounterClientHandler handler;
 
     public DayCounterMod(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::clientSetup);
+        modEventBus.addListener(this::registerLayers);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
         File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
         config = new DayCounterConfig(configFile);
         config.load();
-        NeoForge.EVENT_BUS.register(new DayCounterClientHandler(config));
+        handler = new DayCounterClientHandler(config);
+    }
+
+    private void registerLayers(RegisterGuiLayersEvent event) {
+        if (handler != null) handler.registerLayer(event);
     }
 }
 """
@@ -1594,8 +1635,9 @@ import asd.itamio.daycounter.config.DayCounterConfig;
 import asd.itamio.daycounter.util.DayCounterFormatter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
-import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.client.gui.LayeredDraw;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 
 public class DayCounterClientHandler {
     private final DayCounterConfig config;
@@ -1604,23 +1646,25 @@ public class DayCounterClientHandler {
         this.config = config;
     }
 
-    @SubscribeEvent
-    public void onRenderGui(RenderGuiEvent.Post event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null || mc.level == null) return;
-        if (mc.options.hideGui) return;
-        config.reloadIfChanged();
-        long gameTime = mc.level.getGameTime();
-        long dayTime = gameTime % 24000L;
-        String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
-        if (text.isEmpty()) return;
-        Font fr = mc.font;
-        int screenW = mc.getWindow().getGuiScaledWidth();
-        int screenH = mc.getWindow().getGuiScaledHeight();
-        int w = fr.width(text);
-        int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
-        int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-        event.getGuiGraphics().drawString(fr, text, x, y, 0xFFFFFF, true);
+    public void registerLayer(RegisterGuiLayersEvent event) {
+        LayeredDraw.Layer layer = (guiGraphics, deltaTracker) -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null || mc.level == null) return;
+            if (mc.options.hideGui) return;
+            config.reloadIfChanged();
+            long gameTime = mc.level.getGameTime();
+            long dayTime = gameTime % 24000L;
+            String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
+            if (text.isEmpty()) return;
+            Font fr = mc.font;
+            int screenW = mc.getWindow().getGuiScaledWidth();
+            int screenH = mc.getWindow().getGuiScaledHeight();
+            int w = fr.width(text);
+            int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+            int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF);
+        };
+        event.registerAboveAll(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }
 """
