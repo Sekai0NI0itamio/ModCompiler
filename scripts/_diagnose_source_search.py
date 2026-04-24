@@ -76,7 +76,14 @@ def gh(*args, capture=True, check=True):
 
 
 def trigger_search(version, loader):
-    """Trigger one search workflow run. Returns run_id or None."""
+    """
+    Trigger one search workflow run. Returns run_id or None.
+    Records the time BEFORE triggering, then finds the run created AFTER that time.
+    This avoids the race condition where --limit=1 returns a previous run's ID.
+    """
+    # Record time before trigger so we can find the new run
+    before_trigger = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
     result = gh(
         "workflow", "run", "ai-source-search.yml",
         "-f", f"minecraft_version={version}",
@@ -89,33 +96,78 @@ def trigger_search(version, loader):
     )
     if result is None:
         return None
-    time.sleep(3)
-    runs = gh("run", "list", "--workflow=ai-source-search.yml",
-              "--limit=1", "--json=databaseId,createdAt")
-    if not runs:
-        return None
-    data = json.loads(runs)
-    return data[0]["databaseId"] if data else None
+
+    # Wait for GitHub to register the run, then find it by createdAt > before_trigger
+    for attempt in range(12):  # up to 60s
+        time.sleep(5)
+        runs_json = gh(
+            "run", "list",
+            "--workflow=ai-source-search.yml",
+            "--limit=10",
+            "--json=databaseId,createdAt,status",
+            check=False,
+        )
+        if not runs_json:
+            continue
+        runs = json.loads(runs_json)
+        # Find the most recent run created after our trigger time
+        for run in runs:
+            if run["createdAt"] >= before_trigger:
+                return run["databaseId"]
+
+    return None
 
 
 def download_and_validate(run_id, version, loader, out_dir):
     """
-    Download artifact and do deep validation:
-    - Check java_count from search-info.txt
-    - Check all-java-files.txt actually has entries
-    - Check api-overview/ has render/event class lists
-    - Check queries/ has actual matches
-    Returns dict with full validation details.
+    Download artifact and do deep validation.
+    Lists all artifacts for the run first to find the correct name,
+    then validates that actual .java source files were found.
     """
-    artifact = f"ai-source-search-{version}-{loader}"
     out_dir.mkdir(parents=True, exist_ok=True)
-    gh("run", "download", str(run_id), "-n", artifact,
+
+    # First: list artifacts for this run to find the correct name
+    artifacts_json = gh("run", "view", str(run_id),
+                        "--json=artifacts", check=False)
+    artifact_name = f"ai-source-search-{version}-{loader}"  # expected name
+
+    if artifacts_json:
+        try:
+            artifacts_data = json.loads(artifacts_json)
+            artifacts = artifacts_data.get("artifacts", [])
+            if artifacts:
+                # Use the actual artifact name from the run
+                actual_names = [a["name"] for a in artifacts]
+                if artifact_name not in actual_names and actual_names:
+                    # Use the first available artifact
+                    artifact_name = actual_names[0]
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    # Download the artifact
+    gh("run", "download", str(run_id), "-n", artifact_name,
        "-D", str(out_dir), check=False)
+
+    # If that failed, try downloading all artifacts
+    if not (out_dir / "search-info.txt").exists():
+        gh("run", "download", str(run_id),
+           "-D", str(out_dir), check=False)
+        # search-info.txt might be nested in a subdirectory
+        for info_file in out_dir.rglob("search-info.txt"):
+            if info_file != out_dir / "search-info.txt":
+                # Move contents up
+                import shutil
+                for item in info_file.parent.iterdir():
+                    dest = out_dir / item.name
+                    if not dest.exists():
+                        shutil.move(str(item), str(dest))
+            break
 
     result = {
         "version": version,
         "loader": loader,
         "run_id": run_id,
+        "artifact_name": artifact_name,
         "java_count": 0,
         "all_files_count": 0,
         "query_matches": 0,
@@ -131,7 +183,7 @@ def download_and_validate(run_id, version, loader, out_dir):
     # 1. Check search-info.txt
     info = out_dir / "search-info.txt"
     if not info.exists():
-        result["reason"] = "no artifact downloaded"
+        result["reason"] = f"no search-info.txt found (artifact={artifact_name})"
         return result
 
     info_text = info.read_text()
@@ -149,7 +201,7 @@ def download_and_validate(run_id, version, loader, out_dir):
     if all_files.exists():
         lines = [l for l in all_files.read_text().splitlines() if l.strip()]
         result["all_files_count"] = len(lines)
-        result["sample_files"] = lines[:10]  # first 10 for inspection
+        result["sample_files"] = lines[:10]
 
     # 3. Check query matches
     queries_dir = out_dir / "queries"
@@ -177,7 +229,6 @@ def download_and_validate(run_id, version, loader, out_dir):
     if gradle_log.exists():
         log_text = gradle_log.read_text()
         if "BUILD FAILED" in log_text and not result["gradle_error"]:
-            # Extract the failure reason
             for line in log_text.splitlines():
                 if "Task '" in line and "not found" in line:
                     result["gradle_error"] = line.strip()
@@ -187,8 +238,6 @@ def download_and_validate(run_id, version, loader, out_dir):
                     break
 
     # Determine pass/fail
-    # PASS requires: java_count > 0 AND all_files_count > 0
-    # A workflow can "succeed" but find 0 files — that's still a fail
     if result["java_count"] > 0 and result["all_files_count"] > 0:
         result["status"] = "pass"
         result["reason"] = (
@@ -199,7 +248,7 @@ def download_and_validate(run_id, version, loader, out_dir):
         )
     elif result["java_count"] > 0 and result["all_files_count"] == 0:
         result["status"] = "fail"
-        result["reason"] = f"java_count={result['java_count']} but all-java-files.txt is empty (extraction bug)"
+        result["reason"] = f"java_count={result['java_count']} but all-java-files.txt is empty"
     elif result["gradle_error"]:
         result["status"] = "fail"
         result["reason"] = f"gradle error: {result['gradle_error']}"
@@ -243,7 +292,7 @@ def main():
     print(f"Triggering ALL {total} version+loader combos simultaneously...")
     print("=" * 60)
 
-    # Trigger all at once
+    # Trigger all at once — with 2s gap between each to ensure unique timestamps
     in_flight = {}  # run_id -> (version, loader, trigger_time)
     failed_triggers = []
 
@@ -256,7 +305,7 @@ def main():
         else:
             failed_triggers.append((version, loader))
             print("TRIGGER FAILED")
-        time.sleep(1)  # small delay to avoid rate limiting
+        time.sleep(2)  # ensure unique createdAt timestamps
 
     print(f"\nAll {len(in_flight)} runs triggered. Waiting for completion...")
     print("=" * 60)
