@@ -189,49 +189,27 @@ jobs:
           if [[ "$VERSION" =~ ^26\. ]]; then
             echo "=== 26.x: Downloading unobfuscated Minecraft source from Mojang ==="
             
-            # Fetch the version manifest to get the exact version URL
+            # Fetch the version manifest
             MANIFEST_URL="https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
-            curl -fsSL "$MANIFEST_URL" -o /tmp/mc-manifest.json 2>/dev/null || echo "{}" > /tmp/mc-manifest.json
+            curl -fsSL "$MANIFEST_URL" -o /tmp/mc-manifest.json 2>/dev/null || echo '{}' > /tmp/mc-manifest.json
             
-            # Find the version URL using Python script
-            cat > /tmp/find_version_url.py << 'PYEOF'
-import json, sys
-version = sys.argv[1]
-with open('/tmp/mc-manifest.json') as f:
-    data = json.load(f)
-for v in data.get('versions', []):
-    if v['id'] == version:
-        print(v['url'])
-        break
-PYEOF
-            VERSION_URL=$(python3 /tmp/find_version_url.py "$VERSION" 2>/dev/null || echo "")
+            # Find version URL (single-line Python)
+            VERSION_URL=$(python3 -c "import json; d=json.load(open('/tmp/mc-manifest.json')); [print(v['url']) for v in d.get('versions',[]) if v['id']=='$VERSION']" 2>/dev/null | head -1 || echo "")
             
             if [ -n "$VERSION_URL" ]; then
               echo "Found version URL: $VERSION_URL"
-              curl -fsSL "$VERSION_URL" -o /tmp/mc-version-meta.json 2>/dev/null || echo "{}" > /tmp/mc-version-meta.json
+              curl -fsSL "$VERSION_URL" -o /tmp/mc-version-meta.json 2>/dev/null || echo '{}' > /tmp/mc-version-meta.json
               
-              # Extract client sources URL
-              cat > /tmp/find_client_src.py << 'PYEOF'
-import json, sys
-with open('/tmp/mc-version-meta.json') as f:
-    data = json.load(f)
-downloads = data.get('downloads', {})
-for key in ['client_mappings', 'client']:
-    if key in downloads:
-        url = downloads[key].get('url', '')
-        if url:
-            print(url)
-            break
-PYEOF
-              CLIENT_SRC_URL=$(python3 /tmp/find_client_src.py 2>/dev/null || echo "")
+              # Extract client sources URL (single-line Python)
+              CLIENT_SRC_URL=$(python3 -c "import json; d=json.load(open('/tmp/mc-version-meta.json')); dl=d.get('downloads',{}); [print(dl[k]['url']) for k in ['client_mappings','client'] if k in dl and dl[k].get('url')]" 2>/dev/null | head -1 || echo "")
               echo "Client source URL: $CLIENT_SRC_URL"
               
               if [ -n "$CLIENT_SRC_URL" ]; then
                 mkdir -p /tmp/mc-sources
                 curl -fsSL "$CLIENT_SRC_URL" -o /tmp/mc-sources/client.jar 2>/dev/null || true
                 
-                # If it's a jar/zip, extract java files
-                if file /tmp/mc-sources/client.jar 2>/dev/null | grep -qiE "Zip|Java"; then
+                # Extract java files from the jar
+                if [ -f /tmp/mc-sources/client.jar ]; then
                   echo "Extracting source jar..."
                   unzip -q /tmp/mc-sources/client.jar "*.java" -d /tmp/mc-sources/extracted 2>/dev/null || \
                   unzip -q /tmp/mc-sources/client.jar -d /tmp/mc-sources/extracted 2>/dev/null || true
