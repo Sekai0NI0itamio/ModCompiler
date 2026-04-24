@@ -167,20 +167,90 @@ jobs:
 
       # -------------------------------------------------------
       # Run Gradle to download + decompile Minecraft sources
+      # For 26.x: Minecraft ships unobfuscated — download source directly
+      # For older: use Gradle decompile/genSources tasks
       # -------------------------------------------------------
       - name: Download and decompile Minecraft sources
         run: |
           cd "$WORKSPACE"
           LOADER="${{ inputs.loader }}"
+          VERSION="${{ inputs.minecraft_version }}"
 
           # Disable configuration cache for first-run source gen
           export GRADLE_OPTS="-Dorg.gradle.configuration-cache=false"
 
-          echo "=== Downloading Minecraft sources for $LOADER ==="
+          echo "=== Downloading Minecraft sources for $LOADER $VERSION ==="
 
+          # -------------------------------------------------------
+          # STRATEGY 1: For 26.x — Minecraft is unobfuscated.
+          # Download the sources jar directly from Mojang's CDN.
+          # This is the most reliable approach for modern versions.
+          # -------------------------------------------------------
+          if [[ "$VERSION" =~ ^26\. ]]; then
+            echo "=== 26.x: Downloading unobfuscated Minecraft source from Mojang ==="
+            
+            # Fetch the version manifest to get the exact version URL
+            MANIFEST_URL="https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+            MANIFEST=$(curl -fsSL "$MANIFEST_URL" 2>/dev/null || echo "")
+            
+            if [ -n "$MANIFEST" ]; then
+              # Find the version URL for this MC version
+              VERSION_URL=$(echo "$MANIFEST" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for v in data['versions']:
+    if v['id'] == '$VERSION':
+        print(v['url'])
+        break
+" 2>/dev/null || echo "")
+              
+              if [ -n "$VERSION_URL" ]; then
+                echo "Found version URL: $VERSION_URL"
+                VERSION_META=$(curl -fsSL "$VERSION_URL" 2>/dev/null || echo "")
+                
+                if [ -n "$VERSION_META" ]; then
+                  # Extract client sources URL
+                  CLIENT_SRC_URL=$(echo "$VERSION_META" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+downloads = data.get('downloads', {})
+# Try client_mappings first (source mappings), then client
+for key in ['client_mappings', 'client']:
+    if key in downloads:
+        print(downloads[key].get('url', ''))
+        break
+" 2>/dev/null || echo "")
+                  
+                  echo "Client source URL: $CLIENT_SRC_URL"
+                  
+                  # Also try to get the actual source jar if available
+                  # For 26.x, Mojang provides the full source
+                  if [ -n "$CLIENT_SRC_URL" ]; then
+                    mkdir -p /tmp/mc-sources
+                    curl -fsSL "$CLIENT_SRC_URL" -o /tmp/mc-sources/client.jar 2>/dev/null || true
+                    
+                    # If it's a jar, extract java files
+                    if file /tmp/mc-sources/client.jar 2>/dev/null | grep -q "Zip\|Java"; then
+                      echo "Extracting source jar..."
+                      unzip -q /tmp/mc-sources/client.jar "*.java" -d /tmp/mc-sources/extracted 2>/dev/null || \
+                      unzip -q /tmp/mc-sources/client.jar -d /tmp/mc-sources/extracted 2>/dev/null || true
+                      JAVA_COUNT=$(find /tmp/mc-sources/extracted -name "*.java" 2>/dev/null | wc -l)
+                      echo "Extracted $JAVA_COUNT .java files from Mojang source jar"
+                    fi
+                  fi
+                fi
+              fi
+            fi
+            
+            # Also run Gradle to get the mod loader API sources (Forge/NeoForge/Fabric API)
+            echo "=== Also running Gradle for mod loader API sources ==="
+          fi
+
+          # -------------------------------------------------------
+          # STRATEGY 2: Gradle-based decompilation (all versions)
+          # -------------------------------------------------------
           if [[ "$LOADER" == "forge" ]]; then
             # ForgeGradle 7+ uses 'decompile' task (not genSources)
-            # Try decompile first, then fall back to genSources for older versions
             if ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
               echo "Using 'decompile' task (ForgeGradle 7+)"
               ./gradlew --no-daemon --stacktrace decompile 2>&1 | tee /tmp/gradle.log || {
@@ -221,22 +291,46 @@ jobs:
       # -------------------------------------------------------
       # Find and extract decompiled .java files
       #
-      # ForgeGradle 7+ (Forge 1.20.6+): 'decompile' task produces a
-      #   *-sources.jar inside ~/.gradle/caches/minecraftforge/
-      # ForgeGradle <7 (Forge 1.12-1.20.4): 'genSources' extracts .java
-      #   files into ~/.gradle/caches/forge_gradle/ or net.minecraftforge/
-      # NeoForge: sources jar in ~/.gradle/caches/neoforge/ or similar
-      # Fabric Loom: genSources produces a *-sources.jar inside
-      #   $WORKSPACE/.gradle/loom-cache/ or ~/.gradle/caches/
+      # Priority order:
+      # 1. Mojang direct source download (26.x — unobfuscated)
+      # 2. Sources jar from Gradle cache (all loaders)
+      # 3. Extracted .java files from Gradle cache (Forge/NeoForge)
+      #
+      # For Fabric: genSources produces a *-sources.jar inside
+      #   $WORKSPACE/.gradle/loom-cache/
+      # For ForgeGradle 7+: 'decompile' produces a sources jar in
+      #   $HOME/.gradle/caches/minecraftforge/
+      # For ForgeGradle <7: 'genSources' extracts .java files
+      # For NeoForge: sources jar in $HOME/.gradle/caches/neoforge/
       # -------------------------------------------------------
       - name: Locate and extract decompiled sources
         id: locate
         run: |
           LOADER="${{ inputs.loader }}"
+          VERSION="${{ inputs.minecraft_version }}"
           EXTRACTED_DIR="/tmp/extracted-sources"
           mkdir -p "$EXTRACTED_DIR"
 
-          echo "=== Searching for decompiled sources (loader=$LOADER) ==="
+          echo "=== Searching for decompiled sources (loader=$LOADER version=$VERSION) ==="
+
+          # -------------------------------------------------------
+          # STEP 0: For 26.x — copy Mojang direct sources first
+          # These are the most complete and accurate for 26.x
+          # -------------------------------------------------------
+          if [[ "$VERSION" =~ ^26\. ]]; then
+            MOJANG_EXTRACTED="/tmp/mc-sources/extracted"
+            if [ -d "$MOJANG_EXTRACTED" ]; then
+              MOJANG_COUNT=$(find "$MOJANG_EXTRACTED" -name "*.java" 2>/dev/null | wc -l)
+              echo "Copying $MOJANG_COUNT Mojang direct source files..."
+              find "$MOJANG_EXTRACTED" -name "*.java" -type f | while read -r F; do
+                REL="${F#$MOJANG_EXTRACTED/}"
+                DEST="$EXTRACTED_DIR/$REL"
+                mkdir -p "$(dirname "$DEST")"
+                cp "$F" "$DEST"
+              done
+              echo "Copied Mojang sources to $EXTRACTED_DIR"
+            fi
+          fi
 
           # -------------------------------------------------------
           # Helper: find and extract the best sources jar
@@ -300,7 +394,8 @@ jobs:
           }
 
           # -------------------------------------------------------
-          # FABRIC
+          # STEP 1: Extract from Gradle cache (mod loader API sources)
+          # This adds Forge/NeoForge/Fabric API classes on top of MC sources
           # -------------------------------------------------------
           if [[ "$LOADER" == "fabric" ]]; then
             echo "--- Fabric: searching for sources jar ---"
@@ -310,14 +405,8 @@ jobs:
               "$WORKSPACE/build" \
               || echo "WARNING: No Fabric sources jar found"
 
-          # -------------------------------------------------------
-          # FORGE
-          # -------------------------------------------------------
           elif [[ "$LOADER" == "forge" ]]; then
             echo "--- Forge: searching for sources jar first ---"
-
-            # ForgeGradle 7+ puts a sources jar in the mavenizer cache
-            # Path pattern: ~/.gradle/caches/minecraftforge/forgegradle/mavenizer/caches/...
             if extract_sources_jar \
               "$HOME/.gradle/caches/minecraftforge" \
               "$HOME/.gradle/caches/forge_gradle" \
@@ -340,9 +429,6 @@ jobs:
                 || echo "WARNING: No Forge .java files found"
             fi
 
-          # -------------------------------------------------------
-          # NEOFORGE
-          # -------------------------------------------------------
           elif [[ "$LOADER" == "neoforge" ]]; then
             echo "--- NeoForge: searching for sources jar ---"
             if extract_sources_jar \
@@ -364,6 +450,58 @@ jobs:
             fi
           fi
 
+          # -------------------------------------------------------
+          # STEP 2: For Fabric 26.x — also download Fabric API sources
+          # The Fabric API jar contains HudElementRegistry etc.
+          # -------------------------------------------------------
+          if [[ "$LOADER" == "fabric" ]] && [[ "$VERSION" =~ ^26\. ]]; then
+            echo "--- Fabric 26.x: downloading Fabric API sources from Maven ---"
+            
+            # Get fabric_api_version from gradle.properties
+            FABRIC_API_VER=$(grep "fabric_api_version" "$WORKSPACE/gradle.properties" 2>/dev/null | cut -d= -f2 | tr -d ' ')
+            echo "Fabric API version: $FABRIC_API_VER"
+            
+            if [ -n "$FABRIC_API_VER" ]; then
+              # Download Fabric API sources jar from Maven
+              FABRIC_API_GROUP="net/fabricmc/fabric-api/fabric-api"
+              FABRIC_API_URL="https://maven.fabricmc.net/${FABRIC_API_GROUP}/${FABRIC_API_VER}/fabric-api-${FABRIC_API_VER}-sources.jar"
+              echo "Trying: $FABRIC_API_URL"
+              
+              mkdir -p /tmp/fabric-api-sources
+              if curl -fsSL "$FABRIC_API_URL" -o /tmp/fabric-api-sources/fabric-api-sources.jar 2>/dev/null; then
+                echo "Downloaded Fabric API sources jar"
+                unzip -q /tmp/fabric-api-sources/fabric-api-sources.jar "*.java" \
+                  -d "$EXTRACTED_DIR" 2>/dev/null || \
+                unzip -q /tmp/fabric-api-sources/fabric-api-sources.jar \
+                  -d "$EXTRACTED_DIR" 2>/dev/null || true
+                FABRIC_API_COUNT=$(find "$EXTRACTED_DIR" -path "*/fabricmc/fabric*" -name "*.java" 2>/dev/null | wc -l)
+                echo "Extracted $FABRIC_API_COUNT Fabric API .java files"
+              else
+                echo "WARNING: Could not download Fabric API sources from $FABRIC_API_URL"
+                # Try without -sources suffix (some versions use different naming)
+                FABRIC_API_URL2="https://maven.fabricmc.net/${FABRIC_API_GROUP}/${FABRIC_API_VER}/fabric-api-${FABRIC_API_VER}.jar"
+                echo "Trying alternate: $FABRIC_API_URL2"
+                curl -fsSL "$FABRIC_API_URL2" -o /tmp/fabric-api-sources/fabric-api.jar 2>/dev/null || true
+              fi
+            fi
+          fi
+
+          # -------------------------------------------------------
+          # STEP 3: For all Fabric versions — also try to get Fabric API
+          # sources from the loom cache (already downloaded by Gradle)
+          # -------------------------------------------------------
+          if [[ "$LOADER" == "fabric" ]]; then
+            echo "--- Fabric: searching for Fabric API sources in loom cache ---"
+            FABRIC_API_JARS=$(find "$HOME/.gradle" "$WORKSPACE/.gradle" \
+              -name "fabric-api*sources*.jar" -o -name "fabric-api*-sources.jar" \
+              2>/dev/null | head -5)
+            for JAR in $FABRIC_API_JARS; do
+              echo "Found Fabric API jar: $JAR"
+              unzip -q "$JAR" "*.java" -d "$EXTRACTED_DIR" 2>/dev/null || \
+              unzip -q "$JAR" -d "$EXTRACTED_DIR" 2>/dev/null || true
+            done
+          fi
+
           # Count what we have
           JAVA_COUNT=$(find "$EXTRACTED_DIR" -name "*.java" -type f 2>/dev/null | wc -l)
           echo "source_root=$EXTRACTED_DIR" >> $GITHUB_OUTPUT
@@ -383,9 +521,6 @@ jobs:
             echo ""
             echo "=== DEBUG: home .gradle/caches top dirs ==="
             find "$HOME/.gradle/caches" -maxdepth 3 -type d 2>/dev/null | head -40 || true
-            echo ""
-            echo "=== DEBUG: All .java files anywhere in .gradle ==="
-            find "$HOME/.gradle" -name "*.java" 2>/dev/null | head -20 || true
           fi
 
       # -------------------------------------------------------
