@@ -88,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Max seconds to wait for workflow (default: {DEFAULT_TIMEOUT})")
     parser.add_argument("--repo", default="",
         help="owner/repo override (default: auto-detect from git remote)")
+    parser.add_argument("--no-auto-search", action="store_true",
+        help="Skip automatic source search on build failure")
     args = parser.parse_args(argv)
 
     try:
@@ -109,6 +111,7 @@ class Runner:
         self.timeout    = int(args.timeout)
         self.repo       = (args.repo or _detect_repo()).strip()
         self.token      = _detect_token()
+        self.auto_search = not getattr(args, "no_auto_search", False)
         self.run_id: int = 0
 
         ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -143,7 +146,11 @@ class Runner:
         # 4. Write summary
         self._write_summary(conclusion, run_url, artifacts_dir)
 
-        # 5. Print final status
+        # 5. Auto source search for failed targets
+        if conclusion != "success" and self.auto_search:
+            self._auto_source_search(artifacts_dir)
+
+        # 6. Print final status
         summary_path = self.out_root / "SUMMARY.md"
         print(f"\nRun folder:  {self.out_root}")
         print(f"Summary:     {summary_path}")
@@ -358,6 +365,310 @@ class Runner:
         raise RunError(f"Could not download artifact '{name}': {last_err}")
 
     # ------------------------------------------------------------------
+    def _auto_source_search(self, artifacts_dir: Path) -> None:
+        """
+        After a failed build, automatically:
+        1. Scan all failed build.log files for 'cannot find symbol' / 'does not exist' errors
+        2. Extract the missing class/package names
+        3. Group by (version, loader)
+        4. Trigger one AI Source Search per unique failing combo
+        5. Download results and write them to auto-source-search/ in the run folder
+        6. Print a summary of what was found so the IDE agent can use it immediately
+
+        This saves the agent from having to manually run source searches after every
+        failed build.
+        """
+        mods_dir = artifacts_dir / BUILD_ARTIFACT / "mods"
+        if not mods_dir.exists():
+            return
+
+        print("\n" + "=" * 60)
+        print("AUTO SOURCE SEARCH — analyzing failed builds")
+        print("=" * 60)
+
+        # ----------------------------------------------------------------
+        # Step 1: Parse all failed build logs and extract error info
+        # ----------------------------------------------------------------
+        # Map: (version, loader) -> set of missing symbols
+        failing: dict[tuple[str, str], set[str]] = {}
+
+        for mod_dir in sorted(mods_dir.iterdir()):
+            result_file = mod_dir / "result.json"
+            build_log   = mod_dir / "build.log"
+            if not result_file.exists() or not build_log.exists():
+                continue
+
+            try:
+                result = json.loads(result_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue
+
+            if result.get("status") == "success":
+                continue
+
+            # Extract version and loader from result.json
+            version = result.get("minecraft_version") or result.get("version", "")
+            loader  = result.get("loader", "")
+            if not version or not loader:
+                # Try to parse from folder name: daycounter-forge-1-21-1
+                name = mod_dir.name
+                parts = name.split("-")
+                # Find loader
+                for l in ("forge", "fabric", "neoforge"):
+                    if l in parts:
+                        loader = l
+                        # Version is everything after the loader
+                        idx = parts.index(l)
+                        version = ".".join(parts[idx+1:])
+                        break
+
+            if not version or not loader:
+                continue
+
+            # Parse build.log for missing symbols
+            log_text = build_log.read_text(encoding="utf-8", errors="replace")
+            symbols = _extract_missing_symbols(log_text)
+
+            if symbols:
+                key = (version, loader)
+                if key not in failing:
+                    failing[key] = set()
+                failing[key].update(symbols)
+
+        if not failing:
+            print("  No symbol errors found in failed builds — skipping source search.")
+            return
+
+        print(f"  Found {len(failing)} unique version+loader combos with symbol errors:")
+        for (ver, ldr), syms in sorted(failing.items()):
+            print(f"    {ver}+{ldr}: {', '.join(sorted(syms)[:5])}"
+                  + (f" +{len(syms)-5} more" if len(syms) > 5 else ""))
+
+        # ----------------------------------------------------------------
+        # Step 2: Trigger source searches for all failing combos in parallel
+        # ----------------------------------------------------------------
+        search_dir = self.out_root / "auto-source-search"
+        search_dir.mkdir(exist_ok=True)
+
+        # Trigger all searches simultaneously
+        print(f"\n  Triggering {len(failing)} source searches simultaneously...")
+        search_runs: dict[tuple[str, str], int] = {}  # (ver, ldr) -> run_id
+
+        for (version, loader), symbols in sorted(failing.items()):
+            # Build query from the missing symbols (max 5 most useful ones)
+            queries = _symbols_to_queries(symbols)
+            query_str = ",".join(queries[:6])
+
+            print(f"    Triggering search for {version}+{loader}: {query_str[:60]}...")
+            run_id = _trigger_source_search(
+                version=version,
+                loader=loader,
+                queries=query_str,
+                repo=self.repo,
+                token=self.token,
+            )
+            if run_id:
+                search_runs[(version, loader)] = run_id
+                print(f"      → run {run_id}")
+            else:
+                print(f"      → TRIGGER FAILED")
+            time.sleep(2)  # avoid rate limiting + ensure unique timestamps
+
+        if not search_runs:
+            print("  All source search triggers failed.")
+            return
+
+        # ----------------------------------------------------------------
+        # Step 3: Wait for all searches to complete
+        # ----------------------------------------------------------------
+        print(f"\n  Waiting for {len(search_runs)} source searches to complete...")
+        in_flight = dict(search_runs)  # (ver, ldr) -> run_id
+        results: dict[tuple[str, str], dict] = {}
+
+        deadline = time.time() + 1800  # 30 min max
+        while in_flight and time.time() < deadline:
+            time.sleep(20)
+            completed = []
+            for (ver, ldr), run_id in list(in_flight.items()):
+                try:
+                    data_str = _gh([
+                        "run", "view", str(run_id), "-R", self.repo,
+                        "--json", "status,conclusion",
+                    ], token=self.token)
+                    data = json.loads(data_str)
+                except (RunError, json.JSONDecodeError):
+                    continue
+
+                if data.get("status") != "completed":
+                    continue
+
+                conclusion = data.get("conclusion", "")
+                print(f"    {ver}+{ldr} → {conclusion}")
+
+                # Download the artifact
+                artifact_name = f"ai-source-search-{ver}-{ldr}"
+                out_dir = search_dir / f"{ver}-{ldr}"
+                out_dir.mkdir(exist_ok=True)
+
+                try:
+                    _gh([
+                        "run", "download", str(run_id), "-R", self.repo,
+                        "-D", str(out_dir),
+                    ], token=self.token)
+                except RunError:
+                    pass
+
+                # Parse results
+                info_file = out_dir / "search-info.txt"
+                # Also check nested (artifact may be in a subdirectory)
+                if not info_file.exists():
+                    for nested in out_dir.rglob("search-info.txt"):
+                        info_file = nested
+                        break
+
+                java_count = 0
+                if info_file.exists():
+                    for line in info_file.read_text(encoding="utf-8").splitlines():
+                        if line.startswith("Java files:"):
+                            try:
+                                java_count = int(line.split(":")[1].strip())
+                            except ValueError:
+                                pass
+
+                results[(ver, ldr)] = {
+                    "run_id": run_id,
+                    "conclusion": conclusion,
+                    "java_count": java_count,
+                    "out_dir": str(out_dir),
+                    "symbols": sorted(failing.get((ver, ldr), set())),
+                }
+                completed.append((ver, ldr))
+
+            for key in completed:
+                del in_flight[key]
+
+            if in_flight:
+                still = [f"{v}+{l}" for v, l in in_flight]
+                print(f"    Still waiting: {', '.join(still[:3])}"
+                      + (f" +{len(still)-3} more" if len(still) > 3 else ""))
+
+        # ----------------------------------------------------------------
+        # Step 4: Print summary and write report
+        # ----------------------------------------------------------------
+        print("\n" + "=" * 60)
+        print("AUTO SOURCE SEARCH RESULTS")
+        print("=" * 60)
+
+        report_lines = [
+            "# Auto Source Search Report",
+            "",
+            "Generated automatically after build failure.",
+            "Each section shows what was found for a failing version+loader combo.",
+            "",
+        ]
+
+        for (ver, ldr), info in sorted(results.items()):
+            java_count = info["java_count"]
+            out_dir = Path(info["out_dir"])
+            symbols = info["symbols"]
+
+            status = "✓" if java_count > 0 else "✗"
+            print(f"\n  {status} {ver}+{ldr}  (java_count={java_count})")
+            print(f"    Missing symbols: {', '.join(symbols[:5])}")
+
+            report_lines += [
+                f"## {ver} + {ldr}",
+                "",
+                f"**Missing symbols**: `{'`, `'.join(symbols)}`",
+                f"**Java files found**: {java_count}",
+                f"**Artifact**: `{out_dir}`",
+                "",
+            ]
+
+            if java_count == 0:
+                report_lines.append("*Source search found no files — check gradle-output.log*\n")
+                continue
+
+            # Print key findings from the search
+            # 1. Show matching query results
+            queries_dir = out_dir / "queries"
+            if not queries_dir.exists():
+                # Check nested
+                for nested in out_dir.rglob("queries"):
+                    if nested.is_dir():
+                        queries_dir = nested
+                        break
+
+            if queries_dir.exists():
+                for qf in sorted(queries_dir.glob("*.txt")):
+                    content = qf.read_text(encoding="utf-8", errors="replace")
+                    match_count = content.count("===")
+                    if match_count > 0:
+                        print(f"    Query '{qf.stem}': {match_count} matches")
+                        report_lines.append(f"### Query: `{qf.stem}` ({match_count} matches)\n")
+                        # Show first 30 lines of matches
+                        lines = content.splitlines()
+                        snippet = "\n".join(lines[:40])
+                        report_lines.append(f"```\n{snippet}\n```\n")
+
+            # 2. Show full class files found
+            classes_dir = out_dir / "full-classes"
+            if not classes_dir.exists():
+                for nested in out_dir.rglob("full-classes"):
+                    if nested.is_dir():
+                        classes_dir = nested
+                        break
+
+            if classes_dir.exists():
+                class_files = list(classes_dir.glob("*.java"))
+                if class_files:
+                    print(f"    Full class files: {[f.name for f in class_files[:5]]}")
+                    report_lines.append(f"### Full class files found\n")
+                    for cf in class_files[:10]:
+                        content = cf.read_text(encoding="utf-8", errors="replace")
+                        lines = content.splitlines()
+                        snippet = "\n".join(lines[:60])
+                        report_lines.append(f"**{cf.name}**:\n```java\n{snippet}\n```\n")
+
+            # 3. Show render/event overview
+            overview_dir = out_dir / "api-overview"
+            if not overview_dir.exists():
+                for nested in out_dir.rglob("api-overview"):
+                    if nested.is_dir():
+                        overview_dir = nested
+                        break
+
+            if overview_dir.exists():
+                for fname in ["render-gui-classes.txt", "event-classes.txt",
+                               "modloader-api-classes.txt"]:
+                    fp = overview_dir / fname
+                    if fp.exists():
+                        lines = [l for l in fp.read_text(encoding="utf-8").splitlines() if l.strip()]
+                        if lines:
+                            label = fname.replace(".txt", "").replace("-", " ").title()
+                            print(f"    {label}: {len(lines)} files")
+                            report_lines.append(f"### {label} ({len(lines)} files)\n")
+                            report_lines.append("```\n" + "\n".join(lines[:30]) + "\n```\n")
+
+                # Full API source files
+                full_api = list(overview_dir.glob("full_*.java"))
+                if full_api:
+                    print(f"    Full API source files: {len(full_api)}")
+                    report_lines.append(f"### Full API Source Files ({len(full_api)} files)\n")
+                    for cf in full_api[:5]:
+                        content = cf.read_text(encoding="utf-8", errors="replace")
+                        lines = content.splitlines()
+                        snippet = "\n".join(lines[:80])
+                        report_lines.append(f"**{cf.name}**:\n```java\n{snippet}\n```\n")
+
+        # Write the report
+        report_path = self.out_root / "AUTO_SOURCE_SEARCH_REPORT.md"
+        report_path.write_text("\n".join(report_lines), encoding="utf-8")
+        print(f"\n  Full report: {report_path}")
+        print(f"  Artifacts:   {search_dir}")
+        print("=" * 60)
+
+    # ------------------------------------------------------------------
     def _write_summary(self, conclusion: str, run_url: str, artifacts_dir: Path) -> None:
         build_summary_path = artifacts_dir / BUILD_ARTIFACT / "SUMMARY.md"
         build_summary_text = ""
@@ -551,6 +862,127 @@ def _render_summary(
         lines.append("")
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Auto source search helpers
+# ---------------------------------------------------------------------------
+
+# Patterns that indicate a missing class/package in Java compile errors
+_SYMBOL_PATTERNS = [
+    re.compile(r"symbol:\s+class\s+(\w+)"),
+    re.compile(r"package\s+([\w.]+)\s+does not exist"),
+    re.compile(r"cannot find symbol.*?class\s+(\w+)", re.DOTALL),
+    re.compile(r"error: cannot find symbol\s+symbol:\s+class\s+(\w+)", re.DOTALL),
+]
+
+# Classes that are too generic to be useful search queries
+_SKIP_SYMBOLS = {
+    "String", "int", "long", "boolean", "void", "Object", "List", "Map",
+    "Set", "Optional", "File", "Path", "IOException", "Exception",
+    "Override", "Nullable", "NotNull", "ApiStatus", "Deprecated",
+    "Cancelable", "Event", "IModBusEvent", "SubscribeEvent",
+}
+
+
+def _extract_missing_symbols(log_text: str) -> set[str]:
+    """Extract missing class/package names from a Java compile error log."""
+    symbols: set[str] = set()
+
+    for line in log_text.splitlines():
+        # "symbol:   class Foo"
+        m = re.search(r"symbol:\s+class\s+(\w+)", line)
+        if m:
+            sym = m.group(1)
+            if sym not in _SKIP_SYMBOLS and len(sym) > 3:
+                symbols.add(sym)
+            continue
+
+        # "package net.minecraftforge.client.event does not exist"
+        m = re.search(r"package\s+([\w.]+)\s+does not exist", line)
+        if m:
+            pkg = m.group(1)
+            # Extract the last component as the class name
+            parts = pkg.split(".")
+            if len(parts) >= 2:
+                # Add the full package and the last component
+                symbols.add(parts[-1])
+            continue
+
+    return symbols
+
+
+def _symbols_to_queries(symbols: set[str]) -> list[str]:
+    """
+    Convert a set of missing symbol names to useful source search queries.
+    Prioritizes render/event/GUI classes since those are most commonly wrong.
+    """
+    # Priority order: render/event/GUI classes first
+    priority_keywords = [
+        "Render", "Gui", "Hud", "Overlay", "Layer", "Event",
+        "Register", "Callback", "Draw", "Graphics",
+    ]
+
+    prioritized = []
+    others = []
+
+    for sym in sorted(symbols):
+        if any(kw.lower() in sym.lower() for kw in priority_keywords):
+            prioritized.append(sym)
+        else:
+            others.append(sym)
+
+    # Return prioritized first, then others, max 8 total
+    result = prioritized[:5] + others[:3]
+    return result[:8] if result else list(symbols)[:6]
+
+
+def _trigger_source_search(
+    version: str,
+    loader: str,
+    queries: str,
+    repo: str,
+    token: str,
+) -> int | None:
+    """
+    Trigger the AI Source Search workflow for a specific version+loader.
+    Returns the run_id or None if trigger failed.
+    Records timestamp before trigger to find the correct run ID.
+    """
+    before_trigger = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    try:
+        _gh([
+            "workflow", "run", "ai-source-search.yml",
+            "-R", repo,
+            "-f", f"minecraft_version={version}",
+            "-f", f"loader={loader}",
+            "-f", f"queries={queries}",
+            "-f", "file_patterns=*.java",
+            "-f", "context_lines=8",
+            "-f", "dump_full_class=yes",
+        ], token=token)
+    except RunError:
+        return None
+
+    # Poll for the new run (created after our trigger time)
+    for _ in range(15):
+        time.sleep(4)
+        try:
+            runs_str = _gh([
+                "run", "list", "-R", repo,
+                "--workflow=ai-source-search.yml",
+                "--limit=10",
+                "--json=databaseId,createdAt,status",
+            ], token=token)
+            runs = json.loads(runs_str or "[]")
+            for run in runs:
+                if run.get("createdAt", "") >= before_trigger:
+                    return run["databaseId"]
+        except (RunError, json.JSONDecodeError):
+            pass
+
+    return None
 
 
 # ---------------------------------------------------------------------------
