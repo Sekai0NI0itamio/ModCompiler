@@ -191,58 +191,56 @@ jobs:
             
             # Fetch the version manifest to get the exact version URL
             MANIFEST_URL="https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
-            MANIFEST=$(curl -fsSL "$MANIFEST_URL" 2>/dev/null || echo "")
+            curl -fsSL "$MANIFEST_URL" -o /tmp/mc-manifest.json 2>/dev/null || echo "{}" > /tmp/mc-manifest.json
             
-            if [ -n "$MANIFEST" ]; then
-              # Find the version URL for this MC version
-              VERSION_URL=$(echo "$MANIFEST" | python3 -c "
+            # Find the version URL using Python script
+            cat > /tmp/find_version_url.py << 'PYEOF'
 import json, sys
-data = json.load(sys.stdin)
-for v in data['versions']:
-    if v['id'] == '$VERSION':
+version = sys.argv[1]
+with open('/tmp/mc-manifest.json') as f:
+    data = json.load(f)
+for v in data.get('versions', []):
+    if v['id'] == version:
         print(v['url'])
         break
-" 2>/dev/null || echo "")
+PYEOF
+            VERSION_URL=$(python3 /tmp/find_version_url.py "$VERSION" 2>/dev/null || echo "")
+            
+            if [ -n "$VERSION_URL" ]; then
+              echo "Found version URL: $VERSION_URL"
+              curl -fsSL "$VERSION_URL" -o /tmp/mc-version-meta.json 2>/dev/null || echo "{}" > /tmp/mc-version-meta.json
               
-              if [ -n "$VERSION_URL" ]; then
-                echo "Found version URL: $VERSION_URL"
-                VERSION_META=$(curl -fsSL "$VERSION_URL" 2>/dev/null || echo "")
-                
-                if [ -n "$VERSION_META" ]; then
-                  # Extract client sources URL
-                  CLIENT_SRC_URL=$(echo "$VERSION_META" | python3 -c "
+              # Extract client sources URL
+              cat > /tmp/find_client_src.py << 'PYEOF'
 import json, sys
-data = json.load(sys.stdin)
+with open('/tmp/mc-version-meta.json') as f:
+    data = json.load(f)
 downloads = data.get('downloads', {})
-# Try client_mappings first (source mappings), then client
 for key in ['client_mappings', 'client']:
     if key in downloads:
-        print(downloads[key].get('url', ''))
-        break
-" 2>/dev/null || echo "")
-                  
-                  echo "Client source URL: $CLIENT_SRC_URL"
-                  
-                  # Also try to get the actual source jar if available
-                  # For 26.x, Mojang provides the full source
-                  if [ -n "$CLIENT_SRC_URL" ]; then
-                    mkdir -p /tmp/mc-sources
-                    curl -fsSL "$CLIENT_SRC_URL" -o /tmp/mc-sources/client.jar 2>/dev/null || true
-                    
-                    # If it's a jar, extract java files
-                    if file /tmp/mc-sources/client.jar 2>/dev/null | grep -q "Zip\|Java"; then
-                      echo "Extracting source jar..."
-                      unzip -q /tmp/mc-sources/client.jar "*.java" -d /tmp/mc-sources/extracted 2>/dev/null || \
-                      unzip -q /tmp/mc-sources/client.jar -d /tmp/mc-sources/extracted 2>/dev/null || true
-                      JAVA_COUNT=$(find /tmp/mc-sources/extracted -name "*.java" 2>/dev/null | wc -l)
-                      echo "Extracted $JAVA_COUNT .java files from Mojang source jar"
-                    fi
-                  fi
+        url = downloads[key].get('url', '')
+        if url:
+            print(url)
+            break
+PYEOF
+              CLIENT_SRC_URL=$(python3 /tmp/find_client_src.py 2>/dev/null || echo "")
+              echo "Client source URL: $CLIENT_SRC_URL"
+              
+              if [ -n "$CLIENT_SRC_URL" ]; then
+                mkdir -p /tmp/mc-sources
+                curl -fsSL "$CLIENT_SRC_URL" -o /tmp/mc-sources/client.jar 2>/dev/null || true
+                
+                # If it's a jar/zip, extract java files
+                if file /tmp/mc-sources/client.jar 2>/dev/null | grep -qiE "Zip|Java"; then
+                  echo "Extracting source jar..."
+                  unzip -q /tmp/mc-sources/client.jar "*.java" -d /tmp/mc-sources/extracted 2>/dev/null || \
+                  unzip -q /tmp/mc-sources/client.jar -d /tmp/mc-sources/extracted 2>/dev/null || true
+                  JAVA_COUNT=$(find /tmp/mc-sources/extracted -name "*.java" 2>/dev/null | wc -l)
+                  echo "Extracted $JAVA_COUNT .java files from Mojang source jar"
                 fi
               fi
             fi
             
-            # Also run Gradle to get the mod loader API sources (Forge/NeoForge/Fabric API)
             echo "=== Also running Gradle for mod loader API sources ==="
           fi
 
