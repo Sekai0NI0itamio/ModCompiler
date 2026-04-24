@@ -6,10 +6,12 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 public class VeinMinerKeyHandler {
     public static KeyMapping toggleKey = new KeyMapping(
-        "Toggle Vein Miner", KeyConflictContext.IN_GAME, GLFW.GLFW_KEY_V, "Vein Miner"
+        "Toggle Vein Miner", KeyConflictContext.IN_GAME,
+        InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_V), "Vein Miner"
     );
     public static boolean veinMinerEnabled = true;
     public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
