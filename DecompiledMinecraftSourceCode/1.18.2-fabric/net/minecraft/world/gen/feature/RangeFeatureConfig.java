@@ -1,0 +1,22 @@
+/*
+ * Decompiled with CFR 0.1.1 (FabricMC 57d88659).
+ */
+package net.minecraft.world.gen.feature;
+
+import com.mojang.datafixers.kinds.Applicative;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.world.gen.feature.FeatureConfig;
+import net.minecraft.world.gen.heightprovider.HeightProvider;
+
+public class RangeFeatureConfig
+implements FeatureConfig {
+    public static final Codec<RangeFeatureConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(((MapCodec)HeightProvider.CODEC.fieldOf("height")).forGetter(config -> config.heightProvider)).apply((Applicative<RangeFeatureConfig, ?>)instance, RangeFeatureConfig::new));
+    public final HeightProvider heightProvider;
+
+    public RangeFeatureConfig(HeightProvider heightProvider) {
+        this.heightProvider = heightProvider;
+    }
+}
+
