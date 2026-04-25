@@ -276,20 +276,22 @@ jobs:
           # -------------------------------------------------------
           if [[ "$LOADER" == "forge" ]]; then
             # ForgeGradle 7+ uses 'decompile' task (not genSources)
-            if ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
+            AVAILABLE_TASKS=$(./gradlew --no-daemon tasks --all 2>/dev/null || true)
+            if echo "$AVAILABLE_TASKS" | grep -q "^decompile "; then
               echo "Using 'decompile' task (ForgeGradle 7+)"
               ./gradlew --no-daemon --stacktrace decompile 2>&1 | tee /tmp/gradle.log || {
                 echo "decompile failed, trying downloadSources..."
                 ./gradlew --no-daemon --stacktrace downloadSources 2>&1 | tee -a /tmp/gradle.log || true
               }
+            elif echo "$AVAILABLE_TASKS" | grep -q "^genSources "; then
+              echo "Using 'genSources' task (ForgeGradle 3-6)"
+              ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle.log || true
+            elif echo "$AVAILABLE_TASKS" | grep -q "^setupDecompWorkspace "; then
+              echo "Using 'setupDecompWorkspace' task (ForgeGradle 2.x)"
+              ./gradlew --no-daemon --stacktrace setupDecompWorkspace 2>&1 | tee /tmp/gradle.log || true
             else
-              echo "Using 'genSources' task (ForgeGradle <7)"
-              ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle.log || {
-                echo "genSources failed — trying compileJava to force dependency resolution..."
-                mkdir -p src/main/java/com/stub
-                echo 'package com.stub; public class Stub {}' > src/main/java/com/stub/Stub.java
-                ./gradlew --no-daemon --stacktrace compileJava 2>&1 | tee -a /tmp/gradle.log || true
-              }
+              echo "No known decompile task — trying setupDecompWorkspace as last resort"
+              ./gradlew --no-daemon --stacktrace setupDecompWorkspace 2>&1 | tee /tmp/gradle.log || true
             fi
           elif [[ "$LOADER" == "neoforge" ]]; then
             # NeoForge: try decompile, then genSources, then dependencies

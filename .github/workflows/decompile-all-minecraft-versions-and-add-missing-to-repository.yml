@@ -297,20 +297,25 @@ jobs:
           # STRATEGY 2: Gradle-based decompilation (all versions)
           # ----------------------------------------------------------------
           if [[ "$LOADER" == "forge" ]]; then
-            if ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
+            # Probe available tasks once (avoids 3 separate Gradle invocations)
+            AVAILABLE_TASKS=$(./gradlew --no-daemon tasks --all 2>/dev/null || true)
+
+            if echo "$AVAILABLE_TASKS" | grep -q "^decompile "; then
               echo "Using 'decompile' task (ForgeGradle 7+)"
               ./gradlew --no-daemon --stacktrace decompile 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || {
                 echo "decompile failed, trying downloadSources..."
                 ./gradlew --no-daemon --stacktrace downloadSources 2>&1 | tee -a /tmp/gradle-${{ matrix.slug }}.log || true
               }
+            elif echo "$AVAILABLE_TASKS" | grep -q "^genSources "; then
+              echo "Using 'genSources' task (ForgeGradle 3-6)"
+              ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
+            elif echo "$AVAILABLE_TASKS" | grep -q "^setupDecompWorkspace "; then
+              # ForgeGradle 2.x (1.8.9, 1.12.x) — this downloads + decompiles MC
+              echo "Using 'setupDecompWorkspace' task (ForgeGradle 2.x)"
+              ./gradlew --no-daemon --stacktrace setupDecompWorkspace 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
             else
-              echo "Using 'genSources' task (ForgeGradle <7)"
-              ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || {
-                echo "genSources failed — forcing dependency resolution via compileJava stub..."
-                mkdir -p src/main/java/com/stub
-                echo 'package com.stub; public class Stub {}' > src/main/java/com/stub/Stub.java
-                ./gradlew --no-daemon --stacktrace compileJava 2>&1 | tee -a /tmp/gradle-${{ matrix.slug }}.log || true
-              }
+              echo "No known decompile task found — trying setupDecompWorkspace as last resort"
+              ./gradlew --no-daemon --stacktrace setupDecompWorkspace 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
             fi
 
           elif [[ "$LOADER" == "neoforge" ]]; then
