@@ -1,0 +1,145 @@
+package net.minecraft.nbt;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+public class ShortTag extends NumericTag {
+	private static final int SELF_SIZE_IN_BYTES = 10;
+	public static final TagType<ShortTag> TYPE = new TagType.StaticSize<ShortTag>() {
+		public ShortTag load(DataInput dataInput, NbtAccounter nbtAccounter) throws IOException {
+			return ShortTag.valueOf(readAccounted(dataInput, nbtAccounter));
+		}
+
+		@Override
+		public StreamTagVisitor.ValueResult parse(DataInput dataInput, StreamTagVisitor streamTagVisitor, NbtAccounter nbtAccounter) throws IOException {
+			return streamTagVisitor.visit(readAccounted(dataInput, nbtAccounter));
+		}
+
+		private static short readAccounted(DataInput dataInput, NbtAccounter nbtAccounter) throws IOException {
+			nbtAccounter.accountBytes(10L);
+			return dataInput.readShort();
+		}
+
+		@Override
+		public int size() {
+			return 2;
+		}
+
+		@Override
+		public String getName() {
+			return "SHORT";
+		}
+
+		@Override
+		public String getPrettyName() {
+			return "TAG_Short";
+		}
+
+		@Override
+		public boolean isValue() {
+			return true;
+		}
+	};
+	private final short data;
+
+	ShortTag(short s) {
+		this.data = s;
+	}
+
+	public static ShortTag valueOf(short s) {
+		return s >= -128 && s <= 1024 ? ShortTag.Cache.cache[s - -128] : new ShortTag(s);
+	}
+
+	@Override
+	public void write(DataOutput dataOutput) throws IOException {
+		dataOutput.writeShort(this.data);
+	}
+
+	@Override
+	public int sizeInBytes() {
+		return 10;
+	}
+
+	@Override
+	public byte getId() {
+		return 2;
+	}
+
+	@Override
+	public TagType<ShortTag> getType() {
+		return TYPE;
+	}
+
+	public ShortTag copy() {
+		return this;
+	}
+
+	public boolean equals(Object object) {
+		return this == object ? true : object instanceof ShortTag && this.data == ((ShortTag)object).data;
+	}
+
+	public int hashCode() {
+		return this.data;
+	}
+
+	@Override
+	public void accept(TagVisitor tagVisitor) {
+		tagVisitor.visitShort(this);
+	}
+
+	@Override
+	public long getAsLong() {
+		return this.data;
+	}
+
+	@Override
+	public int getAsInt() {
+		return this.data;
+	}
+
+	@Override
+	public short getAsShort() {
+		return this.data;
+	}
+
+	@Override
+	public byte getAsByte() {
+		return (byte)(this.data & 255);
+	}
+
+	@Override
+	public double getAsDouble() {
+		return this.data;
+	}
+
+	@Override
+	public float getAsFloat() {
+		return this.data;
+	}
+
+	@Override
+	public Number getAsNumber() {
+		return this.data;
+	}
+
+	@Override
+	public StreamTagVisitor.ValueResult accept(StreamTagVisitor streamTagVisitor) {
+		return streamTagVisitor.visit(this.data);
+	}
+
+	static class Cache {
+		private static final int HIGH = 1024;
+		private static final int LOW = -128;
+		static final ShortTag[] cache = new ShortTag[1153];
+
+		private Cache() {
+		}
+
+		static {
+			for (int i = 0; i < cache.length; i++) {
+				cache[i] = new ShortTag((short)(-128 + i));
+			}
+		}
+	}
+}
