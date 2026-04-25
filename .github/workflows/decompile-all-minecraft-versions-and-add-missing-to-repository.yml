@@ -188,18 +188,17 @@ jobs:
           java-version: ${{ steps.java_version.outputs.java_version }}
 
       # ------------------------------------------------------------------
-      # Gradle cache — keyed per slug so each version+loader is isolated
+      # Gradle cache — keyed per slug, stored INSIDE the workspace dir
+      # so it is 100% isolated from other version+loader jobs.
+      # We cache the wrapper (shared, safe) separately from the caches
+      # (version-specific, must not bleed across slugs).
       # ------------------------------------------------------------------
-      - name: Cache Gradle
+      - name: Cache Gradle wrapper
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: decompile-src-${{ runner.os }}-${{ matrix.slug }}-${{ hashFiles('version-manifest.json') }}
-          restore-keys: |
-            decompile-src-${{ runner.os }}-${{ matrix.slug }}-
-            decompile-src-${{ runner.os }}-
+          path: ~/.gradle/wrapper
+          key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('**/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-wrapper-${{ runner.os }}-
 
       # ------------------------------------------------------------------
       # Resolve the template directory for this version+loader
@@ -221,16 +220,23 @@ jobs:
           echo "Resolved template: $TEMPLATE_DIR"
 
       # ------------------------------------------------------------------
-      # Copy template to an isolated workspace
+      # Copy template to an isolated workspace.
+      # GRADLE_USER_HOME is redirected to a per-slug directory so that
+      # Gradle caches from different versions never bleed into each other.
       # ------------------------------------------------------------------
       - name: Prepare Gradle workspace
         run: |
           TEMPLATE_DIR="${{ steps.resolve.outputs.template_dir }}"
           WORKSPACE="/tmp/decompile-ws-${{ matrix.slug }}"
-          rm -rf "$WORKSPACE"
+          GRADLE_HOME="/tmp/gradle-home-${{ matrix.slug }}"
+          rm -rf "$WORKSPACE" "$GRADLE_HOME"
           cp -r "$TEMPLATE_DIR" "$WORKSPACE"
           chmod +x "$WORKSPACE/gradlew" 2>/dev/null || true
-          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+          # Copy the cached wrapper distribution into the isolated home
+          mkdir -p "$GRADLE_HOME/wrapper"
+          cp -r "$HOME/.gradle/wrapper/." "$GRADLE_HOME/wrapper/" 2>/dev/null || true
+          echo "WORKSPACE=$WORKSPACE"         >> $GITHUB_ENV
+          echo "GRADLE_USER_HOME=$GRADLE_HOME" >> $GITHUB_ENV
 
       # ------------------------------------------------------------------
       # Download + decompile Minecraft sources
@@ -405,46 +411,32 @@ jobs:
 
           # ----------------------------------------------------------------
           # STEP 1: Extract from Gradle cache (mod loader API sources)
+          # Search ONLY the isolated GRADLE_USER_HOME to avoid picking up
+          # sources from other version+loader jobs that ran on the same runner.
           # ----------------------------------------------------------------
           if [[ "$LOADER" == "fabric" ]]; then
             extract_sources_jar \
+              "$GRADLE_USER_HOME" \
               "$WORKSPACE/.gradle" \
-              "$HOME/.gradle/caches" \
               "$WORKSPACE/build" \
               || echo "WARNING: No Fabric sources jar found"
 
           elif [[ "$LOADER" == "forge" ]]; then
             if ! extract_sources_jar \
-              "$HOME/.gradle/caches/minecraftforge" \
-              "$HOME/.gradle/caches/forge_gradle" \
-              "$HOME/.gradle/caches/net.minecraftforge" \
-              "$HOME/.gradle/caches/minecraft" \
-              "$HOME/.gradle/caches/modules-2" \
-              "$WORKSPACE/.gradle" \
-              "$HOME/.gradle/caches"; then
+              "$GRADLE_USER_HOME" \
+              "$WORKSPACE/.gradle"; then
               find_java_files \
-                "$HOME/.gradle/caches/minecraftforge" \
-                "$HOME/.gradle/caches/forge_gradle" \
-                "$HOME/.gradle/caches/net.minecraftforge" \
-                "$HOME/.gradle/caches/minecraft" \
-                "$HOME/.gradle/caches/modules-2" \
-                "$HOME/.gradle/caches" \
+                "$GRADLE_USER_HOME" \
                 "$WORKSPACE/.gradle" \
                 || echo "WARNING: No Forge .java files found"
             fi
 
           elif [[ "$LOADER" == "neoforge" ]]; then
             if ! extract_sources_jar \
-              "$HOME/.gradle/caches/neoforge" \
-              "$HOME/.gradle/caches/net.neoforged" \
-              "$HOME/.gradle/caches/modules-2" \
-              "$HOME/.gradle/caches" \
+              "$GRADLE_USER_HOME" \
               "$WORKSPACE/.gradle"; then
               find_java_files \
-                "$HOME/.gradle/caches/neoforge" \
-                "$HOME/.gradle/caches/net.neoforged" \
-                "$HOME/.gradle/caches/modules-2" \
-                "$HOME/.gradle/caches" \
+                "$GRADLE_USER_HOME" \
                 "$WORKSPACE/.gradle" \
                 || echo "WARNING: No NeoForge .java files found"
             fi
@@ -459,7 +451,7 @@ jobs:
               echo "Extracting Fabric API jar: $JAR"
               unzip -q "$JAR" "*.java" -d "$EXTRACTED_DIR" 2>/dev/null || \
               unzip -q "$JAR" -d "$EXTRACTED_DIR" 2>/dev/null || true
-            done < <(find "$HOME/.gradle" "$WORKSPACE/.gradle" \
+            done < <(find "$GRADLE_USER_HOME" "$WORKSPACE/.gradle" \
               \( -name "fabric-api*sources*.jar" -o -name "fabric-api*-sources.jar" \) \
               2>/dev/null | head -5)
           fi
@@ -485,36 +477,37 @@ jobs:
           LOADER="${{ matrix.loader }}"
           JAVA_COUNT="${{ steps.locate.outputs.java_count }}"
           EXTRACTED_DIR="${{ steps.locate.outputs.extracted_dir }}"
+          GENERATED=$(date -u '+%Y-%m-%d %H:%M UTC')
 
           cat > "$EXTRACTED_DIR/README.md" << READMEEOF
-          # Decompiled Minecraft Sources — ${VERSION} / ${LOADER}
+# Decompiled Minecraft Sources — ${VERSION} / ${LOADER}
 
-          Auto-generated by the \`decompile-all-minecraft-versions-and-add-missing-to-repository\`
-          GitHub Actions workflow.
+Auto-generated by the \`decompile-all-minecraft-versions-and-add-missing-to-repository\`
+GitHub Actions workflow.
 
-          | Field        | Value                        |
-          |--------------|------------------------------|
-          | MC Version   | ${VERSION}                   |
-          | Loader       | ${LOADER}                    |
-          | Java files   | ${JAVA_COUNT}                |
-          | Generated    | $(date -u '+%Y-%m-%d %H:%M UTC') |
+| Field        | Value                        |
+|--------------|------------------------------|
+| MC Version   | ${VERSION}                   |
+| Loader       | ${LOADER}                    |
+| Java files   | ${JAVA_COUNT}                |
+| Generated    | ${GENERATED}                 |
 
-          ## Purpose
+## Purpose
 
-          These sources are committed to the repository so that AI coding agents
-          (Kiro, Copilot, etc.) and developers can browse Minecraft API signatures
-          without re-running a decompilation step every time.
+These sources are committed to the repository so that AI coding agents
+(Kiro, Copilot, etc.) and developers can browse Minecraft API signatures
+without re-running a decompilation step every time.
 
-          ## How to use
+## How to use
 
-          Browse the \`.java\` files directly, or search with:
+Browse the \`.java\` files directly, or search with:
 
-          \`\`\`bash
-          grep -r "YourClassName" decompiled-sources/${SLUG}/
-          \`\`\`
+\`\`\`bash
+grep -r "YourClassName" decompiled-sources/${SLUG}/
+\`\`\`
 
-          Or use the \`ai-source-search\` workflow for richer query support.
-          READMEEOF
+Or use the \`ai-source-search\` workflow for richer query support.
+READMEEOF
 
           echo "README written to $EXTRACTED_DIR/README.md"
 
