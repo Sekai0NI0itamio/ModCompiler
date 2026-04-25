@@ -570,6 +570,15 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # Pull latest remote state before we start making commits.
+      # This is critical because the decompile matrix can take 30+ minutes,
+      # during which other commits may land on main.
+      - name: Sync with remote before committing
+        run: |
+          git fetch origin ${{ github.ref_name }}
+          git reset --hard origin/${{ github.ref_name }}
+          echo "Synced to $(git rev-parse --short HEAD) ($(git log -1 --format='%s'))"
+
       # Download every artifact produced by the decompile jobs
       - name: Download all decompiled artifacts
         uses: actions/download-artifact@v4
@@ -648,19 +657,12 @@ jobs:
           echo "SKIPPED=$SKIPPED"     >> $GITHUB_ENV
           echo "FAILED=$FAILED"       >> $GITHUB_ENV
 
-      # Push all commits in one network round-trip
-      # Use rebase-pull to handle any commits that landed on main while
-      # the decompile matrix was running (e.g. manual pushes, other workflows).
+      # Push all commits in one network round-trip.
+      # Since we reset to remote HEAD before making commits, this is always
+      # a fast-forward push.
       - name: Push commits
         run: |
           if [ "${COMMITTED:-0}" -gt 0 ]; then
-            # Pull with rebase to fast-forward past any commits that landed
-            # on the remote while the matrix was running.
-            git pull --rebase origin ${{ github.ref_name }} || {
-              echo "Rebase failed — attempting merge pull instead..."
-              git rebase --abort 2>/dev/null || true
-              git pull --no-rebase origin ${{ github.ref_name }}
-            }
             git push origin HEAD:${{ github.ref_name }}
             echo "Pushed $COMMITTED commit(s) to ${{ github.ref_name }}"
           else
@@ -675,7 +677,6 @@ jobs:
             sed -i '/^decompiled-sources/d' .gitignore
             git add .gitignore
             git diff --cached --quiet || git commit -m "chore: unignore decompiled-sources/" --no-verify
-            git pull --rebase origin ${{ github.ref_name }} || git pull --no-rebase origin ${{ github.ref_name }} || true
             git push origin HEAD:${{ github.ref_name }} || true
           else
             echo ".gitignore is fine — decompiled-sources/ is not excluded"
