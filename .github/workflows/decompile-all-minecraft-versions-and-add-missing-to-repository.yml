@@ -2,7 +2,7 @@ name: Decompile All Minecraft Versions and Add Missing to Repository
 
 # Decompiles Minecraft sources for every version+loader combination defined in
 # version-manifest.json and commits the extracted .java files into
-# decompiled-sources/<version>-<loader>/ in the repository.
+# DecompiledMinecraftSourceCode/<version>-<loader>/ in the repository.
 #
 # Already-committed folders are skipped so re-runs are cheap — only new or
 # missing combinations are processed.
@@ -108,7 +108,7 @@ jobs:
                           continue
                       seen.add(slug)
 
-                      dest_folder = f"decompiled-sources/{slug}"
+                      dest_folder = f"DecompiledMinecraftSourceCode/{slug}"
                       already_exists = Path(dest_folder).is_dir() and any(
                           Path(dest_folder).rglob("*.java")
                       )
@@ -505,7 +505,7 @@ without re-running a decompilation step every time.
 Browse the `.java` files directly, or search with:
 
 ```bash
-grep -r "YourClassName" decompiled-sources/{slug}/
+grep -r "YourClassName" DecompiledMinecraftSourceCode/{slug}/
 ```
 
 Or use the `ai-source-search` workflow for richer query support.
@@ -586,7 +586,7 @@ PYEOF
           path: /tmp/all-decompiled/
           merge-multiple: false
 
-      # Copy each artifact into decompiled-sources/<slug>/ and commit
+      # Copy each artifact into DecompiledMinecraftSourceCode/<slug>/ and commit
       - name: Commit decompiled sources to repository
         run: |
           PREFIX="${{ inputs.commit_message_prefix }}"
@@ -598,7 +598,7 @@ PYEOF
           shopt -s nullglob
           for ARTIFACT_DIR in /tmp/all-decompiled/decompiled-*/; do
             SLUG=$(basename "$ARTIFACT_DIR" | sed 's/^decompiled-//')
-            DEST="decompiled-sources/$SLUG"
+            DEST="DecompiledMinecraftSourceCode/$SLUG"
 
             JAVA_COUNT=$(find "$ARTIFACT_DIR" -name "*.java" -type f 2>/dev/null | wc -l)
 
@@ -669,16 +669,16 @@ PYEOF
           fi
 
       # Update the .gitignore to make sure large binary caches are excluded
-      - name: Ensure decompiled-sources is tracked (not gitignored)
+      - name: Ensure DecompiledMinecraftSourceCode is tracked (not gitignored)
         run: |
-          if grep -q "^decompiled-sources" .gitignore 2>/dev/null; then
-            echo "WARNING: decompiled-sources/ is in .gitignore — removing that line"
-            sed -i '/^decompiled-sources/d' .gitignore
+          if grep -q "^DecompiledMinecraftSourceCode" .gitignore 2>/dev/null; then
+            echo "WARNING: DecompiledMinecraftSourceCode/ is in .gitignore — removing that line"
+            sed -i '/^DecompiledMinecraftSourceCode/d' .gitignore
             git add .gitignore
-            git diff --cached --quiet || git commit -m "chore: unignore decompiled-sources/" --no-verify
+            git diff --cached --quiet || git commit -m "chore: unignore DecompiledMinecraftSourceCode/" --no-verify
             git push origin HEAD:${{ github.ref_name }} || true
           else
-            echo ".gitignore is fine — decompiled-sources/ is not excluded"
+            echo ".gitignore is fine — DecompiledMinecraftSourceCode/ is not excluded"
           fi
 
       - name: Workflow summary
@@ -692,10 +692,10 @@ PYEOF
           echo "| Skipped (already present) | ${SKIPPED:-0} |" >> $GITHUB_STEP_SUMMARY
           echo "| Failed (no sources found) | ${FAILED:-0} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Committed folders live under \`decompiled-sources/\` in the repository." >> $GITHUB_STEP_SUMMARY
+          echo "Committed folders live under \`DecompiledMinecraftSourceCode/\` in the repository." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Committed slugs" >> $GITHUB_STEP_SUMMARY
-          for D in decompiled-sources/*/; do
+          for D in DecompiledMinecraftSourceCode/*/; do
             [ -d "$D" ] || continue
             SLUG=$(basename "$D")
             COUNT=$(find "$D" -name "*.java" -type f 2>/dev/null | wc -l)
