@@ -579,9 +579,11 @@ jobs:
           git reset --hard origin/${{ github.ref_name }}
           echo "Synced to $(git rev-parse --short HEAD) ($(git log -1 --format='%s'))"
 
-      # Download every artifact produced by the decompile jobs
+      # Download every artifact produced by the decompile jobs.
+      # continue-on-error so a single flaky download doesn't abort the commit.
       - name: Download all decompiled artifacts
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           pattern: decompiled-*
           path: /tmp/all-decompiled/
