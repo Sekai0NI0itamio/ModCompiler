@@ -72,10 +72,13 @@ jobs:
             17
             21
 
+      # Cache only the Gradle wrapper (small, shared) and the extracted
+      # .workflow_state sources. We intentionally do NOT cache ~/.gradle/caches
+      # because for modern Forge/NeoForge versions it can exceed 700 MB and
+      # causes the cache upload to stall at ~90% on GitHub's cache service.
       - uses: actions/cache@v4
         with:
           path: |
-            ~/.gradle/caches
             ~/.gradle/wrapper
             .workflow_state/minecraft-sources
           key: mc-sources-${{ runner.os }}-${{ matrix.slug }}-${{ hashFiles('version-manifest.json') }}
