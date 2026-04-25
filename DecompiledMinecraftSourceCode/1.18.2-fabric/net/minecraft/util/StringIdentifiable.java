@@ -1,0 +1,38 @@
+/*
+ * Decompiled with CFR 0.1.1 (FabricMC 57d88659).
+ */
+package net.minecraft.util;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DynamicOps;
+import com.mojang.serialization.Keyable;
+import java.util.Arrays;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import net.minecraft.util.dynamic.Codecs;
+
+public interface StringIdentifiable {
+    public String asString();
+
+    /**
+     * Creates a codec that serializes an enum implementing this interface either
+     * using its ordinals (when compressed) or using its {@link #asString()} method
+     * and a given decode function.
+     */
+    public static <E extends Enum<E>> Codec<E> createCodec(Supplier<E[]> enumValues, Function<String, E> fromString) {
+        Enum[] enums = (Enum[])enumValues.get();
+        return Codecs.orCompressed(Codecs.method_39508(object -> ((StringIdentifiable)object).asString(), fromString), Codecs.rawIdChecked(object -> ((Enum)object).ordinal(), ordinal -> ordinal >= 0 && ordinal < enums.length ? enums[ordinal] : null, -1));
+    }
+
+    public static Keyable toKeyable(final StringIdentifiable[] values) {
+        return new Keyable(){
+
+            @Override
+            public <T> Stream<T> keys(DynamicOps<T> dynamicOps) {
+                return Arrays.stream(values).map(StringIdentifiable::asString).map(dynamicOps::createString);
+            }
+        };
+    }
+}
+

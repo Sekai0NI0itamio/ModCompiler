@@ -1,0 +1,16 @@
+/*
+ * Decompiled with CFR 0.1.1 (FabricMC 57d88659).
+ */
+package net.minecraft.screen;
+
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.screen.ScreenHandler;
+import org.jetbrains.annotations.Nullable;
+
+@FunctionalInterface
+public interface ScreenHandlerFactory {
+    @Nullable
+    public ScreenHandler createMenu(int var1, PlayerInventory var2, PlayerEntity var3);
+}
+

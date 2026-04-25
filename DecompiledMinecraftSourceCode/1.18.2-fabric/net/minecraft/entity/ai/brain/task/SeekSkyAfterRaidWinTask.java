@@ -1,0 +1,23 @@
+/*
+ * Decompiled with CFR 0.1.1 (FabricMC 57d88659).
+ */
+package net.minecraft.entity.ai.brain.task;
+
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.ai.brain.task.SeekSkyTask;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.village.raid.Raid;
+
+public class SeekSkyAfterRaidWinTask
+extends SeekSkyTask {
+    public SeekSkyAfterRaidWinTask(float f) {
+        super(f);
+    }
+
+    @Override
+    protected boolean shouldRun(ServerWorld world, LivingEntity entity) {
+        Raid raid = world.getRaidAt(entity.getBlockPos());
+        return raid != null && raid.hasWon() && super.shouldRun(world, entity);
+    }
+}
+

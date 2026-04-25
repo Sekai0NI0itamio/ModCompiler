@@ -1,0 +1,20 @@
+/*
+ * Decompiled with CFR 0.1.1 (FabricMC 57d88659).
+ */
+package net.minecraft.world.gen.feature;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.world.gen.feature.FeatureConfig;
+import net.minecraft.world.gen.feature.RuinedPortalFeature;
+
+public class RuinedPortalFeatureConfig
+implements FeatureConfig {
+    public static final Codec<RuinedPortalFeatureConfig> CODEC = ((MapCodec)RuinedPortalFeature.Type.CODEC.fieldOf("portal_type")).xmap(RuinedPortalFeatureConfig::new, config -> config.portalType).codec();
+    public final RuinedPortalFeature.Type portalType;
+
+    public RuinedPortalFeatureConfig(RuinedPortalFeature.Type portalType) {
+        this.portalType = portalType;
+    }
+}
+
