@@ -1125,7 +1125,7 @@ public class DayCounterMod {
 
     public DayCounterMod(FMLJavaModLoadingContext context) {
         FMLClientSetupEvent.getBus(context.getModBusGroup()).addListener(this::clientSetup);
-        AddGuiOverlayLayersEvent.getBus(context.getModBusGroup()).addListener(this::registerLayers);
+        AddGuiOverlayLayersEvent.BUS.addListener(this::registerLayers);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
@@ -1182,7 +1182,97 @@ public class DayCounterClientHandler {
             int w = fr.width(text);
             int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            gg.drawString(fr, text, x, y, 0xFFFFFF);
+            gg.text(fr, text, x, y, 0xFFFFFF, true);
+        };
+        draw.add(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
+    }
+}
+"""
+
+# ---------------------------------------------------------------------------
+# Forge 1.21.9-1.21.11 — GuiGraphicsExtractor removed, back to GuiGraphics
+# ForgeLayer.render(GuiGraphics, DeltaTracker) — method renamed from extract() to render()
+# AddGuiOverlayLayersEvent.BUS.addListener() — static BUS, no getBus() needed
+# getDayTime() still exists in 1.21.9+
+# ---------------------------------------------------------------------------
+FORGE_1219_PLUS_MOD = """\
+package asd.itamio.daycounter;
+
+import asd.itamio.daycounter.client.DayCounterClientHandler;
+import asd.itamio.daycounter.config.DayCounterConfig;
+import java.io.File;
+import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLPaths;
+
+@Mod("daycounter")
+public class DayCounterMod {
+    public static final String MODID = "daycounter";
+    private static DayCounterConfig config;
+    private static DayCounterClientHandler handler;
+
+    public DayCounterMod(FMLJavaModLoadingContext context) {
+        FMLClientSetupEvent.getBus(context.getModBusGroup()).addListener(this::clientSetup);
+        AddGuiOverlayLayersEvent.BUS.addListener(this::registerLayers);
+    }
+
+    private void clientSetup(FMLClientSetupEvent event) {
+        File configFile = FMLPaths.CONFIGDIR.get().resolve("daycounter.txt").toFile();
+        config = new DayCounterConfig(configFile);
+        config.load();
+        handler = new DayCounterClientHandler(config);
+    }
+
+    private boolean registerLayers(AddGuiOverlayLayersEvent event) {
+        if (handler != null) handler.registerLayer(event);
+        return false;
+    }
+}
+"""
+
+FORGE_1219_PLUS_CLIENT = """\
+package asd.itamio.daycounter.client;
+
+import asd.itamio.daycounter.config.DayCounterConfig;
+import asd.itamio.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.Identifier;
+import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
+import net.minecraftforge.client.gui.overlay.ForgeLayer;
+import net.minecraftforge.client.gui.overlay.ForgeLayeredDraw;
+
+public class DayCounterClientHandler {
+    private final DayCounterConfig config;
+
+    public DayCounterClientHandler(DayCounterConfig config) {
+        this.config = config;
+    }
+
+    public void registerLayer(AddGuiOverlayLayersEvent event) {
+        ForgeLayeredDraw draw = event.getLayeredDraw();
+        ForgeLayer layer = (gg, dt) -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null || mc.level == null) return;
+            if (mc.options.hideGui) return;
+            config.reloadIfChanged();
+            String text = DayCounterFormatter.format(
+                mc.level.getGameTime(),
+                mc.level.getDayTime(),
+                config.getDisplayMode()
+            );
+            if (text.isEmpty()) return;
+            Font fr = mc.font;
+            int screenW = mc.getWindow().getGuiScaledWidth();
+            int screenH = mc.getWindow().getGuiScaledHeight();
+            int w = fr.width(text);
+            int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
+            int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
+            gg.drawString(fr, text, x, y, 0xFFFFFF, true);
         };
         draw.add(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
@@ -1270,53 +1360,9 @@ public class DayCounterClientHandler {
             int w = fr.width(text);
             int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            gg.drawString(fr, text, x, y, 0xFFFFFF);
+            gg.text(fr, text, x, y, 0xFFFFFF, true);
         };
         draw.add(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
-    }
-}
-"""
-
-FORGE_261_CLIENT = """\
-package asd.itamio.daycounter.client;
-
-import asd.itamio.daycounter.config.DayCounterConfig;
-import asd.itamio.daycounter.util.DayCounterFormatter;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.LayeredDraw;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
-import net.minecraftforge.client.gui.overlay.ForgeLayeredDraw;
-
-public class DayCounterClientHandler {
-    private final DayCounterConfig config;
-
-    public DayCounterClientHandler(DayCounterConfig config) {
-        this.config = config;
-    }
-
-    public void registerLayer(AddGuiOverlayLayersEvent event) {
-        ForgeLayeredDraw draw = event.getLayeredDraw();
-        LayeredDraw.Layer layer = (guiGraphics, deltaTracker) -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc == null || mc.player == null || mc.level == null) return;
-            if (mc.options.hideGui) return;
-            config.reloadIfChanged();
-            long gameTime = mc.level.getGameTime();
-            long dayTime = gameTime % 24000L;
-            String text = DayCounterFormatter.format(gameTime, dayTime, config.getDisplayMode());
-            if (text.isEmpty()) return;
-            Font fr = mc.font;
-            int screenW = mc.getWindow().getGuiScaledWidth();
-            int screenH = mc.getWindow().getGuiScaledHeight();
-            int w = fr.width(text);
-            int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
-            int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF, true);
-        };
-        draw.add(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }
 """
@@ -1787,11 +1833,13 @@ package asd.itamio.daycounter.client;
 
 import asd.itamio.daycounter.config.DayCounterConfig;
 import asd.itamio.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.LayeredDraw;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.gui.GuiLayer;
 
 public class DayCounterClientHandler {
     private final DayCounterConfig config;
@@ -1801,7 +1849,7 @@ public class DayCounterClientHandler {
     }
 
     public void registerLayer(RegisterGuiLayersEvent event) {
-        LayeredDraw.Layer layer = (guiGraphics, deltaTracker) -> {
+        GuiLayer layer = (gg, dt) -> {
             Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.player == null || mc.level == null) return;
             if (mc.options.hideGui) return;
@@ -1816,9 +1864,9 @@ public class DayCounterClientHandler {
             int w = fr.width(text);
             int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF);
+            gg.text(fr, text, x, y, 0xFFFFFF, true);
         };
-        event.registerAboveAll(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
+        event.registerAboveAll(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }
 """
@@ -1931,7 +1979,7 @@ TARGETS = [
      "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21-1.21.1-forge", "1.21-1.21.1", "forge",
-     FORGE_121_MOD,              FORGE_121_CLIENT,
+     FORGE_1206_MOD,              FORGE_121_TO_1215_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.3-forge",   "1.21.3",  "forge",
@@ -1959,7 +2007,7 @@ TARGETS = [
      "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-1.21.9-1.21.11-forge", "1.21.9-1.21.11", "forge",
-     FORGE_1216_PLUS_MOD,        FORGE_1216_PLUS_CLIENT,
+     FORGE_1219_PLUS_MOD,        FORGE_1219_PLUS_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None, False),
 
     ("DayCounter-26.1.2-forge",   "26.1.2",  "forge",
@@ -2020,17 +2068,7 @@ TARGETS = [
      FABRIC_121_PLUS_MOD,        FABRIC_121_PLUS_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
 
-    ("DayCounter-26.1-fabric",    "26.1",    "fabric",
-     FABRIC_261_MOD,             FABRIC_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
-
-    ("DayCounter-26.1.1-fabric",  "26.1.1",  "fabric",
-     FABRIC_261_MOD,             FABRIC_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
-
-    ("DayCounter-26.1.2-fabric",  "26.1.2",  "fabric",
-     FABRIC_261_MOD,             FABRIC_261_CLIENT,
-     "asd.itamio.daycounter.DayCounterMod", fabric_mod_json_split, True),
+    # 26.x Fabric: HudRenderCallback removed in 26.1, no replacement in Fabric API yet — skip
 
     # ---- NeoForge ----
     ("DayCounter-1.20.2-neoforge", "1.20.2",  "neoforge",

@@ -2,11 +2,13 @@ package asd.itamio.daycounter.client;
 
 import asd.itamio.daycounter.config.DayCounterConfig;
 import asd.itamio.daycounter.util.DayCounterFormatter;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.LayeredDraw;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.gui.GuiLayer;
 
 public class DayCounterClientHandler {
     private final DayCounterConfig config;
@@ -16,7 +18,7 @@ public class DayCounterClientHandler {
     }
 
     public void registerLayer(RegisterGuiLayersEvent event) {
-        LayeredDraw.Layer layer = (guiGraphics, deltaTracker) -> {
+        GuiLayer layer = (gg, dt) -> {
             Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.player == null || mc.level == null) return;
             if (mc.options.hideGui) return;
@@ -31,8 +33,8 @@ public class DayCounterClientHandler {
             int w = fr.width(text);
             int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            guiGraphics.drawString(fr, text, x, y, 0xFFFFFF);
+            gg.text(fr, text, x, y, 0xFFFFFF, true);
         };
-        event.registerAboveAll(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
+        event.registerAboveAll(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }
