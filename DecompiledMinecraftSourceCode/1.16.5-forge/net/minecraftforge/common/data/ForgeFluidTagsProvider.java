@@ -1,0 +1,32 @@
+/*
+ * Copyright (c) Forge Development LLC and contributors
+ * SPDX-License-Identifier: LGPL-2.1-only
+ */
+
+package net.minecraftforge.common.data;
+
+import net.minecraft.data.DataGenerator;
+import net.minecraft.data.FluidTagsProvider;
+import net.minecraftforge.common.ForgeMod;
+
+import static net.minecraftforge.common.Tags.Fluids.MILK;
+
+public class ForgeFluidTagsProvider extends FluidTagsProvider
+{
+    public ForgeFluidTagsProvider(DataGenerator gen, ExistingFileHelper existingFileHelper)
+    {
+        super(gen, "forge", existingFileHelper);
+    }
+
+    @Override
+    public void func_200432_c()
+    {
+        func_240522_a_(MILK).addOptional(ForgeMod.MILK.getId()).addOptional(ForgeMod.FLOWING_MILK.getId());
+    }
+
+    @Override
+    public String func_200397_b()
+    {
+        return "Forge Fluid Tags";
+    }
+}

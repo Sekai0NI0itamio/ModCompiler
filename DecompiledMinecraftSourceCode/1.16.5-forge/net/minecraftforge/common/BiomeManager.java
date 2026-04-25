@@ -1,0 +1,248 @@
+/*
+ * Copyright (c) Forge Development LLC and contributors
+ * SPDX-License-Identifier: LGPL-2.1-only
+ */
+
+package net.minecraftforge.common;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+import com.google.common.collect.ImmutableList;
+
+import net.minecraft.world.biome.Biomes;
+import net.minecraft.util.RegistryKey;
+import net.minecraft.util.WeightedRandom;
+import net.minecraft.world.biome.Biome;
+
+public class BiomeManager
+{
+    private static TrackedList<BiomeEntry>[] biomes = setupBiomes();
+    private static final List<RegistryKey<Biome>> additionalOverworldBiomes = new ArrayList<>();
+    private static final List<RegistryKey<Biome>> additionalOverworldBiomesView = Collections.unmodifiableList(additionalOverworldBiomes);
+
+    private static TrackedList<BiomeEntry>[] setupBiomes()
+    {
+        @SuppressWarnings("unchecked")
+        TrackedList<BiomeEntry>[] currentBiomes = new TrackedList[BiomeType.values().length];
+
+        currentBiomes[BiomeType.DESERT_LEGACY.ordinal()] = new TrackedList<>(
+            new BiomeEntry(Biomes.field_76769_d, 10),
+            new BiomeEntry(Biomes.field_76767_f, 10),
+            new BiomeEntry(Biomes.field_76770_e, 10),
+            new BiomeEntry(Biomes.field_76780_h, 10),
+            new BiomeEntry(Biomes.field_76772_c, 10),
+            new BiomeEntry(Biomes.field_76768_g, 10)
+        );
+
+        currentBiomes[BiomeType.DESERT.ordinal()] = new TrackedList<>(
+            new BiomeEntry(Biomes.field_76769_d, 30),
+            new BiomeEntry(Biomes.field_150588_X, 20),
+            new BiomeEntry(Biomes.field_76772_c, 10)
+        );
+
+        currentBiomes[BiomeType.WARM.ordinal()] = new TrackedList<>(
+            new BiomeEntry(Biomes.field_76767_f, 10),
+            new BiomeEntry(Biomes.field_150585_R, 10),
+            new BiomeEntry(Biomes.field_76770_e, 10),
+            new BiomeEntry(Biomes.field_76772_c, 10),
+            new BiomeEntry(Biomes.field_150583_P, 10),
+            new BiomeEntry(Biomes.field_76780_h, 10)
+        );
+
+        currentBiomes[BiomeType.COOL.ordinal()] = new TrackedList<>(
+            new BiomeEntry(Biomes.field_76767_f, 10),
+            new BiomeEntry(Biomes.field_76770_e, 10),
+            new BiomeEntry(Biomes.field_76768_g, 10),
+            new BiomeEntry(Biomes.field_76772_c, 10)
+        );
+
+        currentBiomes[BiomeType.ICY.ordinal()] = new TrackedList<>(
+            new BiomeEntry(Biomes.field_76774_n, 30),
+            new BiomeEntry(Biomes.field_150584_S, 10)
+        );
+
+        return currentBiomes;
+    }
+
+    /*
+    public static void addSpawnBiome(Biome biome)
+    {
+        if (!BiomeProvider.BIOMES_TO_SPAWN_IN.contains(biome))
+        {
+            BiomeProvider.BIOMES_TO_SPAWN_IN.add(biome);
+        }
+    }
+
+    public static void removeSpawnBiome(Biome biome)
+    {
+        if (BiomeProvider.BIOMES_TO_SPAWN_IN.contains(biome))
+        {
+            BiomeProvider.BIOMES_TO_SPAWN_IN.remove(biome);
+        }
+    }
+    */
+
+    /**
+     * Add biomes that you add to the overworld without using {@link BiomeManager#addBiome(BiomeType, BiomeEntry)}
+     */
+    public static void addAdditionalOverworldBiomes(RegistryKey<Biome> biome)
+    {
+        if (!"minecraft".equals(biome.func_240901_a_().func_110624_b()) && additionalOverworldBiomes.stream().noneMatch(entry -> entry.func_240901_a_().equals(biome.func_240901_a_())))
+        {
+            additionalOverworldBiomes.add(biome);
+        }
+    }
+
+    public static boolean addBiome(BiomeType type, BiomeEntry entry)
+    {
+        int idx = type.ordinal();
+        List<BiomeEntry> list = idx > biomes.length ? null : biomes[idx];
+        if (list != null)
+        {
+            additionalOverworldBiomes.add(entry.key);
+            return list.add(entry);
+        }
+        return false;
+    }
+
+    public static boolean removeBiome(BiomeType type, BiomeEntry entry)
+    {
+        int idx = type.ordinal();
+        List<BiomeEntry> list = idx > biomes.length ? null : biomes[idx];
+        return list == null ? false : list.remove(entry);
+    }
+
+    /**
+     * @return list of biomes that might be generated in the overworld in addition to the vanilla biomes
+     */
+    public static List<RegistryKey<Biome>> getAdditionalOverworldBiomes()
+    {
+        return additionalOverworldBiomesView;
+    }
+
+    public static ImmutableList<BiomeEntry> getBiomes(BiomeType type)
+    {
+        int idx = type.ordinal();
+        List<BiomeEntry> list = idx >= biomes.length ? null : biomes[idx];
+        return list != null ? ImmutableList.copyOf(list) : ImmutableList.of();
+    }
+
+    public static boolean isTypeListModded(BiomeType type)
+    {
+        int idx = type.ordinal();
+        TrackedList<BiomeEntry> list = idx > biomes.length ? null : biomes[idx];
+        return list == null ? false : list.isModded();
+    }
+
+    public static enum BiomeType
+    {
+        DESERT, DESERT_LEGACY, WARM, COOL, ICY;
+    }
+
+    public static class BiomeEntry extends WeightedRandom.Item
+    {
+        private final RegistryKey<Biome> key;
+
+        public BiomeEntry(RegistryKey<Biome> key, int weight)
+        {
+            super(weight);
+            this.key = key;
+        }
+
+        public RegistryKey<Biome> getKey()
+        {
+            return this.key;
+        }
+    }
+
+    private static class TrackedList<E> extends ArrayList<E>
+    {
+        private static final long serialVersionUID = 1L;
+        private boolean isModded = false;
+
+        @SafeVarargs
+        private <T extends E> TrackedList(T... c)
+        {
+            super(Arrays.asList(c));
+        }
+
+        @Override
+        public E set(int index, E element)
+        {
+            isModded = true;
+            return super.set(index, element);
+        }
+
+        @Override
+        public boolean add(E e)
+        {
+            isModded = true;
+            return super.add(e);
+        }
+
+        @Override
+        public void add(int index, E element)
+        {
+            isModded = true;
+            super.add(index, element);
+        }
+
+        @Override
+        public E remove(int index)
+        {
+            isModded = true;
+            return super.remove(index);
+        }
+
+        @Override
+        public boolean remove(Object o)
+        {
+            isModded = true;
+            return super.remove(o);
+        }
+
+        @Override
+        public void clear()
+        {
+            isModded = true;
+            super.clear();
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends E> c)
+        {
+            isModded = true;
+            return super.addAll(c);
+        }
+
+        @Override
+        public boolean addAll(int index, Collection<? extends E> c)
+        {
+            isModded = true;
+            return super.addAll(index, c);
+        }
+
+        @Override
+        public boolean removeAll(Collection<?> c)
+        {
+            isModded = true;
+            return super.removeAll(c);
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> c)
+        {
+            isModded = true;
+            return super.retainAll(c);
+        }
+
+        public boolean isModded()
+        {
+            return isModded;
+        }
+    }
+}
