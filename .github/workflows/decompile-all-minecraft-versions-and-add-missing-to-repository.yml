@@ -165,14 +165,17 @@ jobs:
         id: java_version
         run: |
           VERSION="${{ matrix.version }}"
+          LOADER="${{ matrix.loader }}"
           if [[ "$VERSION" =~ ^1\.(8|12) ]]; then
             JAVA_VER=8
           elif [[ "$VERSION" =~ ^1\.(16|17) ]]; then
             JAVA_VER=16
           elif [[ "$VERSION" =~ ^1\.(18|19) ]]; then
             JAVA_VER=17
-          elif [[ "$VERSION" =~ ^1\.20\.[0-4]$ ]] || [[ "$VERSION" == "1.20" ]]; then
-            JAVA_VER=17
+          elif [[ "$VERSION" =~ ^1\.20 ]]; then
+            # Fabric 1.20.x template is anchored to 1.20.6 which requires Java 21.
+            # Forge 1.20.1-1.20.4 works with Java 17 but Java 21 is backward-compatible.
+            JAVA_VER=21
           elif [[ "$VERSION" =~ ^26\. ]]; then
             JAVA_VER=21
           else
@@ -319,7 +322,16 @@ jobs:
             fi
 
           elif [[ "$LOADER" == "neoforge" ]]; then
-            if ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
+            # NeoForge 26.x uses ModDevGradle which has no decompile/genSources task.
+            # For 26.x, Minecraft sources come from the Mojang CDN (already downloaded
+            # in STRATEGY 1 above). We still run Gradle to pull NeoForge API jars.
+            if [[ "$VERSION" =~ ^26\. ]]; then
+              echo "NeoForge 26.x: using Mojang CDN sources + Gradle for NeoForge API jars"
+              ./gradlew --no-daemon --stacktrace dependencies 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
+              # Also run createMinecraftArtifacts if available (ModDevGradle task)
+              ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "createMinecraftArtifacts" && \
+                ./gradlew --no-daemon --stacktrace createMinecraftArtifacts 2>&1 | tee -a /tmp/gradle-${{ matrix.slug }}.log || true
+            elif ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
               ./gradlew --no-daemon --stacktrace decompile 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
             elif ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^genSources "; then
               ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
@@ -411,6 +423,28 @@ jobs:
                 mkdir -p "$(dirname "$DEST")"
                 cp "$F" "$DEST"
               done
+            fi
+
+            # For NeoForge 26.x: if CDN gave 0 files, copy from the already-committed
+            # Forge 26.x sources (same Minecraft codebase, different mod loader API).
+            CURRENT_COUNT=$(find "$EXTRACTED_DIR" -name "*.java" 2>/dev/null | wc -l)
+            if [[ "$LOADER" == "neoforge" ]] && [ "$CURRENT_COUNT" -eq 0 ]; then
+              # Find the matching Forge 26.x folder already in the repo
+              FORGE_SLUG="${VERSION}-forge"
+              FORGE_SRC="DecompiledMinecraftSourceCode/${FORGE_SLUG}"
+              if [ -d "$FORGE_SRC" ] && [ "$(find "$FORGE_SRC" -name "*.java" | wc -l)" -gt 0 ]; then
+                echo "NeoForge 26.x: copying MC sources from committed $FORGE_SLUG (same codebase)..."
+                find "$FORGE_SRC" -name "*.java" -type f | while read -r F; do
+                  REL="${F#$FORGE_SRC/}"
+                  DEST="$EXTRACTED_DIR/$REL"
+                  mkdir -p "$(dirname "$DEST")"
+                  cp "$F" "$DEST"
+                done
+                COPIED=$(find "$EXTRACTED_DIR" -name "*.java" | wc -l)
+                echo "Copied $COPIED .java files from $FORGE_SLUG"
+              else
+                echo "WARNING: No committed Forge 26.x sources found at $FORGE_SRC — NeoForge 26.x will have 0 files"
+              fi
             fi
           fi
 
