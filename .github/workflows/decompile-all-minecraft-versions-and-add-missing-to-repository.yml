@@ -511,7 +511,7 @@ jobs:
       # ------------------------------------------------------------------
       - name: Write folder README
         run: |
-          python3 scripts/_write_decompile_readme.py \
+          python3 scripts/write_decompile_readme.py \
             "${{ steps.locate.outputs.extracted_dir }}" \
             "${{ matrix.version }}" \
             "${{ matrix.loader }}" \
