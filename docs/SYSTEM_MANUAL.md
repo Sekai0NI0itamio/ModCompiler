@@ -21,6 +21,13 @@ It also includes a second GitHub workflow, `Jar Decompile`, that:
 3. Extracts metadata when possible
 4. Produces a zip with `src/` plus `mod_info.txt`
 
+And a third workflow, `Decompile All Minecraft Versions and Add Missing to Repository`, that:
+
+1. Decompiles Minecraft API sources for every version+loader combination
+2. Commits the extracted `.java` files into `decompiled-sources/` in the repository
+3. Skips versions that are already committed, so re-runs are cheap
+4. Lets AI agents and developers search the API without re-running decompilation
+
 ## Core Design
 
 The system is built around version folders.
@@ -487,9 +494,148 @@ Typical failure categories:
 
 When that happens, the workflow should still leave enough output for you to debug the issue.
 
-## How The Decompile Workflow Works
+## Decompiled Minecraft Sources Repository
 
-The second workflow is `Jar Decompile`.
+The repository includes a pre-generated library of decompiled Minecraft API sources under:
+
+```text
+decompiled-sources/
+  1.8.9-forge/
+  1.12.2-forge/
+  1.16.5-fabric/
+  1.16.5-forge/
+  1.17.1-fabric/
+  1.17.1-forge/
+  1.18.2-fabric/
+  1.18-forge/
+  ...
+  26.1.2-neoforge/
+```
+
+Each folder contains the extracted `.java` files for that Minecraft version and loader combination, plus a `README.md` with generation metadata.
+
+### Why This Exists
+
+AI coding agents (Kiro, Copilot, etc.) and developers frequently need to look up Minecraft API signatures — class names, method signatures, event types — before writing or fixing mod code.
+
+Without this library, every lookup requires triggering a full Gradle decompilation run in GitHub Actions, which takes 10–60 minutes per version.
+
+With this library, you can search the sources instantly:
+
+```bash
+# Find all uses of a class or method name
+grep -r "DimensionDataStorage" decompiled-sources/1.21.5-forge/
+
+# List all event classes for a version
+ls decompiled-sources/1.21.5-forge/ | grep -i event
+
+# Search across all versions at once
+grep -r "computeIfAbsent" decompiled-sources/
+```
+
+### For IDE Agents (Kiro)
+
+When writing or fixing mod code, reference the decompiled sources directly from the repository instead of triggering the `AI Source Search` workflow:
+
+```
+decompiled-sources/<version>-<loader>/
+```
+
+For example, to look up the `SavedData` API for Forge 1.21.5:
+
+```bash
+grep -r "SavedData" decompiled-sources/1.21.5-forge/
+```
+
+Or browse the folder tree to discover available classes:
+
+```bash
+ls decompiled-sources/1.21.5-forge/net/minecraft/world/level/saveddata/
+```
+
+The `AI Source Search` workflow remains available for richer regex queries, context-line output, and full class dumps when you need more than a simple grep.
+
+### Keeping The Library Up To Date
+
+The library is populated and maintained by the `Decompile All Minecraft Versions and Add Missing to Repository` workflow.
+
+**Run it from the GitHub Actions UI:**
+
+1. Open the repository on GitHub
+2. Open `Actions`
+3. Select `Decompile All Minecraft Versions and Add Missing to Repository`
+4. Click `Run workflow`
+5. Leave all inputs at their defaults to process only missing versions
+6. Click `Run workflow`
+
+**Or trigger it from your terminal:**
+
+```bash
+python3 scripts/decompile_all_and_commit.py
+```
+
+The script requires the `gh` CLI to be installed and authenticated.
+
+**Workflow inputs:**
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `force_regenerate` | `no` | Set to `yes` to re-decompile even if the folder already exists |
+| `specific_version` | _(blank)_ | Only process one version, e.g. `1.21.5` |
+| `specific_loader` | _(blank)_ | Only process one loader: `forge`, `fabric`, or `neoforge` |
+| `commit_message_prefix` | `chore(sources)` | Prefix for the auto-generated git commit message |
+
+Already-committed folders are skipped automatically, so re-runs are cheap.
+
+### Adding Decompiled Sources For A New Minecraft Version
+
+When a new Minecraft version is added to `version-manifest.json`, its decompiled sources are not committed automatically.
+Follow these steps to add them:
+
+**Step 1: Add the version to `version-manifest.json`**
+
+Add the new version range entry with its loader configurations, template directory, and Java version rules.
+See the existing entries as a reference.
+
+**Step 2: Add the template**
+
+Create the template directory at `<range>/<loader>/template/` and populate it with the Gradle project for that version.
+Update `<range>/<loader>/PROVENANCE.md` to record where the template came from.
+
+**Step 3: Run the decompile workflow for the new version only**
+
+```bash
+python3 scripts/decompile_all_and_commit.py --version 1.22.1 --loader forge
+```
+
+Or from the GitHub Actions UI, set `specific_version` to the new version and `specific_loader` to the loader.
+
+The workflow will decompile the sources and commit them to `decompiled-sources/1.22.1-forge/`.
+
+**Step 4: Verify the sources were committed**
+
+```bash
+git pull
+ls decompiled-sources/1.22.1-forge/
+```
+
+If the folder is empty or missing, check the workflow run log for Gradle errors.
+The most common cause is a missing or misconfigured template.
+
+**Step 5: Run for all loaders**
+
+Repeat Step 3 for each loader supported by the new version (`forge`, `fabric`, `neoforge`).
+Or omit `--loader` to process all loaders at once:
+
+```bash
+python3 scripts/decompile_all_and_commit.py --version 1.22.1
+```
+
+---
+
+## How The Jar Decompile Workflow Works
+
+The `Jar Decompile` workflow is separate from the sources library above.
 
 Its purpose is different:
 
@@ -554,16 +700,17 @@ In short:
 Use this sequence:
 
 1. decide the exact target version and loader
-2. write the mod specifically for that API generation
-3. set `mod.txt` and `version.txt`
-4. place the package in a top-level folder
-5. zip it
-6. commit the zip to `incoming/`
-7. if you want auto-publishing, create the `MODRINTH_TOKEN` repository secret
-8. run `Build Mods`
-9. optionally fill in `modrinth_project_url`
-10. inspect the artifact or the log
-11. iterate until clean
+2. check `decompiled-sources/<version>-<loader>/` for API signatures before writing code
+3. write the mod specifically for that API generation
+4. set `mod.txt` and `version.txt`
+5. place the package in a top-level folder
+6. zip it
+7. commit the zip to `incoming/`
+8. if you want auto-publishing, create the `MODRINTH_TOKEN` repository secret
+9. run `Build Mods`
+10. optionally fill in `modrinth_project_url`
+11. inspect the artifact or the log
+12. iterate until clean
 
 ## Included Example
 
