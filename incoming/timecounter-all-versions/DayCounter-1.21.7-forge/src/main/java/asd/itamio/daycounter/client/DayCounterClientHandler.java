@@ -37,7 +37,7 @@ public class DayCounterClientHandler {
             int w = fr.width(text);
             int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            gg.drawString(fr, text, x, y, 0xFFFFFF);
+            gg.text(fr, text, x, y, 0xFFFFFF, true);
         };
         draw.add(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
     }

@@ -5,7 +5,7 @@ import asd.itamio.daycounter.util.DayCounterFormatter;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.Identifier;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.client.gui.overlay.ForgeLayer;
@@ -37,7 +37,7 @@ public class DayCounterClientHandler {
             int w = fr.width(text);
             int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            gg.drawString(fr, text, x, y, 0xFFFFFF);
+            gg.drawString(fr, text, x, y, 0xFFFFFF, true);
         };
         draw.add(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
