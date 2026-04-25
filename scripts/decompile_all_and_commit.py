@@ -8,7 +8,7 @@ GitHub Actions workflow, waits for it to finish, and prints a summary.
 
 The workflow decompiles Minecraft sources for every version+loader combination
 in version-manifest.json and commits the extracted .java files into
-  decompiled-sources/<version>-<loader>/
+  DecompiledMinecraftSourceCode/<version>-<loader>/
 in the repository.  Already-committed folders are skipped automatically, so
 re-runs are cheap.
 
@@ -173,7 +173,7 @@ def print_summary(run_info: dict, repo: str) -> None:
         print("✅ Decompiled sources have been committed to the repository.")
         print()
         print("Browse them at:")
-        print(f"  https://github.com/{repo}/tree/HEAD/decompiled-sources/")
+        print(f"  https://github.com/{repo}/tree/HEAD/DecompiledMinecraftSourceCode/")
         print()
         print("Or clone/pull and search locally:")
         print("  git pull")

@@ -11,12 +11,19 @@ name: AI Source Search — Fetch Minecraft API for IDE Agent
 #       --queries "computeIfAbsent" "SavedDataType" "DimensionDataStorage" \
 #       --files "*DimensionDataStorage*.java" "*SavedData*.java"
 #
-# The workflow:
-#   1. Sets up the Gradle template for the requested version+loader
-#   2. Runs the Gradle task that downloads and decompiles Minecraft sources
-#   3. Searches for each query across the decompiled source
-#   4. Dumps the full class list so the AI can browse the API tree
-#   5. Uploads everything as a single artifact the AI can download and read
+# The workflow has two source modes (controlled by the source_mode input):
+#
+#   repo (DEFAULT, recommended):
+#     Searches DecompiledMinecraftSourceCode/<version>-<loader>/ directly from
+#     the repository. Instant — no Gradle, no downloads. Falls back to
+#     live-decompile if the folder is missing.
+#
+#   live-decompile (slow, not recommended unless repo sources are missing):
+#     1. Sets up the Gradle template for the requested version+loader
+#     2. Runs the Gradle task that downloads and decompiles Minecraft sources
+#     3. Searches for each query across the decompiled source
+#     4. Dumps the full class list so the AI can browse the API tree
+#     5. Uploads everything as a single artifact the AI can download and read
 
 on:
   workflow_dispatch:
@@ -60,6 +67,17 @@ on:
         options:
           - 'yes'
           - 'no'
+      source_mode:
+        description: |
+          How to obtain Minecraft sources.
+          repo (recommended, fast): search DecompiledMinecraftSourceCode/ in the repository directly.
+          live-decompile (slow): run Gradle to decompile sources on-the-fly.
+        required: false
+        default: 'repo'
+        type: choice
+        options:
+          - 'repo'
+          - 'live-decompile'
 
 jobs:
   search:
@@ -75,8 +93,35 @@ jobs:
         with:
           python-version: '3.12'
 
+      # -------------------------------------------------------
+      # REPO MODE: search DecompiledMinecraftSourceCode/ directly.
+      # This is fast (no Gradle, no downloads) and is the default.
+      # Falls back to live-decompile if the folder is missing.
+      # -------------------------------------------------------
+      - name: Search repository sources (repo mode)
+        id: repo_search
+        if: inputs.source_mode == 'repo' || inputs.source_mode == ''
+        run: |
+          VERSION="${{ inputs.minecraft_version }}"
+          LOADER="${{ inputs.loader }}"
+          SLUG="${VERSION}-${LOADER}"
+          REPO_SRC="DecompiledMinecraftSourceCode/${SLUG}"
+
+          if [ ! -d "$REPO_SRC" ] || [ "$(find "$REPO_SRC" -name "*.java" | wc -l)" -eq 0 ]; then
+            echo "repo_sources_available=false" >> $GITHUB_OUTPUT
+            echo "⚠️  No pre-committed sources found at $REPO_SRC — will fall back to live decompile."
+            echo "   To populate it, run: 'Decompile All Minecraft Versions and Add Missing to Repository'"
+          else
+            JAVA_COUNT=$(find "$REPO_SRC" -name "*.java" -type f | wc -l)
+            echo "repo_sources_available=true"  >> $GITHUB_OUTPUT
+            echo "source_root=$REPO_SRC"        >> $GITHUB_OUTPUT
+            echo "java_count=$JAVA_COUNT"       >> $GITHUB_OUTPUT
+            echo "✅ Found $JAVA_COUNT .java files in $REPO_SRC"
+          fi
+
       - name: Determine Java version
         id: java_version
+        if: steps.repo_search.outputs.repo_sources_available != 'true'
         run: |
           VERSION="${{ inputs.minecraft_version }}"
           
@@ -98,6 +143,7 @@ jobs:
           echo "Using Java $JAVA_VER for Minecraft $VERSION"
 
       - name: Set up Java
+        if: steps.repo_search.outputs.repo_sources_available != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -144,6 +190,7 @@ jobs:
       # Gradle cache — keyed on template files
       # -------------------------------------------------------
       - name: Cache Gradle
+        if: steps.repo_search.outputs.repo_sources_available != 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -157,6 +204,7 @@ jobs:
       # Copy template to isolated workspace
       # -------------------------------------------------------
       - name: Prepare workspace
+        if: steps.repo_search.outputs.repo_sources_available != 'true'
         run: |
           TEMPLATE_DIR="${{ steps.resolve.outputs.template_dir }}"
           WORKSPACE="/tmp/ai-src-ws"
@@ -171,6 +219,7 @@ jobs:
       # For older: use Gradle decompile/genSources tasks
       # -------------------------------------------------------
       - name: Download and decompile Minecraft sources
+        if: steps.repo_search.outputs.repo_sources_available != 'true'
         run: |
           cd "$WORKSPACE"
           LOADER="${{ inputs.loader }}"
@@ -280,6 +329,7 @@ jobs:
       # For NeoForge: sources jar in $HOME/.gradle/caches/neoforge/
       # -------------------------------------------------------
       - name: Locate and extract decompiled sources
+        if: steps.repo_search.outputs.repo_sources_available != 'true'
         id: locate
         run: |
           LOADER="${{ inputs.loader }}"
@@ -505,8 +555,17 @@ jobs:
       # -------------------------------------------------------
       - name: Run searches
         run: |
-          SOURCE_ROOT="${{ steps.locate.outputs.source_root }}"
-          JAVA_COUNT="${{ steps.locate.outputs.java_count }}"
+          # Use repo sources if available, otherwise use live-decompiled sources
+          if [ -n "${{ steps.repo_search.outputs.source_root }}" ]; then
+            SOURCE_ROOT="${{ steps.repo_search.outputs.source_root }}"
+            JAVA_COUNT="${{ steps.repo_search.outputs.java_count }}"
+            SOURCE_MODE="repo"
+          else
+            SOURCE_ROOT="${{ steps.locate.outputs.source_root }}"
+            JAVA_COUNT="${{ steps.locate.outputs.java_count }}"
+            SOURCE_MODE="live-decompile"
+          fi
+          echo "Source mode: $SOURCE_MODE  |  Root: $SOURCE_ROOT  |  Files: $JAVA_COUNT"
           CONTEXT="${{ inputs.context_lines }}"
           DUMP_FULL="${{ inputs.dump_full_class }}"
 
@@ -544,6 +603,7 @@ jobs:
           {
             echo "Version  : ${{ inputs.minecraft_version }}"
             echo "Loader   : ${{ inputs.loader }}"
+            echo "Mode     : $SOURCE_MODE"
             echo "Queries  : ${{ inputs.queries }}"
             echo "Patterns : ${{ inputs.file_patterns }}"
             echo "Context  : $CONTEXT lines"
@@ -721,6 +781,7 @@ jobs:
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version | ${{ inputs.minecraft_version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Loader | ${{ inputs.loader }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mode | ${{ inputs.source_mode || 'repo' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Queries | \`${{ inputs.queries }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Java files found | ${{ steps.locate.outputs.java_count }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
