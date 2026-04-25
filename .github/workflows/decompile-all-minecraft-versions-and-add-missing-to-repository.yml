@@ -649,9 +649,18 @@ jobs:
           echo "FAILED=$FAILED"       >> $GITHUB_ENV
 
       # Push all commits in one network round-trip
+      # Use rebase-pull to handle any commits that landed on main while
+      # the decompile matrix was running (e.g. manual pushes, other workflows).
       - name: Push commits
         run: |
           if [ "${COMMITTED:-0}" -gt 0 ]; then
+            # Pull with rebase to fast-forward past any commits that landed
+            # on the remote while the matrix was running.
+            git pull --rebase origin ${{ github.ref_name }} || {
+              echo "Rebase failed — attempting merge pull instead..."
+              git rebase --abort 2>/dev/null || true
+              git pull --no-rebase origin ${{ github.ref_name }}
+            }
             git push origin HEAD:${{ github.ref_name }}
             echo "Pushed $COMMITTED commit(s) to ${{ github.ref_name }}"
           else
@@ -666,6 +675,7 @@ jobs:
             sed -i '/^decompiled-sources/d' .gitignore
             git add .gitignore
             git diff --cached --quiet || git commit -m "chore: unignore decompiled-sources/" --no-verify
+            git pull --rebase origin ${{ github.ref_name }} || git pull --no-rebase origin ${{ github.ref_name }} || true
             git push origin HEAD:${{ github.ref_name }} || true
           else
             echo ".gitignore is fine — decompiled-sources/ is not excluded"
