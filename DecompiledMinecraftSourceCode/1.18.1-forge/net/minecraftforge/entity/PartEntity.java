@@ -1,0 +1,27 @@
+/*
+ * Copyright (c) Forge Development LLC and contributors
+ * SPDX-License-Identifier: LGPL-2.1-only
+ */
+
+package net.minecraftforge.entity;
+
+import net.minecraft.world.entity.Entity;
+import net.minecraft.network.protocol.Packet;
+
+public abstract class PartEntity<T extends Entity> extends Entity {
+    private final T parent;
+
+    public PartEntity(T parent) {
+        super(parent.m_6095_(), parent.f_19853_);
+        this.parent = parent;
+    }
+
+    public T getParent() {
+        return parent;
+    }
+
+    @Override
+    public Packet<?> m_5654_() {
+        throw new UnsupportedOperationException();
+    }
+}
