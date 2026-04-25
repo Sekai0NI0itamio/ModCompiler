@@ -1,0 +1,308 @@
+/*
+ * Copyright (c) Forge Development LLC and contributors
+ * SPDX-License-Identifier: LGPL-2.1-only
+ */
+
+package net.minecraftforge.fml.client;
+
+import java.io.File;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
+
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
+import com.mojang.blaze3d.matrix.MatrixStack;
+import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.client.gui.AbstractGui;
+import net.minecraft.client.gui.screen.MultiplayerScreen;
+import net.minecraft.client.multiplayer.PlayerController;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.ExtensionPoint;
+import net.minecraftforge.fml.ForgeI18n;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.network.FMLNetworkConstants;
+import net.minecraftforge.fml.network.NetworkRegistry;
+import net.minecraftforge.versions.forge.ForgeVersion;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
+
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.world.ClientWorld;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.ServerStatusResponse;
+import net.minecraft.resources.ResourcePack;
+import net.minecraft.resources.FallbackResourceManager;
+import net.minecraft.resources.IResourcePack;
+import net.minecraft.resources.SimpleReloadableResourceManager;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
+import net.minecraftforge.forgespi.language.IModInfo;
+import net.minecraftforge.fml.packs.ModFileResourcePack;
+import net.minecraftforge.registries.GameData;
+
+public class ClientHooks
+{
+    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Marker CLIENTHOOKS = MarkerManager.getMarker("CLIENTHOOKS");
+
+    private static final ResourceLocation iconSheet = new ResourceLocation(ForgeVersion.MOD_ID, "textures/gui/icons.png");
+    @Nullable
+
+    public static void processForgeListPingData(ServerStatusResponse packet, ServerData target)
+    {
+        if (packet.getForgeData() != null) {
+            final Map<String, String> mods = packet.getForgeData().getRemoteModData();
+            final Map<ResourceLocation, Pair<String, Boolean>> remoteChannels = packet.getForgeData().getRemoteChannels();
+            final int fmlver = packet.getForgeData().getFMLNetworkVersion();
+
+            boolean fmlNetMatches = fmlver == FMLNetworkConstants.FMLNETVERSION;
+            boolean channelsMatch = NetworkRegistry.checkListPingCompatibilityForClient(remoteChannels);
+            AtomicBoolean result = new AtomicBoolean(true);
+            final List<String> extraClientMods = new ArrayList<>();
+            ModList.get().forEachModContainer((modid, mc) ->
+                    mc.getCustomExtension(ExtensionPoint.DISPLAYTEST).ifPresent(ext-> {
+                        boolean foundModOnServer = ext.getRight().test(mods.get(modid), true);
+                        result.compareAndSet(true, foundModOnServer);
+                        if (!foundModOnServer) {
+                            extraClientMods.add(modid);
+                        }
+                    })
+            );
+            boolean modsMatch = result.get();
+
+            final Map<String, String> extraServerMods = mods.entrySet().stream().
+                    filter(e -> !Objects.equals(FMLNetworkConstants.IGNORESERVERONLY, e.getValue())).
+                    filter(e -> !ModList.get().isLoaded(e.getKey())).
+                    collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+            LOGGER.debug(CLIENTHOOKS, "Received FML ping data from server at {}: FMLNETVER={}, mod list is compatible : {}, channel list is compatible: {}, extra server mods: {}", target.field_78845_b, fmlver, modsMatch, channelsMatch, extraServerMods);
+
+            String extraReason = null;
+
+            if (!extraServerMods.isEmpty()) {
+                extraReason = "fml.menu.multiplayer.extraservermods";
+                LOGGER.info(CLIENTHOOKS, ForgeI18n.parseMessage(extraReason) + ": {}", extraServerMods.entrySet().stream()
+                        .map(e -> e.getKey() + "@" + e.getValue())
+                        .collect(Collectors.joining(", ")));
+            }
+            if (!modsMatch) {
+                extraReason = "fml.menu.multiplayer.modsincompatible";
+                LOGGER.info(CLIENTHOOKS, "Client has mods that are missing on server: {}", extraClientMods);
+            }
+            if (!channelsMatch) {
+                extraReason = "fml.menu.multiplayer.networkincompatible";
+            }
+
+            if (fmlver < FMLNetworkConstants.FMLNETVERSION) {
+                extraReason = "fml.menu.multiplayer.serveroutdated";
+            }
+            if (fmlver > FMLNetworkConstants.FMLNETVERSION) {
+                extraReason = "fml.menu.multiplayer.clientoutdated";
+            }
+            target.forgeData = new ExtendedServerListData("FML", extraServerMods.isEmpty() && fmlNetMatches && channelsMatch && modsMatch, mods.size(), extraReason, packet.getForgeData().isTruncated());
+        } else {
+            target.forgeData = new ExtendedServerListData("VANILLA", NetworkRegistry.canConnectToVanillaServer(),0, null);
+        }
+
+    }
+
+    public static void drawForgePingInfo(MultiplayerScreen gui, ServerData target, MatrixStack mStack, int x, int y, int width, int relativeMouseX, int relativeMouseY) {
+        int idx;
+        String tooltip;
+        if (target.forgeData == null)
+            return;
+        switch (target.forgeData.type) {
+            case "FML":
+                if (target.forgeData.isCompatible) {
+                    idx = 0;
+                    tooltip = ForgeI18n.parseMessage("fml.menu.multiplayer.compatible", target.forgeData.numberOfMods);
+                } else {
+                    idx = 16;
+                    if(target.forgeData.extraReason != null) {
+                        String extraReason = ForgeI18n.parseMessage(target.forgeData.extraReason);
+                        tooltip = ForgeI18n.parseMessage("fml.menu.multiplayer.incompatible.extra", extraReason);
+                    } else {
+                        tooltip = ForgeI18n.parseMessage("fml.menu.multiplayer.incompatible");
+                    }
+                }
+                if (target.forgeData.truncated)
+                {
+                    tooltip += "\n" + ForgeI18n.parseMessage("fml.menu.multiplayer.truncated");
+                }
+                break;
+            case "VANILLA":
+                if (target.forgeData.isCompatible) {
+                    idx = 48;
+                    tooltip = ForgeI18n.parseMessage("fml.menu.multiplayer.vanilla");
+                } else {
+                    idx = 80;
+                    tooltip = ForgeI18n.parseMessage("fml.menu.multiplayer.vanilla.incompatible");
+                }
+                break;
+            default:
+                idx = 64;
+                tooltip = ForgeI18n.parseMessage("fml.menu.multiplayer.unknown", target.forgeData.type);
+        }
+
+        Minecraft.func_71410_x().func_110434_K().func_110577_a(iconSheet);
+        AbstractGui.func_238466_a_(mStack, x + width - 18, y + 10, 16, 16, 0, idx, 16, 16, 256, 256);
+
+        if(relativeMouseX > width - 15 && relativeMouseX < width && relativeMouseY > 10 && relativeMouseY < 26) {
+            //this is not the most proper way to do it,
+            //but works best here and has the least maintenance overhead
+            gui.func_238854_b_(Arrays.stream(tooltip.split("\n")).map(StringTextComponent::new).collect(Collectors.toList()));
+        }
+    }
+
+    public static String fixDescription(String description)
+    {
+        return description.endsWith(":NOFML§r") ? description.substring(0, description.length() - 8)+"§r" : description;
+    }
+
+    @SuppressWarnings("resource")
+    static File getSavesDir()
+    {
+        return new File(Minecraft.func_71410_x().field_71412_D, "saves");
+    }
+
+    private static NetworkManager getClientToServerNetworkManager()
+    {
+        return Minecraft.func_71410_x().func_147114_u()!=null ? Minecraft.func_71410_x().func_147114_u().func_147298_b() : null;
+    }
+
+    public static void handleClientWorldClosing(ClientWorld world)
+    {
+        NetworkManager client = getClientToServerNetworkManager();
+        // ONLY revert a non-local connection
+        if (client != null && !client.func_150731_c())
+        {
+            GameData.revertToFrozen();
+        }
+    }
+
+
+    private static SetMultimap<String,ResourceLocation> missingTextures = HashMultimap.create();
+    private static Set<String> badTextureDomains = Sets.newHashSet();
+    private static Table<String, String, Set<ResourceLocation>> brokenTextures = HashBasedTable.create();
+
+    public static void trackMissingTexture(ResourceLocation resourceLocation)
+    {
+        badTextureDomains.add(resourceLocation.func_110624_b());
+        missingTextures.put(resourceLocation.func_110624_b(),resourceLocation);
+    }
+
+    public static void trackBrokenTexture(ResourceLocation resourceLocation, String error)
+    {
+        badTextureDomains.add(resourceLocation.func_110624_b());
+        Set<ResourceLocation> badType = brokenTextures.get(resourceLocation.func_110624_b(), error);
+        if (badType == null)
+        {
+            badType = Sets.newHashSet();
+            brokenTextures.put(resourceLocation.func_110624_b(), MoreObjects.firstNonNull(error, "Unknown error"), badType);
+        }
+        badType.add(resourceLocation);
+    }
+
+    public static void logMissingTextureErrors()
+    {
+        if (missingTextures.isEmpty() && brokenTextures.isEmpty())
+        {
+            return;
+        }
+        Logger logger = LogManager.getLogger("FML.TEXTURE_ERRORS");
+        logger.error(Strings.repeat("+=", 25));
+        logger.error("The following texture errors were found.");
+        Map<String, FallbackResourceManager> resManagers = ObfuscationReflectionHelper.getPrivateValue(SimpleReloadableResourceManager.class, (SimpleReloadableResourceManager)Minecraft.func_71410_x().func_195551_G(), "field_199014"+"_c");
+        for (String resourceDomain : badTextureDomains)
+        {
+            Set<ResourceLocation> missing = missingTextures.get(resourceDomain);
+            logger.error(Strings.repeat("=", 50));
+            logger.error("  DOMAIN {}", resourceDomain);
+            logger.error(Strings.repeat("-", 50));
+            logger.error("  domain {} is missing {} texture{}",resourceDomain, missing.size(),missing.size()!=1 ? "s" : "");
+            FallbackResourceManager fallbackResourceManager = resManagers.get(resourceDomain);
+            if (fallbackResourceManager == null)
+            {
+                logger.error("    domain {} is missing a resource manager - it is probably a side-effect of automatic texture processing", resourceDomain);
+            }
+            else
+            {
+                List<IResourcePack> resPacks = fallbackResourceManager.field_199023_a;
+                logger.error("    domain {} has {} location{}:",resourceDomain, resPacks.size(), resPacks.size() != 1 ? "s" :"");
+                for (IResourcePack resPack : resPacks)
+                {
+                    if (resPack instanceof ModFileResourcePack) {
+                        ModFileResourcePack modRP = (ModFileResourcePack) resPack;
+                        List<IModInfo> mods = modRP.getModFile().getModInfos();
+                        logger.error("      mod(s) {} resources at {}", mods.stream().map(IModInfo::getDisplayName).collect(Collectors.toList()), modRP.getModFile().getFilePath());
+                    }
+                    else if (resPack instanceof ResourcePack)
+                    {
+                        logger.error("      resource pack at path {}", ((ResourcePack)resPack).field_195771_a.getPath());
+                    }
+                    else
+                    {
+                        logger.error("      unknown resourcepack type {} : {}", resPack.getClass().getName(), resPack.func_195762_a());
+                    }
+                }
+            }
+            logger.error(Strings.repeat("-", 25));
+            if (missingTextures.containsKey(resourceDomain)) {
+                logger.error("    The missing resources for domain {} are:", resourceDomain);
+                for (ResourceLocation rl : missing) {
+                    logger.error("      {}", rl.func_110623_a());
+                }
+                logger.error(Strings.repeat("-", 25));
+            }
+            if (!brokenTextures.containsRow(resourceDomain))
+            {
+                logger.error("    No other errors exist for domain {}", resourceDomain);
+            }
+            else
+            {
+                logger.error("    The following other errors were reported for domain {}:",resourceDomain);
+                Map<String, Set<ResourceLocation>> resourceErrs = brokenTextures.row(resourceDomain);
+                for (String error: resourceErrs.keySet())
+                {
+                    logger.error(Strings.repeat("-", 25));
+                    logger.error("    Problem: {}", error);
+                    for (ResourceLocation rl : resourceErrs.get(error))
+                    {
+                        logger.error("      {}",rl.func_110623_a());
+                    }
+                }
+            }
+            logger.error(Strings.repeat("=", 50));
+        }
+        logger.error(Strings.repeat("+=", 25));
+    }
+
+    public static void firePlayerLogin(PlayerController pc, ClientPlayerEntity player, NetworkManager networkManager) {
+        MinecraftForge.EVENT_BUS.post(new ClientPlayerNetworkEvent.LoggedInEvent(pc, player, networkManager));
+    }
+
+    public static void firePlayerLogout(PlayerController pc, ClientPlayerEntity player) {
+        MinecraftForge.EVENT_BUS.post(new ClientPlayerNetworkEvent.LoggedOutEvent(pc, player, player != null ? player.field_71174_a != null ? player.field_71174_a.func_147298_b() : null : null));
+    }
+
+    public static void firePlayerRespawn(PlayerController pc, ClientPlayerEntity oldPlayer, ClientPlayerEntity newPlayer, NetworkManager networkManager) {
+        MinecraftForge.EVENT_BUS.post(new ClientPlayerNetworkEvent.RespawnEvent(pc, oldPlayer, newPlayer, networkManager));
+    }
+
+
+}

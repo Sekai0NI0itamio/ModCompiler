@@ -1,0 +1,107 @@
+/*
+ * Copyright (c) Forge Development LLC and contributors
+ * SPDX-License-Identifier: LGPL-2.1-only
+ */
+
+package net.minecraftforge.common.world;
+
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StringUtils;
+import net.minecraft.util.Util;
+import net.minecraft.util.registry.DynamicRegistries;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.world.DimensionType;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.gen.ChunkGenerator;
+import net.minecraft.world.gen.DimensionSettings;
+import net.minecraft.world.gen.settings.DimensionGeneratorSettings;
+import net.minecraftforge.common.ForgeConfig;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.ForgeRegistryEntry;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class ForgeWorldType extends ForgeRegistryEntry<ForgeWorldType>
+{
+    private static final Logger LOGGER = LogManager.getLogger();
+
+    public static ForgeWorldType getDefaultWorldType()
+    {
+        String defaultWorldType = ForgeConfig.COMMON.defaultWorldType.get();
+
+        if (StringUtils.func_151246_b(defaultWorldType) || "default".equals(defaultWorldType))
+            return null; // use vanilla
+
+        ForgeWorldType def = ForgeRegistries.WORLD_TYPES.getValue(new ResourceLocation(defaultWorldType));
+        if (def == null)
+        {
+            LOGGER.error("The defaultWorldType '{}' specified in the forge config has not been registered. The vanilla default generator will be used.", defaultWorldType);
+        }
+
+        return def;
+    }
+
+    private final IChunkGeneratorFactory factory;
+
+    public ForgeWorldType(IChunkGeneratorFactory factory)
+    {
+        this.factory = factory;
+    }
+
+    public ForgeWorldType(IBasicChunkGeneratorFactory factory)
+    {
+        this.factory = factory;
+    }
+
+    public String getTranslationKey()
+    {
+        return Util.func_200697_a("generator", getRegistryName());
+    }
+
+    public ITextComponent getDisplayName()
+    {
+        return new TranslationTextComponent(getTranslationKey());
+    }
+
+    /**
+     * Called from both the dedicated server and the world creation screen in the client.
+     * to construct the DimensionGEneratorSettings:
+     * @return The constructed chunk generator.
+     */
+    public ChunkGenerator createChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed, String generatorSettings)
+    {
+        return this.factory.createChunkGenerator(biomeRegistry, dimensionSettingsRegistry, seed, generatorSettings);
+    }
+
+    public DimensionGeneratorSettings createSettings(DynamicRegistries dynamicRegistries, long seed, boolean generateStructures, boolean generateLoot, String generatorSettings)
+    {
+        return this.factory.createSettings(dynamicRegistries, seed, generateStructures, generateLoot, generatorSettings);
+    }
+
+    public interface IChunkGeneratorFactory
+    {
+        ChunkGenerator createChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed, String generatorSettings);
+
+        default DimensionGeneratorSettings createSettings(DynamicRegistries dynamicRegistries, long seed, boolean generateStructures, boolean bonusChest, String generatorSettings) {
+            Registry<Biome> biomeRegistry = dynamicRegistries.func_243612_b(Registry.field_239720_u_);
+            Registry<DimensionType> dimensionTypeRegistry = dynamicRegistries.func_243612_b(Registry.field_239698_ad_);
+            Registry<DimensionSettings> dimensionSettingsRegistry = dynamicRegistries.func_243612_b(Registry.field_243549_ar);
+            return new DimensionGeneratorSettings(seed, generateStructures, bonusChest,
+                    DimensionGeneratorSettings.func_242749_a(dimensionTypeRegistry,
+                            DimensionType.func_242718_a(dimensionTypeRegistry, biomeRegistry, dimensionSettingsRegistry, seed),
+                            createChunkGenerator(biomeRegistry, dimensionSettingsRegistry, seed, generatorSettings)));
+        }
+    }
+
+    public interface IBasicChunkGeneratorFactory extends IChunkGeneratorFactory
+    {
+        ChunkGenerator createChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed);
+
+        default ChunkGenerator createChunkGenerator(Registry<Biome> biomeRegistry, Registry<DimensionSettings> dimensionSettingsRegistry, long seed, String generatorSettings)
+        {
+            return createChunkGenerator(biomeRegistry, dimensionSettingsRegistry, seed);
+        }
+    }
+}
