@@ -1,0 +1,693 @@
+name: Decompile All Minecraft Versions and Add Missing to Repository
+
+# Decompiles Minecraft sources for every version+loader combination defined in
+# version-manifest.json and commits the extracted .java files into
+# decompiled-sources/<version>-<loader>/ in the repository.
+#
+# Already-committed folders are skipped so re-runs are cheap — only new or
+# missing combinations are processed.
+#
+# USAGE (from IDE agent or terminal):
+#   python3 scripts/decompile_all_and_commit.py
+#
+# Or trigger manually from the GitHub Actions UI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_regenerate:
+        description: 'Force re-decompile even if folder already exists in repo (yes/no)'
+        required: false
+        default: 'no'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+      specific_version:
+        description: 'Only process this version (e.g. 1.21.5). Leave blank for all.'
+        required: false
+        default: ''
+        type: string
+      specific_loader:
+        description: 'Only process this loader (forge/fabric/neoforge). Leave blank for all.'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - forge
+          - fabric
+          - neoforge
+      commit_message_prefix:
+        description: 'Prefix for the git commit message'
+        required: false
+        default: 'chore(sources)'
+        type: string
+
+# Only one run at a time to avoid concurrent commits to the same branch
+concurrency:
+  group: decompile-all-sources
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Stage 1: Build the matrix from version-manifest.json
+  # ---------------------------------------------------------------------------
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build decompile matrix
+        id: matrix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = json.loads(Path("version-manifest.json").read_text(encoding="utf-8"))
+          force     = "${{ inputs.force_regenerate }}" == "yes"
+          only_ver  = "${{ inputs.specific_version }}".strip()
+          only_ldr  = "${{ inputs.specific_loader }}".strip()
+
+          include = []
+          seen = set()
+
+          for entry in manifest.get("ranges", []):
+              folder = entry["folder"]
+              for loader, cfg in entry.get("loaders", {}).items():
+                  # Filter by specific_version / specific_loader inputs
+                  if only_ldr and loader != only_ldr:
+                      continue
+
+                  # Collect the representative versions for this range+loader
+                  versions = cfg.get("supported_versions")
+                  if not versions:
+                      # Fall back to anchor_version when no explicit list
+                      versions = [cfg.get("anchor_version", entry.get("min_version", ""))]
+
+                  for version in versions:
+                      version = str(version).strip()
+                      if not version:
+                          continue
+                      if only_ver and version != only_ver:
+                          continue
+
+                      slug = f"{version}-{loader}"
+                      if slug in seen:
+                          continue
+                      seen.add(slug)
+
+                      dest_folder = f"decompiled-sources/{slug}"
+                      already_exists = Path(dest_folder).is_dir() and any(
+                          Path(dest_folder).rglob("*.java")
+                      )
+
+                      if already_exists and not force:
+                          print(f"SKIP (already committed): {slug}")
+                          continue
+
+                      include.append({
+                          "version": version,
+                          "loader":  loader,
+                          "folder":  folder,
+                          "slug":    slug,
+                      })
+
+          matrix = {"include": include}
+          out = os.environ.get("GITHUB_OUTPUT", "")
+          if out:
+              with open(out, "a") as f:
+                  f.write(f"matrix={json.dumps(matrix)}\n")
+
+          print(f"Matrix contains {len(include)} entries to decompile.")
+          for item in include:
+              print(f"  {item['slug']}")
+          PY
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: Decompile each version+loader in parallel
+  # ---------------------------------------------------------------------------
+  decompile:
+    needs: prepare-matrix
+    if: ${{ fromJson(needs.prepare-matrix.outputs.matrix).include[0] != null }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ------------------------------------------------------------------
+      # Java — install all versions we might need; setup-java supports
+      # a multi-version list.
+      # ------------------------------------------------------------------
+      - name: Determine Java version
+        id: java_version
+        run: |
+          VERSION="${{ matrix.version }}"
+          if [[ "$VERSION" =~ ^1\.(8|12) ]]; then
+            JAVA_VER=8
+          elif [[ "$VERSION" =~ ^1\.(16|17) ]]; then
+            JAVA_VER=16
+          elif [[ "$VERSION" =~ ^1\.(18|19) ]]; then
+            JAVA_VER=17
+          elif [[ "$VERSION" =~ ^1\.20\.[0-4]$ ]] || [[ "$VERSION" == "1.20" ]]; then
+            JAVA_VER=17
+          elif [[ "$VERSION" =~ ^26\. ]]; then
+            JAVA_VER=21
+          else
+            JAVA_VER=21
+          fi
+          echo "java_version=$JAVA_VER" >> $GITHUB_OUTPUT
+          echo "Using Java $JAVA_VER for Minecraft $VERSION"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.java_version.outputs.java_version }}
+
+      # ------------------------------------------------------------------
+      # Gradle cache — keyed per slug so each version+loader is isolated
+      # ------------------------------------------------------------------
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: decompile-src-${{ runner.os }}-${{ matrix.slug }}-${{ hashFiles('version-manifest.json') }}
+          restore-keys: |
+            decompile-src-${{ runner.os }}-${{ matrix.slug }}-
+            decompile-src-${{ runner.os }}-
+
+      # ------------------------------------------------------------------
+      # Resolve the template directory for this version+loader
+      # ------------------------------------------------------------------
+      - name: Resolve template directory
+        id: resolve
+        run: |
+          FOLDER="${{ matrix.folder }}"
+          LOADER="${{ matrix.loader }}"
+          TEMPLATE_DIR="${FOLDER}/${LOADER}/template"
+
+          if [ ! -d "$TEMPLATE_DIR" ]; then
+            echo "ERROR: No template at $TEMPLATE_DIR"
+            ls -d ${FOLDER}/*/template 2>/dev/null || echo "  (none found)"
+            exit 1
+          fi
+
+          echo "template_dir=$TEMPLATE_DIR" >> $GITHUB_OUTPUT
+          echo "Resolved template: $TEMPLATE_DIR"
+
+      # ------------------------------------------------------------------
+      # Copy template to an isolated workspace
+      # ------------------------------------------------------------------
+      - name: Prepare Gradle workspace
+        run: |
+          TEMPLATE_DIR="${{ steps.resolve.outputs.template_dir }}"
+          WORKSPACE="/tmp/decompile-ws-${{ matrix.slug }}"
+          rm -rf "$WORKSPACE"
+          cp -r "$TEMPLATE_DIR" "$WORKSPACE"
+          chmod +x "$WORKSPACE/gradlew" 2>/dev/null || true
+          echo "WORKSPACE=$WORKSPACE" >> $GITHUB_ENV
+
+      # ------------------------------------------------------------------
+      # Download + decompile Minecraft sources
+      # Mirrors the exact strategy used in ai-source-search.yml
+      # ------------------------------------------------------------------
+      - name: Download and decompile Minecraft sources
+        run: |
+          cd "$WORKSPACE"
+          LOADER="${{ matrix.loader }}"
+          VERSION="${{ matrix.version }}"
+          export GRADLE_OPTS="-Dorg.gradle.configuration-cache=false"
+
+          echo "=== Decompiling $LOADER $VERSION ==="
+
+          # ----------------------------------------------------------------
+          # STRATEGY 1: 26.x — Minecraft ships unobfuscated; grab from CDN
+          # ----------------------------------------------------------------
+          if [[ "$VERSION" =~ ^26\. ]]; then
+            echo "--- 26.x: downloading unobfuscated source from Mojang CDN ---"
+            MANIFEST_URL="https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+            curl -fsSL "$MANIFEST_URL" -o /tmp/mc-manifest.json 2>/dev/null || echo '{}' > /tmp/mc-manifest.json
+
+            VERSION_URL=$(python3 -c "
+          import json, sys
+          d = json.load(open('/tmp/mc-manifest.json'))
+          for v in d.get('versions', []):
+              if v['id'] == '$VERSION':
+                  print(v['url'])
+                  break
+          " 2>/dev/null || echo "")
+
+            if [ -n "$VERSION_URL" ]; then
+              curl -fsSL "$VERSION_URL" -o /tmp/mc-version-meta.json 2>/dev/null || echo '{}' > /tmp/mc-version-meta.json
+              CLIENT_SRC_URL=$(python3 -c "
+          import json
+          d = json.load(open('/tmp/mc-version-meta.json'))
+          dl = d.get('downloads', {})
+          for k in ['client_mappings', 'client']:
+              if k in dl:
+                  print(dl[k]['url'])
+                  break
+          " 2>/dev/null || echo "")
+
+              if [ -n "$CLIENT_SRC_URL" ]; then
+                mkdir -p /tmp/mc-sources
+                curl -fsSL "$CLIENT_SRC_URL" -o /tmp/mc-sources/client.jar 2>/dev/null || true
+                if [ -f /tmp/mc-sources/client.jar ]; then
+                  unzip -q /tmp/mc-sources/client.jar "*.java" -d /tmp/mc-sources/extracted 2>/dev/null || \
+                  unzip -q /tmp/mc-sources/client.jar -d /tmp/mc-sources/extracted 2>/dev/null || true
+                  JAVA_COUNT=$(find /tmp/mc-sources/extracted -name "*.java" 2>/dev/null | wc -l)
+                  echo "Extracted $JAVA_COUNT .java files from Mojang CDN"
+                fi
+              fi
+            fi
+          fi
+
+          # ----------------------------------------------------------------
+          # STRATEGY 2: Gradle-based decompilation (all versions)
+          # ----------------------------------------------------------------
+          if [[ "$LOADER" == "forge" ]]; then
+            if ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
+              echo "Using 'decompile' task (ForgeGradle 7+)"
+              ./gradlew --no-daemon --stacktrace decompile 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || {
+                echo "decompile failed, trying downloadSources..."
+                ./gradlew --no-daemon --stacktrace downloadSources 2>&1 | tee -a /tmp/gradle-${{ matrix.slug }}.log || true
+              }
+            else
+              echo "Using 'genSources' task (ForgeGradle <7)"
+              ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || {
+                echo "genSources failed — forcing dependency resolution via compileJava stub..."
+                mkdir -p src/main/java/com/stub
+                echo 'package com.stub; public class Stub {}' > src/main/java/com/stub/Stub.java
+                ./gradlew --no-daemon --stacktrace compileJava 2>&1 | tee -a /tmp/gradle-${{ matrix.slug }}.log || true
+              }
+            fi
+
+          elif [[ "$LOADER" == "neoforge" ]]; then
+            if ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^decompile "; then
+              ./gradlew --no-daemon --stacktrace decompile 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
+            elif ./gradlew --no-daemon tasks --all 2>/dev/null | grep -q "^genSources "; then
+              ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
+            else
+              ./gradlew --no-daemon --stacktrace dependencies 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || true
+            fi
+
+          elif [[ "$LOADER" == "fabric" ]]; then
+            ./gradlew --no-daemon --stacktrace genSources 2>&1 | tee /tmp/gradle-${{ matrix.slug }}.log || {
+              echo "genSources failed — trying dependencies..."
+              ./gradlew --no-daemon --stacktrace dependencies 2>&1 | tee -a /tmp/gradle-${{ matrix.slug }}.log || true
+            }
+          fi
+
+          echo "=== Gradle done ==="
+
+      # ------------------------------------------------------------------
+      # Locate and collect all decompiled .java files
+      # ------------------------------------------------------------------
+      - name: Locate and collect decompiled sources
+        id: locate
+        run: |
+          LOADER="${{ matrix.loader }}"
+          VERSION="${{ matrix.version }}"
+          SLUG="${{ matrix.slug }}"
+          EXTRACTED_DIR="/tmp/extracted-$SLUG"
+          mkdir -p "$EXTRACTED_DIR"
+
+          echo "=== Collecting sources for $SLUG ==="
+
+          # ----------------------------------------------------------------
+          # Helper: find the largest sources jar and extract it
+          # ----------------------------------------------------------------
+          extract_sources_jar() {
+            local BEST_JAR="" BEST_SIZE=0
+            for ROOT in "$@"; do
+              [ -d "$ROOT" ] || continue
+              while IFS= read -r JAR; do
+                SIZE=$(stat -c%s "$JAR" 2>/dev/null || echo 0)
+                if [ "$SIZE" -gt "$BEST_SIZE" ]; then BEST_SIZE=$SIZE; BEST_JAR=$JAR; fi
+              done < <(find "$ROOT" \
+                \( -name "*-sources.jar" -o -name "*named-sources.jar" \
+                   -o -name "*-sources-*.jar" -o -name "*decompiled*.jar" \) \
+                -not -name "*.lock" -type f 2>/dev/null)
+            done
+            if [ -n "$BEST_JAR" ]; then
+              echo "Found sources jar ($BEST_SIZE bytes): $BEST_JAR"
+              unzip -q "$BEST_JAR" "*.java" -d "$EXTRACTED_DIR" 2>/dev/null || \
+              unzip -q "$BEST_JAR" -d "$EXTRACTED_DIR" 2>/dev/null || true
+              return 0
+            fi
+            return 1
+          }
+
+          # ----------------------------------------------------------------
+          # Helper: copy .java files from the largest cache subtree
+          # ----------------------------------------------------------------
+          find_java_files() {
+            local BEST_ROOT="" BEST_COUNT=0
+            for ROOT in "$@"; do
+              [ -d "$ROOT" ] || continue
+              COUNT=$(find "$ROOT" -name "*.java" -type f 2>/dev/null | wc -l)
+              if [ "$COUNT" -gt "$BEST_COUNT" ]; then BEST_COUNT=$COUNT; BEST_ROOT=$ROOT; fi
+            done
+            if [ "$BEST_COUNT" -gt 0 ]; then
+              echo "Copying $BEST_COUNT .java files from $BEST_ROOT..."
+              find "$BEST_ROOT" -name "*.java" -type f | while read -r F; do
+                REL="${F#$BEST_ROOT/}"
+                DEST="$EXTRACTED_DIR/$REL"
+                mkdir -p "$(dirname "$DEST")"
+                cp "$F" "$DEST"
+              done
+              return 0
+            fi
+            return 1
+          }
+
+          # ----------------------------------------------------------------
+          # STEP 0: 26.x — copy Mojang CDN sources first
+          # ----------------------------------------------------------------
+          if [[ "$VERSION" =~ ^26\. ]]; then
+            MOJANG_EXTRACTED="/tmp/mc-sources/extracted"
+            if [ -d "$MOJANG_EXTRACTED" ]; then
+              MOJANG_COUNT=$(find "$MOJANG_EXTRACTED" -name "*.java" 2>/dev/null | wc -l)
+              echo "Copying $MOJANG_COUNT Mojang CDN source files..."
+              find "$MOJANG_EXTRACTED" -name "*.java" -type f | while read -r F; do
+                REL="${F#$MOJANG_EXTRACTED/}"
+                DEST="$EXTRACTED_DIR/$REL"
+                mkdir -p "$(dirname "$DEST")"
+                cp "$F" "$DEST"
+              done
+            fi
+          fi
+
+          # ----------------------------------------------------------------
+          # STEP 1: Extract from Gradle cache (mod loader API sources)
+          # ----------------------------------------------------------------
+          if [[ "$LOADER" == "fabric" ]]; then
+            extract_sources_jar \
+              "$WORKSPACE/.gradle" \
+              "$HOME/.gradle/caches" \
+              "$WORKSPACE/build" \
+              || echo "WARNING: No Fabric sources jar found"
+
+          elif [[ "$LOADER" == "forge" ]]; then
+            if ! extract_sources_jar \
+              "$HOME/.gradle/caches/minecraftforge" \
+              "$HOME/.gradle/caches/forge_gradle" \
+              "$HOME/.gradle/caches/net.minecraftforge" \
+              "$HOME/.gradle/caches/minecraft" \
+              "$HOME/.gradle/caches/modules-2" \
+              "$WORKSPACE/.gradle" \
+              "$HOME/.gradle/caches"; then
+              find_java_files \
+                "$HOME/.gradle/caches/minecraftforge" \
+                "$HOME/.gradle/caches/forge_gradle" \
+                "$HOME/.gradle/caches/net.minecraftforge" \
+                "$HOME/.gradle/caches/minecraft" \
+                "$HOME/.gradle/caches/modules-2" \
+                "$HOME/.gradle/caches" \
+                "$WORKSPACE/.gradle" \
+                || echo "WARNING: No Forge .java files found"
+            fi
+
+          elif [[ "$LOADER" == "neoforge" ]]; then
+            if ! extract_sources_jar \
+              "$HOME/.gradle/caches/neoforge" \
+              "$HOME/.gradle/caches/net.neoforged" \
+              "$HOME/.gradle/caches/modules-2" \
+              "$HOME/.gradle/caches" \
+              "$WORKSPACE/.gradle"; then
+              find_java_files \
+                "$HOME/.gradle/caches/neoforge" \
+                "$HOME/.gradle/caches/net.neoforged" \
+                "$HOME/.gradle/caches/modules-2" \
+                "$HOME/.gradle/caches" \
+                "$WORKSPACE/.gradle" \
+                || echo "WARNING: No NeoForge .java files found"
+            fi
+          fi
+
+          # ----------------------------------------------------------------
+          # STEP 2: Fabric — also pull Fabric API sources from loom cache
+          # ----------------------------------------------------------------
+          if [[ "$LOADER" == "fabric" ]]; then
+            while IFS= read -r JAR; do
+              [ -f "$JAR" ] || continue
+              echo "Extracting Fabric API jar: $JAR"
+              unzip -q "$JAR" "*.java" -d "$EXTRACTED_DIR" 2>/dev/null || \
+              unzip -q "$JAR" -d "$EXTRACTED_DIR" 2>/dev/null || true
+            done < <(find "$HOME/.gradle" "$WORKSPACE/.gradle" \
+              \( -name "fabric-api*sources*.jar" -o -name "fabric-api*-sources.jar" \) \
+              2>/dev/null | head -5)
+          fi
+
+          JAVA_COUNT=$(find "$EXTRACTED_DIR" -name "*.java" -type f 2>/dev/null | wc -l)
+          echo "extracted_dir=$EXTRACTED_DIR" >> $GITHUB_OUTPUT
+          echo "java_count=$JAVA_COUNT"       >> $GITHUB_OUTPUT
+          echo "Total .java files collected: $JAVA_COUNT"
+
+          if [ "$JAVA_COUNT" -eq 0 ]; then
+            echo "=== DEBUG: sources jars in Gradle cache ==="
+            find "$HOME/.gradle/caches" -name "*.jar" 2>/dev/null \
+              | grep -i "source\|decompile\|named\|mapped" | head -30 || true
+          fi
+
+      # ------------------------------------------------------------------
+      # Write a README for the committed folder
+      # ------------------------------------------------------------------
+      - name: Write folder README
+        run: |
+          SLUG="${{ matrix.slug }}"
+          VERSION="${{ matrix.version }}"
+          LOADER="${{ matrix.loader }}"
+          JAVA_COUNT="${{ steps.locate.outputs.java_count }}"
+          EXTRACTED_DIR="${{ steps.locate.outputs.extracted_dir }}"
+
+          cat > "$EXTRACTED_DIR/README.md" << READMEEOF
+          # Decompiled Minecraft Sources — ${VERSION} / ${LOADER}
+
+          Auto-generated by the \`decompile-all-minecraft-versions-and-add-missing-to-repository\`
+          GitHub Actions workflow.
+
+          | Field        | Value                        |
+          |--------------|------------------------------|
+          | MC Version   | ${VERSION}                   |
+          | Loader       | ${LOADER}                    |
+          | Java files   | ${JAVA_COUNT}                |
+          | Generated    | $(date -u '+%Y-%m-%d %H:%M UTC') |
+
+          ## Purpose
+
+          These sources are committed to the repository so that AI coding agents
+          (Kiro, Copilot, etc.) and developers can browse Minecraft API signatures
+          without re-running a decompilation step every time.
+
+          ## How to use
+
+          Browse the \`.java\` files directly, or search with:
+
+          \`\`\`bash
+          grep -r "YourClassName" decompiled-sources/${SLUG}/
+          \`\`\`
+
+          Or use the \`ai-source-search\` workflow for richer query support.
+          READMEEOF
+
+          echo "README written to $EXTRACTED_DIR/README.md"
+
+      # ------------------------------------------------------------------
+      # Upload the extracted sources as a workflow artifact
+      # (used by the commit job below)
+      # ------------------------------------------------------------------
+      - name: Upload decompiled sources artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: decompiled-${{ matrix.slug }}
+          path: ${{ steps.locate.outputs.extracted_dir }}/
+          retention-days: 3
+          if-no-files-found: warn
+
+      # ------------------------------------------------------------------
+      # Job summary
+      # ------------------------------------------------------------------
+      - name: Job summary
+        if: always()
+        run: |
+          SLUG="${{ matrix.slug }}"
+          JAVA_COUNT="${{ steps.locate.outputs.java_count }}"
+          echo "## Decompile: $SLUG" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${JAVA_COUNT:-0}" -gt 0 ]; then
+            echo "✅ **$JAVA_COUNT** .java files extracted" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No .java files found — check Gradle log" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Stage 3: Download all artifacts and commit them to the repository
+  # Runs sequentially after all decompile jobs finish so we make one clean
+  # commit per version+loader (or one combined commit if preferred).
+  # ---------------------------------------------------------------------------
+  commit-to-repository:
+    needs: [prepare-matrix, decompile]
+    if: always() && fromJson(needs.prepare-matrix.outputs.matrix).include[0] != null
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so we can push cleanly
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Download every artifact produced by the decompile jobs
+      - name: Download all decompiled artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: decompiled-*
+          path: /tmp/all-decompiled/
+          merge-multiple: false
+
+      # Copy each artifact into decompiled-sources/<slug>/ and commit
+      - name: Commit decompiled sources to repository
+        run: |
+          PREFIX="${{ inputs.commit_message_prefix }}"
+          FORCE="${{ inputs.force_regenerate }}"
+          COMMITTED=0
+          SKIPPED=0
+          FAILED=0
+
+          shopt -s nullglob
+          for ARTIFACT_DIR in /tmp/all-decompiled/decompiled-*/; do
+            SLUG=$(basename "$ARTIFACT_DIR" | sed 's/^decompiled-//')
+            DEST="decompiled-sources/$SLUG"
+
+            JAVA_COUNT=$(find "$ARTIFACT_DIR" -name "*.java" -type f 2>/dev/null | wc -l)
+
+            if [ "$JAVA_COUNT" -eq 0 ]; then
+              echo "SKIP $SLUG — no .java files in artifact (decompilation likely failed)"
+              FAILED=$((FAILED + 1))
+              continue
+            fi
+
+            # Skip if already committed and not forcing
+            if [ -d "$DEST" ] && [ "$FORCE" != "yes" ]; then
+              EXISTING=$(find "$DEST" -name "*.java" -type f 2>/dev/null | wc -l)
+              if [ "$EXISTING" -gt 0 ]; then
+                echo "SKIP $SLUG — already has $EXISTING .java files in repo"
+                SKIPPED=$((SKIPPED + 1))
+                continue
+              fi
+            fi
+
+            echo "Committing $JAVA_COUNT .java files for $SLUG..."
+
+            # Remove old content if force-regenerating
+            if [ "$FORCE" == "yes" ] && [ -d "$DEST" ]; then
+              git rm -rf "$DEST" --quiet 2>/dev/null || rm -rf "$DEST"
+            fi
+
+            mkdir -p "$DEST"
+            cp -r "$ARTIFACT_DIR/." "$DEST/"
+
+            git add "$DEST"
+
+            # Only commit if there are staged changes
+            if git diff --cached --quiet; then
+              echo "  No changes to commit for $SLUG (content identical)"
+              SKIPPED=$((SKIPPED + 1))
+            else
+              git commit -m "${PREFIX}: add decompiled sources for ${SLUG}" \
+                --no-verify \
+                -m "Auto-generated by decompile-all-minecraft-versions-and-add-missing-to-repository workflow." \
+                -m "Java files: $JAVA_COUNT" \
+                -m "Run: ${{ github.run_id }}"
+              echo "  Committed $SLUG"
+              COMMITTED=$((COMMITTED + 1))
+            fi
+          done
+
+          echo ""
+          echo "=== Commit summary ==="
+          echo "  Committed : $COMMITTED"
+          echo "  Skipped   : $SKIPPED"
+          echo "  Failed    : $FAILED"
+
+          # Store counts for the summary step
+          echo "COMMITTED=$COMMITTED" >> $GITHUB_ENV
+          echo "SKIPPED=$SKIPPED"     >> $GITHUB_ENV
+          echo "FAILED=$FAILED"       >> $GITHUB_ENV
+
+      # Push all commits in one network round-trip
+      - name: Push commits
+        run: |
+          if [ "${COMMITTED:-0}" -gt 0 ]; then
+            git push origin HEAD:${{ github.ref_name }}
+            echo "Pushed $COMMITTED commit(s) to ${{ github.ref_name }}"
+          else
+            echo "Nothing to push."
+          fi
+
+      # Update the .gitignore to make sure large binary caches are excluded
+      - name: Ensure decompiled-sources is tracked (not gitignored)
+        run: |
+          if grep -q "^decompiled-sources" .gitignore 2>/dev/null; then
+            echo "WARNING: decompiled-sources/ is in .gitignore — removing that line"
+            sed -i '/^decompiled-sources/d' .gitignore
+            git add .gitignore
+            git diff --cached --quiet || git commit -m "chore: unignore decompiled-sources/" --no-verify
+            git push origin HEAD:${{ github.ref_name }} || true
+          else
+            echo ".gitignore is fine — decompiled-sources/ is not excluded"
+          fi
+
+      - name: Workflow summary
+        if: always()
+        run: |
+          echo "## Decompile All Minecraft Versions — Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Result    | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Committed | ${COMMITTED:-0} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Skipped (already present) | ${SKIPPED:-0} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failed (no sources found) | ${FAILED:-0} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Committed folders live under \`decompiled-sources/\` in the repository." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Committed slugs" >> $GITHUB_STEP_SUMMARY
+          for D in decompiled-sources/*/; do
+            [ -d "$D" ] || continue
+            SLUG=$(basename "$D")
+            COUNT=$(find "$D" -name "*.java" -type f 2>/dev/null | wc -l)
+            echo "- \`$SLUG\` — $COUNT .java files" >> $GITHUB_STEP_SUMMARY
+          done || true
