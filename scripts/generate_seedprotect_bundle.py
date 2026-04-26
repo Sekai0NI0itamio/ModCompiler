@@ -500,11 +500,34 @@ def create_neoforge(mc_version: str):
 
     # ── Main class ────────────────────────────────────────────────────────────
     # NeoForge uses its own event package throughout all versions.
-    # ALL NeoForge versions (1.20.x through 26.1.x) use the same pattern:
-    #   @EventBusSubscriber + event.setCanceled(true)
-    # NeoForge 26.1 still uses NeoForge.EVENT_BUS.post() with ICancellableEvent
-    # — it does NOT use EventBus 7's .BUS.addListener() pattern.
-    main_src = f"""package com.seedprotect;
+    # NeoForge 1.20.x–1.21.x: @Mod.EventBusSubscriber(bus = Bus.FORGE) nested annotation
+    # NeoForge 26.1+: @EventBusSubscriber is a standalone annotation from
+    #   net.neoforged.fml.common.EventBusSubscriber (no longer nested inside @Mod)
+    #   No bus= parameter needed — defaults to the game/Forge bus.
+    # Both use NeoForge.EVENT_BUS.post() with ICancellableEvent.setCanceled(true).
+    if is_26:
+        main_src = f"""package com.seedprotect;
+
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
+
+// NeoForge 26.1+: @EventBusSubscriber is a standalone annotation (not nested in @Mod).
+// No bus= parameter — defaults to the game/Forge bus.
+@Mod("{MOD_ID}")
+@EventBusSubscriber(modid = "{MOD_ID}")
+public final class SeedProtectMod {{
+    public static final String MOD_ID = "{MOD_ID}";
+
+    @SubscribeEvent
+    public static void onFarmlandTrample(BlockEvent.FarmlandTrampleEvent event) {{
+        event.setCanceled(true);
+    }}
+}}
+"""
+    else:
+        main_src = f"""package com.seedprotect;
 
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.bus.api.SubscribeEvent;
