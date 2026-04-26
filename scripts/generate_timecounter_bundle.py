@@ -1100,10 +1100,10 @@ FORGE_1212_TO_1215_MOD = FORGE_1206_MOD
 FORGE_1212_TO_1215_CLIENT = FORGE_121_TO_1215_CLIENT
 
 # ---------------------------------------------------------------------------
-# Forge 1.21.6+ — EventBus 7: @SubscribeEvent import changed to
-# net.minecraftforge.eventbus.api.listener.SubscribeEvent
-# Mod constructor: FMLJavaModLoadingContext context injection
-# Use RenderGuiEvent.Post (not RenderGuiOverlayEvent which moved/changed)
+# Forge 1.21.6+ — EventBus 7: AddGuiOverlayLayersEvent is a RecordEvent
+# ForgeLayer.render(GuiGraphics, DeltaTracker) — uses GuiGraphics (not GuiGraphicsExtractor)
+# ResourceLocation (not Identifier) for layer name
+# getBus(context.getModBusGroup()) is the correct registration pattern for 56-58.x
 # ---------------------------------------------------------------------------
 FORGE_1216_PLUS_MOD = """\
 package asd.itamio.daycounter;
@@ -1125,7 +1125,7 @@ public class DayCounterMod {
 
     public DayCounterMod(FMLJavaModLoadingContext context) {
         FMLClientSetupEvent.getBus(context.getModBusGroup()).addListener(this::clientSetup);
-        AddGuiOverlayLayersEvent.BUS.addListener(this::registerLayers);
+        AddGuiOverlayLayersEvent.getBus(context.getModBusGroup()).addListener(this::registerLayers);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
@@ -1150,8 +1150,8 @@ import asd.itamio.daycounter.util.DayCounterFormatter;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.client.gui.overlay.ForgeLayer;
 import net.minecraftforge.client.gui.overlay.ForgeLayeredDraw;
@@ -1182,9 +1182,9 @@ public class DayCounterClientHandler {
             int w = fr.width(text);
             int x = config.getAnchor().resolveX(screenW, w, config.getOffsetX());
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
-            gg.text(fr, text, x, y, 0xFFFFFF, true);
+            gg.drawString(fr, text, x, y, 0xFFFFFF, true);
         };
-        draw.add(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
+        draw.add(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }
 """
@@ -1241,7 +1241,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.client.gui.overlay.ForgeLayer;
 import net.minecraftforge.client.gui.overlay.ForgeLayeredDraw;
@@ -1274,7 +1274,7 @@ public class DayCounterClientHandler {
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
             gg.drawString(fr, text, x, y, 0xFFFFFF, true);
         };
-        draw.add(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
+        draw.add(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }
 """
@@ -1978,7 +1978,7 @@ TARGETS = [
      FORGE_1206_MOD,             FORGE_1206_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None, False),
 
-    ("DayCounter-1.21-1.21.1-forge", "1.21-1.21.1", "forge",
+    ("DayCounter-1.21.1-forge",   "1.21.1",  "forge",
      FORGE_1206_MOD,              FORGE_121_TO_1215_CLIENT,
      "asd.itamio.daycounter.DayCounterMod", None, False),
 

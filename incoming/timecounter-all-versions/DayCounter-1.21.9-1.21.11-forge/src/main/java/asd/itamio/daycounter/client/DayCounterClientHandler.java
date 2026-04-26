@@ -6,7 +6,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
 import net.minecraftforge.client.gui.overlay.ForgeLayer;
 import net.minecraftforge.client.gui.overlay.ForgeLayeredDraw;
@@ -39,6 +39,6 @@ public class DayCounterClientHandler {
             int y = config.getAnchor().resolveY(screenH, fr.lineHeight, config.getOffsetY());
             gg.drawString(fr, text, x, y, 0xFFFFFF, true);
         };
-        draw.add(Identifier.fromNamespaceAndPath("daycounter", "hud"), layer);
+        draw.add(ResourceLocation.fromNamespaceAndPath("daycounter", "hud"), layer);
     }
 }

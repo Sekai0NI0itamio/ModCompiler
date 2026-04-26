@@ -17,7 +17,7 @@ public class DayCounterMod {
 
     public DayCounterMod(FMLJavaModLoadingContext context) {
         FMLClientSetupEvent.getBus(context.getModBusGroup()).addListener(this::clientSetup);
-        AddGuiOverlayLayersEvent.BUS.addListener(this::registerLayers);
+        AddGuiOverlayLayersEvent.getBus(context.getModBusGroup()).addListener(this::registerLayers);
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
