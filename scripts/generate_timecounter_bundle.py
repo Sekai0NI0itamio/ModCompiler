@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generator for Time Counter (Day Counter) — all versions bundle.
-Mod: https://modrinth.com/mod/time-counter
+Mod: https://modrinth.com/mod/optimized-day-counter
 Original: 1.12.2 Forge only. Client-side only (HUD overlay).
 runtime_side=client
 
@@ -32,7 +32,7 @@ group=asd.itamio.daycounter
 description=Shows the current world day and an optional real-life-style Minecraft clock in a movable HUD.
 authors=Itamio
 license=MIT
-homepage=https://modrinth.com/mod/time-counter
+homepage=https://modrinth.com/mod/optimized-day-counter
 runtime_side=client
 """
 
@@ -1937,7 +1937,7 @@ def fabric_mod_json_presplit(entrypoint):
   "description": "Shows the current world day and an optional real-life-style Minecraft clock in a movable HUD.",
   "authors": ["Itamio"],
   "contact": {{
-    "homepage": "https://modrinth.com/mod/time-counter"
+    "homepage": "https://modrinth.com/mod/optimized-day-counter"
   }},
   "license": "MIT",
   "environment": "client",
@@ -1962,7 +1962,7 @@ def fabric_mod_json_split(entrypoint):
   "description": "Shows the current world day and an optional real-life-style Minecraft clock in a movable HUD.",
   "authors": ["Itamio"],
   "contact": {{
-    "homepage": "https://modrinth.com/mod/time-counter"
+    "homepage": "https://modrinth.com/mod/optimized-day-counter"
   }},
   "license": "MIT",
   "environment": "client",
