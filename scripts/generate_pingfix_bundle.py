@@ -50,7 +50,25 @@ if failed_only:
         print("No failures found. Nothing to rebuild."); sys.exit(0)
     print(f"Found {len(failed_targets)} failed targets from {latest_run.name}")
     for t in sorted(failed_targets): print(f"  - {t}")
-    targets_to_build_names = failed_targets
+    # Convert build system names (pingfix-forge-26-1-2) to our folder names (pingfix-26.1.2-forge)
+    # Build system format: {mod_id}-{loader}-{version_with_dashes}
+    # Our format: {mod_id}-{version}-{loader}
+    converted = set()
+    for name in failed_targets:
+        # name like "pingfix-forge-26-1-2" or "pingfix-neoforge-1-20-2"
+        parts = name.split("-")
+        # Find loader position
+        for loader in ("neoforge", "forge", "fabric"):
+            if loader in parts:
+                idx = parts.index(loader)
+                version = ".".join(parts[idx+1:])
+                our_name = f"pingfix-{version}-{loader}"
+                converted.add(our_name)
+                break
+        else:
+            converted.add(name)  # fallback: keep as-is
+    targets_to_build_names = converted
+    print(f"Converted to our folder names: {sorted(targets_to_build_names)}")
 else:
     targets_to_build_names = None
 
@@ -356,6 +374,53 @@ public final class PingFixMod {
 }
 """
 
+# Forge 26.1.2 — TickEvent is now a sealed interface with record types (no Phase field)
+# ClientTickEvent.Post.BUS.addListener() — handler takes Post record (no phase check needed)
+FORGE_261_SRC = """\
+package com.itamio.pingfix;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+
+/**
+ * PingFix Forge 26.1.2 — TickEvent is now a sealed interface with record types.
+ * ClientTickEvent.Post is a record (no phase field) — Post always means post-tick.
+ * Uses EventBus 7 pattern: TickEvent.ClientTickEvent.Post.BUS.addListener(...)
+ */
+@Mod(PingFixMod.MOD_ID)
+public final class PingFixMod {
+    public static final String MOD_ID = "pingfix";
+    private static final int REFRESH_INTERVAL_TICKS = 200;
+    private int tickCounter = 0;
+
+    public PingFixMod(FMLJavaModLoadingContext context) {
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            TickEvent.ClientTickEvent.Post.BUS.addListener(this::onClientTick);
+        }
+    }
+
+    private void onClientTick(TickEvent.ClientTickEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) return;
+        if (mc.screen instanceof JoinMultiplayerScreen) {
+            tickCounter++;
+            if (tickCounter >= REFRESH_INTERVAL_TICKS) {
+                tickCounter = 0;
+                mc.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
+            }
+        } else {
+            tickCounter = 0;
+        }
+    }
+}
+"""
+
 def create_forge(mc_version: str):
     folder_name = f"pingfix-{mc_version}-forge"
     if targets_to_build_names is not None and folder_name not in targets_to_build_names:
@@ -371,7 +436,8 @@ def create_forge(mc_version: str):
 
     v = vt(mc_version)
     is_legacy = v < (1, 13)          # 1.12.x
-    is_eb7    = v >= (1, 21, 6) or mc_version.startswith("26.")
+    is_261    = mc_version.startswith("26.")
+    is_eb7    = v >= (1, 21, 6) and not is_261  # 1.21.6-1.21.11 only
 
     if is_legacy:
         src = FORGE_112_SRC
@@ -390,7 +456,12 @@ def create_forge(mc_version: str):
         (res_dir / "pack.mcmeta").write_text(
             json.dumps({"pack": {"pack_format": 3, "description": MOD_NAME}}, indent=2))
     else:
-        src = FORGE_EB7_SRC if is_eb7 else FORGE_MODERN_SRC
+        if is_261:
+            src = FORGE_261_SRC
+        elif is_eb7:
+            src = FORGE_EB7_SRC
+        else:
+            src = FORGE_MODERN_SRC
         (java_dir / "PingFixMod.java").write_text(src)
 
         if is_eb7:
@@ -534,6 +605,50 @@ public final class PingFixMod {
 }
 """
 
+# NeoForge 1.20.2 — ClientTickEvent not in public API for NeoForge 20.2.x
+# Use LevelTickEvent.Post with isClientSide() check instead
+NEO_1202_SRC = """\
+package com.itamio.pingfix;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+
+/**
+ * PingFix NeoForge 1.20.2 — ClientTickEvent is not in the public API for NeoForge 20.2.x.
+ * Uses LevelTickEvent.Post with isClientSide() check as a workaround.
+ * LevelTickEvent fires for both client and server levels — only act on client side.
+ */
+@Mod(PingFixMod.MOD_ID)
+public final class PingFixMod {
+    public static final String MOD_ID = "pingfix";
+    private static final int REFRESH_INTERVAL_TICKS = 200;
+    private int tickCounter = 0;
+
+    public PingFixMod() {
+        NeoForge.EVENT_BUS.addListener(this::onLevelTick);
+    }
+
+    private void onLevelTick(LevelTickEvent.Post event) {
+        if (!event.getLevel().isClientSide()) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) return;
+        if (mc.screen instanceof JoinMultiplayerScreen) {
+            tickCounter++;
+            if (tickCounter >= REFRESH_INTERVAL_TICKS) {
+                tickCounter = 0;
+                mc.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
+            }
+        } else {
+            tickCounter = 0;
+        }
+    }
+}
+"""
+
 def create_neoforge(mc_version: str):
     folder_name = f"pingfix-{mc_version}-neoforge"
     if targets_to_build_names is not None and folder_name not in targets_to_build_names:
@@ -548,7 +663,13 @@ def create_neoforge(mc_version: str):
     (res_dir / "META-INF").mkdir(exist_ok=True)
 
     is_26 = mc_version.startswith("26.")
-    src = NEO_261_SRC if is_26 else NEO_MODERN_SRC
+    is_1202 = mc_version == "1.20.2"
+    if is_26:
+        src = NEO_261_SRC
+    elif is_1202:
+        src = NEO_1202_SRC
+    else:
+        src = NEO_MODERN_SRC
     (java_dir / "PingFixMod.java").write_text(src)
 
     if is_26:
