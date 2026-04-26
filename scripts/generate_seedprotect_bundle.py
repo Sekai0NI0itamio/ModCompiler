@@ -2,11 +2,10 @@
 """
 Generate Seed Protect mod bundle for all missing versions.
 
-Missing versions (from Profile Diagnosis report):
-  Fabric:   1.17, 1.20, 1.21, 1.21.2, 1.21.9, 26.1, 26.1.1, 26.1.2
-  Forge:    1.12, 1.17, 1.20, 1.21.2, 1.21.6, 1.21.7, 1.21.8, 1.21.9,
-            1.21.10, 1.21.11, 26.1, 26.1.1, 26.1.2
-  NeoForge: 1.20, 26.1, 26.1.1, 26.1.2
+Missing versions (updated 2026-04-26):
+  Fabric:   1.21.3, 1.21.4, 1.21.5, 1.21.6, 1.21.7, 1.21.10, 26.1, 26.1.1, 26.1.2
+  Forge:    26.1.2
+  NeoForge: 26.1, 26.1.1, 26.1.2
 
 Key API notes:
   Forge 1.12:       net.minecraftforge.event.world.BlockEvent.FarmlandTrampleEvent
@@ -15,10 +14,15 @@ Key API notes:
                     @SubscribeEvent from net.minecraftforge.eventbus.api
   Forge 1.21.6+:    EventBus 7 — FarmlandTrampleEvent.BUS.addListener(true, ...)
                     Listener returns boolean (true = cancel). No @SubscribeEvent.
-  Fabric 1.17:      yarn mappings — net.minecraft.block.FarmlandBlock.onLandedUpon
-  Fabric 1.20-1.21: Mojang mappings — net.minecraft.world.level.block.FarmBlock.fallOn
-  Fabric 26.1:      Mojang mappings — same as 1.21.x, Java 25, new loom plugin
-  NeoForge 1.20+:   net.neoforged.neoforge.event.level.BlockEvent.FarmlandTrampleEvent
+  Fabric 1.17-1.20: yarn mappings — net.minecraft.block.FarmlandBlock.onLandedUpon
+  Fabric 1.21+:     Mojang mappings — net.minecraft.world.level.block.FarmBlock.fallOn
+  Fabric 26.1+:     Mojang mappings — net.minecraft.world.level.block.FarmlandBlock.fallOn
+                    (class renamed back to FarmlandBlock in 26.1; double fallDistance)
+                    Java 25, new loom plugin
+  NeoForge 1.20-26.1: net.neoforged.neoforge.event.level.BlockEvent.FarmlandTrampleEvent
+                    @EventBusSubscriber + event.setCanceled(true) — same pattern for ALL
+                    NeoForge versions including 26.1.x (NeoForge does NOT use EventBus 7
+                    for FarmlandTrampleEvent; it still uses NeoForge.EVENT_BUS.post())
 """
 import json
 import shutil
@@ -71,31 +75,25 @@ if failed_only:
     targets_to_build = failed_targets
 else:
     targets_to_build = {
-        # Fabric — use exact versions from manifest supported_versions
-        ("1.17.1", "fabric"),   # 1.17-1.17.1 range, anchor=1.17.1
-        ("1.20.1", "fabric"),   # 1.20-1.20.6 range, first supported
-        ("1.21",   "fabric"),   # 1.21-1.21.1 range, min_version
-        ("1.21.2", "fabric"),   # 1.21.2-1.21.8 range, min_version
-        ("1.21.9", "fabric"),   # 1.21.9-1.21.11 range, min_version
-        # Forge — use exact versions from manifest supported_versions
+        # Fabric — missing versions
+        ("1.21.3",  "fabric"),
+        ("1.21.4",  "fabric"),
+        ("1.21.5",  "fabric"),
+        ("1.21.6",  "fabric"),
+        ("1.21.7",  "fabric"),
+        ("1.21.10", "fabric"),
+        ("26.1",    "fabric"),
+        ("26.1.1",  "fabric"),
+        ("26.1.2",  "fabric"),
+        # Forge — missing versions
         # NOTE: Forge only released for MC 26.1.2 (not 26.1 or 26.1.1)
-        ("1.12",    "forge"),   # 1.12-1.12.2 range, min_version
-        ("1.17.1",  "forge"),   # 1.17-1.17.1 range, only supported version
-        ("1.20.1",  "forge"),   # 1.20-1.20.6 range, first supported
-        ("1.21.3",  "forge"),   # 1.21.2-1.21.8 range, first supported (1.21.2 not in list)
-        ("1.21.6",  "forge"),
-        ("1.21.7",  "forge"),
-        ("1.21.8",  "forge"),
-        ("1.21.9",  "forge"),
-        ("1.21.10", "forge"),
-        ("1.21.11", "forge"),
-        # NeoForge — use exact versions from manifest supported_versions
-        ("1.20.2",  "neoforge"),  # 1.20-1.20.6 range, first neoforge supported
-        # NOTE: 26.x versions (Fabric/Forge/NeoForge) are skipped — all loaders
-        # are in beta/unstable for 26.1.x. Add once ecosystem stabilizes.
+        ("26.1.2",  "forge"),
+        # NeoForge — missing versions
+        ("26.1",    "neoforge"),
+        ("26.1.1",  "neoforge"),
+        ("26.1.2",  "neoforge"),
     }
     print(f"Building {len(targets_to_build)} missing targets")
-    print("NOTE: 26.x versions skipped — all loaders still in beta/unstable for 26.1.x")
 
 # ── Clean bundle dir ──────────────────────────────────────────────────────────
 if bundle_dir.exists():
@@ -143,16 +141,16 @@ public final class SeedProtectMod implements ModInitializer {{
 
     # ── Mixin ─────────────────────────────────────────────────────────────────
     # Fabric mapping eras:
-    #   1.17.x        → yarn: net.minecraft.block.FarmlandBlock / onLandedUpon
-    #   1.18.x–1.20.x → yarn: net.minecraft.block.FarmlandBlock / onLandedUpon
+    #   1.17.x–1.20.x → yarn: net.minecraft.block.FarmlandBlock / onLandedUpon
     #   1.21+         → Mojang: net.minecraft.world.level.block.FarmBlock / fallOn
-    #   26.1+         → Mojang (no obfuscation): net.minecraft.world.level.block.FarmBlock / fallOn
+    #   26.1+         → Mojang: net.minecraft.world.level.block.FarmlandBlock / fallOn
+    #                   (class renamed back to FarmlandBlock; fallDistance is double)
     is_yarn = mc_version.startswith("1.17") or mc_version.startswith("1.18") or \
               mc_version.startswith("1.19") or mc_version.startswith("1.20")
     is_26   = mc_version.startswith("26.")
 
     if is_yarn:
-        # Yarn mappings (1.17.x)
+        # Yarn mappings (1.17.x–1.20.x)
         mixin_src = """package com.seedprotect.mixin;
 
 import net.minecraft.block.FarmlandBlock;
@@ -165,7 +163,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-// Fabric 1.17.x — yarn mappings
+// Fabric 1.17.x–1.20.x — yarn mappings
 // Class: net.minecraft.block.FarmlandBlock
 // Method: onLandedUpon (yarn name for fallOn)
 @Mixin(FarmlandBlock.class)
@@ -177,8 +175,35 @@ public abstract class FarmlandBlockMixin {
     }
 }
 """
+    elif is_26:
+        # Mojang mappings 26.1+ — class is FarmlandBlock (renamed back from FarmBlock)
+        # fallDistance is double (changed from float in 26.1)
+        mixin_src = """package com.seedprotect.mixin;
+
+import net.minecraft.world.level.block.FarmlandBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+// Fabric 26.1+ — Mojang mappings
+// Class renamed back to FarmlandBlock (was FarmBlock in 1.21.x)
+// fallDistance changed from float to double in 26.1
+@Mixin(FarmlandBlock.class)
+public abstract class FarmlandBlockMixin {
+    @Inject(method = "fallOn", at = @At("HEAD"), cancellable = true)
+    private void seedprotect_cancelTrample(Level level, BlockState state,
+            BlockPos pos, Entity entity, double fallDistance, CallbackInfo ci) {
+        ci.cancel();
+    }
+}
+"""
     else:
-        # Mojang mappings (1.20+, 26.1+)
+        # Mojang mappings 1.21.x — class is FarmBlock, fallDistance is float
         mixin_src = """package com.seedprotect.mixin;
 
 import net.minecraft.world.level.block.FarmBlock;
@@ -191,7 +216,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-// Fabric 1.20+ / 26.1+ — Mojang mappings
+// Fabric 1.21+ — Mojang mappings
 // Class: net.minecraft.world.level.block.FarmBlock
 // Method: fallOn
 @Mixin(FarmBlock.class)
@@ -232,7 +257,7 @@ public abstract class FarmlandBlockMixin {
     mixin_config = {
         "required": True,
         "package": "com.seedprotect.mixin",
-        "compatibilityLevel": "JAVA_21" if not is_26 else "JAVA_25",
+        "compatibilityLevel": "JAVA_25" if is_26 else "JAVA_21" if not is_yarn else "JAVA_16",
         "mixins": ["FarmlandBlockMixin"],
         "injectors": {"defaultRequire": 1}
     }
@@ -475,40 +500,11 @@ def create_neoforge(mc_version: str):
 
     # ── Main class ────────────────────────────────────────────────────────────
     # NeoForge uses its own event package throughout all versions.
-    # NeoForge 26.1+ uses EventBus 7 — same pattern as Forge 26.1+:
-    #   FarmlandTrampleEvent.BUS.addListener(true, handler)
-    #   Listener returns boolean (true = cancel). No @EventBusSubscriber.
-    # NeoForge 1.20.x–1.21.x uses the old @EventBusSubscriber pattern.
-    is_neo_eb7 = mc_version.startswith("26.")
-
-    if is_neo_eb7:
-        main_src = f"""package com.seedprotect;
-
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
-
-// NeoForge 26.1+ uses EventBus 7.
-// Each event has its own static BUS field.
-// Cancellation is done by returning true from the listener.
-@Mod("{MOD_ID}")
-public final class SeedProtectMod {{
-    public static final String MOD_ID = "{MOD_ID}";
-
-    public SeedProtectMod(FMLJavaModLoadingContext context) {{
-        BlockEvent.FarmlandTrampleEvent.BUS.addListener(
-            /* alwaysCancelling = */ true,
-            SeedProtectMod::onFarmlandTrample
-        );
-    }}
-
-    private static boolean onFarmlandTrample(BlockEvent.FarmlandTrampleEvent event) {{
-        return true;
-    }}
-}}
-"""
-    else:
-        main_src = f"""package com.seedprotect;
+    # ALL NeoForge versions (1.20.x through 26.1.x) use the same pattern:
+    #   @EventBusSubscriber + event.setCanceled(true)
+    # NeoForge 26.1 still uses NeoForge.EVENT_BUS.post() with ICancellableEvent
+    # — it does NOT use EventBus 7's .BUS.addListener() pattern.
+    main_src = f"""package com.seedprotect;
 
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.bus.api.SubscribeEvent;
