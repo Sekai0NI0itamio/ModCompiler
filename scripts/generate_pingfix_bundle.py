@@ -605,8 +605,9 @@ public final class PingFixMod {
 }
 """
 
-# NeoForge 1.20.2 — ClientTickEvent not in public API for NeoForge 20.2.x
-# Use LevelTickEvent.Post with isClientSide() check instead
+# NeoForge 1.20.2 — ClientTickEvent and LevelTickEvent not in public API for NeoForge 20.2.x
+# Use RenderGuiEvent.Post (fires every frame, client-only, always accessible)
+# We throttle with a frame counter — 1200 frames ≈ 10 seconds at 120fps, good enough
 NEO_1202_SRC = """\
 package com.itamio.pingfix;
 
@@ -614,36 +615,36 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 /**
- * PingFix NeoForge 1.20.2 — ClientTickEvent is not in the public API for NeoForge 20.2.x.
- * Uses LevelTickEvent.Post with isClientSide() check as a workaround.
- * LevelTickEvent fires for both client and server levels — only act on client side.
+ * PingFix NeoForge 1.20.2 — ClientTickEvent and LevelTickEvent are not in the
+ * public API for NeoForge 20.2.x. Uses RenderGuiEvent.Post (fires every frame,
+ * client-only) with a frame counter as a workaround.
  */
 @Mod(PingFixMod.MOD_ID)
 public final class PingFixMod {
     public static final String MOD_ID = "pingfix";
-    private static final int REFRESH_INTERVAL_TICKS = 200;
-    private int tickCounter = 0;
+    // ~1200 frames at 120fps ≈ 10 seconds; at 60fps ≈ 20 seconds. Good enough.
+    private static final int REFRESH_INTERVAL_FRAMES = 1200;
+    private int frameCounter = 0;
 
     public PingFixMod() {
-        NeoForge.EVENT_BUS.addListener(this::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(this::onRenderGui);
     }
 
-    private void onLevelTick(LevelTickEvent.Post event) {
-        if (!event.getLevel().isClientSide()) return;
+    private void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
         if (mc.screen instanceof JoinMultiplayerScreen) {
-            tickCounter++;
-            if (tickCounter >= REFRESH_INTERVAL_TICKS) {
-                tickCounter = 0;
+            frameCounter++;
+            if (frameCounter >= REFRESH_INTERVAL_FRAMES) {
+                frameCounter = 0;
                 mc.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
             }
         } else {
-            tickCounter = 0;
+            frameCounter = 0;
         }
     }
 }
@@ -663,10 +664,10 @@ def create_neoforge(mc_version: str):
     (res_dir / "META-INF").mkdir(exist_ok=True)
 
     is_26 = mc_version.startswith("26.")
-    is_1202 = mc_version == "1.20.2"
+    is_1202_era = mc_version in ("1.20.2", "1.20.4")  # ClientTickEvent not in public API
     if is_26:
         src = NEO_261_SRC
-    elif is_1202:
+    elif is_1202_era:
         src = NEO_1202_SRC
     else:
         src = NEO_MODERN_SRC
