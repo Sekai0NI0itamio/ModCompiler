@@ -29,6 +29,22 @@ from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+
+# DIF core — unified source search + issue matching
+try:
+    from dif_core import (
+        SourceSearchEngine,
+        extract_missing_symbols,
+        match_errors_to_dif,
+        print_search_results,
+        _detect_repo,
+        _detect_token,
+        _gh as _dif_gh,
+    )
+    _DIF_AVAILABLE = True
+except ImportError:
+    _DIF_AVAILABLE = False
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +290,10 @@ Examples:
                     help="Trigger workflow and exit without waiting")
     ap.add_argument("--timeout", type=int, default=3600,
                     help="Max seconds to wait (default: 3600)")
+    ap.add_argument("--local-only", action="store_true",
+                    help="Only search DecompiledMinecraftSourceCode/ locally, never trigger workflow")
+    ap.add_argument("--dif-search", metavar="QUERY",
+                    help="Also search the DIF database with this natural language query")
 
     args = ap.parse_args()
 
@@ -289,6 +309,62 @@ Examples:
     queries_str = ",".join(q.strip() for q in args.queries if q.strip())
     files_str = ",".join(f.strip() for f in args.files if f.strip()) or "*.java"
     dump_full = "no" if args.no_dump_full else "yes"
+
+    # ── DIF search (optional) ─────────────────────────────────────────
+    if getattr(args, "dif_search", None) and _DIF_AVAILABLE:
+        from dif_core import search_dif
+        results = search_dif(args.dif_search, top_n=5)
+        print_search_results(results, query=args.dif_search)
+
+    # ── Local search via dif_core (instant if sources are in repo) ────
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    out = Path(args.output_dir) if args.output_dir else (
+        ROOT / "MinecraftSourceSearch" / f"run-{ts}"
+    )
+
+    if _DIF_AVAILABLE:
+        from dif_core import DECOMPILED_DIR
+        slug = f"{args.version}-{args.loader}"
+        sources_folder = DECOMPILED_DIR / slug
+        if sources_folder.is_dir():
+            print(f"\nLocal sources found: {sources_folder}")
+            print("Searching locally (instant)...\n")
+            engine = SourceSearchEngine()
+            symbols = [q.strip() for q in queries_str.split(",") if q.strip()]
+            result = engine.search(
+                version=args.version, loader=args.loader,
+                symbols=symbols, out_dir=out,
+                context_lines=args.context,
+                dump_full_class=(dump_full == "yes"),
+            )
+            java_count = result.get("java_count", 0)
+            qr = result.get("query_results", {})
+            fc = result.get("full_classes", [])
+            print(f"✓ Local search complete: {java_count:,} files, "
+                  f"{len(qr)} queries matched, {len(fc)} full classes captured")
+            print(f"  Results: {out}")
+
+            # Print query results
+            queries_dir = out / "queries"
+            if queries_dir.exists():
+                for qfile in sorted(queries_dir.glob("*.txt")):
+                    content = qfile.read_text(encoding="utf-8")
+                    lines = content.splitlines()
+                    print(f"\n{'=' * 60}")
+                    print(f"QUERY: {qfile.stem}")
+                    print("=" * 60)
+                    if len(lines) > 200:
+                        print("\n".join(lines[:200]))
+                        print(f"\n... ({len(lines) - 200} more lines — read {qfile})")
+                    else:
+                        print(content)
+
+            if getattr(args, "local_only", False):
+                return
+
+            if java_count > 0:
+                print("\n✓ Local search found results — skipping workflow trigger.")
+                return
 
     run_id = trigger(
         version=args.version,
@@ -310,11 +386,6 @@ Examples:
         print("\nWorkflow failed. Check logs:")
         print(f"  gh run view {run_id} --log")
         sys.exit(1)
-
-    ts = time.strftime("%Y%m%d-%H%M%S")
-    out = Path(args.output_dir) if args.output_dir else (
-        ROOT / "MinecraftSourceSearch" / f"run-{ts}"
-    )
 
     ok = download(run_id, args.version, args.loader, out)
     if ok:
