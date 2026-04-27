@@ -62,6 +62,8 @@ try:
         match_errors_to_dif,
         print_search_results,
         _symbols_to_queries,
+        is_infrastructure_failure,
+        _symbols_are_generic,
         _trigger_source_search_workflow as _trigger_source_search,
         _gh as _dif_gh,
     )
@@ -465,6 +467,23 @@ class Runner:
             log_text = build_log.read_text(encoding="utf-8", errors="replace")
             symbols = extract_missing_symbols(log_text)
 
+            # ── Infrastructure failure detection ──────────────────────
+            # If the build failed due to Gradle/dependency/config issues
+            # (not a missing Minecraft API), source search won't help.
+            is_infra, infra_reason = is_infrastructure_failure(log_text)
+            if is_infra:
+                print(f"\n  ⚠️  {mod_dir.name}: skipping source search")
+                print(f"       Reason: {infra_reason}")
+                # Still run DIF matching — it may have a relevant entry
+                dif_matches = match_errors_to_dif(log_text)
+                if dif_matches:
+                    print(f"  💡 DIF matches for {mod_dir.name}:")
+                    for score, entry in dif_matches[:3]:
+                        pct = int(score * 100)
+                        print(f"     {pct}%  [{entry.id}] {entry.title}")
+                        print(f"          → dif/{entry.path.name}")
+                continue
+
             # ── DIF matching for this failed build ────────────────────
             dif_matches = match_errors_to_dif(log_text)
             if dif_matches:
@@ -475,6 +494,14 @@ class Runner:
                     print(f"          → dif/{entry.path.name}")
 
             if symbols:
+                # Skip if all extracted symbols are generic package segments —
+                # this indicates a broken classpath, not a targeted API issue.
+                if _symbols_are_generic(symbols):
+                    print(f"\n  ⚠️  {mod_dir.name}: skipping source search")
+                    print(f"       Reason: only generic package segments found "
+                          f"({', '.join(sorted(symbols)[:5])}) — likely broken classpath")
+                    continue
+
                 key = (version, loader)
                 if key not in failing:
                     failing[key] = set()
