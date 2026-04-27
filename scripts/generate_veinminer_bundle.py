@@ -4245,7 +4245,7 @@ ALL_TARGETS = [
                             mod_json=FABRIC_117_MOD_JSON)),
 
     ("VeinMiner-1.19-1.19.2-fabric", "1.19-1.19.2",   "fabric",
-     _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_119_KEY,
+     _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_119_EARLY_HANDLER_FIXED, FABRIC_119_KEY,
                             mod_json=FABRIC_117_MOD_JSON)),
 
     ("VeinMiner-1.19.3-1.19.4-fabric", "1.19.3-1.19.4", "fabric",
