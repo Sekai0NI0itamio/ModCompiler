@@ -44,9 +44,11 @@ Public API
   from scripts.dif_core import (
       DifEngine,
       SourceSearchEngine,
-      search_dif,          # NLP search returning ranked results
-      match_errors_to_dif, # match build log errors to DIF entries
-      run_source_search,   # unified source search (local repo or workflow)
+      search_dif,              # NLP search returning ranked results
+      match_errors_to_dif,     # match build log errors to DIF entries
+      run_source_search,       # unified source search (local repo or workflow)
+      is_infrastructure_failure,  # detect Gradle/infra failures (skip source search)
+      _symbols_are_generic,    # detect generic/broken-classpath symbols
   )
 """
 
@@ -626,6 +628,114 @@ _PRIORITY_KEYWORDS = [
     "Register", "Callback", "Draw", "Graphics", "Farmland",
     "Trample", "Block", "Screen", "Button",
 ]
+
+# Generic package last-segments that appear when the entire classpath is broken.
+# These are NOT specific missing API classes — they indicate a build infrastructure
+# failure (Gradle can't resolve dependencies, wrong Java version, etc.).
+_GENERIC_PACKAGE_SEGMENTS = {
+    "registry", "client", "server", "common", "util", "utils", "core",
+    "base", "api", "impl", "internal", "main", "test", "data", "world",
+    "entity", "block", "item", "network", "packet", "config", "handler",
+    "manager", "helper", "provider", "factory", "builder", "context",
+    "platform", "mixin", "compat", "integration", "feature", "init",
+    "setup", "loader", "forge", "fabric", "neoforge", "minecraft",
+    "modid", "resources", "assets", "tags", "codec", "nbt", "text",
+    "sound", "particle", "biome", "dimension", "level", "chunk",
+    "player", "inventory", "container", "recipe", "loot", "advancement",
+}
+
+# Patterns in build logs that indicate a Gradle/infrastructure failure rather
+# than a missing Minecraft/Forge/Fabric API class.
+_INFRA_FAILURE_PATTERNS = [
+    # Gradle dependency resolution failures
+    r"Could not resolve\b",
+    r"Could not download\b",
+    r"Could not GET\b",
+    r"Could not HEAD\b",
+    r"Failed to resolve\b",
+    r"Execution failed for task.*:compileJava",
+    r"Execution failed for task.*:downloadMcpConfig",
+    r"Execution failed for task.*:extractSrg",
+    r"Execution failed for task.*:createMcpToSrg",
+    r"Execution failed for task.*:downloadMCMeta",
+    r"Execution failed for task.*:setupDecompWorkspace",
+    r"Execution failed for task.*:genSources",
+    r"Execution failed for task.*:reobfJar",
+    # Network / TLS errors
+    r"javax\.net\.ssl\.",
+    r"SSLHandshakeException",
+    r"Connection refused",
+    r"Connection timed out",
+    r"Read timed out",
+    r"UnknownHostException",
+    r"SocketTimeoutException",
+    # Gradle wrapper / daemon issues
+    r"Could not create service of type\b",
+    r"Gradle build daemon disappeared",
+    r"Daemon will be stopped",
+    r"GradleException",
+    r"org\.gradle\.api\.GradleException",
+    # ForgeGradle / FabricLoom setup failures
+    r"net\.minecraftforge\.gradle",
+    r"Could not find net\.minecraftforge:forge:",
+    r"Could not find net\.neoforged:neoforge:",
+    r"Could not find net\.fabricmc:fabric-loader:",
+    r"Could not find net\.fabricmc\.loom",
+    r"Could not find com\.modrinth\.minotaur",
+    # Java version mismatch
+    r"error: release version \d+ not supported",
+    r"Unsupported class file major version",
+    r"invalid source release",
+    r"invalid target release",
+    # Classpath completely broken (hundreds of errors = not a targeted API issue)
+    # Detected by counting "cannot find symbol" occurrences — handled in code below
+]
+
+# If a build log has more than this many "cannot find symbol" / "does not exist"
+# errors, it's almost certainly a broken classpath, not a targeted API issue.
+_INFRA_FAILURE_ERROR_THRESHOLD = 30
+
+
+def is_infrastructure_failure(log_text: str) -> tuple[bool, str]:
+    """
+    Detect whether a build failure is due to Gradle/infrastructure issues
+    rather than a missing Minecraft/Forge/Fabric API class.
+
+    Returns (is_infra_failure, reason_string).
+    When True, source search should be skipped — it won't find anything useful.
+    """
+    # Check for known infrastructure error patterns
+    for pattern in _INFRA_FAILURE_PATTERNS:
+        if re.search(pattern, log_text):
+            # Extract a short excerpt for the reason message
+            for line in log_text.splitlines():
+                if re.search(pattern, line):
+                    excerpt = line.strip()[:120]
+                    return True, f"infrastructure error: {excerpt}"
+
+    # Check for an overwhelming number of compile errors (broken classpath)
+    symbol_error_count = len(re.findall(
+        r"(?:cannot find symbol|package .+ does not exist|error: cannot find)",
+        log_text,
+    ))
+    if symbol_error_count > _INFRA_FAILURE_ERROR_THRESHOLD:
+        return True, (
+            f"classpath appears broken ({symbol_error_count} 'cannot find symbol' errors — "
+            f"threshold is {_INFRA_FAILURE_ERROR_THRESHOLD})"
+        )
+
+    return False, ""
+
+
+def _symbols_are_generic(symbols: set[str]) -> bool:
+    """
+    Return True if all extracted symbols are generic package segments
+    (indicating a broken classpath) rather than specific API class names.
+    """
+    if not symbols:
+        return True
+    specific = {s for s in symbols if s not in _GENERIC_PACKAGE_SEGMENTS}
+    return len(specific) == 0
 
 
 def _symbols_to_queries(symbols: set[str]) -> list[str]:
