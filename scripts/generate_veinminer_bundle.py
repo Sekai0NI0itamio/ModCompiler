@@ -3585,8 +3585,7 @@ import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import org.lwjgl.glfw.GLFW;
 public class VeinMinerKeyHandler {
     public static final KeyMapping toggleKey = new KeyMapping(
-        "Toggle Vein Miner", GLFW.GLFW_KEY_V,
-        KeyMapping.Category.lookup("Vein Miner").orElseGet(() -> KeyMapping.Category.create("Vein Miner", 0))
+        "Toggle Vein Miner", GLFW.GLFW_KEY_V, KeyMapping.Category.MISC
     );
     public static boolean veinMinerEnabled = true;
     public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
@@ -3752,6 +3751,21 @@ public class VeinMinerHandler implements PlayerBlockBreakEvents.Before {
     }
 }
 """
+
+# Fabric 1.19.0-1.19.2: old yarn path net.minecraft.util.registry.Registry
+FABRIC_119_EARLY_HANDLER_FIXED = FABRIC_119_HANDLER_FIXED.replace(
+    "import net.minecraft.registry.Registries;",
+    "import net.minecraft.util.registry.Registry;"
+).replace(
+    "Registries.BLOCK.getId(b)",
+    "Registry.BLOCK.getId(b)"
+).replace(
+    "Registries.BLOCK.getId(target)",
+    "Registry.BLOCK.getId(target)"
+).replace(
+    "Registries.ITEM.getId(d.getItem())",
+    "Registry.ITEM.getId(d.getItem())"
+)
 
 # Fabric 1.20.x handler: Registries (same as 1.19), but EquipmentSlot for 1.20.5+
 # 1.20.1-1.20.4: Consumer lambda; 1.20.5-1.20.6: EquipmentSlot
@@ -3947,7 +3961,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 @Environment(EnvType.CLIENT)
 public class VeinMinerKeyHandler implements ClientModInitializer {
@@ -3955,8 +3968,7 @@ public class VeinMinerKeyHandler implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-            "Toggle Vein Miner", GLFW.GLFW_KEY_V,
-            KeyMapping.Category.lookup("Vein Miner").orElseGet(() -> KeyMapping.Category.create("Vein Miner", 0))
+            "Toggle Vein Miner", GLFW.GLFW_KEY_V, KeyMapping.Category.MISC
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (toggleKey.consumeClick()) {
@@ -3981,8 +3993,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 public class VeinMinerKeyHandler {
     public static final KeyMapping toggleKey = new KeyMapping(
-        "Toggle Vein Miner", GLFW.GLFW_KEY_V,
-        KeyMapping.Category.lookup("Vein Miner").orElseGet(() -> KeyMapping.Category.create("Vein Miner", 0))
+        "Toggle Vein Miner", GLFW.GLFW_KEY_V, KeyMapping.Category.MISC
     );
     public static boolean veinMinerEnabled = true;
     public static void register(RegisterKeyMappingsEvent event) { event.register(toggleKey); }
@@ -4233,7 +4244,11 @@ ALL_TARGETS = [
      _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_117_HANDLER, FABRIC_117_KEY,
                             mod_json=FABRIC_117_MOD_JSON)),
 
-    ("VeinMiner-1.19-1.19.4-fabric", "1.19-1.19.4",   "fabric",
+    ("VeinMiner-1.19-1.19.2-fabric", "1.19-1.19.2",   "fabric",
+     _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_119_EARLY_HANDLER_FIXED, FABRIC_119_KEY,
+                            mod_json=FABRIC_117_MOD_JSON)),
+
+    ("VeinMiner-1.19.3-1.19.4-fabric", "1.19.3-1.19.4", "fabric",
      _fabric_presplit_files(FABRIC_117_MAIN, FABRIC_119_HANDLER_FIXED, FABRIC_119_KEY,
                             mod_json=FABRIC_117_MOD_JSON)),
 
