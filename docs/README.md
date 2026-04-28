@@ -6,6 +6,12 @@ This folder contains documentation for the ModCompiler project, which helps buil
 
 ## Documentation Index
 
+### ⚡ START HERE (AI Agents)
+
+**[IDE_QUICK_STARTUP_READ.md](IDE_QUICK_STARTUP_READ.md)** — Read this first, every time.
+Covers what the user wants, every mistake a previous agent made, how a typical
+session goes, and a quick-reference table for common errors → DIF entries.
+
 ### Core System Documentation
 
 1. **[SYSTEM_MANUAL.md](SYSTEM_MANUAL.md)**
