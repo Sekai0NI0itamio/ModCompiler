@@ -61,8 +61,8 @@ versions because it skipped this step.
 
 ## Mistakes the Previous Agent Made (Don't Repeat These)
 
-These are real mistakes made during the Optimized Vein Miner port, corrected
-by the user. Learn from them.
+These are real mistakes made during actual ports, corrected by the user.
+Learn from them.
 
 ### Mistake 1: Skipped the diagnosis step entirely
 
@@ -165,6 +165,13 @@ sources reflect the ANCHOR's yarn. Non-anchor versions may use different package
 paths. Add `dependency_overrides` in `version-manifest.json` to pin their yarn.
 See DIF entry `ANCHOR-ONLY-YARN-PITFALL`.
 
+**Extended rule from TPA Teleport port**: This also applies to method names, not
+just package paths. The `1.16.5/fabric/template` uses the 1.17 branch as its
+base. The decompiled sources show `getServer()` but the actual 1.16.5 yarn
+build.10 uses `getMinecraftServer()`. Never trust decompiled sources for
+anchor_only templates — check the `dependency_overrides` in `version-manifest.json`
+to find the actual yarn version, then verify against that.
+
 ---
 
 ### Mistake 7: Didn't document issues after finishing
@@ -176,7 +183,128 @@ The user had to explicitly ask for documentation.
 1. Add DIF entries for every compile error encountered
 2. Write `docs/examples/<MOD>_ALL_VERSIONS.md`
 3. Update `docs/IDE_AGENT_INSTRUCTION_SHEET.txt`
-4. Commit everything
+4. Update `docs/IDE_QUICK_STARTUP_READ.md` with new mistakes and DIF entries
+5. Commit everything
+
+---
+
+### Mistake 8: Used fsWrite tool with large content (TPA Teleport port)
+
+**What happened**: The `fsWrite` tool silently failed when given large file
+content. The file was never created and no error was shown until the next
+operation tried to use it.
+
+**Rule**: For large files (generator scripts, example docs), write them using
+bash heredoc (`cat > file << 'EOF'`) in multiple chunks. Verify the file exists
+and has correct syntax after writing:
+
+```bash
+python3 -c "import ast; ast.parse(open('scripts/generate_tpa_bundle.py').read()); print('Syntax OK')"
+```
+
+---
+
+### Mistake 9: Applied string replacements to the wrong source in the derivation chain (TPA Teleport port)
+
+**What happened**: When building source strings via `.replace()` chains, a fix
+applied to `SRC_1165_FABRIC` (e.g. `getMinecraftServer()`) propagated to all
+derived sources (`SRC_117_FABRIC = SRC_1165_FABRIC`, `SRC_118_FABRIC`, etc.)
+because they inherit from it. The fix was correct for 1.16.5 but wrong for 1.17+.
+
+**Rule**: When deriving source strings from a base via `.replace()`, always
+verify that the fix is correct for ALL versions that inherit from that base.
+If a fix is version-specific, apply it only to that version's string and then
+revert it in the derived version:
+
+```python
+SRC_117_FABRIC = SRC_1165_FABRIC.replace(
+    "src.getMinecraftServer().getPlayerManager()",
+    "src.getServer().getPlayerManager()"
+)  # 1.17+ uses getServer(), only 1.16.5 uses getMinecraftServer()
+```
+
+---
+
+### Mistake 10: Lambda replacement introduced a non-final variable capture (TPA Teleport port)
+
+**What happened**: In 1.20+, `sendSuccess()` takes a `Supplier<Component>` lambda.
+When deriving 1.20 source from 1.19 via `.replace("sendSuccess(Component.literal(",
+"sendSuccess(() -> Component.literal(")`, any `count` variable incremented in a
+loop above the call became a non-final lambda capture — causing a compile error.
+
+**Rule**: After introducing a supplier lambda via string replacement, check
+whether any variables captured in that lambda are modified before the lambda.
+If so, add `final int finalCount = count;` immediately before the lambda:
+
+```python
+SRC_120_FORGE = SRC_119_FORGE.replace(
+    "src.sendSuccess(Component.literal(",
+    "src.sendSuccess(() -> Component.literal("
+).replace(
+    'src.sendSuccess(() -> Component.literal("Accepted "+count+',
+    'final int finalCount=count; src.sendSuccess(() -> Component.literal("Accepted "+finalCount+'
+)
+```
+
+See DIF entry `LAMBDA-COUNT-CAPTURE`.
+
+---
+
+### Mistake 11: Stripped UUID arg incorrectly when replacing sendMessage (TPA Teleport port)
+
+**What happened**: When replacing `sendMessage(Component.literal(` with
+`sendSystemMessage(Component.literal(` to fix the 1.19+ API change, only the
+opening of the call was replaced. The trailing `, player.getUUID())` remained,
+causing a different compile error.
+
+**Rule**: When replacing `sendMessage` with `sendSystemMessage`, also strip the
+UUID argument. The replacement must handle the full call:
+
+```python
+# Step 1: replace the method name
+src = src.replace(".sendMessage(Component.literal(", ".sendSystemMessage(Component.literal(")
+# Step 2: strip the trailing UUID arg (closing paren of literal + UUID arg)
+src = src.replace("), req.getUUID());", "));")
+src = src.replace("), to.getUUID());", "));")
+src = src.replace("), me.getUUID());", "));")
+```
+
+See DIF entry `FORGE-SEND-MESSAGE-UUID-REMOVED`.
+
+---
+
+### Mistake 12: Used wrong version string for 26.x targets (TPA Teleport port)
+
+**What happened**: Used `26.1-26.x` as the `minecraft_version` in `version.txt`
+for 26.x targets. The prepare script rejected it immediately with
+`Unsupported version format '26.x'`.
+
+**Rule**: The `minecraft_version` in `version.txt` must match an entry in
+`supported_versions` in `version-manifest.json`. For the `26.1-26.x` range,
+the anchor version is `26.1.2`. Use that, not the folder name.
+
+```
+minecraft_version=26.1.2
+loader=forge
+```
+
+See DIF entry `VERSION-STRING-26X-ANCHOR`.
+
+---
+
+### Mistake 13: Assumed NeoForge supports all 1.20.x versions (TPA Teleport port)
+
+**What happened**: Generated NeoForge targets for `1.20-1.20.6` as a range.
+The build failed with "does not support exact Minecraft 1.20" because NeoForge
+didn't exist until 1.20.2.
+
+**Rule**: Always check `version-manifest.json` for the exact `supported_versions`
+list before generating targets. NeoForge for the 1.20 range only supports
+`1.20.2`, `1.20.4`, `1.20.5`, `1.20.6`. Similarly, the 1.17 template only
+supports `1.17.1`, not `1.17`.
+
+See DIF entries `NEOFORGE-120-SUPPORTED-VERSIONS` and
+`FORGE-117-TEMPLATE-SUPPORTS-1171-ONLY`.
 
 ---
 
@@ -195,7 +323,7 @@ Agent:
   7. Read results → fix only failed targets
   8. Repeat steps 4-7 until all targets pass
   9. Verify final state on Modrinth
-  10. Add DIF entries + example doc + commit
+  10. Add DIF entries + example doc + update this file + commit
 ```
 
 Total build runs for a typical mod: 2–4. If you're on run 6+, stop and
@@ -260,6 +388,69 @@ Based on this conversation, the user:
 - **Will correct you directly** — if you make a mistake, the user will say so bluntly. Take the correction, don't repeat the mistake.
 - **Does not want explanations of what you're about to do** — just do it
 - **Does not want multiple commands chained** — one command per turn
+- **Does not want weird shell commands** — use the right tool for the job. Don't pipe to grep when you can use the search tools. Don't use `cat` when you can use `readFile`.
+
+---
+
+## Version-Specific API Quick Reference
+
+This is a condensed cheat sheet. For full details, see the DIF entries.
+
+### Forge command registration
+
+| MC Version | Source class | Register commands |
+|------------|-------------|-------------------|
+| 1.8.9 | `CommandBase` | `FMLServerStartingEvent.registerServerCommand()` |
+| 1.12.2 | `CommandBase` | `FMLServerStartingEvent.registerServerCommand()` |
+| 1.16.5 | `CommandSource` | `@SubscribeEvent RegisterCommandsEvent` (2-arg dispatcher) |
+| 1.17–1.21.5 | `CommandSourceStack` | `@SubscribeEvent RegisterCommandsEvent` |
+| 1.21.6–26.x | `CommandSourceStack` | `RegisterCommandsEvent.BUS.addListener()` (EventBus 7) |
+
+### Fabric command registration
+
+| MC Version | Package | Callback signature |
+|------------|---------|-------------------|
+| 1.16.5–1.18.x | `command.v1` | `(dispatcher, dedicated)` |
+| 1.19–26.x | `command.v2` | `(dispatcher, registryAccess, dedicated)` |
+
+### Sending messages to players
+
+| MC Version | Loader | Method |
+|------------|--------|--------|
+| 1.8.9 | Forge | `player.addChatMessage(new ChatComponentText("..."))` |
+| 1.12.2 | Forge | `player.sendMessage(new TextComponentString("..."))` |
+| 1.16.5 | Forge | `player.sendMessage(new StringTextComponent("..."), uuid)` |
+| 1.17–1.18.x | Forge | `player.sendMessage(new TextComponent("..."), uuid)` |
+| 1.19+ | Forge/NeoForge | `player.sendSystemMessage(Component.literal("..."))` |
+| 1.16.5–1.18.x | Fabric | `player.sendMessage(new LiteralText("..."), false)` |
+| 1.19–1.20.x | Fabric | `player.sendMessage(Text.literal("..."), false)` |
+| 1.21+ | Fabric | `player.sendSystemMessage(Text.literal("..."))` |
+
+### sendSuccess / sendFeedback
+
+| MC Version | Loader | Signature |
+|------------|--------|-----------|
+| 1.16.5 | Forge | `src.sendSuccess(new StringTextComponent("..."), false)` |
+| 1.17–1.19.4 | Forge | `src.sendSuccess(Component.literal("..."), false)` |
+| 1.20+ | Forge/NeoForge | `src.sendSuccess(() -> Component.literal("..."), false)` |
+| 1.16.5–1.19.4 | Fabric | `src.sendFeedback(new LiteralText("...") / Text.literal("..."), false)` |
+| 1.20+ | Fabric | `src.sendFeedback(() -> Text.literal("..."), false)` |
+
+### Getting the server from a command source
+
+| MC Version | Loader | Method |
+|------------|--------|--------|
+| 1.16.5 | Fabric | `src.getMinecraftServer()` |
+| 1.17+ | Fabric | `src.getServer()` |
+| All | Forge/NeoForge | `src.getServer()` |
+
+### Getting a player from a command source
+
+| MC Version | Loader | Method |
+|------------|--------|--------|
+| 1.16.5 | Forge | `(ServerPlayerEntity) src.getEntity()` (manual cast + null check) |
+| 1.17+ | Forge/NeoForge | `src.getPlayerOrException()` |
+| All | Fabric | `src.getPlayer()` |
 
 ---
 
@@ -309,4 +500,4 @@ For deeper reading (in order of usefulness):
 
 ---
 
-*Last updated: April 2026 — based on Optimized Vein Miner all-versions port session*
+*Last updated: April 2026 — based on TPA Teleport all-versions port session*
