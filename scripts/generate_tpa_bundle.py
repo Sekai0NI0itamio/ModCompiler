@@ -1193,10 +1193,10 @@ targets = [
     # --- 1.21.9-1.21.11 forge + neoforge (fabric already published) ---
     ("TpaTeleport-1.21.9-1.21.11-forge",SRC_1219_FORGE,   "forge",    "1.21.9-1.21.11",{}),
     ("TpaTeleport-1.21.9-1.21.11-neoforge",SRC_1219_NEOFORGE,"neoforge","1.21.9-1.21.11",{}),
-    # --- 26.1-26.x ---
-    ("TpaTeleport-26.1-26.x-forge",     SRC_261_FORGE,    "forge",    "26.1-26.x",     {}),
-    ("TpaTeleport-26.1-26.x-fabric",    SRC_261_FABRIC,   "fabric",   "26.1-26.x",     {"src/main/resources/fabric.mod.json": FABRIC_MOD_JSON}),
-    ("TpaTeleport-26.1-26.x-neoforge",  SRC_261_NEOFORGE, "neoforge", "26.1-26.x",     {}),
+    # --- 26.1-26.x (anchor version 26.1.2) ---
+    ("TpaTeleport-26.1-26.x-forge",     SRC_261_FORGE,    "forge",    "26.1.2",        {}),
+    ("TpaTeleport-26.1-26.x-fabric",    SRC_261_FABRIC,   "fabric",   "26.1.2",        {"src/main/resources/fabric.mod.json": FABRIC_MOD_JSON}),
+    ("TpaTeleport-26.1-26.x-neoforge",  SRC_261_NEOFORGE, "neoforge", "26.1.2",        {}),
 ]
 
 # ============================================================
