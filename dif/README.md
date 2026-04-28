@@ -102,3 +102,14 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 | FABRIC-PROTECTED-FIELDS-REFLECTION | Fabric HandledScreen protected fields | fabric | all |
 | NEVER-REBUILD-GREEN-TARGETS | Best practice: use --failed-only | all | — |
 | FORGE-26-FORGELAYER-EXTRACT-PATTERN | Forge 26.1.2 ForgeLayer.extract() pattern | forge | 26.1.2 |
+
+## Recently Added
+
+| ID | Title | Loaders | Versions |
+|----|-------|---------|----------|
+| FORGE-117-NO-REGISTER-KEY-MAPPINGS-EVENT | Forge 1.17.1 — RegisterKeyMappingsEvent does not exist | forge | 1.17, 1.17.1 |
+| FABRIC-119-REGISTRY-PATH-SPLIT | Fabric 1.19–1.19.2 uses old registry path, 1.19.3+ uses new | fabric | 1.19–1.19.4 |
+| KEYMAPPING-CATEGORY-REQUIRED-1219 | 1.21.9+ — KeyMapping requires Category not String | forge, neoforge, fabric | 1.21.9–1.21.11 |
+| NEOFORGE-1219-MODCONTAINER-REQUIRED | NeoForge 1.21.9+ — ModContainer required in @Mod constructor | neoforge | 1.21.9–1.21.11 |
+| ANCHOR-ONLY-YARN-PITFALL | anchor_only mode — Loom downloads yarn for exact MC version | fabric | 1.19–1.19.2 |
+| ALWAYS-DIAGNOSE-BEFORE-BUILDING | Always run diagnosis before building — never rebuild published versions | all | — |
