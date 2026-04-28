@@ -89,7 +89,7 @@ public class TpaTeleportMod {
     static EntityPlayerMP findPlayer(MinecraftServer srv, String name) {
         for (Object o : srv.getConfigurationManager().playerEntityList) {
             EntityPlayerMP p = (EntityPlayerMP) o;
-            if (p.getCommandSenderName().equalsIgnoreCase(name)) return p;
+            if (p.getGameProfile().getName().equalsIgnoreCase(name)) return p;
         }
         return null;
     }
@@ -106,9 +106,9 @@ public class TpaTeleportMod {
             if (to == null) throw new CommandException("Player not found: " + args[0]);
             if (to == from) throw new CommandException("You cannot tpa to yourself.");
             cleanExpired();
-            pending.put(key(from.getCommandSenderName(), to.getCommandSenderName()), System.currentTimeMillis());
-            from.addChatMessage(new ChatComponentText("Teleport request sent to " + to.getCommandSenderName() + ". Expires in 60s."));
-            to.addChatMessage(new ChatComponentText(from.getCommandSenderName() + " wants to teleport to you. Use /tpaccept or /tpadeny."));
+            pending.put(key(from.getGameProfile().getName(), to.getGameProfile().getName()), System.currentTimeMillis());
+            from.addChatMessage(new ChatComponentText("Teleport request sent to " + to.getGameProfile().getName() + ". Expires in 60s."));
+            to.addChatMessage(new ChatComponentText(from.getGameProfile().getName() + " wants to teleport to you. Use /tpaccept or /tpadeny."));
         }
     }
     static class TpaHereCmd extends CommandBase {
@@ -123,9 +123,9 @@ public class TpaTeleportMod {
             if (to == null) throw new CommandException("Player not found: " + args[0]);
             if (to == from) throw new CommandException("You cannot tpahere yourself.");
             cleanExpired();
-            pending.put(key(from.getCommandSenderName(), to.getCommandSenderName()) + ":here", System.currentTimeMillis());
-            from.addChatMessage(new ChatComponentText("Request sent to " + to.getCommandSenderName() + " to come to you. Expires in 60s."));
-            to.addChatMessage(new ChatComponentText(from.getCommandSenderName() + " wants you to teleport to them. Use /tpaccept or /tpadeny."));
+            pending.put(key(from.getGameProfile().getName(), to.getGameProfile().getName()) + ":here", System.currentTimeMillis());
+            from.addChatMessage(new ChatComponentText("Request sent to " + to.getGameProfile().getName() + " to come to you. Expires in 60s."));
+            to.addChatMessage(new ChatComponentText(from.getGameProfile().getName() + " wants you to teleport to them. Use /tpaccept or /tpadeny."));
         }
     }
     static class TpAcceptCmd extends CommandBase {
@@ -138,7 +138,7 @@ public class TpaTeleportMod {
             EntityPlayerMP me = (EntityPlayerMP) sender;
             String requester = args[0];
             cleanExpired();
-            String k = key(requester, me.getCommandSenderName());
+            String k = key(requester, me.getGameProfile().getName());
             String kh = k + ":here";
             if (pending.containsKey(k)) {
                 pending.remove(k);
@@ -163,7 +163,7 @@ public class TpaTeleportMod {
             if (!(sender instanceof EntityPlayerMP)) throw new CommandException("Players only.");
             EntityPlayerMP me = (EntityPlayerMP) sender;
             cleanExpired();
-            String myName = me.getCommandSenderName();
+            String myName = me.getGameProfile().getName();
             int count = 0;
             Iterator<Map.Entry<String,Long>> it = pending.entrySet().iterator();
             while (it.hasNext()) {
@@ -193,12 +193,12 @@ public class TpaTeleportMod {
             EntityPlayerMP me = (EntityPlayerMP) sender;
             String requester = args[0];
             cleanExpired();
-            String k = key(requester, me.getCommandSenderName());
+            String k = key(requester, me.getGameProfile().getName());
             boolean removed = pending.remove(k) != null | pending.remove(k + ":here") != null;
             if (!removed) throw new CommandException("No pending request from " + requester + ".");
             me.addChatMessage(new ChatComponentText("Denied teleport from " + requester + "."));
             EntityPlayerMP req = findPlayer(MinecraftServer.getServer(), requester);
-            if (req != null) req.addChatMessage(new ChatComponentText(me.getCommandSenderName() + " denied your teleport request."));
+            if (req != null) req.addChatMessage(new ChatComponentText(me.getGameProfile().getName() + " denied your teleport request."));
         }
     }
     static class TpaDenyAllCmd extends CommandBase {
@@ -209,7 +209,7 @@ public class TpaTeleportMod {
             if (!(sender instanceof EntityPlayerMP)) throw new CommandException("Players only.");
             EntityPlayerMP me = (EntityPlayerMP) sender;
             cleanExpired();
-            String myName = me.getCommandSenderName();
+            String myName = me.getGameProfile().getName();
             int count = 0;
             Iterator<Map.Entry<String,Long>> it = pending.entrySet().iterator();
             while (it.hasNext()) {
@@ -233,7 +233,7 @@ public class TpaTeleportMod {
             if (!(sender instanceof EntityPlayerMP)) throw new CommandException("Players only.");
             if (args.length < 1) throw new CommandException("Usage: /tpacancel <player|all>");
             EntityPlayerMP me = (EntityPlayerMP) sender;
-            String myName = me.getCommandSenderName();
+            String myName = me.getGameProfile().getName();
             cleanExpired();
             if ("all".equalsIgnoreCase(args[0])) {
                 int count = 0;
@@ -833,7 +833,7 @@ public class TpaTeleportMod {
             if (here) { me.teleportTo(req.getX(),req.getY(),req.getZ()); } else { req.teleportTo(me.getX(),me.getY(),me.getZ()); }
             req.sendSystemMessage(Component.literal("Teleport accepted."));
         }
-        src.sendSuccess(()->Component.literal("Accepted "+count+" teleport request(s)."), false); return 1;
+        final int finalCount=count; src.sendSuccess(()->Component.literal("Accepted "+finalCount+" teleport request(s)."), false); return 1;
     }
     static int tpadeny(CommandSourceStack src, String requester) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer me=src.getPlayerOrException(); cleanExpired();
@@ -855,7 +855,7 @@ public class TpaTeleportMod {
             ServerPlayer req=src.getServer().getPlayerList().getPlayerByName(parts[0]);
             if (req!=null) req.sendSystemMessage(Component.literal(myName+" denied your teleport request."));
         }
-        src.sendSuccess(()->Component.literal("Denied "+count+" teleport request(s)."), false); return 1;
+        final int finalCount=count; src.sendSuccess(()->Component.literal("Denied "+finalCount+" teleport request(s)."), false); return 1;
     }
     static int tpacancel(CommandSourceStack src, String target) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer me=src.getPlayerOrException(); String myName=me.getName().getString(); cleanExpired();
@@ -866,7 +866,7 @@ public class TpaTeleportMod {
                 String base=e.getKey().endsWith(":here")?e.getKey().substring(0,e.getKey().length()-5):e.getKey();
                 if (base.startsWith(myName+"->")) { it.remove(); count++; }
             }
-            src.sendSuccess(()->Component.literal("Cancelled "+count+" outgoing request(s)."), false);
+            final int finalCount=count; src.sendSuccess(()->Component.literal("Cancelled "+finalCount+" outgoing request(s)."), false);
         } else {
             String k=key(myName,target);
             boolean removed=pending.remove(k)!=null|pending.remove(k+":here")!=null;
@@ -1084,7 +1084,10 @@ public class TpaTeleportMod implements ModInitializer {
 }
 """
 
-# Fabric 1.17-1.18.x: CommandRegistrationCallback v2 (dispatcher, registryAccess, dedicated)
+# Fabric 1.17.1: still uses command.v1 (v2 not available until 1.18)
+SRC_117_FABRIC = SRC_1165_FABRIC  # same as 1.16.5: v1, 2-arg callback
+
+# Fabric 1.18-1.18.x: CommandRegistrationCallback v2 (dispatcher, registryAccess, dedicated)
 SRC_117_118_FABRIC = SRC_1165_FABRIC.replace(
     "import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;",
     "import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;"
@@ -1092,6 +1095,8 @@ SRC_117_118_FABRIC = SRC_1165_FABRIC.replace(
     "CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> register(dispatcher));",
     "CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, dedicated) -> register(dispatcher));"
 )
+
+SRC_118_FABRIC = SRC_117_118_FABRIC
 
 # Fabric 1.19-1.19.4: Text.literal replaces LiteralText; sendMessage(text,uuid) removed -> sendMessage(text)
 SRC_119_FABRIC = SRC_117_118_FABRIC.replace(
@@ -1215,7 +1220,7 @@ public class TpaTeleportMod implements ModInitializer {
             if (here) { me.teleportTo(req.getX(),req.getY(),req.getZ()); } else { req.teleportTo(me.getX(),me.getY(),me.getZ()); }
             req.sendSystemMessage(Component.literal("Teleport accepted."));
         }
-        src.sendSuccess(()->Component.literal("Accepted "+count+" teleport request(s)."), false); return 1;
+        final int finalCount=count; src.sendSuccess(()->Component.literal("Accepted "+finalCount+" teleport request(s)."), false); return 1;
     }
     static int tpadeny(CommandSourceStack src, String requester) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer me=src.getPlayerOrException(); cleanExpired();
@@ -1237,7 +1242,7 @@ public class TpaTeleportMod implements ModInitializer {
             ServerPlayer req=src.getServer().getPlayerList().getPlayerByName(parts[0]);
             if (req!=null) req.sendSystemMessage(Component.literal(myName+" denied your teleport request."));
         }
-        src.sendSuccess(()->Component.literal("Denied "+count+" teleport request(s)."), false); return 1;
+        final int finalCount=count; src.sendSuccess(()->Component.literal("Denied "+finalCount+" teleport request(s)."), false); return 1;
     }
     static int tpacancel(CommandSourceStack src, String target) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer me=src.getPlayerOrException(); String myName=me.getName().getString(); cleanExpired();
@@ -1248,7 +1253,7 @@ public class TpaTeleportMod implements ModInitializer {
                 String base=e.getKey().endsWith(":here")?e.getKey().substring(0,e.getKey().length()-5):e.getKey();
                 if (base.startsWith(myName+"->")) { it.remove(); count++; }
             }
-            src.sendSuccess(()->Component.literal("Cancelled "+count+" outgoing request(s)."), false);
+            final int finalCount=count; src.sendSuccess(()->Component.literal("Cancelled "+finalCount+" outgoing request(s)."), false);
         } else {
             String k=key(myName,target);
             boolean removed=pending.remove(k)!=null|pending.remove(k+":here")!=null;
@@ -1284,15 +1289,15 @@ targets = [
     ("TpaTeleport-1.16.5-fabric",            SRC_1165_FABRIC,   "fabric",   "1.16.5",        FM),
     # --- 1.17.1 only (template doesn't support 1.17) ---
     ("TpaTeleport-1.17.1-forge",             SRC_117_118_FORGE, "forge",    "1.17.1",        {}),
-    ("TpaTeleport-1.17.1-fabric",            SRC_117_118_FABRIC,"fabric",   "1.17.1",        FM),
+    ("TpaTeleport-1.17.1-fabric",            SRC_117_FABRIC,    "fabric",   "1.17.1",        FM),
     # --- 1.18-1.18.2 ---
     ("TpaTeleport-1.18-1.18.2-forge",        SRC_117_118_FORGE, "forge",    "1.18-1.18.2",   {}),
-    ("TpaTeleport-1.18-1.18.2-fabric",       SRC_117_118_FABRIC,"fabric",   "1.18-1.18.2",   FM),
+    ("TpaTeleport-1.18-1.18.2-fabric",       SRC_118_FABRIC,    "fabric",   "1.18-1.18.2",   FM),
     # --- 1.19-1.19.4 ---
     ("TpaTeleport-1.19-1.19.4-forge",        SRC_119_FORGE,     "forge",    "1.19-1.19.4",   {}),
     ("TpaTeleport-1.19-1.19.4-fabric",       SRC_119_FABRIC,    "fabric",   "1.19-1.19.4",   FM),
     # --- 1.20-1.20.6 fabric (forge already published) ---
-    ("TpaTeleport-1.20-1.20.6-fabric",       SRC_120_FABRIC,    "fabric",   "1.20-1.20.6",   FM),
+    ("TpaTeleport-1.20.1-1.20.6-fabric",      SRC_120_FABRIC,    "fabric",   "1.20.1-1.20.6", FM),
     # --- 1.20 neoforge: only 1.20.2, 1.20.4, 1.20.5, 1.20.6 supported ---
     ("TpaTeleport-1.20.2-neoforge",          SRC_120_NEOFORGE,  "neoforge", "1.20.2",        {}),
     ("TpaTeleport-1.20.4-neoforge",          SRC_120_NEOFORGE,  "neoforge", "1.20.4",        {}),
