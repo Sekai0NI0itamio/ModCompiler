@@ -723,14 +723,21 @@ public class TpaTeleportMod {
 """
 
 # 1.19-1.19.4: Component.literal replaces TextComponent; sendMessage(comp,uuid) removed -> sendSystemMessage
-SRC_119_FORGE = SRC_117_118_FORGE.replace(
+# Build from SRC_117_118_FORGE but replace TextComponent->Component.literal AND strip UUID args
+_src119 = SRC_117_118_FORGE.replace(
     "import net.minecraft.network.chat.TextComponent;",
     "import net.minecraft.network.chat.Component;"
-).replace(
-    "new TextComponent(", "Component.literal("
-).replace(
+).replace("new TextComponent(", "Component.literal(")
+# Replace sendMessage(Component.literal(...), uuid) -> sendSystemMessage(Component.literal(...))
+# Do this by replacing the sendMessage calls that have UUID args
+_src119 = _src119.replace(
     ".sendMessage(Component.literal(", ".sendSystemMessage(Component.literal("
 )
+# Strip the trailing UUID args: ", req.getUUID())" -> ")"
+_src119 = _src119.replace("), req.getUUID());", "));")
+_src119 = _src119.replace("), to.getUUID());", "));")
+_src119 = _src119.replace("), me.getUUID());", "));")
+SRC_119_FORGE = _src119
 
 # 1.20-1.20.6 Forge: sendSuccess takes Supplier<Component>
 SRC_120_FORGE = SRC_119_FORGE.replace(
@@ -994,36 +1001,36 @@ public class TpaTeleportMod implements ModInitializer {
 
     static int tpa(ServerCommandSource src, String target) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity from = src.getPlayer();
-        ServerPlayerEntity to = src.getMinecraftServer().getPlayerManager().getPlayer(target);
+        ServerPlayerEntity to = src.getServer().getPlayerManager().getPlayer(target);
         if (to==null) { src.sendFeedback(new LiteralText("Player not found: "+target), false); return 0; }
         if (to==from) { src.sendFeedback(new LiteralText("You cannot tpa to yourself."), false); return 0; }
         cleanExpired();
         pending.put(key(from.getName().getString(), to.getName().getString()), System.currentTimeMillis());
         src.sendFeedback(new LiteralText("Teleport request sent to "+to.getName().getString()+". Expires in 60s."), false);
-        to.sendMessage(new LiteralText(from.getName().getString()+" wants to teleport to you. Use /tpaccept or /tpadeny."), to.getUuid());
+        to.sendMessage(new LiteralText(from.getName().getString()+" wants to teleport to you. Use /tpaccept or /tpadeny."), false);
         return 1;
     }
     static int tpahere(ServerCommandSource src, String target) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity from = src.getPlayer();
-        ServerPlayerEntity to = src.getMinecraftServer().getPlayerManager().getPlayer(target);
+        ServerPlayerEntity to = src.getServer().getPlayerManager().getPlayer(target);
         if (to==null) { src.sendFeedback(new LiteralText("Player not found: "+target), false); return 0; }
         if (to==from) { src.sendFeedback(new LiteralText("You cannot tpahere yourself."), false); return 0; }
         cleanExpired();
         pending.put(key(from.getName().getString(), to.getName().getString())+":here", System.currentTimeMillis());
         src.sendFeedback(new LiteralText("Request sent to "+to.getName().getString()+" to come to you. Expires in 60s."), false);
-        to.sendMessage(new LiteralText(from.getName().getString()+" wants you to teleport to them. Use /tpaccept or /tpadeny."), to.getUuid());
+        to.sendMessage(new LiteralText(from.getName().getString()+" wants you to teleport to them. Use /tpaccept or /tpadeny."), false);
         return 1;
     }
     static int tpaccept(ServerCommandSource src, String requester) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity me = src.getPlayer(); cleanExpired();
         String k=key(requester,me.getName().getString()); String kh=k+":here";
         if (pending.containsKey(k)) {
-            pending.remove(k); ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(requester);
-            if (req!=null) { req.teleport(me.getX(),me.getY(),me.getZ()); req.sendMessage(new LiteralText("Teleport accepted."), req.getUuid()); }
+            pending.remove(k); ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(requester);
+            if (req!=null) { req.teleport(me.getX(),me.getY(),me.getZ()); req.sendMessage(new LiteralText("Teleport accepted."), false); }
             src.sendFeedback(new LiteralText("Accepted teleport from "+requester+"."), false);
         } else if (pending.containsKey(kh)) {
-            pending.remove(kh); ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(requester);
-            if (req!=null) { me.teleport(req.getX(),req.getY(),req.getZ()); req.sendMessage(new LiteralText("Teleport accepted."), req.getUuid()); }
+            pending.remove(kh); ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(requester);
+            if (req!=null) { me.teleport(req.getX(),req.getY(),req.getZ()); req.sendMessage(new LiteralText("Teleport accepted."), false); }
             src.sendFeedback(new LiteralText("Accepted teleport to "+requester+"."), false);
         } else { src.sendFeedback(new LiteralText("No pending request from "+requester+"."), false); return 0; }
         return 1;
@@ -1035,9 +1042,9 @@ public class TpaTeleportMod implements ModInitializer {
             Map.Entry<String,Long> e=it.next(); String k=e.getKey(); boolean here=k.endsWith(":here");
             String base=here?k.substring(0,k.length()-5):k; String[] parts=base.split("->");
             if (parts.length!=2||!parts[1].equals(myName)) continue; it.remove(); count++;
-            ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(parts[0]); if (req==null) continue;
+            ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(parts[0]); if (req==null) continue;
             if (here) { me.teleport(req.getX(),req.getY(),req.getZ()); } else { req.teleport(me.getX(),me.getY(),me.getZ()); }
-            req.sendMessage(new LiteralText("Teleport accepted."), req.getUuid());
+            req.sendMessage(new LiteralText("Teleport accepted."), false);
         }
         src.sendFeedback(new LiteralText("Accepted "+count+" teleport request(s)."), false); return 1;
     }
@@ -1047,8 +1054,8 @@ public class TpaTeleportMod implements ModInitializer {
         boolean removed=pending.remove(k)!=null|pending.remove(k+":here")!=null;
         if (!removed) { src.sendFeedback(new LiteralText("No pending request from "+requester+"."), false); return 0; }
         src.sendFeedback(new LiteralText("Denied teleport from "+requester+"."), false);
-        ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(requester);
-        if (req!=null) req.sendMessage(new LiteralText(me.getName().getString()+" denied your teleport request."), req.getUuid());
+        ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(requester);
+        if (req!=null) req.sendMessage(new LiteralText(me.getName().getString()+" denied your teleport request."), false);
         return 1;
     }
     static int tpadenyall(ServerCommandSource src) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -1058,8 +1065,8 @@ public class TpaTeleportMod implements ModInitializer {
             Map.Entry<String,Long> e=it.next(); String k=e.getKey();
             String base=k.endsWith(":here")?k.substring(0,k.length()-5):k; String[] parts=base.split("->");
             if (parts.length!=2||!parts[1].equals(myName)) continue; it.remove(); count++;
-            ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(parts[0]);
-            if (req!=null) req.sendMessage(new LiteralText(myName+" denied your teleport request."), req.getUuid());
+            ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(parts[0]);
+            if (req!=null) req.sendMessage(new LiteralText(myName+" denied your teleport request."), false);
         }
         src.sendFeedback(new LiteralText("Denied "+count+" teleport request(s)."), false); return 1;
     }
@@ -1096,41 +1103,19 @@ SRC_117_118_FABRIC = SRC_1165_FABRIC.replace(
     "CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, dedicated) -> register(dispatcher));"
 )
 
-SRC_118_FABRIC = SRC_117_118_FABRIC
+SRC_118_FABRIC = SRC_117_FABRIC  # 1.18 also uses v1 (v2 not available)
 
-# Fabric 1.19-1.19.4: Text.literal replaces LiteralText; sendMessage(text,uuid) removed -> sendMessage(text)
-SRC_119_FABRIC = SRC_117_118_FABRIC.replace(
-    "import net.minecraft.text.LiteralText;",
-    "import net.minecraft.text.Text;"
-).replace(
-    "new LiteralText(", "Text.literal("
-).replace(
-    ".sendMessage(Text.literal(", ".sendMessage(Text.literal("  # no-op, uuid param still exists in 1.19
-)
-# Actually in 1.19 sendMessage(Text, UUID) still exists — just replace LiteralText with Text.literal
-SRC_119_FABRIC = SRC_117_118_FABRIC.replace(
+# Fabric 1.19-1.19.4: Text.literal replaces LiteralText; still uses v1 command API
+# Derive from SRC_117_FABRIC (v1) not SRC_117_118_FABRIC (v2)
+SRC_119_FABRIC = SRC_117_FABRIC.replace(
     "import net.minecraft.text.LiteralText;",
     "import net.minecraft.text.Text;"
 ).replace("new LiteralText(", "Text.literal(")
 
-# Fabric 1.20-1.20.6: sendFeedback takes Supplier<Text>; sendMessage(text,uuid) removed -> sendMessage(text)
+# Fabric 1.20-1.20.6: sendFeedback takes Supplier<Text>; sendMessage(text, false) stays
 SRC_120_FABRIC = SRC_119_FABRIC.replace(
     "src.sendFeedback(Text.literal(",
     "src.sendFeedback(() -> Text.literal("
-).replace(
-    ".sendMessage(Text.literal(", ".sendMessage(Text.literal("
-)
-# Fix sendMessage(text, uuid) -> sendMessage(text) for 1.20+
-SRC_120_FABRIC = SRC_119_FABRIC.replace(
-    "src.sendFeedback(Text.literal(",
-    "src.sendFeedback(() -> Text.literal("
-)
-# Replace sendMessage(text, uuid) with sendMessage(text) — remove the uuid arg
-import re as _re
-SRC_120_FABRIC = _re.sub(
-    r'\.sendMessage\(Text\.literal\(([^)]+)\), \w+\.getUuid\(\)\)',
-    r'.sendMessage(Text.literal(\1))',
-    SRC_120_FABRIC
 )
 
 # Fabric 1.21+: same as 1.20
