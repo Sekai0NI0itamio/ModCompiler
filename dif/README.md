@@ -113,3 +113,13 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 | NEOFORGE-1219-MODCONTAINER-REQUIRED | NeoForge 1.21.9+ — ModContainer required in @Mod constructor | neoforge | 1.21.9–1.21.11 |
 | ANCHOR-ONLY-YARN-PITFALL | anchor_only mode — Loom downloads yarn for exact MC version | fabric | 1.19–1.19.2 |
 | ALWAYS-DIAGNOSE-BEFORE-BUILDING | Always run diagnosis before building — never rebuild published versions | all | — |
+| FABRIC-COMMAND-API-V1-VS-V2 | Fabric CommandRegistrationCallback — v1 (1.16.5–1.18.x) vs v2 (1.19+) | fabric | 1.16.5–1.20.6 |
+| FABRIC-SEND-MESSAGE-SIGNATURE | Fabric sendMessage() takes (Text, boolean overlay), not UUID | fabric | 1.16.5–1.20.6 |
+| FABRIC-GET-SERVER-VS-GET-MINECRAFT-SERVER | Fabric 1.16.5 uses getMinecraftServer(), 1.17+ uses getServer() | fabric | 1.16.5–1.20.1 |
+| FORGE-SEND-MESSAGE-UUID-REMOVED | Forge/NeoForge sendMessage(Component, UUID) removed in 1.19+, use sendSystemMessage() | forge, neoforge | 1.19–26.1.2 |
+| FORGE-COMMAND-SOURCE-1165 | Forge 1.16.5 CommandSource.asPlayer() does not exist | forge | 1.16.5 |
+| JAVA6-COMPAT-189-FORGE | Forge 1.8.9 Java 6: no underscores, no diamond <>, no lambdas | forge | 1.8.9 |
+| LAMBDA-COUNT-CAPTURE | Lambda captures non-final count — use final int finalCount = count | forge, neoforge, fabric | 1.20–26.1.2 |
+| VERSION-STRING-26X-ANCHOR | 26.1-26.x version string must be anchor version 26.1.2 | all | 26.1.2 |
+| NEOFORGE-120-SUPPORTED-VERSIONS | NeoForge 1.20 only supports 1.20.2, 1.20.4, 1.20.5, 1.20.6 | neoforge | 1.20.2–1.20.6 |
+| FORGE-117-TEMPLATE-SUPPORTS-1171-ONLY | Forge/Fabric 1.17 template only supports 1.17.1, not 1.17 | forge, fabric | 1.17.1 |
