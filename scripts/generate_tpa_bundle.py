@@ -743,6 +743,15 @@ SRC_119_FORGE = _src119
 SRC_120_FORGE = SRC_119_FORGE.replace(
     "src.sendSuccess(Component.literal(",
     "src.sendSuccess(() -> Component.literal("
+).replace(
+    'src.sendSuccess(() -> Component.literal("Accepted "+count+" teleport request(s)."), false); return 1;',
+    'final int finalCount=count; src.sendSuccess(() -> Component.literal("Accepted "+finalCount+" teleport request(s)."), false); return 1;'
+).replace(
+    'src.sendSuccess(() -> Component.literal("Denied "+count+" teleport request(s)."), false); return 1;',
+    'final int finalCount=count; src.sendSuccess(() -> Component.literal("Denied "+finalCount+" teleport request(s)."), false); return 1;'
+).replace(
+    'src.sendSuccess(() -> Component.literal("Cancelled "+count+" outgoing request(s)."), false);',
+    'final int finalCount=count; src.sendSuccess(() -> Component.literal("Cancelled "+finalCount+" outgoing request(s)."), false);'
 )
 
 # 1.21-1.21.5 Forge: same as 1.20
@@ -1001,7 +1010,7 @@ public class TpaTeleportMod implements ModInitializer {
 
     static int tpa(ServerCommandSource src, String target) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity from = src.getPlayer();
-        ServerPlayerEntity to = src.getServer().getPlayerManager().getPlayer(target);
+        ServerPlayerEntity to = src.getMinecraftServer().getPlayerManager().getPlayer(target);
         if (to==null) { src.sendFeedback(new LiteralText("Player not found: "+target), false); return 0; }
         if (to==from) { src.sendFeedback(new LiteralText("You cannot tpa to yourself."), false); return 0; }
         cleanExpired();
@@ -1012,7 +1021,7 @@ public class TpaTeleportMod implements ModInitializer {
     }
     static int tpahere(ServerCommandSource src, String target) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayerEntity from = src.getPlayer();
-        ServerPlayerEntity to = src.getServer().getPlayerManager().getPlayer(target);
+        ServerPlayerEntity to = src.getMinecraftServer().getPlayerManager().getPlayer(target);
         if (to==null) { src.sendFeedback(new LiteralText("Player not found: "+target), false); return 0; }
         if (to==from) { src.sendFeedback(new LiteralText("You cannot tpahere yourself."), false); return 0; }
         cleanExpired();
@@ -1025,11 +1034,11 @@ public class TpaTeleportMod implements ModInitializer {
         ServerPlayerEntity me = src.getPlayer(); cleanExpired();
         String k=key(requester,me.getName().getString()); String kh=k+":here";
         if (pending.containsKey(k)) {
-            pending.remove(k); ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(requester);
+            pending.remove(k); ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(requester);
             if (req!=null) { req.teleport(me.getX(),me.getY(),me.getZ()); req.sendMessage(new LiteralText("Teleport accepted."), false); }
             src.sendFeedback(new LiteralText("Accepted teleport from "+requester+"."), false);
         } else if (pending.containsKey(kh)) {
-            pending.remove(kh); ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(requester);
+            pending.remove(kh); ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(requester);
             if (req!=null) { me.teleport(req.getX(),req.getY(),req.getZ()); req.sendMessage(new LiteralText("Teleport accepted."), false); }
             src.sendFeedback(new LiteralText("Accepted teleport to "+requester+"."), false);
         } else { src.sendFeedback(new LiteralText("No pending request from "+requester+"."), false); return 0; }
@@ -1042,7 +1051,7 @@ public class TpaTeleportMod implements ModInitializer {
             Map.Entry<String,Long> e=it.next(); String k=e.getKey(); boolean here=k.endsWith(":here");
             String base=here?k.substring(0,k.length()-5):k; String[] parts=base.split("->");
             if (parts.length!=2||!parts[1].equals(myName)) continue; it.remove(); count++;
-            ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(parts[0]); if (req==null) continue;
+            ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(parts[0]); if (req==null) continue;
             if (here) { me.teleport(req.getX(),req.getY(),req.getZ()); } else { req.teleport(me.getX(),me.getY(),me.getZ()); }
             req.sendMessage(new LiteralText("Teleport accepted."), false);
         }
@@ -1054,7 +1063,7 @@ public class TpaTeleportMod implements ModInitializer {
         boolean removed=pending.remove(k)!=null|pending.remove(k+":here")!=null;
         if (!removed) { src.sendFeedback(new LiteralText("No pending request from "+requester+"."), false); return 0; }
         src.sendFeedback(new LiteralText("Denied teleport from "+requester+"."), false);
-        ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(requester);
+        ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(requester);
         if (req!=null) req.sendMessage(new LiteralText(me.getName().getString()+" denied your teleport request."), false);
         return 1;
     }
@@ -1065,7 +1074,7 @@ public class TpaTeleportMod implements ModInitializer {
             Map.Entry<String,Long> e=it.next(); String k=e.getKey();
             String base=k.endsWith(":here")?k.substring(0,k.length()-5):k; String[] parts=base.split("->");
             if (parts.length!=2||!parts[1].equals(myName)) continue; it.remove(); count++;
-            ServerPlayerEntity req=src.getServer().getPlayerManager().getPlayer(parts[0]);
+            ServerPlayerEntity req=src.getMinecraftServer().getPlayerManager().getPlayer(parts[0]);
             if (req!=null) req.sendMessage(new LiteralText(myName+" denied your teleport request."), false);
         }
         src.sendFeedback(new LiteralText("Denied "+count+" teleport request(s)."), false); return 1;
@@ -1105,9 +1114,14 @@ SRC_117_118_FABRIC = SRC_1165_FABRIC.replace(
 
 SRC_118_FABRIC = SRC_117_FABRIC  # 1.18 also uses v1 (v2 not available)
 
-# Fabric 1.19-1.19.4: Text.literal replaces LiteralText; still uses v1 command API
-# Derive from SRC_117_FABRIC (v1) not SRC_117_118_FABRIC (v2)
+# Fabric 1.19-1.19.4: Text.literal replaces LiteralText; needs v2 command API
 SRC_119_FABRIC = SRC_117_FABRIC.replace(
+    "import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;",
+    "import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;"
+).replace(
+    "CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> register(dispatcher));",
+    "CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, dedicated) -> register(dispatcher));"
+).replace(
     "import net.minecraft.text.LiteralText;",
     "import net.minecraft.text.Text;"
 ).replace("new LiteralText(", "Text.literal(")
@@ -1116,6 +1130,15 @@ SRC_119_FABRIC = SRC_117_FABRIC.replace(
 SRC_120_FABRIC = SRC_119_FABRIC.replace(
     "src.sendFeedback(Text.literal(",
     "src.sendFeedback(() -> Text.literal("
+).replace(
+    'src.sendFeedback(() -> Text.literal("Accepted "+count+" teleport request(s)."), false); return 1;',
+    'final int finalCount=count; src.sendFeedback(() -> Text.literal("Accepted "+finalCount+" teleport request(s)."), false); return 1;'
+).replace(
+    'src.sendFeedback(() -> Text.literal("Denied "+count+" teleport request(s)."), false); return 1;',
+    'final int finalCount=count; src.sendFeedback(() -> Text.literal("Denied "+finalCount+" teleport request(s)."), false); return 1;'
+).replace(
+    'src.sendFeedback(() -> Text.literal("Cancelled "+count+" outgoing request(s)."), false);',
+    'final int finalCount=count; src.sendFeedback(() -> Text.literal("Cancelled "+finalCount+" outgoing request(s)."), false);'
 )
 
 # Fabric 1.21+: same as 1.20
