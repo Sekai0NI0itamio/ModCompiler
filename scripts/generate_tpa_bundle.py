@@ -1101,7 +1101,10 @@ public class TpaTeleportMod implements ModInitializer {
 """
 
 # Fabric 1.17.1: still uses command.v1 (v2 not available until 1.18)
-SRC_117_FABRIC = SRC_1165_FABRIC  # same as 1.16.5: v1, 2-arg callback
+SRC_117_FABRIC = SRC_1165_FABRIC.replace(
+    "src.getMinecraftServer().getPlayerManager()",
+    "src.getServer().getPlayerManager()"
+)  # 1.17+ uses getServer(), only 1.16.5 uses getMinecraftServer()
 
 # Fabric 1.18-1.18.x: CommandRegistrationCallback v2 (dispatcher, registryAccess, dedicated)
 SRC_117_118_FABRIC = SRC_1165_FABRIC.replace(
