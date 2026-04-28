@@ -656,6 +656,22 @@ documented:
    - 26.x versions skipped — all loaders still in beta/unstable
    - Result: 16 additional versions published across Fabric, Forge, NeoForge
 
+4. Optimized Vein Miner mod (docs/examples/OPTIMIZED_VEIN_MINER_ALL_VERSIONS.md)
+   - Event-based client+server mod (block break handler + toggle keybind)
+   - 72 versions published: 1.8.9 through 1.21.11, all three loaders
+   - CRITICAL: Always run fetch_modrinth_project.py FIRST to find missing versions
+   - CRITICAL: Never build targets already published — filter the zip manually
+   - Forge 1.17.1: RegisterKeyMappingsEvent does NOT exist — use ClientRegistry
+   - Fabric 1.19–1.19.2: uses old `net.minecraft.util.registry.Registry` path
+   - Fabric 1.19.3+: moved to `net.minecraft.registry.Registries`
+   - anchor_only mode pitfall: Loom downloads yarn for the exact MC version, not
+     the anchor — add dependency_overrides for each non-anchor version
+   - 1.21.9+: KeyMapping constructor requires KeyMapping.Category not String
+     Use KeyMapping.Category.MISC (not lookup/create — those don't exist)
+   - NeoForge 1.21.9+: ModContainer required in @Mod constructor
+   - Full API reference table: registry paths, KeyMapping constructors, hurtAndBreak
+     signatures, event packages — all per version/loader combination
+
 Read all three documents before starting any new multi-version port. They will
 save significant time by showing:
 - Exactly which API names to use per version
@@ -772,9 +788,9 @@ Only use Jar Decompile when you have a local jar that is not on Modrinth.
 
 Searching Minecraft/Forge/NeoForge API source code
 ---------------------------------------------------
-!! MANDATORY: You MUST use the AI Source Search workflow any time you are    !!
-!! unsure of a class name, package, or method signature. This is not         !!
-!! optional. Guessing is forbidden. Run the search first, then write code.   !!
+!! MANDATORY: You MUST look up actual source code any time you are unsure   !!
+!! of a class name, package, or method signature. This is not optional.     !!
+!! Guessing is forbidden. Search the sources first, then write code.        !!
 
 This applies to ALL of the following situations:
   - You get a "class not found" or "cannot find symbol" compile error
@@ -787,44 +803,39 @@ This applies to ALL of the following situations:
 
 DO NOT attempt to fix a compile error by guessing a different class name.
 DO NOT assume Fabric uses the same class names as Forge. It does not.
-DO NOT skip this step because you think you know the answer. Run the search.
-
-Workflow: `AI Source Search`
-Script:   `scripts/ai_source_search.py`
-File:     `.github/workflows/ai-source-search.yml`
+DO NOT skip this step because you think you know the answer. Search first.
 
 ------------------------------------------------------------------------
-How to use
+PRIMARY METHOD: Search DecompiledMinecraftSourceCode/ directly (FAST)
 ------------------------------------------------------------------------
 
-  python3 scripts/ai_source_search.py \
-      --version <minecraft_version> \
-      --loader <forge|fabric|neoforge> \
-      --queries "<ClassName>" "<methodName>" \
-      --files "*<ClassName>*.java"
+All 64 version+loader combinations are pre-committed to the repository at:
 
-The script:
-  1. Triggers the GitHub Actions workflow
-  2. Waits for it to complete (~2-5 minutes)
-  3. Downloads the results artifact
-  4. Prints all matches and full class files to stdout
+  DecompiledMinecraftSourceCode/<version>-<loader>/
 
-You get the exact class names, package paths, and method signatures for that
-specific Minecraft version and loader — no guessing required.
+This is INSTANT. No workflow run, no waiting, no GitHub Actions minutes.
+Use this for ALL routine API lookups.
 
-------------------------------------------------------------------------
-What the results contain
-------------------------------------------------------------------------
+  # Find a class by name
+  grep -r "DimensionDataStorage" DecompiledMinecraftSourceCode/1.21.5-forge/
 
-  - search-info.txt       — version, loader, query params, match count
-  - queries/<query>.txt   — grep matches with context lines around each hit
-  - full-classes/*.java   — full content of every matched class file
-  - all-java-files.txt    — complete list of all .java files found
-  - gradle-output.log     — Gradle output (useful if sources are missing)
+  # Find a method signature
+  grep -r "computeIfAbsent" DecompiledMinecraftSourceCode/1.21.5-forge/
 
-RULE: Read the full class file from full-classes/ — not just the grep snippet.
-RULE: Use the exact class name and package from the search results in your code.
-RULE: Do NOT run this locally. It runs entirely on GitHub Actions.
+  # Browse available classes in a package
+  ls DecompiledMinecraftSourceCode/1.21.5-forge/net/minecraft/world/level/saveddata/
+
+  # Read a full class file
+  cat DecompiledMinecraftSourceCode/1.21.5-forge/net/minecraft/world/level/saveddata/SavedData.java
+
+  # Search across all versions at once
+  grep -r "FarmlandTrampleEvent" DecompiledMinecraftSourceCode/
+
+  # Find all event classes for a version
+  find DecompiledMinecraftSourceCode/1.21.5-forge/ -name "*Event*.java"
+
+  # Fabric yarn-mapped names (different from Forge!)
+  grep -r "FarmlandBlock" DecompiledMinecraftSourceCode/1.18.2-fabric/
 
 ------------------------------------------------------------------------
 Mandatory pattern: "class not found" or "cannot find symbol" errors
@@ -834,21 +845,52 @@ When a build fails with a class-not-found or cannot-find-symbol error:
 
   STEP 1 — Stop. Do not guess a different class name.
 
-  STEP 2 — Run the AI Source Search for that version and loader:
+  STEP 2 — Search DecompiledMinecraftSourceCode/ for the failing version:
 
-    python3 scripts/ai_source_search.py \
-        --version <failing_version> \
-        --loader <failing_loader> \
-        --queries "<ClassName that failed>" \
-        --files "*.java"
+    grep -r "<ClassName that failed>" DecompiledMinecraftSourceCode/<version>-<loader>/
 
-  STEP 3 — Read all-java-files.txt to find the correct path.
-           Read the full class from full-classes/<ClassName>.java.
+  STEP 3 — If the class name is wrong, search broadly:
 
-  STEP 4 — Use the exact package and class name from the source.
+    grep -r "trample" DecompiledMinecraftSourceCode/1.18.2-fabric/
+    find DecompiledMinecraftSourceCode/1.18.2-fabric/ -name "*Farmland*"
+
+  STEP 4 — Read the full class file to get the exact package and method names:
+
+    cat DecompiledMinecraftSourceCode/1.18.2-fabric/net/minecraft/block/FarmlandBlock.java
+
+  STEP 5 — Use the exact package and class name from the source.
            Update the mod code. Then rebuild.
 
 This is the ONLY acceptable way to resolve a class-not-found error.
+
+------------------------------------------------------------------------
+FALLBACK METHOD: AI Source Search workflow (when repo search is not enough)
+------------------------------------------------------------------------
+
+Use the workflow when you need:
+  - Richer regex queries with context lines (-B/-A flags)
+  - Full class dumps formatted as workflow output artifacts
+  - A version that is NOT yet in DecompiledMinecraftSourceCode/ (rare)
+
+Workflow: `AI Source Search`
+Script:   `scripts/ai_source_search.py`
+File:     `.github/workflows/ai-source-search.yml`
+
+The workflow defaults to `source_mode=repo`, which reads from
+DecompiledMinecraftSourceCode/ — same data as a direct grep, just slower.
+Only use `source_mode=live-decompile` if the folder is missing.
+
+  python3 scripts/ai_source_search.py \
+      --version <minecraft_version> \
+      --loader <forge|fabric|neoforge> \
+      --queries "<ClassName>" "<methodName>" \
+      --files "*<ClassName>*.java"
+
+The script:
+  1. Triggers the GitHub Actions workflow
+  2. Waits for it to complete (~2-5 minutes in repo mode)
+  3. Downloads the results artifact
+  4. Prints all matches and full class files to stdout
 
 ------------------------------------------------------------------------
 Why Fabric class names differ from Forge
@@ -870,44 +912,32 @@ These are the SAME class in the same Minecraft version. The names are
 entirely different because the mapping systems are different.
 
 You cannot port a Forge mixin to Fabric by changing the package prefix.
-You must look up the actual yarn-mapped name using the AI Source Search.
+You must look up the actual yarn-mapped name in DecompiledMinecraftSourceCode/.
 
 ------------------------------------------------------------------------
-Examples
+Examples — direct repo search (preferred)
 ------------------------------------------------------------------------
 
 Find the farmland block class in Fabric 1.18.2 (yarn mappings):
 
-  python3 scripts/ai_source_search.py \
-      --version 1.18.2 \
-      --loader fabric \
-      --queries "FarmlandBlock" "onLandedUpon" \
-      --files "*.java"
+  grep -r "FarmlandBlock" DecompiledMinecraftSourceCode/1.18.2-fabric/
+  find DecompiledMinecraftSourceCode/1.18.2-fabric/ -name "*Farmland*"
+  cat DecompiledMinecraftSourceCode/1.18.2-fabric/net/minecraft/block/FarmlandBlock.java
 
 Find SavedData API in Forge 1.21.5:
 
-  python3 scripts/ai_source_search.py \
-      --version 1.21.5 \
-      --loader forge \
-      --queries "computeIfAbsent" "SavedDataType" "DimensionDataStorage" \
-      --files "*DimensionDataStorage*.java" "*SavedData*.java"
+  grep -r "SavedData" DecompiledMinecraftSourceCode/1.21.5-forge/
+  ls DecompiledMinecraftSourceCode/1.21.5-forge/net/minecraft/world/level/saveddata/
+  cat DecompiledMinecraftSourceCode/1.21.5-forge/net/minecraft/world/level/saveddata/SavedData.java
 
 Find an event class in NeoForge 1.21.9:
 
-  python3 scripts/ai_source_search.py \
-      --version 1.21.9 \
-      --loader neoforge \
-      --queries "FarmlandTrampleEvent" \
-      --files "*.java"
+  grep -r "FarmlandTrampleEvent" DecompiledMinecraftSourceCode/1.21.9-neoforge/
 
 Broad search when you don't know the class name at all:
 
-  python3 scripts/ai_source_search.py \
-      --version 1.19.4 \
-      --loader fabric \
-      --queries "trample" "farmland" \
-      --files "*.java" \
-      --context 30
+  grep -r "trample" DecompiledMinecraftSourceCode/1.19.4-fabric/
+  find DecompiledMinecraftSourceCode/1.19.4-fabric/ -name "*farmland*" -o -name "*Farmland*"
 
 ------------------------------------------------------------------------
 Real-world example: Seed Protect Fabric 1.18-1.19.3
@@ -917,29 +947,36 @@ The mod failed with:
   error: Mixin target net.minecraft.world.level.block.FarmlandBlock could not be found
 
 Three guesses at different class names all failed. The fix was to stop
-guessing and run the AI Source Search:
+guessing and search the repo directly:
 
-  python3 scripts/ai_source_search.py \
-      --version 1.18.2 --loader fabric \
-      --queries "FarmlandBlock" "fallOn" "trample" --files "*.java"
+  grep -r "FarmlandBlock" DecompiledMinecraftSourceCode/1.18.2-fabric/
+  # → DecompiledMinecraftSourceCode/1.18.2-fabric/net/minecraft/block/FarmlandBlock.java
 
-The search returned the actual FarmlandBlock.java source, which showed:
-  - Package: net.minecraft.block  (NOT net.minecraft.world.level.block)
-  - Method:  onLandedUpon(...)    (NOT fallOn)
+  cat DecompiledMinecraftSourceCode/1.18.2-fabric/net/minecraft/block/FarmlandBlock.java
+  # → Shows: package net.minecraft.block
+  # → Shows: method onLandedUpon(...)  (NOT fallOn)
 
 The mixin was fixed with the correct names and all 6 versions compiled
 on the first attempt. See SEED_PROTECT_SOLUTION_SUMMARY.md for full details.
 
 ------------------------------------------------------------------------
-How the workflow finds sources (technical detail)
+How the sources are organized (technical detail)
 ------------------------------------------------------------------------
 
-  Fabric:    runs `genSources` via Fabric Loom → produces a sources jar
-             inside the workspace .gradle/loom-cache/ → workflow unzips it
-  Forge:     runs `genSources` via ForgeGradle → extracts .java files into
-             ~/.gradle/caches/forge_gradle/ or net.minecraftforge/
-  NeoForge:  runs `dependencies` + `genSources` → sources land in
-             ~/.gradle/caches/neoforge/
+  DecompiledMinecraftSourceCode/<version>-<loader>/
+    net/minecraft/          ← full Minecraft source (all loaders)
+    net/minecraftforge/     ← Forge API (forge only)
+    net/neoforged/          ← NeoForge API (neoforge only)
+    net/fabricmc/           ← Fabric API (fabric only)
+    README.md               ← generation metadata
+
+  NeoForge folders include net/minecraft/ classes copied from the matching
+  Forge or Fabric build. NeoForge Gradle only produces net/neoforged/ API
+  classes natively; the full MC source is supplemented from Forge/Fabric.
+
+  All 64 version+loader combinations are present and verified:
+    python3 scripts/check_decompiled_status.py   ← check presence
+    python3 scripts/test_source_search.py        ← run full test suite
 
 Agent checklist before doing work
 ---------------------------------

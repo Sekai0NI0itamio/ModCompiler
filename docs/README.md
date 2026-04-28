@@ -79,6 +79,7 @@ This folder contains documentation for the ModCompiler project, which helps buil
 
 ### "I want to build for multiple Minecraft versions"
 → Read: [SYSTEM_MANUAL.md](SYSTEM_MANUAL.md)  
+→ Search API: `grep -r "ClassName" DecompiledMinecraftSourceCode/<version>-<loader>/`  
 → Use: GitHub Actions workflows
 
 ### "I want to publish my mod to Modrinth"
@@ -89,6 +90,11 @@ This folder contains documentation for the ModCompiler project, which helps buil
 → Read: [AI_AGENT_MODRINTH_WORKFLOW.md](AI_AGENT_MODRINTH_WORKFLOW.md)  
 → **DEFAULT**: Generate metadata files, use `--use-ai-metadata` flag  
 → **10x faster** than standard workflow!
+
+### "I need to look up a Minecraft API class or method" 🔍
+→ **Instant**: `grep -r "ClassName" DecompiledMinecraftSourceCode/<version>-<loader>/`  
+→ All 64 version+loader combinations pre-committed — no workflow run needed  
+→ Read: [SYSTEM_MANUAL.md](SYSTEM_MANUAL.md) → "Decompiled Minecraft Sources Repository"
 
 ## Critical Issue: Source Code Conflicts
 
@@ -242,6 +248,7 @@ These documents record real build sessions — challenges encountered, fixes app
 - **[CRAFTABLE_SLIME_BALLS_ALL_VERSIONS.md](examples/CRAFTABLE_SLIME_BALLS_ALL_VERSIONS.md)** — Recipe-only mod, 61 versions, zero failures ✓
 - **[COMMON_SERVER_CORE_ALL_VERSIONS.md](examples/COMMON_SERVER_CORE_ALL_VERSIONS.md)** — Server-side utility mod
 - **[ALLOW_OFFLINE_LAN_JOIN_ALL_VERSIONS.md](examples/ALLOW_OFFLINE_LAN_JOIN_ALL_VERSIONS.md)** — Reflection-based server mod, 72 versions, Forge event API across all eras ✓
+- **[OPTIMIZED_VEIN_MINER_ALL_VERSIONS.md](examples/OPTIMIZED_VEIN_MINER_ALL_VERSIONS.md)** — Event-based client+server mod, 72 versions, KeyMapping.Category changes in 1.21.9+, Fabric registry path split at 1.19.3, anchor_only yarn pitfall ✓
 
 ---
 
