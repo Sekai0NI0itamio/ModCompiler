@@ -672,7 +672,29 @@ documented:
    - Full API reference table: registry paths, KeyMapping constructors, hurtAndBreak
      signatures, event packages — all per version/loader combination
 
-Read all three documents before starting any new multi-version port. They will
+5. TPA Teleport mod (docs/examples/TPA_TELEPORT_ALL_VERSIONS.md)
+   - Server-side only command mod (no client code, no keybinds, no GUI)
+   - 68 versions published: 1.8.9 through 26.1.2, all three loaders
+   - 7 build runs to reach full coverage
+   - Forge 1.8.9: Java 6 source level — no underscores in literals, no diamond <>,
+     no lambdas, no removeIf() — use explicit iterator loops
+   - Forge 1.16.5: CommandSource (not CommandSourceStack), no asPlayer() method —
+     use (ServerPlayerEntity) src.getEntity() with null check
+   - Forge 1.19+: sendMessage(Component, UUID) removed — use sendSystemMessage(Component)
+     When deriving via string replace, strip the trailing UUID arg too
+   - Forge 1.21.6+: EventBus 7 — RegisterCommandsEvent.BUS.addListener() in constructor
+   - Fabric 1.16.5: uses getMinecraftServer() not getServer() (yarn 1.16.5+build.10)
+     Do NOT trust DecompiledMinecraftSourceCode for anchor_only templates
+   - Fabric 1.16.5–1.18.x: command.v1 with 2-arg callback (dispatcher, dedicated)
+   - Fabric 1.19+: command.v2 with 3-arg callback (dispatcher, registryAccess, dedicated)
+   - Fabric sendMessage: takes (Text, boolean overlay) — pass false for chat, NOT a UUID
+   - Lambda count capture: sendSuccess(() -> ...) in 1.20+ captures count — add
+     final int finalCount = count before the lambda
+   - NeoForge 1.20: only supports 1.20.2, 1.20.4, 1.20.5, 1.20.6 (not 1.20 or 1.20.1)
+   - 26.1-26.x version string: use anchor version 26.1.2, not "26.1-26.x" or "26.x"
+   - 1.17 template: only supports 1.17.1, not 1.17 — use exact version 1.17.1
+
+Read all four documents before starting any new multi-version port. They will
 save significant time by showing:
 - Exactly which API names to use per version
 - How to use the AI Source Search workflow instead of guessing

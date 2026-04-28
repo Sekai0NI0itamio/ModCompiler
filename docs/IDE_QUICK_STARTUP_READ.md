@@ -279,6 +279,19 @@ Based on this conversation, the user:
 | `EventBus7` / `addListener` pattern (1.21.6+) | `FORGE-EB7-EVENTBUS7-PATTERN` |
 | Fabric class name wrong (FarmBlock vs FarmlandBlock) | `FABRIC-YARN-VS-MOJANG-MAPPINGS` |
 | HTTP 502/503 downloading Gradle | `GRADLE-TRANSIENT-NETWORK-FAILURE` |
+| `package net.fabricmc.fabric.api.command.v2 does not exist` | `FABRIC-COMMAND-API-V1-VS-V2` |
+| `package net.fabricmc.fabric.api.command.v1 does not exist` | `FABRIC-COMMAND-API-V1-VS-V2` |
+| `UUID cannot be converted to boolean` (Fabric sendMessage) | `FABRIC-SEND-MESSAGE-SIGNATURE` |
+| `UUID cannot be converted to ResourceKey` (Forge sendMessage) | `FORGE-SEND-MESSAGE-UUID-REMOVED` |
+| `cannot find symbol: method asPlayer()` (Forge 1.16.5) | `FORGE-COMMAND-SOURCE-1165` |
+| `cannot find symbol: method getServer()` (Fabric 1.16.5) | `FABRIC-GET-SERVER-VS-GET-MINECRAFT-SERVER` |
+| `underscores in literals are not supported in -source 1.6` | `JAVA6-COMPAT-189-FORGE` |
+| `diamond operator is not supported in -source 1.6` | `JAVA6-COMPAT-189-FORGE` |
+| `lambda expressions are not supported in -source 1.6` | `JAVA6-COMPAT-189-FORGE` |
+| `local variables referenced from a lambda expression must be final` | `LAMBDA-COUNT-CAPTURE` |
+| `Unsupported version format '26.x'` | `VERSION-STRING-26X-ANCHOR` |
+| `does not support exact Minecraft 1.20` (NeoForge) | `NEOFORGE-120-SUPPORTED-VERSIONS` |
+| `does not support exact Minecraft 1.17` | `FORGE-117-TEMPLATE-SUPPORTS-1171-ONLY` |
 
 ---
 
@@ -289,9 +302,10 @@ For deeper reading (in order of usefulness):
 1. `docs/IDE_AGENT_INSTRUCTION_SHEET.txt` — complete operating manual
 2. `dif/README.md` — DIF system overview and full entry list
 3. `docs/examples/OPTIMIZED_VEIN_MINER_ALL_VERSIONS.md` — most recent port, all issues documented
-4. `docs/examples/SEED_PROTECT_ALL_VERSIONS.md` — mixin-based mod, yarn mapping pitfalls
-5. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
-6. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
+4. `docs/examples/TPA_TELEPORT_ALL_VERSIONS.md` — server-side command mod, 7 runs, 68 versions
+5. `docs/examples/SEED_PROTECT_ALL_VERSIONS.md` — mixin-based mod, yarn mapping pitfalls
+6. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
+7. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
 
 ---
 
