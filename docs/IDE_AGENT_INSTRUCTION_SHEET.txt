@@ -1212,3 +1212,132 @@ The intended user experience is:
 7. Later, the same IDE agent can reopen the mod, update it to all supported versions, and use GitHub Actions to compile and publish those versions in a repeatable loop.
 
 That is the intended way to use this project.
+
+Post-update checklist — after updating a mod to all versions
+------------------------------------------------------------
+Once all build runs are complete and versions are published, do the following
+before telling the user you are done:
+
+1. VERIFY COVERAGE
+   Run fetch_modrinth_project.py to confirm the final published state:
+
+     python3 scripts/fetch_modrinth_project.py \
+         --project https://modrinth.com/mod/<slug> \
+         --output-dir /tmp/final-check
+     cat /tmp/final-check/summary.txt
+
+   Check that the "Game versions" and "Loaders" lines match what was expected.
+   Report the final version count to the user.
+
+2. DOCUMENT ISSUES IN THE DIF SYSTEM
+   For every compile error or API issue encountered during the build runs,
+   create a DIF entry in dif/ so future agents can find the fix instantly.
+
+   The DIF system is the primary searchable knowledge base for build errors.
+   run_build.py automatically matches errors against DIF entries after each run.
+
+   To create a new entry:
+     python3 scripts/dif_search.py --create
+
+   Or create the .md file directly in dif/ following the format in dif/README.md.
+
+   Required fields:
+   - id: UPPERCASE-HYPHENATED-ID
+   - title: short description
+   - tags: [loader, error-type, version-era, ...]
+   - versions: [affected MC versions]
+   - loaders: [forge, fabric, neoforge]
+   - symbols: [class names that appear in the error]
+   - error_patterns: ["regex matching the exact error text"]
+
+   Then update dif/README.md to add the new entry to the table.
+
+3. DOCUMENT THE PORT IN docs/examples/
+   Create a new file docs/examples/<MOD_NAME>_ALL_VERSIONS.md following the
+   format of existing examples (e.g. OPTIMIZED_VEIN_MINER_ALL_VERSIONS.md).
+
+   Include:
+   - Overview: mod name, URL, starting/final coverage, number of build runs
+   - Mod description: what it does, which APIs it uses
+   - Every compile error encountered, its root cause, and the fix
+   - Version-specific API reference tables (registry paths, event packages, etc.)
+   - Build run summary table showing what failed/succeeded in each run
+   - Files modified (generator script, version-manifest.json, etc.)
+
+4. UPDATE docs/IDE_AGENT_INSTRUCTION_SHEET.txt
+   Add the new example to the "Completed real-world examples" section with a
+   one-line summary of the key lessons learned.
+
+5. COMMIT EVERYTHING
+   Commit the DIF entries, example doc, and IDE manual update together:
+
+     git add dif/ docs/examples/<MOD>_ALL_VERSIONS.md docs/IDE_AGENT_INSTRUCTION_SHEET.txt docs/README.md
+     git commit -m "docs: add <mod> all-versions port documentation and DIF entries"
+     git push
+
+DIF system quick reference
+--------------------------
+The DIF (Documentary of Issues and Fixes) system lives in dif/.
+It is the primary searchable knowledge base for build errors.
+
+Search before writing new code:
+  python3 scripts/dif_search.py "RegisterKeyMappingsEvent forge 1.17"
+  python3 scripts/dif_search.py "KeyMapping Category String incompatible"
+  python3 scripts/dif_search.py "net.minecraft.registry does not exist fabric"
+  python3 scripts/dif_search.py --match-log path/to/build.log
+  python3 scripts/dif_search.py --scan-run ModCompileRuns/run-xxx/
+
+run_build.py automatically runs DIF matching after each failed build and
+shows the top matching entries. Read those entries before attempting a fix.
+
+Key DIF entries for common issues:
+  FORGE-117-NO-REGISTER-KEY-MAPPINGS-EVENT  — Forge 1.17.1 key binding
+  FORGE-17-EVENT-WORLD-VS-LEVEL             — Forge 1.17 event package
+  FABRIC-119-REGISTRY-PATH-SPLIT            — Fabric 1.19 registry path
+  ANCHOR-ONLY-YARN-PITFALL                  — anchor_only yarn mismatch
+  KEYMAPPING-CATEGORY-REQUIRED-1219         — 1.21.9+ KeyMapping.Category
+  NEOFORGE-1219-MODCONTAINER-REQUIRED       — NeoForge 1.21.9+ constructor
+  FORGE-EB7-EVENTBUS7-PATTERN               — Forge 1.21.6+ EventBus 7
+  FABRIC-YARN-VS-MOJANG-MAPPINGS            — Fabric yarn vs Mojang names
+  ALWAYS-DIAGNOSE-BEFORE-BUILDING           — run diagnosis first workflow
+  NEVER-REBUILD-GREEN-TARGETS               — --failed-only best practice
+  GRADLE-TRANSIENT-NETWORK-FAILURE          — retry on HTTP 502/503
+
+Mandatory pre-build workflow for updating a mod to all versions
+---------------------------------------------------------------
+ALWAYS follow this sequence. Do not skip steps.
+
+Step 1: Fetch the current Modrinth state
+  python3 scripts/fetch_modrinth_project.py \
+      --project <modrinth-url> \
+      --output-dir /tmp/diagnosis
+  cat /tmp/diagnosis/summary.txt
+
+Step 2: Identify missing versions
+  Compare "Game versions" and "Loaders" from summary.txt against
+  version-manifest.json. Build ONLY the missing targets.
+
+Step 3: Check for an existing generator script
+  ls scripts/generate_<modname>_bundle.py
+  If it exists, use it. Run with --failed-only after the first run.
+  Do NOT hand-write source code if a generator already exists.
+
+Step 4: Search DIF for known issues before writing code
+  python3 scripts/dif_search.py "<error or API name>"
+
+Step 5: Generate the bundle for missing targets only
+  python3 scripts/generate_<mod>_bundle.py --failed-only
+  # Then filter the zip to exclude already-published targets (see ALWAYS-DIAGNOSE-BEFORE-BUILDING)
+
+Step 6: Commit, push, and run
+  git add incoming/ && git commit -m "..." && git push
+  python3 scripts/run_build.py incoming/<bundle>.zip \
+      --modrinth <url> --max-parallel all
+
+Step 7: On failure — read the DIF matches in the output, fix only failed targets
+  python3 scripts/generate_<mod>_bundle.py --failed-only
+  # Filter zip again to exclude already-published targets
+  git add incoming/ && git commit -m "fix: ..." && git push
+  python3 scripts/run_build.py incoming/<bundle>.zip --modrinth <url>
+
+Step 8: On success — run the post-update checklist (see above)
