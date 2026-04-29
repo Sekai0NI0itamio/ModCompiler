@@ -107,6 +107,9 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 
 | ID | Title | Loaders | Versions |
 |----|-------|---------|----------|
+| FORGE-LIVINGUSETOTEM-NOT-IN-41X | Forge 1.19–1.19.2 (41.x) — LivingUseTotemEvent does not exist, added in 44.x (1.19.3+) | forge | 1.19–1.19.2 |
+| FORGE-EB7-FMLCOMMONSETUPEVENT-GETBUS | Forge 1.21.6+ EventBus 7 — FMLCommonSetupEvent.getBus(context.getModBusGroup()) replaces getModEventBus() | forge | 1.21.6–26.1.2 |
+| FORGE-DATACOMPONENTS-ITEM-STACK-SIZE | Forge/NeoForge 1.20.5+ — Item max stack size stored in DataComponents.MAX_STACK_SIZE | forge, neoforge | 1.20.5–26.1.2 |
 | FORGE-ITEM-PACKAGE-PRE-117 | Forge pre-1.17 uses net.minecraft.item, 1.17+ uses net.minecraft.world.item | forge | 1.16.5–1.18.2 |
 | FABRIC-121-MOJANG-MAPPINGS-SWITCH | Fabric 1.21+ switched to Mojang mappings — MinecraftClient→Minecraft, all class names changed | fabric | 1.21–26.1.2 |
 | NEOFORGE-TICKEVENT-CLIENT-PACKAGE | NeoForge 1.21.2+ ClientTickEvent moved to net.neoforged.neoforge.client.event | neoforge | 1.21.2–26.1.2 |
