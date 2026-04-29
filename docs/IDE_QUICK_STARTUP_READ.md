@@ -491,6 +491,8 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | `package net.minecraftforge.fml.loading does not exist` (NeoForge 26.1) | `NEOFORGE-FMLENVIRONMENT-GETDIST` |
 | `method interactItem.*required.*PlayerEntity.*World.*Hand` (Fabric 1.18) | `FABRIC-118-INTERACTITEM-WORLD-ARG` |
 | `no suitable method found for addListener.*ClientTickEvent` (Forge 1.21.6+) | `FORGE-EB7-POST-BUS-ADDLISTENER` |
+| `cannot find symbol.*class LivingUseTotemEvent` (Forge 1.19–1.19.2) | `FORGE-LIVINGUSETOTEM-NOT-IN-41X` |
+| `cannot find symbol.*method getModEventBus.*FMLJavaModLoadingContext` | `FORGE-EB7-FMLCOMMONSETUPEVENT-GETBUS` |
 
 ---
 
