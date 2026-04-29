@@ -107,6 +107,12 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 
 | ID | Title | Loaders | Versions |
 |----|-------|---------|----------|
+| FORGE-ITEM-PACKAGE-PRE-117 | Forge pre-1.17 uses net.minecraft.item, 1.17+ uses net.minecraft.world.item | forge | 1.16.5–1.18.2 |
+| FABRIC-121-MOJANG-MAPPINGS-SWITCH | Fabric 1.21+ switched to Mojang mappings — MinecraftClient→Minecraft, all class names changed | fabric | 1.21–26.1.2 |
+| NEOFORGE-TICKEVENT-CLIENT-PACKAGE | NeoForge 1.21.2+ ClientTickEvent moved to net.neoforged.neoforge.client.event | neoforge | 1.21.2–26.1.2 |
+| NEOFORGE-FMLENVIRONMENT-GETDIST | NeoForge 1.21.9+ FMLEnvironment.dist field → FMLEnvironment.getDist() method | neoforge | 1.21.9–26.1.2 |
+| FABRIC-118-INTERACTITEM-WORLD-ARG | Fabric 1.18.x interactItem() requires World as 2nd argument | fabric | 1.18–1.18.2 |
+| FORGE-EB7-POST-BUS-ADDLISTENER | Forge 1.21.6+ EventBus 7 — use TickEvent.ClientTickEvent.Post.BUS.addListener() | forge | 1.21.6–26.1.2 |
 | FORGE-117-NO-REGISTER-KEY-MAPPINGS-EVENT | Forge 1.17.1 — RegisterKeyMappingsEvent does not exist | forge | 1.17, 1.17.1 |
 | FABRIC-119-REGISTRY-PATH-SPLIT | Fabric 1.19–1.19.2 uses old registry path, 1.19.3+ uses new | fabric | 1.19–1.19.4 |
 | KEYMAPPING-CATEGORY-REQUIRED-1219 | 1.21.9+ — KeyMapping requires Category not String | forge, neoforge, fabric | 1.21.9–1.21.11 |

@@ -483,6 +483,14 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | `Unsupported version format '26.x'` | `VERSION-STRING-26X-ANCHOR` |
 | `does not support exact Minecraft 1.20` (NeoForge) | `NEOFORGE-120-SUPPORTED-VERSIONS` |
 | `does not support exact Minecraft 1.17` | `FORGE-117-TEMPLATE-SUPPORTS-1171-ONLY` |
+| `package net.minecraft.item does not exist` (Forge 1.17+) | `FORGE-ITEM-PACKAGE-PRE-117` |
+| `cannot find symbol.*MinecraftClient` (Fabric 1.21+) | `FABRIC-121-MOJANG-MAPPINGS-SWITCH` |
+| `package net.minecraft.item does not exist` (Fabric 1.21+) | `FABRIC-121-MOJANG-MAPPINGS-SWITCH` |
+| `cannot find symbol.*TickEvent` (NeoForge 1.21.2+) | `NEOFORGE-TICKEVENT-CLIENT-PACKAGE` |
+| `cannot find symbol.*variable dist.*FMLEnvironment` | `NEOFORGE-FMLENVIRONMENT-GETDIST` |
+| `package net.minecraftforge.fml.loading does not exist` (NeoForge 26.1) | `NEOFORGE-FMLENVIRONMENT-GETDIST` |
+| `method interactItem.*required.*PlayerEntity.*World.*Hand` (Fabric 1.18) | `FABRIC-118-INTERACTITEM-WORLD-ARG` |
+| `no suitable method found for addListener.*ClientTickEvent` (Forge 1.21.6+) | `FORGE-EB7-POST-BUS-ADDLISTENER` |
 
 ---
 
