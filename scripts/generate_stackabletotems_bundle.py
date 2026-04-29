@@ -584,7 +584,132 @@ public class StackableTotemsMod {
 # ===========================================================================
 # TARGETS
 # ===========================================================================
+
+# ===========================================================================
+# FORGE 1.12.2 — old FML, mcmod.info era
+# Totem exists (added in 1.11). Vanilla handles stack shrink.
+# Field name: "field_77777_bU" (SRG) or "maxStackSize" (dev)
+# Uses FMLInitializationEvent, net.minecraft.init.Items
+# ===========================================================================
+SRC_1122_FORGE = """\
+package net.itamio.stackabletotems;
+
+import net.minecraft.init.Items;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import java.lang.reflect.Field;
+
+@Mod(modid = "stackabletotems", name = "Stackable Totems of Undying", version = "1.0.0",
+     acceptedMinecraftVersions = "[1.12,1.12.2]")
+public class StackableTotemsMod {
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        try {
+            Field f = net.minecraft.item.Item.class
+                .getDeclaredField("field_77777_bU");
+            f.setAccessible(true);
+            f.set(Items.TOTEM_OF_UNDYING, 64);
+        } catch (Exception e) {
+            try {
+                Field f = net.minecraft.item.Item.class
+                    .getDeclaredField("maxStackSize");
+                f.setAccessible(true);
+                f.set(Items.TOTEM_OF_UNDYING, 64);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+}
+"""
+
+# ===========================================================================
+# FABRIC 1.16.5 — presplit, yarn mappings
+# net.minecraft.item.Item, maxCount field, Items.TOTEM_OF_UNDYING
+# Uses ModInitializer (server-side), reflection on "maxCount"
+# ===========================================================================
+SRC_1165_FABRIC = """\
+package net.itamio.stackabletotems;
+
+import net.fabricmc.api.ModInitializer;
+import net.minecraft.item.Items;
+import java.lang.reflect.Field;
+
+public class StackableTotemsMod implements ModInitializer {
+    @Override
+    public void onInitialize() {
+        try {
+            Field f = net.minecraft.item.Item.class
+                .getDeclaredField("maxCount");
+            f.setAccessible(true);
+            f.set(Items.TOTEM_OF_UNDYING, 64);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+"""
+
+# ===========================================================================
+# FABRIC 1.17-1.19.4 — presplit, yarn mappings
+# Same as 1.16.5 — net.minecraft.item.Item, maxCount field
+# ===========================================================================
+SRC_117_119_FABRIC = SRC_1165_FABRIC
+
+# ===========================================================================
+# FABRIC 1.20.1-1.20.6 — split (src/client/java), yarn mappings
+# Still net.minecraft.item.Item, maxCount field
+# ===========================================================================
+SRC_120_FABRIC = SRC_1165_FABRIC
+
+# ===========================================================================
+# FABRIC 1.21-1.21.8 — split, Mojang mappings
+# net.minecraft.world.item.Item, DataComponents.MAX_STACK_SIZE
+# ===========================================================================
+SRC_121_FABRIC = """\
+package net.itamio.stackabletotems;
+
+import net.fabricmc.api.ModInitializer;
+import net.minecraft.world.item.Items;
+import net.minecraft.core.component.DataComponents;
+import java.lang.reflect.Field;
+
+public class StackableTotemsMod implements ModInitializer {
+    @Override
+    public void onInitialize() {
+        try {
+            Field f = net.minecraft.world.item.Item.class
+                .getDeclaredField("components");
+            f.setAccessible(true);
+            net.minecraft.core.component.DataComponentMap map =
+                (net.minecraft.core.component.DataComponentMap) f.get(Items.TOTEM_OF_UNDYING);
+            net.minecraft.core.component.DataComponentMap newMap =
+                net.minecraft.core.component.DataComponentMap.builder()
+                    .addAll(map)
+                    .set(DataComponents.MAX_STACK_SIZE, 64)
+                    .build();
+            f.set(Items.TOTEM_OF_UNDYING, newMap);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+"""
+
+# ===========================================================================
+# FABRIC 1.21.9-1.21.11 — split, Mojang mappings, same as 1.21+
+# ===========================================================================
+SRC_1219_FABRIC = SRC_121_FABRIC
+
+# ===========================================================================
+# FABRIC 26.1-26.1.2 — split, Mojang mappings, same as 1.21+
+# ===========================================================================
+SRC_261_FABRIC = SRC_121_FABRIC
+
 TARGETS = [
+    # ---- FORGE 1.12.2 (totem exists since 1.11, reflection-only) ----
+    ("StackableTotems-1.12.2-forge",  "1.12.2",  "forge", SRC_1122_FORGE,       GROUP, ENTRYPOINT),
     # ---- FORGE 1.16.5–1.19.2 (reflection-only: vanilla already shrinks stack by 1) ----
     # LivingUseTotemEvent does NOT exist in these Forge versions.
     # Vanilla LivingEntity.tryUseTotem() already calls itemStack.decrement(1) / shrink(1).
@@ -639,6 +764,31 @@ TARGETS = [
     ("StackableTotems-26.1-neoforge",   "26.1",   "neoforge", SRC_261_NEO, GROUP, ENTRYPOINT),
     ("StackableTotems-26.1.1-neoforge", "26.1.1", "neoforge", SRC_261_NEO, GROUP, ENTRYPOINT),
     ("StackableTotems-26.1.2-neoforge", "26.1.2", "neoforge", SRC_261_NEO, GROUP, ENTRYPOINT),
+
+    # ---- FABRIC (server-side: ModInitializer, reflection-only — vanilla handles stack shrink) ----
+    # presplit adapter (src/main/java): 1.16.5–1.19.4
+    ("StackableTotems-1.16.5-fabric",       "1.16.5",       "fabric", SRC_1165_FABRIC,   GROUP, ENTRYPOINT),
+    ("StackableTotems-1.17-1.17.1-fabric",  "1.17-1.17.1",  "fabric", SRC_117_119_FABRIC, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.18-1.18.2-fabric",  "1.18-1.18.2",  "fabric", SRC_117_119_FABRIC, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.19-fabric",         "1.19",         "fabric", SRC_117_119_FABRIC, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.19.1-fabric",       "1.19.1",       "fabric", SRC_117_119_FABRIC, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.19.2-fabric",       "1.19.2",       "fabric", SRC_117_119_FABRIC, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.19.3-fabric",       "1.19.3",       "fabric", SRC_117_119_FABRIC, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.19.4-fabric",       "1.19.4",       "fabric", SRC_117_119_FABRIC, GROUP, ENTRYPOINT),
+    # split adapter (src/main/java for server ModInitializer): 1.20.1–1.20.6
+    ("StackableTotems-1.20.1-fabric",       "1.20.1",       "fabric", SRC_120_FABRIC,    GROUP, ENTRYPOINT),
+    ("StackableTotems-1.20.2-fabric",       "1.20.2",       "fabric", SRC_120_FABRIC,    GROUP, ENTRYPOINT),
+    ("StackableTotems-1.20.3-fabric",       "1.20.3",       "fabric", SRC_120_FABRIC,    GROUP, ENTRYPOINT),
+    ("StackableTotems-1.20.4-fabric",       "1.20.4",       "fabric", SRC_120_FABRIC,    GROUP, ENTRYPOINT),
+    ("StackableTotems-1.20.5-fabric",       "1.20.5",       "fabric", SRC_120_FABRIC,    GROUP, ENTRYPOINT),
+    ("StackableTotems-1.20.6-fabric",       "1.20.6",       "fabric", SRC_120_FABRIC,    GROUP, ENTRYPOINT),
+    # split adapter, Mojang mappings: 1.21+
+    ("StackableTotems-1.21-1.21.1-fabric",  "1.21-1.21.1",  "fabric", SRC_121_FABRIC,   GROUP, ENTRYPOINT),
+    ("StackableTotems-1.21.2-1.21.8-fabric","1.21.2-1.21.8","fabric", SRC_121_FABRIC,   GROUP, ENTRYPOINT),
+    ("StackableTotems-1.21.9-1.21.11-fabric","1.21.9-1.21.11","fabric",SRC_1219_FABRIC, GROUP, ENTRYPOINT),
+    ("StackableTotems-26.1-fabric",         "26.1",         "fabric", SRC_261_FABRIC,   GROUP, ENTRYPOINT),
+    ("StackableTotems-26.1.1-fabric",       "26.1.1",       "fabric", SRC_261_FABRIC,   GROUP, ENTRYPOINT),
+    ("StackableTotems-26.1.2-fabric",       "26.1.2",       "fabric", SRC_261_FABRIC,   GROUP, ENTRYPOINT),
 ]
 
 
