@@ -683,7 +683,22 @@ documented:
    - Forge 1.19+: sendMessage(Component, UUID) removed — use sendSystemMessage(Component)
      When deriving via string replace, strip the trailing UUID arg too
    - Forge 1.21.6+: EventBus 7 — RegisterCommandsEvent.BUS.addListener() in constructor
-   - Fabric 1.16.5: uses getMinecraftServer() not getServer() (yarn 1.16.5+build.10)
+   - Fabric 1.16.5: uses getMinecraftServer() not getServer() (yarn 1.
+
+6. Auto Fast XP mod (docs/examples/AUTO_FAST_XP_ALL_VERSIONS.md)
+   - Client-side only mod (no server code, no commands, no keybinds)
+   - 50 new versions added: 1.8.9 through 26.1.2, all three loaders
+   - 4 build runs to reach full coverage
+   - CRITICAL: Fabric 1.21 is a hard mapping boundary — ALL class names change
+     (MinecraftClient→Minecraft, net.minecraft.item→net.minecraft.world.item,
+     Hand→InteractionHand, getMainHandStack→getMainHandItem, etc.)
+     Write a completely separate source string for Fabric 1.21+
+   - NeoForge 26.1 does NOT have net.minecraftforge.* packages — fully net.neoforged.*
+   - NeoForge 1.21.9+: FMLEnvironment.dist (field) → FMLEnvironment.getDist() (method)
+   - NeoForge 1.21.2+: ClientTickEvent moved to net.neoforged.neoforge.client.event
+   - Forge 1.21.6+: use TickEvent.ClientTickEvent.Post.BUS.addListener() not ClientTickEvent.BUS
+   - Fabric 1.18.x: interactItem() takes 3 args (player, world, hand) — unique to 1.18.x
+   - Forge 1.17+: net.minecraft.world.item (not net.minecraft.item)16.5+build.10)
      Do NOT trust DecompiledMinecraftSourceCode for anchor_only templates
    - Fabric 1.16.5–1.18.x: command.v1 with 2-arg callback (dispatcher, dedicated)
    - Fabric 1.19+: command.v2 with 3-arg callback (dispatcher, registryAccess, dedicated)
