@@ -8,9 +8,9 @@
 | Modrinth URL | https://modrinth.com/mod/stackable-totems-(up-to-64) |
 | Mod ID | `stackabletotems` |
 | Starting coverage | 1 version (Forge 1.20.1–1.20.6 as a single multi-version entry) |
-| Final coverage | 35 versions |
-| New versions added | 32 (33 targets built, 1 already covered) |
-| Build runs | 2 |
+| Final coverage | 42 versions |
+| New versions added | 41 (across 4 build runs) |
+| Build runs | 4 |
 | Generator script | `scripts/generate_stackabletotems_bundle.py` |
 | Completed | April 2026 |
 
@@ -215,6 +215,8 @@ Loaders: forge, neoforge
 |-----|---------|--------|--------|---------|
 | 1 | 36 | 27 | 9 | Initial attempt |
 | 2 | 7 | 7 | 0 | Remove 1.19/1.19.1/1.19.2; fix EventBus7 mod bus registration |
+| 3 | 7 | 6 | 1 | Add 1.16.5–1.19.1 reflection-only targets (vanilla handles stack shrink) |
+| 4 | 1 | 1 | 0 | Fix 1.16.5: use `net.minecraft.item` not `net.minecraft.world.item` |
 
 ## API Reference Table
 
@@ -273,10 +275,16 @@ Loaders: forge, neoforge
 
 1. **`LivingUseTotemEvent` was added in Forge 44.x (1.19.3), not 41.x (1.19).** The decompiled sources show it for 1.19 because they were regenerated with a newer Forge. Always check the actual Forge version in the build log, not just the decompiled sources.
 
-2. **Forge 1.21.6+ EventBus 7 removed `getModEventBus()`.** The new pattern for registering mod-bus events is `EventClass.getBus(context.getModBusGroup()).addListener(handler)`. This applies to `FMLCommonSetupEvent`, `RegisterEvent`, `GatherDataEvent`, etc.
+2. **For 1.16.5–1.19.2, vanilla already handles the stack shrink.** `LivingEntity.tryUseTotem()` calls `itemStack.decrement(1)` / `shrink(1)` itself. You only need to set `maxStackSize=64` via reflection — no event subscription needed.
 
-3. **Item max stack size moved to DataComponents in 1.20.5.** Pre-1.20.5: reflect on `maxStackSize` int field. Post-1.20.5: reflect on `components` DataComponentMap and set `DataComponents.MAX_STACK_SIZE`.
+3. **Forge 1.21.6+ EventBus 7 removed `getModEventBus()`.** The new pattern for registering mod-bus events is `EventClass.getBus(context.getModBusGroup()).addListener(handler)`. This applies to `FMLCommonSetupEvent`, `RegisterEvent`, `GatherDataEvent`, etc.
 
-4. **NeoForge `LivingUseTotemEvent` stays in `net.neoforged.neoforge.event.entity.living` across all versions** — no package change unlike Forge's EventBus 7 migration.
+4. **Item max stack size moved to DataComponents in 1.20.5.** Pre-1.20.5: reflect on `maxStackSize` int field. Post-1.20.5: reflect on `components` DataComponentMap and set `DataComponents.MAX_STACK_SIZE`.
 
-5. **Server-side mods don't need `runtime_side=server` to work** — but setting it correctly ensures the mod is marked server-only on Modrinth and won't be required on clients.
+5. **1.16.5 uses `net.minecraft.item` not `net.minecraft.world.item`.** The package rename happened in 1.17. Always use the correct package for the target version.
+
+6. **NeoForge `LivingUseTotemEvent` stays in `net.neoforged.neoforge.event.entity.living` across all versions** — no package change unlike Forge's EventBus 7 migration.
+
+7. **Server-side mods don't need `runtime_side=server` to work** — but setting it correctly ensures the mod is marked server-only on Modrinth and won't be required on clients.
+
+8. **Always re-run the diagnosis after completing a port** — the user noticed we were still missing 1.16.5–1.19.1 because we incorrectly assumed those versions had no totem support.
