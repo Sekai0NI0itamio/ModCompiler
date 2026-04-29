@@ -543,6 +543,44 @@ public class StackableTotemsMod {
 }
 """
 
+# 1.16.5 uses net.minecraft.item (pre-1.17 package)
+SRC_REFLECT_ONLY_1165 = """\
+package net.itamio.stackabletotems;
+
+import net.minecraft.item.Items;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import java.lang.reflect.Field;
+
+@Mod("stackabletotems")
+public class StackableTotemsMod {
+    public StackableTotemsMod() {
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
+    }
+
+    private void setup(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            try {
+                Field f = net.minecraft.item.Item.class
+                    .getDeclaredField("f_41370_");
+                f.setAccessible(true);
+                f.set(Items.TOTEM_OF_UNDYING, 64);
+            } catch (Exception e) {
+                try {
+                    Field f = net.minecraft.item.Item.class
+                        .getDeclaredField("maxStackSize");
+                    f.setAccessible(true);
+                    f.set(Items.TOTEM_OF_UNDYING, 64);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+    }
+}
+"""
+
 # ===========================================================================
 # TARGETS
 # ===========================================================================
@@ -551,7 +589,7 @@ TARGETS = [
     # LivingUseTotemEvent does NOT exist in these Forge versions.
     # Vanilla LivingEntity.tryUseTotem() already calls itemStack.decrement(1) / shrink(1).
     # We only need to set maxStackSize=64 via reflection so players can hold >1 totem.
-    ("StackableTotems-1.16.5-forge",  "1.16.5",  "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.16.5-forge",  "1.16.5",  "forge", SRC_REFLECT_ONLY_1165, GROUP, ENTRYPOINT),
     ("StackableTotems-1.17.1-forge",  "1.17.1",  "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
     ("StackableTotems-1.18-forge",    "1.18",    "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
     ("StackableTotems-1.18.1-forge",  "1.18.1",  "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
