@@ -702,15 +702,19 @@ documented:
 
 7. Stackable Totems mod (docs/examples/STACKABLE_TOTEMS_ALL_VERSIONS.md)
    - Server-side only Forge/NeoForge mod (no Fabric, no client code)
-   - 32 new versions added: 1.19.3 through 26.1.2, Forge + NeoForge
-   - 2 build runs to reach full coverage
+   - 41 new versions added: 1.16.5 through 26.1.2, Forge + NeoForge
+   - 4 build runs to reach full coverage
    - CRITICAL: LivingUseTotemEvent was added in Forge 44.x (1.19.3+), NOT in 41.x (1.19)
      The decompiled sources show it for 1.19 but the actual build template uses 41.1.0
      Always check the Forge version in the build log, not just the decompiled sources
+   - CRITICAL: For 1.16.5-1.19.2, vanilla already handles stack shrink (decrement(1))
+     Only need reflection to set maxStackSize=64 — no event subscription needed
    - Forge 1.21.6+: getModEventBus() removed — use FMLCommonSetupEvent.getBus(context.getModBusGroup())
    - Item max stack size: pre-1.20.5 = reflect on "f_41370_" int field;
      1.20.5+ = reflect on "components" DataComponentMap, set DataComponents.MAX_STACK_SIZE
-   - NeoForge LivingUseTotemEvent stays in net.neoforged.neoforge.event.entity.living across all versions16.5+build.10)
+   - 1.16.5 uses net.minecraft.item (not net.minecraft.world.item — package rename in 1.17)
+   - NeoForge LivingUseTotemEvent stays in net.neoforged.neoforge.event.entity.living across all versions
+   - Always re-run diagnosis after completing a port to catch missed versions16.5+build.10)
      Do NOT trust DecompiledMinecraftSourceCode for anchor_only templates
    - Fabric 1.16.5–1.18.x: command.v1 with 2-arg callback (dispatcher, dedicated)
    - Fabric 1.19+: command.v2 with 3-arg callback (dispatcher, registryAccess, dedicated)
