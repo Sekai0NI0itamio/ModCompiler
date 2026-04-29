@@ -499,12 +499,66 @@ public class StackableTotemsMod {
 
 
 # ===========================================================================
+# FORGE 1.16.5–1.19.2 — REFLECTION ONLY (no LivingUseTotemEvent)
+# Vanilla LivingEntity.tryUseTotem() already calls itemStack.shrink(1) / decrement(1)
+# so stacking works correctly once maxStackSize is set to 64.
+# We only need to set the field via reflection at startup.
+# Uses FMLCommonSetupEvent (EventBus 6 style — getModEventBus())
+# ===========================================================================
+SRC_REFLECT_ONLY = """\
+package net.itamio.stackabletotems;
+
+import net.minecraft.world.item.Items;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import java.lang.reflect.Field;
+
+@Mod("stackabletotems")
+public class StackableTotemsMod {
+    public StackableTotemsMod() {
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
+    }
+
+    private void setup(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            try {
+                Field f = net.minecraft.world.item.Item.class
+                    .getDeclaredField("f_41370_");
+                f.setAccessible(true);
+                f.set(Items.TOTEM_OF_UNDYING, 64);
+            } catch (Exception e) {
+                try {
+                    Field f = net.minecraft.world.item.Item.class
+                        .getDeclaredField("maxStackSize");
+                    f.setAccessible(true);
+                    f.set(Items.TOTEM_OF_UNDYING, 64);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+    }
+}
+"""
+
+# ===========================================================================
 # TARGETS
-# (folder_name, mc_version, loader, src, group, entrypoint)
 # ===========================================================================
 TARGETS = [
-    # ---- FORGE 1.19.3-1.19.4 (LivingUseTotemEvent added in Forge 44.x / 1.19.3+) ----
-    # NOTE: 1.19, 1.19.1, 1.19.2 use Forge 41.x which does NOT have LivingUseTotemEvent
+    # ---- FORGE 1.16.5–1.19.2 (reflection-only: vanilla already shrinks stack by 1) ----
+    # LivingUseTotemEvent does NOT exist in these Forge versions.
+    # Vanilla LivingEntity.tryUseTotem() already calls itemStack.decrement(1) / shrink(1).
+    # We only need to set maxStackSize=64 via reflection so players can hold >1 totem.
+    ("StackableTotems-1.16.5-forge",  "1.16.5",  "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.17.1-forge",  "1.17.1",  "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.18-forge",    "1.18",    "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.18.1-forge",  "1.18.1",  "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.18.2-forge",  "1.18.2",  "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.19-forge",    "1.19",    "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
+    ("StackableTotems-1.19.1-forge",  "1.19.1",  "forge", SRC_REFLECT_ONLY, GROUP, ENTRYPOINT),
+    # ---- FORGE 1.19.3-1.19.4 (LivingUseTotemEvent added in Forge 44.x) ----
     ("StackableTotems-1.19.3-forge",  "1.19.3",  "forge", SRC_119_FORGE,   GROUP, ENTRYPOINT),
     ("StackableTotems-1.19.4-forge",  "1.19.4",  "forge", SRC_119_FORGE,   GROUP, ENTRYPOINT),
     # ---- FORGE 1.21-1.21.1 (DataComponents era, EventBus 6 BUS pattern) ----
