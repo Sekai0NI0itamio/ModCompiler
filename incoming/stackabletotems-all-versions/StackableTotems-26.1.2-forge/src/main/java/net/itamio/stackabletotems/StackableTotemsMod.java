@@ -11,7 +11,7 @@ import java.lang.reflect.Field;
 @Mod("stackabletotems")
 public class StackableTotemsMod {
     public StackableTotemsMod(FMLJavaModLoadingContext context) {
-        context.getModEventBus().addListener(this::setup);
+        FMLCommonSetupEvent.getBus(context.getModBusGroup()).addListener(this::setup);
         LivingUseTotemEvent.BUS.addListener(true, StackableTotemsMod::onUseTotem);
     }
 

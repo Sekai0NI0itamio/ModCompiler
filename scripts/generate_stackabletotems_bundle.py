@@ -164,6 +164,7 @@ public class StackableTotemsMod {
 
 # ===========================================================================
 # FORGE 1.21.6–1.21.8 — EventBus 7
+# FMLCommonSetupEvent.getBus(context.getModBusGroup()).addListener(handler)
 # LivingUseTotemEvent.BUS.addListener(alwaysCancelling=true, handler)
 # Return true to cancel
 # ===========================================================================
@@ -181,7 +182,7 @@ import java.lang.reflect.Field;
 @Mod("stackabletotems")
 public class StackableTotemsMod {
     public StackableTotemsMod(FMLJavaModLoadingContext context) {
-        context.getModEventBus().addListener(this::setup);
+        FMLCommonSetupEvent.getBus(context.getModBusGroup()).addListener(this::setup);
         LivingUseTotemEvent.BUS.addListener(true, StackableTotemsMod::onUseTotem);
     }
 
@@ -218,7 +219,7 @@ public class StackableTotemsMod {
 
 # ===========================================================================
 # FORGE 1.21.9–26.1.2 — EventBus 7, record-based LivingUseTotemEvent
-# getTotem() is a record accessor
+# Same pattern as 1.21.6-1.21.8
 # ===========================================================================
 SRC_1219_FORGE = """\
 package net.itamio.stackabletotems;
@@ -234,7 +235,7 @@ import java.lang.reflect.Field;
 @Mod("stackabletotems")
 public class StackableTotemsMod {
     public StackableTotemsMod(FMLJavaModLoadingContext context) {
-        context.getModEventBus().addListener(this::setup);
+        FMLCommonSetupEvent.getBus(context.getModBusGroup()).addListener(this::setup);
         LivingUseTotemEvent.BUS.addListener(true, StackableTotemsMod::onUseTotem);
     }
 
@@ -502,10 +503,8 @@ public class StackableTotemsMod {
 # (folder_name, mc_version, loader, src, group, entrypoint)
 # ===========================================================================
 TARGETS = [
-    # ---- FORGE 1.19.4 ----
-    ("StackableTotems-1.19-forge",    "1.19",    "forge", SRC_119_FORGE,   GROUP, ENTRYPOINT),
-    ("StackableTotems-1.19.1-forge",  "1.19.1",  "forge", SRC_119_FORGE,   GROUP, ENTRYPOINT),
-    ("StackableTotems-1.19.2-forge",  "1.19.2",  "forge", SRC_119_FORGE,   GROUP, ENTRYPOINT),
+    # ---- FORGE 1.19.3-1.19.4 (LivingUseTotemEvent added in Forge 44.x / 1.19.3+) ----
+    # NOTE: 1.19, 1.19.1, 1.19.2 use Forge 41.x which does NOT have LivingUseTotemEvent
     ("StackableTotems-1.19.3-forge",  "1.19.3",  "forge", SRC_119_FORGE,   GROUP, ENTRYPOINT),
     ("StackableTotems-1.19.4-forge",  "1.19.4",  "forge", SRC_119_FORGE,   GROUP, ENTRYPOINT),
     # ---- FORGE 1.21-1.21.1 (DataComponents era, EventBus 6 BUS pattern) ----
