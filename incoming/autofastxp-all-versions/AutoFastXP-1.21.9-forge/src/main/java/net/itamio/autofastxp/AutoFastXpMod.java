@@ -10,7 +10,7 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 public class AutoFastXpMod {
     public AutoFastXpMod(FMLJavaModLoadingContext context) {
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            TickEvent.ClientTickEvent.BUS.addListener(AutoFastXpHandler::onClientTick);
+            TickEvent.ClientTickEvent.Post.BUS.addListener(AutoFastXpHandler::onClientTick);
         }
     }
 }

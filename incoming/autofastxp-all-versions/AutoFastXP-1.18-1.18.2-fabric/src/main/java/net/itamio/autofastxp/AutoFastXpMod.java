@@ -16,16 +16,17 @@ public class AutoFastXpMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.world == null) return;
             if (client.currentScreen != null) return;
-            if (!client.options.keyUse.isPressed()) return;
+            if (!client.options.useKey.isPressed()) return;
             ItemStack main = client.player.getMainHandStack();
             ItemStack off = client.player.getOffHandStack();
-            ItemStack active = isXpBottle(main) ? main : (isXpBottle(off) ? off : null);
-            if (active == null) return;
+            boolean useMain = isXpBottle(main);
+            boolean useOff = isXpBottle(off);
+            if (!useMain && !useOff) return;
             tickCounter++;
             if (tickCounter < THROW_INTERVAL) return;
             tickCounter = 0;
-            Hand hand = isXpBottle(main) ? Hand.MAIN_HAND : Hand.OFF_HAND;
-            client.interactionManager.interactItem(client.player, hand);
+            Hand hand = useMain ? Hand.MAIN_HAND : Hand.OFF_HAND;
+            client.interactionManager.interactItem(client.player, client.world, hand);
         });
     }
 
