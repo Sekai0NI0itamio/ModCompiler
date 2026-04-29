@@ -2,10 +2,10 @@ package net.itamio.autofastxp;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.Items;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionHand;
 
 public class AutoFastXpMod implements ClientModInitializer {
     private static final int THROW_INTERVAL = 3;
@@ -14,19 +14,19 @@ public class AutoFastXpMod implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player == null || client.world == null) return;
-            if (client.currentScreen != null) return;
-            if (!client.options.useKey.isPressed()) return;
-            ItemStack main = client.player.getMainHandStack();
-            ItemStack off = client.player.getOffHandStack();
+            if (client.player == null || client.level == null) return;
+            if (client.screen != null) return;
+            if (!client.options.keyUse.isDown()) return;
+            ItemStack main = client.player.getMainHandItem();
+            ItemStack off = client.player.getOffhandItem();
             boolean useMain = isXpBottle(main);
             boolean useOff = isXpBottle(off);
             if (!useMain && !useOff) return;
             tickCounter++;
             if (tickCounter < THROW_INTERVAL) return;
             tickCounter = 0;
-            Hand hand = useMain ? Hand.MAIN_HAND : Hand.OFF_HAND;
-            client.interactionManager.interactItem(client.player, hand);
+            InteractionHand hand = useMain ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+            client.gameMode.useItem(client.player, hand);
         });
     }
 

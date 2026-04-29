@@ -411,14 +411,57 @@ public class AutoFastXpMod implements ClientModInitializer {
 """
 
 # ===========================================================================
-# FABRIC 1.20+ — split adapter: client code goes in src/client/java/
+# FABRIC 1.20.x — split adapter, yarn mappings still: MinecraftClient, net.minecraft.item, Hand
 # options.useKey, interactItem(player, hand)
 # ===========================================================================
 SRC_120_FABRIC = SRC_119_FABRIC
-SRC_121_FABRIC = SRC_119_FABRIC
-SRC_1212_FABRIC = SRC_119_FABRIC
-SRC_1219_FABRIC = SRC_119_FABRIC
-SRC_261_FABRIC = SRC_119_FABRIC
+
+# ===========================================================================
+# FABRIC 1.21+ — split adapter, Mojang mappings: Minecraft, net.minecraft.world.item, InteractionHand
+# options.useKey, interactItem(player, hand) — same method but Mojang class names
+# ===========================================================================
+SRC_121_FABRIC = """\
+package net.itamio.autofastxp;
+
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionHand;
+
+public class AutoFastXpMod implements ClientModInitializer {
+    private static final int THROW_INTERVAL = 3;
+    private int tickCounter = 0;
+
+    @Override
+    public void onInitializeClient() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null || client.level == null) return;
+            if (client.screen != null) return;
+            if (!client.options.keyUse.isDown()) return;
+            ItemStack main = client.player.getMainHandItem();
+            ItemStack off = client.player.getOffhandItem();
+            boolean useMain = isXpBottle(main);
+            boolean useOff = isXpBottle(off);
+            if (!useMain && !useOff) return;
+            tickCounter++;
+            if (tickCounter < THROW_INTERVAL) return;
+            tickCounter = 0;
+            InteractionHand hand = useMain ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+            client.gameMode.useItem(client.player, hand);
+        });
+    }
+
+    private boolean isXpBottle(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() == Items.EXPERIENCE_BOTTLE;
+    }
+}
+"""
+
+SRC_1212_FABRIC = SRC_121_FABRIC
+SRC_1219_FABRIC = SRC_121_FABRIC
+SRC_261_FABRIC = SRC_121_FABRIC
 
 
 # ===========================================================================
@@ -511,7 +554,7 @@ import net.neoforged.fml.loading.FMLEnvironment;
 @Mod("autofastxp")
 public class AutoFastXpMod {
     public AutoFastXpMod(IEventBus modBus, ModContainer modContainer) {
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
             modBus.addListener(this::clientSetup);
         }
     }
