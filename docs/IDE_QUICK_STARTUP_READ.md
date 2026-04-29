@@ -57,6 +57,36 @@ This tells you exactly which versions are already published. Build ONLY the
 missing ones. The previous agent wasted 5+ build runs rebuilding already-published
 versions because it skipped this step.
 
+**Then immediately run the manifest comparison to find ALL missing targets:**
+
+```python
+# scripts/_check_missing.py — run this after every fetch_modrinth_project.py
+import json
+
+with open('version-manifest.json') as f:
+    manifest = json.load(f)
+
+all_targets = set()
+for r in manifest['ranges']:
+    for loader, cfg in r['loaders'].items():
+        versions = cfg.get('supported_versions', [r.get('min_version')])
+        for v in versions:
+            all_targets.add((v, loader))
+
+# Build published set from fetch_modrinth_project.py output
+# e.g. published = {('1.20.1', 'forge'), ('1.20.1', 'fabric'), ...}
+published = set()  # fill from diagnosis
+
+missing = sorted(all_targets - published)
+print(f'MISSING ({len(missing)} targets):')
+for t in missing:
+    print(f'  {t[0]:12} {t[1]}')
+```
+
+**The manifest covers ALL loaders (Forge, Fabric, NeoForge) for ALL version ranges.**
+A mod that was originally Forge-only still needs Fabric and NeoForge ports.
+Never assume a mod only needs one loader — always check the manifest.
+
 ---
 
 ## Mistakes the Previous Agent Made (Don't Repeat These)
@@ -74,6 +104,48 @@ published.
 diagnoser that diagnosis a project link and finds all the missing versions."
 
 **Rule**: ALWAYS run `fetch_modrinth_project.py` first. Build only missing targets.
+
+---
+
+### Mistake 14: Declared port complete without checking version-manifest.json (Stackable Totems port)
+
+**What happened**: After building Forge and NeoForge targets, the agent ran
+`fetch_modrinth_project.py`, saw 35 versions published, and declared the port
+complete. The user had to point out that Fabric versions and Forge 1.12.2 were
+still missing — 22 more targets.
+
+**User correction**: "Are you sure you updated it to all versions? Remember my
+repository supports versions from 1.8.9 to the newest, with fabric versions as well."
+
+**Root cause**: The agent computed missing targets by comparing against a manually-
+written list. That list only included loaders the mod was originally published on
+(Forge only). The agent never cross-referenced against `version-manifest.json`.
+
+**Rule**: After `fetch_modrinth_project.py`, ALWAYS run the manifest comparison:
+
+```python
+import json
+
+with open('version-manifest.json') as f:
+    manifest = json.load(f)
+
+all_targets = set()
+for r in manifest['ranges']:
+    for loader, cfg in r['loaders'].items():
+        versions = cfg.get('supported_versions', [r.get('min_version')])
+        for v in versions:
+            all_targets.add((v, loader))
+
+# published = set of (version, loader) tuples from fetch_modrinth_project.py output
+missing = sorted(all_targets - published)
+print(f'MISSING ({len(missing)}):')
+for t in missing:
+    print(f'  {t[0]:12} {t[1]}')
+```
+
+Only declare done when `missing` is empty. The manifest covers ALL loaders
+(Forge, Fabric, NeoForge) for ALL supported version ranges. A mod that was
+originally Forge-only still needs Fabric and NeoForge ports.
 
 ---
 
@@ -315,15 +387,17 @@ User: "Update this mod to all versions: https://modrinth.com/mod/my-mod"
 
 Agent:
   1. Run fetch_modrinth_project.py → see what's already published
-  2. Check scripts/ for existing generator → use it if found
-  3. Search dif/ for known issues with this mod type
-  4. Generate bundle with only missing targets
-  5. git add + git commit + git push (one command)
-  6. python3 scripts/run_build.py ... (one command, blocking)
-  7. Read results → fix only failed targets
-  8. Repeat steps 4-7 until all targets pass
-  9. Verify final state on Modrinth
-  10. Add DIF entries + example doc + update this file + commit
+  2. Run manifest comparison → find ALL missing targets across ALL loaders
+  3. Check scripts/ for existing generator → use it if found
+  4. Search dif/ for known issues with this mod type
+  5. Generate bundle with only missing targets
+  6. git add + git commit + git push (one command)
+  7. python3 scripts/run_build.py ... (one command, blocking)
+  8. Read results → fix only failed targets
+  9. Repeat steps 5-8 until all targets pass
+  10. Run manifest comparison again → confirm 0 missing
+  11. Verify final state on Modrinth
+  12. Add DIF entries + example doc + update this file + commit
 ```
 
 Total build runs for a typical mod: 2–4. If you're on run 6+, stop and
@@ -493,6 +567,7 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | `no suitable method found for addListener.*ClientTickEvent` (Forge 1.21.6+) | `FORGE-EB7-POST-BUS-ADDLISTENER` |
 | `cannot find symbol.*class LivingUseTotemEvent` (Forge 1.19–1.19.2) | `FORGE-LIVINGUSETOTEM-NOT-IN-41X` |
 | `cannot find symbol.*method getModEventBus.*FMLJavaModLoadingContext` | `FORGE-EB7-FMLCOMMONSETUPEVENT-GETBUS` |
+| Port declared complete but user says versions are missing | `ALWAYS-CHECK-FULL-MANIFEST-NOT-JUST-PUBLISHED` |
 
 ---
 
