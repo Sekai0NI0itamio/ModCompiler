@@ -1,8 +1,9 @@
 package net.itamio.autofastxp;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.item.Items;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionHand;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.api.distmarker.Dist;
@@ -22,12 +23,13 @@ public class AutoFastXpHandler {
         if (!mc.options.keyUse.isDown()) return;
         ItemStack main = mc.player.getMainHandItem();
         ItemStack off = mc.player.getOffhandItem();
-        ItemStack active = isXpBottle(main) ? main : (isXpBottle(off) ? off : null);
-        if (active == null) return;
+        boolean useMain = isXpBottle(main);
+        boolean useOff = isXpBottle(off);
+        if (!useMain && !useOff) return;
         tickCounter++;
         if (tickCounter < THROW_INTERVAL) return;
         tickCounter = 0;
-        net.minecraft.util.Hand hand = isXpBottle(main) ? net.minecraft.util.Hand.MAIN_HAND : net.minecraft.util.Hand.OFF_HAND;
+        InteractionHand hand = useMain ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         mc.gameMode.useItem(mc.player, mc.level, hand);
     }
 

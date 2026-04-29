@@ -23,7 +23,7 @@ Already published (skip these):
 
 import argparse
 import json
-import os
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -46,36 +46,26 @@ def write(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.lstrip("\n"), encoding="utf-8")
 
-def mod_txt(group=None, entrypoint=None, runtime_side="client"):
+def mod_txt(group=None, entrypoint=None):
     g = group or GROUP
     ep = entrypoint or f"{g}.AutoFastXpMod"
-    lines = [
-        f"mod_id={MOD_ID}",
-        f"name={MOD_NAME}",
-        f"mod_version={MOD_VERSION}",
-        f"group={g}",
-        f"entrypoint_class={ep}",
-        f"description={DESCRIPTION}",
-        f"authors={AUTHORS}",
-        f"license={LICENSE}",
-        f"homepage={HOMEPAGE}",
-        f"runtime_side={runtime_side}",
-    ]
-    return "\n".join(lines) + "\n"
+    return (
+        f"mod_id={MOD_ID}\nname={MOD_NAME}\nmod_version={MOD_VERSION}\n"
+        f"group={g}\nentrypoint_class={ep}\n"
+        f"description={DESCRIPTION}\nauthors={AUTHORS}\nlicense={LICENSE}\n"
+        f"homepage={HOMEPAGE}\nruntime_side=client\n"
+    )
 
 def version_txt(mc: str, loader: str) -> str:
     return f"minecraft_version={mc}\nloader={loader}\n"
 
 
 # ===========================================================================
-# FORGE 1.8.9 — Java 6 compat: no underscores in literals, no <>, no lambdas
-# Uses ClientTickEvent from net.minecraftforge.fml.common.gameevent.TickEvent
-# Uses Minecraft.getMinecraft(), player.getHeldItem(), gameSettings.keyBindUseItem
+# FORGE 1.8.9 — Java 6, net.minecraft.item (old), playerController.sendUseItem
 # ===========================================================================
 SRC_189_MOD = """\
 package asd.itamio.autofastxp;
 
-import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
@@ -134,11 +124,9 @@ public class AutoFastXpHandler {
 }
 """
 
-
 # ===========================================================================
-# FORGE 1.16.5 — mods.toml era, new event bus, isClientSide
-# Uses TickEvent.ClientTickEvent, gameSettings.keyBindUseItem.isDown()
-# Items.EXPERIENCE_BOTTLE
+# FORGE 1.16.5 — net.minecraft.world.item, net.minecraft.util.Hand
+# TickEvent in net.minecraftforge.event.TickEvent
 # ===========================================================================
 SRC_1165_FORGE_MOD = """\
 package net.itamio.autofastxp;
@@ -168,8 +156,9 @@ SRC_1165_FORGE_HANDLER = """\
 package net.itamio.autofastxp;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.item.Items;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionHand;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.api.distmarker.Dist;
@@ -189,12 +178,13 @@ public class AutoFastXpHandler {
         if (!mc.options.keyUse.isDown()) return;
         ItemStack main = mc.player.getMainHandItem();
         ItemStack off = mc.player.getOffhandItem();
-        ItemStack active = isXpBottle(main) ? main : (isXpBottle(off) ? off : null);
-        if (active == null) return;
+        boolean useMain = isXpBottle(main);
+        boolean useOff = isXpBottle(off);
+        if (!useMain && !useOff) return;
         tickCounter++;
         if (tickCounter < THROW_INTERVAL) return;
         tickCounter = 0;
-        net.minecraft.util.Hand hand = isXpBottle(main) ? net.minecraft.util.Hand.MAIN_HAND : net.minecraft.util.Hand.OFF_HAND;
+        InteractionHand hand = useMain ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         mc.gameMode.useItem(mc.player, mc.level, hand);
     }
 
@@ -204,43 +194,16 @@ public class AutoFastXpHandler {
 }
 """
 
-
-# ===========================================================================
-# FORGE 1.17.1 — same as 1.16.5 but uses ClientRegistry for keys (no RegisterKeyMappingsEvent)
-# TickEvent still in net.minecraftforge.event.TickEvent
-# ===========================================================================
+# 1.17.1 and 1.18.x Forge — same API as 1.16.5 for this mod
 SRC_171_FORGE_MOD = SRC_1165_FORGE_MOD
-
 SRC_171_FORGE_HANDLER = SRC_1165_FORGE_HANDLER
-
-# ===========================================================================
-# FORGE 1.18-1.18.2 — same API as 1.16.5/1.17.1 for this simple mod
-# ===========================================================================
 SRC_118_FORGE_MOD = SRC_1165_FORGE_MOD
-
 SRC_118_FORGE_HANDLER = SRC_1165_FORGE_HANDLER
 
-# ===========================================================================
-# FORGE 1.19-1.19.4 — same API, already published but keeping for reference
-# ===========================================================================
-SRC_119_FORGE_MOD = SRC_1165_FORGE_MOD
-SRC_119_FORGE_HANDLER = SRC_1165_FORGE_HANDLER
 
 # ===========================================================================
-# FORGE 1.20-1.20.6 — same API as 1.16.5+ for this simple mod
-# ===========================================================================
-SRC_120_FORGE_MOD = SRC_1165_FORGE_MOD
-SRC_120_FORGE_HANDLER = SRC_1165_FORGE_HANDLER
-
-# ===========================================================================
-# FORGE 1.21-1.21.5 — same API as 1.16.5+ for this simple mod
-# ===========================================================================
-SRC_121_FORGE_MOD = SRC_1165_FORGE_MOD
-SRC_121_FORGE_HANDLER = SRC_1165_FORGE_HANDLER
-
-# ===========================================================================
-# FORGE 1.21.6-1.21.8 — EventBus 7: @SubscribeEvent removed
-# TickEvent.ClientTickEvent.BUS.addListener() pattern
+# FORGE 1.21.6-1.21.8 — EventBus 7
+# TickEvent.ClientTickEvent.Post.BUS.addListener(Consumer<Post>)
 # Constructor takes FMLJavaModLoadingContext
 # ===========================================================================
 SRC_1216_FORGE_MOD = """\
@@ -256,7 +219,7 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 public class AutoFastXpMod {
     public AutoFastXpMod(FMLJavaModLoadingContext context) {
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            TickEvent.ClientTickEvent.BUS.addListener(AutoFastXpHandler::onClientTick);
+            TickEvent.ClientTickEvent.Post.BUS.addListener(AutoFastXpHandler::onClientTick);
         }
     }
 }
@@ -268,6 +231,7 @@ package net.itamio.autofastxp;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionHand;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -284,77 +248,13 @@ public class AutoFastXpHandler {
         if (!mc.options.keyUse.isDown()) return;
         ItemStack main = mc.player.getMainHandItem();
         ItemStack off = mc.player.getOffhandItem();
-        ItemStack active = isXpBottle(main) ? main : (isXpBottle(off) ? off : null);
-        if (active == null) return;
+        boolean useMain = isXpBottle(main);
+        boolean useOff = isXpBottle(off);
+        if (!useMain && !useOff) return;
         tickCounter++;
         if (tickCounter < THROW_INTERVAL) return;
         tickCounter = 0;
-        net.minecraft.world.InteractionHand hand = isXpBottle(main)
-            ? net.minecraft.world.InteractionHand.MAIN_HAND
-            : net.minecraft.world.InteractionHand.OFF_HAND;
-        mc.gameMode.useItem(mc.player, hand);
-    }
-
-    private static boolean isXpBottle(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() == Items.EXPERIENCE_BOTTLE;
-    }
-}
-"""
-
-
-# ===========================================================================
-# FORGE 1.21.9-1.21.11 — EventBus 7 with static BUS pattern
-# TickEvent is now record-based: TickEvent.ClientTickEvent.Pre/Post
-# ===========================================================================
-SRC_1219_FORGE_MOD = """\
-package net.itamio.autofastxp;
-
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.loading.FMLEnvironment;
-
-@Mod("autofastxp")
-public class AutoFastXpMod {
-    public AutoFastXpMod(FMLJavaModLoadingContext context) {
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            TickEvent.ClientTickEvent.BUS.addListener(AutoFastXpHandler::onClientTick);
-        }
-    }
-}
-"""
-
-SRC_1219_FORGE_HANDLER = """\
-package net.itamio.autofastxp;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-
-@OnlyIn(Dist.CLIENT)
-public class AutoFastXpHandler {
-    private static final int THROW_INTERVAL = 3;
-    private static int tickCounter = 0;
-
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return;
-        if (mc.screen != null) return;
-        if (!mc.options.keyUse.isDown()) return;
-        ItemStack main = mc.player.getMainHandItem();
-        ItemStack off = mc.player.getOffhandItem();
-        ItemStack active = isXpBottle(main) ? main : (isXpBottle(off) ? off : null);
-        if (active == null) return;
-        tickCounter++;
-        if (tickCounter < THROW_INTERVAL) return;
-        tickCounter = 0;
-        net.minecraft.world.InteractionHand hand = isXpBottle(main)
-            ? net.minecraft.world.InteractionHand.MAIN_HAND
-            : net.minecraft.world.InteractionHand.OFF_HAND;
+        InteractionHand hand = useMain ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         mc.gameMode.useItem(mc.player, hand);
     }
 
@@ -365,20 +265,24 @@ public class AutoFastXpHandler {
 """
 
 # ===========================================================================
-# FORGE 26.1.2 — EventBus 7, same pattern as 1.21.9+
-# ResourceLocation -> Identifier rename but not needed for this simple mod
+# FORGE 1.21.9-1.21.11 — EventBus 7, record-based TickEvent
+# TickEvent.ClientTickEvent.Post.BUS.addListener(Consumer<Post>)
+# Same as 1.21.6-1.21.8 pattern
 # ===========================================================================
-SRC_261_FORGE_MOD = SRC_1219_FORGE_MOD
-SRC_261_FORGE_HANDLER = SRC_1219_FORGE_HANDLER
+SRC_1219_FORGE_MOD = SRC_1216_FORGE_MOD
+SRC_1219_FORGE_HANDLER = SRC_1216_FORGE_HANDLER
+
+# ===========================================================================
+# FORGE 26.1.2 — same EventBus 7 pattern
+# ===========================================================================
+SRC_261_FORGE_MOD = SRC_1216_FORGE_MOD
+SRC_261_FORGE_HANDLER = SRC_1216_FORGE_HANDLER
 
 
 # ===========================================================================
-# FABRIC 1.16.5 — presplit source dir, command.v1, getMinecraftServer()
-# Uses ClientTickCallback (fabric-api), Items.EXPERIENCE_BOTTLE
-# package: net.itamio.autofastxp
-# entrypoint: client
+# FABRIC 1.16.5 — presplit (src/main/java), options.keyUse, interactItem(player, hand)
 # ===========================================================================
-SRC_1165_FABRIC_MOD = """\
+SRC_1165_FABRIC = """\
 package net.itamio.autofastxp;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -400,12 +304,13 @@ public class AutoFastXpMod implements ClientModInitializer {
             if (!client.options.keyUse.isPressed()) return;
             ItemStack main = client.player.getMainHandStack();
             ItemStack off = client.player.getOffHandStack();
-            ItemStack active = isXpBottle(main) ? main : (isXpBottle(off) ? off : null);
-            if (active == null) return;
+            boolean useMain = isXpBottle(main);
+            boolean useOff = isXpBottle(off);
+            if (!useMain && !useOff) return;
             tickCounter++;
             if (tickCounter < THROW_INTERVAL) return;
             tickCounter = 0;
-            Hand hand = isXpBottle(main) ? Hand.MAIN_HAND : Hand.OFF_HAND;
+            Hand hand = useMain ? Hand.MAIN_HAND : Hand.OFF_HAND;
             client.interactionManager.interactItem(client.player, hand);
         });
     }
@@ -417,53 +322,108 @@ public class AutoFastXpMod implements ClientModInitializer {
 """
 
 # ===========================================================================
-# FABRIC 1.17-1.17.1 — presplit, same as 1.16.5 but getServer() not getMinecraftServer()
-# ClientTickEvents.END_CLIENT_TICK is the same
+# FABRIC 1.17-1.17.1 — presplit, same as 1.16.5
 # ===========================================================================
-SRC_117_FABRIC_MOD = SRC_1165_FABRIC_MOD
+SRC_117_FABRIC = SRC_1165_FABRIC
 
 # ===========================================================================
-# FABRIC 1.18-1.18.2 — presplit, same API for this simple mod
+# FABRIC 1.18-1.18.2 — presplit, options.useKey (renamed), interactItem(player, world, hand)
 # ===========================================================================
-SRC_118_FABRIC_MOD = SRC_1165_FABRIC_MOD
+SRC_118_FABRIC = """\
+package net.itamio.autofastxp;
+
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.item.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.Hand;
+
+public class AutoFastXpMod implements ClientModInitializer {
+    private static final int THROW_INTERVAL = 3;
+    private int tickCounter = 0;
+
+    @Override
+    public void onInitializeClient() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null || client.world == null) return;
+            if (client.currentScreen != null) return;
+            if (!client.options.useKey.isPressed()) return;
+            ItemStack main = client.player.getMainHandStack();
+            ItemStack off = client.player.getOffHandStack();
+            boolean useMain = isXpBottle(main);
+            boolean useOff = isXpBottle(off);
+            if (!useMain && !useOff) return;
+            tickCounter++;
+            if (tickCounter < THROW_INTERVAL) return;
+            tickCounter = 0;
+            Hand hand = useMain ? Hand.MAIN_HAND : Hand.OFF_HAND;
+            client.interactionManager.interactItem(client.player, client.world, hand);
+        });
+    }
+
+    private boolean isXpBottle(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() == Items.EXPERIENCE_BOTTLE;
+    }
+}
+"""
 
 # ===========================================================================
-# FABRIC 1.19-1.19.4 — presplit, same API
-# Note: 1.19-1.19.2 use old registry path but we don't use registry here
+# FABRIC 1.19-1.19.4 — presplit, options.useKey, interactItem(player, hand) — 2 args again
 # ===========================================================================
-SRC_119_FABRIC_MOD = SRC_1165_FABRIC_MOD
+SRC_119_FABRIC = """\
+package net.itamio.autofastxp;
+
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.item.Items;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.Hand;
+
+public class AutoFastXpMod implements ClientModInitializer {
+    private static final int THROW_INTERVAL = 3;
+    private int tickCounter = 0;
+
+    @Override
+    public void onInitializeClient() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null || client.world == null) return;
+            if (client.currentScreen != null) return;
+            if (!client.options.useKey.isPressed()) return;
+            ItemStack main = client.player.getMainHandStack();
+            ItemStack off = client.player.getOffHandStack();
+            boolean useMain = isXpBottle(main);
+            boolean useOff = isXpBottle(off);
+            if (!useMain && !useOff) return;
+            tickCounter++;
+            if (tickCounter < THROW_INTERVAL) return;
+            tickCounter = 0;
+            Hand hand = useMain ? Hand.MAIN_HAND : Hand.OFF_HAND;
+            client.interactionManager.interactItem(client.player, hand);
+        });
+    }
+
+    private boolean isXpBottle(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() == Items.EXPERIENCE_BOTTLE;
+    }
+}
+"""
 
 # ===========================================================================
-# FABRIC 1.20-1.20.6 — split source dir, same API for this simple mod
+# FABRIC 1.20+ — split adapter: client code goes in src/client/java/
+# options.useKey, interactItem(player, hand)
 # ===========================================================================
-SRC_120_FABRIC_MOD = SRC_1165_FABRIC_MOD
-
-# ===========================================================================
-# FABRIC 1.21-1.21.1 — split source dir, same API
-# ===========================================================================
-SRC_121_FABRIC_MOD = SRC_1165_FABRIC_MOD
-
-# ===========================================================================
-# FABRIC 1.21.2-1.21.8 — split source dir, same API
-# ===========================================================================
-SRC_1212_FABRIC_MOD = SRC_1165_FABRIC_MOD
-
-# ===========================================================================
-# FABRIC 1.21.9-1.21.11 — split source dir, same API
-# ===========================================================================
-SRC_1219_FABRIC_MOD = SRC_1165_FABRIC_MOD
-
-# ===========================================================================
-# FABRIC 26.1-26.1.2 — split source dir, same API
-# Note: 26.x uses loom 1.16-SNAPSHOT, fabric_api_version (no yarn_mappings key)
-# ===========================================================================
-SRC_261_FABRIC_MOD = SRC_1165_FABRIC_MOD
+SRC_120_FABRIC = SRC_119_FABRIC
+SRC_121_FABRIC = SRC_119_FABRIC
+SRC_1212_FABRIC = SRC_119_FABRIC
+SRC_1219_FABRIC = SRC_119_FABRIC
+SRC_261_FABRIC = SRC_119_FABRIC
 
 
 # ===========================================================================
-# NEOFORGE 1.20.2-1.20.6 — neoforge.mods.toml, IEventBus constructor
-# Uses NeoForge.EVENT_BUS, @Mod.EventBusSubscriber(Bus.FORGE)
-# TickEvent.ClientTickEvent, same as Forge 1.16.5+ for this simple mod
+# NEOFORGE 1.20.2-1.21.8 — net.neoforged.neoforge.client.event.ClientTickEvent
+# (NOT net.neoforged.neoforge.event.TickEvent — that doesn't have ClientTickEvent)
 # ===========================================================================
 SRC_120_NEO_MOD = """\
 package net.itamio.autofastxp;
@@ -495,7 +455,8 @@ package net.itamio.autofastxp;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.event.TickEvent;
+import net.minecraft.world.InteractionHand;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -506,22 +467,20 @@ public class AutoFastXpHandler {
     private int tickCounter = 0;
 
     @SubscribeEvent
-    public void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
         if (mc.screen != null) return;
         if (!mc.options.keyUse.isDown()) return;
         ItemStack main = mc.player.getMainHandItem();
         ItemStack off = mc.player.getOffhandItem();
-        ItemStack active = isXpBottle(main) ? main : (isXpBottle(off) ? off : null);
-        if (active == null) return;
+        boolean useMain = isXpBottle(main);
+        boolean useOff = isXpBottle(off);
+        if (!useMain && !useOff) return;
         tickCounter++;
         if (tickCounter < THROW_INTERVAL) return;
         tickCounter = 0;
-        net.minecraft.world.InteractionHand hand = isXpBottle(main)
-            ? net.minecraft.world.InteractionHand.MAIN_HAND
-            : net.minecraft.world.InteractionHand.OFF_HAND;
+        InteractionHand hand = useMain ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         mc.gameMode.useItem(mc.player, hand);
     }
 
@@ -531,9 +490,7 @@ public class AutoFastXpHandler {
 }
 """
 
-# ===========================================================================
-# NEOFORGE 1.21-1.21.8 — same as 1.20.x NeoForge
-# ===========================================================================
+# 1.21-1.21.8 NeoForge same as 1.20.x
 SRC_121_NEO_MOD = SRC_120_NEO_MOD
 SRC_121_NEO_HANDLER = SRC_120_NEO_HANDLER
 
@@ -569,6 +526,7 @@ SRC_1219_NEO_HANDLER = SRC_120_NEO_HANDLER
 
 # ===========================================================================
 # NEOFORGE 26.1-26.1.2 — standalone @EventBusSubscriber, ModContainer required
+# FMLEnvironment import is net.minecraftforge.fml.loading.FMLEnvironment
 # ===========================================================================
 SRC_261_NEO_MOD = """\
 package net.itamio.autofastxp;
@@ -579,7 +537,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 
 @Mod("autofastxp")
 public class AutoFastXpMod {
@@ -599,80 +557,54 @@ SRC_261_NEO_HANDLER = SRC_120_NEO_HANDLER
 
 
 # ===========================================================================
-# TARGET DEFINITIONS
-# Each entry: (folder_name, mc_version, loader, mod_src, handler_src, group, entrypoint)
-# handler_src=None means single-file mod (no separate handler)
+# TARGETS
+# (folder_name, mc_version, loader, mod_src, handler_src, group, entrypoint, client_srcset)
+# client_srcset=True  → client code goes in src/client/java/ (fabric_split 1.20+)
+# client_srcset=False → client code goes in src/main/java/  (fabric_presplit)
+# handler_src=None    → single-file mod (Fabric)
 # ===========================================================================
-
-# Already published — DO NOT include:
-# 1.12.2 forge, 1.16.5 fabric, 1.17/1.17.1 fabric
-# 1.19-1.19.4 forge, 1.20.1-1.20.4/1.20.6 forge
-# 1.21/1.21.1 forge, 1.21.3-1.21.5 forge, 26.1.2 forge
-# 1.20.5/1.20.6 neoforge, 1.21-1.21.8 neoforge
-
 TARGETS = [
     # ---- FORGE ----
-    # 1.8.9
-    ("AutoFastXP-1.8.9-forge",    "1.8.9",   "forge",    SRC_189_MOD,       SRC_189_HANDLER,       GROUP_FORGE_LEGACY, f"{GROUP_FORGE_LEGACY}.AutoFastXpMod"),
-    # 1.16.5
-    ("AutoFastXP-1.16.5-forge",   "1.16.5",  "forge",    SRC_1165_FORGE_MOD, SRC_1165_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.17.1
-    ("AutoFastXP-1.17.1-forge",   "1.17.1",  "forge",    SRC_171_FORGE_MOD, SRC_171_FORGE_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.18-1.18.2
-    ("AutoFastXP-1.18-forge",     "1.18",    "forge",    SRC_118_FORGE_MOD, SRC_118_FORGE_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.18.1-forge",   "1.18.1",  "forge",    SRC_118_FORGE_MOD, SRC_118_FORGE_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.18.2-forge",   "1.18.2",  "forge",    SRC_118_FORGE_MOD, SRC_118_FORGE_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.21.6-1.21.8 (EventBus 7)
-    ("AutoFastXP-1.21.6-forge",   "1.21.6",  "forge",    SRC_1216_FORGE_MOD, SRC_1216_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.21.7-forge",   "1.21.7",  "forge",    SRC_1216_FORGE_MOD, SRC_1216_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.21.8-forge",   "1.21.8",  "forge",    SRC_1216_FORGE_MOD, SRC_1216_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.21.9-1.21.11 (EventBus 7, record-based TickEvent)
-    ("AutoFastXP-1.21.9-forge",   "1.21.9",  "forge",    SRC_1219_FORGE_MOD, SRC_1219_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.21.10-forge",  "1.21.10", "forge",    SRC_1219_FORGE_MOD, SRC_1219_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.21.11-forge",  "1.21.11", "forge",    SRC_1219_FORGE_MOD, SRC_1219_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 26.1.2 already published — skip
+    ("AutoFastXP-1.8.9-forge",    "1.8.9",   "forge",    SRC_189_MOD,        SRC_189_HANDLER,        GROUP_FORGE_LEGACY, f"{GROUP_FORGE_LEGACY}.AutoFastXpMod", False),
+    ("AutoFastXP-1.16.5-forge",   "1.16.5",  "forge",    SRC_1165_FORGE_MOD, SRC_1165_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.17.1-forge",   "1.17.1",  "forge",    SRC_171_FORGE_MOD,  SRC_171_FORGE_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.18-forge",     "1.18",    "forge",    SRC_118_FORGE_MOD,  SRC_118_FORGE_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.18.1-forge",   "1.18.1",  "forge",    SRC_118_FORGE_MOD,  SRC_118_FORGE_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.18.2-forge",   "1.18.2",  "forge",    SRC_118_FORGE_MOD,  SRC_118_FORGE_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.6-forge",   "1.21.6",  "forge",    SRC_1216_FORGE_MOD, SRC_1216_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.7-forge",   "1.21.7",  "forge",    SRC_1216_FORGE_MOD, SRC_1216_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.8-forge",   "1.21.8",  "forge",    SRC_1216_FORGE_MOD, SRC_1216_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.9-forge",   "1.21.9",  "forge",    SRC_1219_FORGE_MOD, SRC_1219_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.10-forge",  "1.21.10", "forge",    SRC_1219_FORGE_MOD, SRC_1219_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.11-forge",  "1.21.11", "forge",    SRC_1219_FORGE_MOD, SRC_1219_FORGE_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
 
-    # ---- FABRIC ----
-    # 1.18-1.18.2 (anchor_only range — use range version.txt)
-    ("AutoFastXP-1.18-1.18.2-fabric", "1.18-1.18.2", "fabric", SRC_118_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.19-1.19.4 (anchor_only range)
-    ("AutoFastXP-1.19-1.19.4-fabric", "1.19-1.19.4", "fabric", SRC_119_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.20.1-1.20.6
-    ("AutoFastXP-1.20-1.20.6-fabric", "1.20.1-1.20.6", "fabric", SRC_120_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.21-1.21.1 (anchor_only range)
-    ("AutoFastXP-1.21-1.21.1-fabric", "1.21-1.21.1", "fabric", SRC_121_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.21.2-1.21.8 (anchor_only range)
-    ("AutoFastXP-1.21.2-1.21.8-fabric", "1.21.2-1.21.8", "fabric", SRC_1212_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.21.9-1.21.11 (anchor_only range)
-    ("AutoFastXP-1.21.9-1.21.11-fabric", "1.21.9-1.21.11", "fabric", SRC_1219_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 26.1-26.1.2
-    ("AutoFastXP-26.1-fabric",    "26.1",    "fabric",   SRC_261_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-26.1.1-fabric",  "26.1.1",  "fabric",   SRC_261_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-26.1.2-fabric",  "26.1.2",  "fabric",   SRC_261_FABRIC_MOD, None, GROUP, f"{GROUP}.AutoFastXpMod"),
+    # ---- FABRIC (presplit = src/main/java) ----
+    ("AutoFastXP-1.18-1.18.2-fabric",   "1.18-1.18.2",   "fabric", SRC_118_FABRIC,  None, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.19-1.19.4-fabric",   "1.19-1.19.4",   "fabric", SRC_119_FABRIC,  None, GROUP, f"{GROUP}.AutoFastXpMod", False),
+
+    # ---- FABRIC (split = src/client/java) ----
+    ("AutoFastXP-1.20-1.20.6-fabric",   "1.20.1-1.20.6", "fabric", SRC_120_FABRIC,  None, GROUP, f"{GROUP}.AutoFastXpMod", True),
+    ("AutoFastXP-1.21-1.21.1-fabric",   "1.21-1.21.1",   "fabric", SRC_121_FABRIC,  None, GROUP, f"{GROUP}.AutoFastXpMod", True),
+    ("AutoFastXP-1.21.2-1.21.8-fabric", "1.21.2-1.21.8", "fabric", SRC_1212_FABRIC, None, GROUP, f"{GROUP}.AutoFastXpMod", True),
+    ("AutoFastXP-1.21.9-1.21.11-fabric","1.21.9-1.21.11","fabric", SRC_1219_FABRIC, None, GROUP, f"{GROUP}.AutoFastXpMod", True),
+    ("AutoFastXP-26.1-fabric",          "26.1",          "fabric", SRC_261_FABRIC,  None, GROUP, f"{GROUP}.AutoFastXpMod", True),
+    ("AutoFastXP-26.1.1-fabric",        "26.1.1",        "fabric", SRC_261_FABRIC,  None, GROUP, f"{GROUP}.AutoFastXpMod", True),
+    ("AutoFastXP-26.1.2-fabric",        "26.1.2",        "fabric", SRC_261_FABRIC,  None, GROUP, f"{GROUP}.AutoFastXpMod", True),
 
     # ---- NEOFORGE ----
-    # 1.20.2, 1.20.4 (1.20.5/1.20.6 already published)
-    ("AutoFastXP-1.20.2-neoforge", "1.20.2", "neoforge", SRC_120_NEO_MOD, SRC_120_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.20.4-neoforge", "1.20.4", "neoforge", SRC_120_NEO_MOD, SRC_120_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.21.2 (1.21/1.21.1/1.21.3-1.21.8 already published)
-    ("AutoFastXP-1.21.2-neoforge", "1.21.2", "neoforge", SRC_121_NEO_MOD, SRC_121_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 1.21.9-1.21.11 (ModContainer required)
-    ("AutoFastXP-1.21.9-neoforge",  "1.21.9",  "neoforge", SRC_1219_NEO_MOD, SRC_1219_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.21.10-neoforge", "1.21.10", "neoforge", SRC_1219_NEO_MOD, SRC_1219_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-1.21.11-neoforge", "1.21.11", "neoforge", SRC_1219_NEO_MOD, SRC_1219_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    # 26.1-26.1.2 (standalone @EventBusSubscriber, ModContainer required)
-    ("AutoFastXP-26.1-neoforge",   "26.1",   "neoforge", SRC_261_NEO_MOD, SRC_261_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-26.1.1-neoforge", "26.1.1", "neoforge", SRC_261_NEO_MOD, SRC_261_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
-    ("AutoFastXP-26.1.2-neoforge", "26.1.2", "neoforge", SRC_261_NEO_MOD, SRC_261_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod"),
+    ("AutoFastXP-1.20.2-neoforge", "1.20.2", "neoforge", SRC_120_NEO_MOD,  SRC_120_NEO_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.20.4-neoforge", "1.20.4", "neoforge", SRC_120_NEO_MOD,  SRC_120_NEO_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.2-neoforge", "1.21.2", "neoforge", SRC_121_NEO_MOD,  SRC_121_NEO_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.9-neoforge",  "1.21.9",  "neoforge", SRC_1219_NEO_MOD, SRC_1219_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.10-neoforge", "1.21.10", "neoforge", SRC_1219_NEO_MOD, SRC_1219_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-1.21.11-neoforge", "1.21.11", "neoforge", SRC_1219_NEO_MOD, SRC_1219_NEO_HANDLER, GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-26.1-neoforge",   "26.1",   "neoforge", SRC_261_NEO_MOD,  SRC_261_NEO_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-26.1.1-neoforge", "26.1.1", "neoforge", SRC_261_NEO_MOD,  SRC_261_NEO_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
+    ("AutoFastXP-26.1.2-neoforge", "26.1.2", "neoforge", SRC_261_NEO_MOD,  SRC_261_NEO_HANDLER,  GROUP, f"{GROUP}.AutoFastXpMod", False),
 ]
 
 
-# ===========================================================================
-# BUILD HELPERS
-# ===========================================================================
-
 def get_failed_targets():
-    """Read the most recent ModCompileRuns/ folder and return set of failed folder names."""
     runs_dir = ROOT / "ModCompileRuns"
     if not runs_dir.exists():
         return None
@@ -686,55 +618,39 @@ def get_failed_targets():
                 for job in data.get("jobs", []):
                     if job.get("status") != "success":
                         name = job.get("name", "")
-                        # name is like "AutoFastXP-1.8.9-forge"
                         failed.add(name)
                 print(f"Reading failures from: {run.name}")
                 print(f"Failed targets: {sorted(failed)}")
                 return failed
             except Exception as e:
                 print(f"Warning: could not parse {result_file}: {e}")
-    # Also check SUMMARY.md for failed targets
-    for run in runs:
-        summary = run / "SUMMARY.md"
-        if summary.exists():
-            text = summary.read_text()
-            failed = set()
-            for line in text.splitlines():
-                if "FAILED" in line or "failed" in line or "❌" in line:
-                    # Try to extract folder name from line
-                    for t in TARGETS:
-                        if t[0] in line:
-                            failed.add(t[0])
-            if failed:
-                print(f"Reading failures from SUMMARY: {run.name}")
-                return failed
     return None
 
 
-def write_target(folder_name, mc_version, loader, mod_src, handler_src, group, entrypoint):
-    """Write one mod target folder."""
+def write_target(folder_name, mc_version, loader, mod_src, handler_src, group, entrypoint, client_srcset):
     pkg_path = group.replace(".", "/")
     base = BUNDLE_DIR / folder_name
 
-    # mod.txt
     write(base / "mod.txt", mod_txt(group=group, entrypoint=entrypoint))
-
-    # version.txt
     write(base / "version.txt", version_txt(mc_version, loader))
 
-    # Main mod source
-    write(base / "src" / "main" / "java" / pkg_path / "AutoFastXpMod.java", mod_src)
+    # For fabric_split (1.20+), client entrypoint goes in src/client/java/
+    if client_srcset:
+        java_dir = base / "src" / "client" / "java"
+    else:
+        java_dir = base / "src" / "main" / "java"
 
-    # Handler source (if separate)
+    write(java_dir / pkg_path / "AutoFastXpMod.java", mod_src)
+
     if handler_src is not None:
-        write(base / "src" / "main" / "java" / pkg_path / "AutoFastXpHandler.java", handler_src)
+        write(java_dir / pkg_path / "AutoFastXpHandler.java", handler_src)
 
 
 def build_zip(targets_to_include):
-    """Package the bundle dir into a zip."""
     ZIP_PATH.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
-        for folder_name, *_ in targets_to_include:
+        for t in targets_to_include:
+            folder_name = t[0]
             folder = BUNDLE_DIR / folder_name
             for file in sorted(folder.rglob("*")):
                 if file.is_file():
@@ -743,9 +659,8 @@ def build_zip(targets_to_include):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate Auto Fast XP all-versions bundle")
-    parser.add_argument("--failed-only", action="store_true",
-                        help="Only include targets that failed in the last run")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--failed-only", action="store_true")
     args = parser.parse_args()
 
     if args.failed_only:
@@ -754,28 +669,25 @@ def main():
             print("No previous run found — generating all targets")
             targets = TARGETS
         elif not failed:
-            print("No failed targets found in last run — nothing to do")
+            print("No failed targets in last run — nothing to do")
             sys.exit(0)
         else:
             targets = [t for t in TARGETS if t[0] in failed]
             if not targets:
-                print(f"Warning: failed set {failed} did not match any TARGETS folder names")
-                print("Generating all targets as fallback")
+                print(f"Warning: failed set did not match any TARGETS — generating all")
                 targets = TARGETS
     else:
         targets = TARGETS
 
-    # Clean and regenerate
     if BUNDLE_DIR.exists():
-        import shutil
         shutil.rmtree(BUNDLE_DIR)
     BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
 
     print(f"Generating {len(targets)} target(s)...")
     for t in targets:
-        folder_name, mc_version, loader, mod_src, handler_src, group, entrypoint = t
+        folder_name, mc_version, loader, mod_src, handler_src, group, entrypoint, client_srcset = t
         print(f"  {folder_name}")
-        write_target(folder_name, mc_version, loader, mod_src, handler_src, group, entrypoint)
+        write_target(folder_name, mc_version, loader, mod_src, handler_src, group, entrypoint, client_srcset)
 
     build_zip(targets)
     print("Done.")
