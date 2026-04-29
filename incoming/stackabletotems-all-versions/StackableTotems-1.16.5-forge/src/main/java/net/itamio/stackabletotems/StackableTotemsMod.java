@@ -1,7 +1,6 @@
 package net.itamio.stackabletotems;
 
-import net.minecraft.world.item.Items;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraft.item.Items;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -16,13 +15,13 @@ public class StackableTotemsMod {
     private void setup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             try {
-                Field f = net.minecraft.world.item.Item.class
+                Field f = net.minecraft.item.Item.class
                     .getDeclaredField("f_41370_");
                 f.setAccessible(true);
                 f.set(Items.TOTEM_OF_UNDYING, 64);
             } catch (Exception e) {
                 try {
-                    Field f = net.minecraft.world.item.Item.class
+                    Field f = net.minecraft.item.Item.class
                         .getDeclaredField("maxStackSize");
                     f.setAccessible(true);
                     f.set(Items.TOTEM_OF_UNDYING, 64);
