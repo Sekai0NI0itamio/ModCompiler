@@ -107,6 +107,7 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 
 | ID | Title | Loaders | Versions |
 |----|-------|---------|----------|
+| ALWAYS-CHECK-FULL-MANIFEST-NOT-JUST-PUBLISHED | Always compute missing targets from version-manifest.json, not just from what's published | all | — |
 | FORGE-LIVINGUSETOTEM-NOT-IN-41X | Forge 1.19–1.19.2 (41.x) — LivingUseTotemEvent does not exist, added in 44.x (1.19.3+) | forge | 1.19–1.19.2 |
 | FORGE-EB7-FMLCOMMONSETUPEVENT-GETBUS | Forge 1.21.6+ EventBus 7 — FMLCommonSetupEvent.getBus(context.getModBusGroup()) replaces getModEventBus() | forge | 1.21.6–26.1.2 |
 | FORGE-DATACOMPONENTS-ITEM-STACK-SIZE | Forge/NeoForge 1.20.5+ — Item max stack size stored in DataComponents.MAX_STACK_SIZE | forge, neoforge | 1.20.5–26.1.2 |

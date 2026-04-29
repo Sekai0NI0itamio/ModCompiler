@@ -701,20 +701,21 @@ documented:
    - Forge 1.17+: net.minecraft.world.item (not net.minecraft.item)
 
 7. Stackable Totems mod (docs/examples/STACKABLE_TOTEMS_ALL_VERSIONS.md)
-   - Server-side only Forge/NeoForge mod (no Fabric, no client code)
-   - 41 new versions added: 1.16.5 through 26.1.2, Forge + NeoForge
-   - 4 build runs to reach full coverage
+   - Server-side only Forge/NeoForge/Fabric mod
+   - 74 new versions added: 1.12.2 through 26.1.2, all three loaders
+   - 5 build runs to reach full coverage
+   - CRITICAL LESSON: Agent declared done after 35 versions (Forge+NeoForge only).
+     User pointed out Fabric and Forge 1.12.2 were missing. Root cause: agent never
+     ran the manifest comparison. Always run it before declaring done.
    - CRITICAL: LivingUseTotemEvent was added in Forge 44.x (1.19.3+), NOT in 41.x (1.19)
-     The decompiled sources show it for 1.19 but the actual build template uses 41.1.0
-     Always check the Forge version in the build log, not just the decompiled sources
-   - CRITICAL: For 1.16.5-1.19.2, vanilla already handles stack shrink (decrement(1))
-     Only need reflection to set maxStackSize=64 — no event subscription needed
+   - CRITICAL: For 1.12.2-1.19.2 Forge and ALL Fabric: vanilla already handles stack shrink
+     (LivingEntity.tryUseTotem() calls decrement(1)) — only reflection needed
    - Forge 1.21.6+: getModEventBus() removed — use FMLCommonSetupEvent.getBus(context.getModBusGroup())
-   - Item max stack size: pre-1.20.5 = reflect on "f_41370_" int field;
-     1.20.5+ = reflect on "components" DataComponentMap, set DataComponents.MAX_STACK_SIZE
-   - 1.16.5 uses net.minecraft.item (not net.minecraft.world.item — package rename in 1.17)
-   - NeoForge LivingUseTotemEvent stays in net.neoforged.neoforge.event.entity.living across all versions
-   - Always re-run diagnosis after completing a port to catch missed versions16.5+build.10)
+   - Item max stack size: pre-1.20.5 = reflect on int field; 1.20.5+ = DataComponents
+   - 1.16.5 Forge uses net.minecraft.item (not net.minecraft.world.item — rename in 1.17)
+   - Fabric server-side mods use ModInitializer (not ClientModInitializer)
+   - Fabric uses maxCount field (yarn) for 1.16.5-1.20.6, DataComponents for 1.21+
+   - 1.12.2 Forge SRG field name: field_77777_bU (not f_41370_)16.5+build.10)
      Do NOT trust DecompiledMinecraftSourceCode for anchor_only templates
    - Fabric 1.16.5–1.18.x: command.v1 with 2-arg callback (dispatcher, dedicated)
    - Fabric 1.19+: command.v2 with 3-arg callback (dispatcher, registryAccess, dedicated)
@@ -1279,8 +1280,31 @@ before telling the user you are done:
          --output-dir /tmp/final-check
      cat /tmp/final-check/summary.txt
 
-   Check that the "Game versions" and "Loaders" lines match what was expected.
-   Report the final version count to the user.
+   Then run the manifest comparison to confirm 0 missing targets:
+
+     python3 -c "
+     import json
+     with open('version-manifest.json') as f:
+         manifest = json.load(f)
+     all_targets = set()
+     for r in manifest['ranges']:
+         for loader, cfg in r['loaders'].items():
+             versions = cfg.get('supported_versions', [r.get('min_version')])
+             for v in versions:
+                 all_targets.add((v, loader))
+     # Build published set from summary.txt game_versions + loaders
+     # published = {('1.20.1', 'forge'), ...}
+     published = set()  # fill this from the diagnosis output
+     missing = sorted(all_targets - published)
+     if missing:
+         print(f'STILL MISSING ({len(missing)}):')
+         for t in missing: print(f'  {t[0]:12} {t[1]}')
+     else:
+         print('All targets covered.')
+     "
+
+   Only declare done when missing is empty. The manifest covers ALL loaders.
+   A mod originally published on Forge only still needs Fabric and NeoForge ports.
 
 2. DOCUMENT ISSUES IN THE DIF SYSTEM
    For every compile error or API issue encountered during the build runs,
