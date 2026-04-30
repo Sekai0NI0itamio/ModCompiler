@@ -5,22 +5,25 @@ struct ContentView: View {
 
     var body: some View {
         HSplitView {
-            // Left: project list
             ProjectListView(vm: vm)
                 .frame(minWidth: 240, idealWidth: 280, maxWidth: 340)
-
-            // Right: detail sidebar
             DetailSidebar(vm: vm)
-                .frame(minWidth: 480)
+                .frame(minWidth: 520)
         }
-        .frame(minWidth: 780, minHeight: 560)
+        .frame(minWidth: 820, minHeight: 580)
         .background(Color(white: 0.08))
         .preferredColorScheme(.dark)
         .sheet(isPresented: $vm.showSettings) {
             SettingsView(vm: vm)
         }
         .task {
+            // 1. Load project list (includes full body for aesthetics)
             await vm.loadProjects()
+            // 2. Download analytics history for all projects
+            //    (incremental if cache exists, full if first launch)
+            if !vm.settings.apiToken.isEmpty {
+                await vm.downloadAllHistory()
+            }
         }
     }
 }
