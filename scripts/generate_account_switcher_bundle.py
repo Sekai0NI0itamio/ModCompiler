@@ -856,6 +856,7 @@ ALREADY_PUBLISHED = {
     ("1.21.7", "forge"), ("1.21.8", "forge"),
     ("1.21.9", "forge"), ("1.21.10", "forge"), ("1.21.11", "forge"),
     # Fabric (1.21.1-1.21.8 range only)
+    ("1.17.1", "fabric"),
     ("1.21.1", "fabric"), ("1.21.2", "fabric"), ("1.21.3", "fabric"), ("1.21.4", "fabric"),
     ("1.21.5", "fabric"), ("1.21.6", "fabric"), ("1.21.7", "fabric"), ("1.21.8", "fabric"),
 }
@@ -894,6 +895,7 @@ NEOFORGE_TARGETS = [
 FABRIC_TARGETS = [
     # presplit (1.16.5-1.19.4) — MatrixStack render, yarn mappings
     ("accountswitcher-fabric-1-16-5",  "1.16.5",  "fabric", "fabric_presplit"),
+    ("accountswitcher-fabric-1-17",    "1.17",    "fabric", "fabric_presplit"),
     ("accountswitcher-fabric-1-17-1",  "1.17.1",  "fabric", "fabric_presplit"),
     ("accountswitcher-fabric-1-18",    "1.18",    "fabric", "fabric_presplit"),
     ("accountswitcher-fabric-1-19",    "1.19",    "fabric", "fabric_presplit"),
@@ -909,6 +911,8 @@ FABRIC_TARGETS = [
     ("accountswitcher-fabric-1-20-5",  "1.20.5",  "fabric", "fabric_split_120"),
     ("accountswitcher-fabric-1-20-6",  "1.20.6",  "fabric", "fabric_split_120"),
     # split 1.21-1.21.8 — GuiGraphics render, Mojang mappings (already published, skip)
+    # 1.21 itself is missing — add it
+    ("accountswitcher-fabric-1-21",    "1.21",    "fabric", "fabric_split_121"),
     # split 1.21.9-1.21.11 — GuiGraphics render, Mojang mappings
     ("accountswitcher-fabric-1-21-9",  "1.21.9",  "fabric", "fabric_split_121"),
     ("accountswitcher-fabric-1-21-10", "1.21.10", "fabric", "fabric_split_121"),
