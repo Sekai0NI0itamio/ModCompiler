@@ -380,7 +380,56 @@ See DIF entries `NEOFORGE-120-SUPPORTED-VERSIONS` and
 
 ---
 
-## How a Typical "Update to All Versions" Session Goes
+### Mistake 15: Generator source string missing f-prefix — literal `{MOD_ID}` and `{{` in Java output (Account Switcher port)
+
+**What happened**: A source string for Forge 26.1.2 was defined as `"""\..."""` instead
+of `f"""\..."""`. Python did not substitute `{MOD_ID}` or convert `{{`/`}}` to `{`/`}`.
+The Java compiler saw `@Mod("{MOD_ID}")` and `public class AccountSwitcherMod {{` and
+failed with `illegal start of expression`.
+
+**User correction**: Build log showed `illegal start of expression` at the `{{` line.
+
+**Rule**: Every generator source string that contains `{VAR}` placeholders or `{{`/`}}`
+for literal Java braces MUST use the `f"""..."""` prefix. After generating, spot-check
+at least one output file before committing:
+
+```bash
+python3 scripts/generate_<mod>_bundle.py
+cat incoming/<mod>-all-versions/<slug>/src/main/java/.../MyMod.java | head -5
+# Must show: @Mod("mymod") not @Mod("{MOD_ID}")
+# Must show: public class MyMod { not public class MyMod {{
+```
+
+See DIF entry `FORGE-FSTRING-ESCAPING-IN-GENERATOR`.
+
+---
+
+### Mistake 16: Assumed Fabric uses same `supported_versions` as Forge for the same range folder (Account Switcher port)
+
+**What happened**: After 41 targets were published, the manifest comparison showed
+`1.17 fabric` and `1.21 fabric` still missing. The generator was targeting `1.17.1`
+and `1.21.1` for Fabric (matching Forge), but the manifest's `supported_versions`
+for Fabric in those ranges is `["1.17"]` and `["1.21"]` respectively.
+
+**User correction**: Manifest comparison after run 2 revealed 2 still-missing targets.
+
+**Rule**: Always read `supported_versions` per-loader from `version-manifest.json`.
+Never assume Fabric and Forge share the same version list for a range folder.
+
+```python
+for r in manifest['ranges']:
+    for loader, cfg in r['loaders'].items():
+        versions = cfg.get('supported_versions', [r.get('min_version')])
+        # versions is DIFFERENT per loader — do not share between loaders
+```
+
+Key differences:
+- `1.17-1.17.1/fabric`: `["1.17"]` — Forge has `["1.17.1"]`
+- `1.21-1.21.1/fabric`: `["1.21"]` — Forge/NeoForge have `["1.21", "1.21.1"]`
+
+See DIF entry `FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION`.
+
+---
 
 ```
 User: "Update this mod to all versions: https://modrinth.com/mod/my-mod"
@@ -568,6 +617,10 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | `cannot find symbol.*class LivingUseTotemEvent` (Forge 1.19–1.19.2) | `FORGE-LIVINGUSETOTEM-NOT-IN-41X` |
 | `cannot find symbol.*method getModEventBus.*FMLJavaModLoadingContext` | `FORGE-EB7-FMLCOMMONSETUPEVENT-GETBUS` |
 | Port declared complete but user says versions are missing | `ALWAYS-CHECK-FULL-MANIFEST-NOT-JUST-PUBLISHED` |
+| Generator produces `{MOD_ID}` or `{{` literally in Java output | `FORGE-FSTRING-ESCAPING-IN-GENERATOR` |
+| Fabric 1.17 or 1.21 missing after publishing 1.17.1 / 1.21.1 | `FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION` |
+| `cannot find symbol.*DrawScreenEvent` or `Render.Post` or `getPoseStack` | `FORGE-SCREEN-EVENT-RENDER-SUBCLASS-HISTORY` |
+| Fabric TitleScreen mixin fails to inject or wrong render signature | `FABRIC-TITLESCREEN-MIXIN-RENDER-SIGNATURE-HISTORY` |
 
 ---
 
@@ -577,12 +630,13 @@ For deeper reading (in order of usefulness):
 
 1. `docs/IDE_AGENT_INSTRUCTION_SHEET.txt` — complete operating manual
 2. `dif/README.md` — DIF system overview and full entry list
-3. `docs/examples/OPTIMIZED_VEIN_MINER_ALL_VERSIONS.md` — most recent port, all issues documented
-4. `docs/examples/TPA_TELEPORT_ALL_VERSIONS.md` — server-side command mod, 7 runs, 68 versions
-5. `docs/examples/SEED_PROTECT_ALL_VERSIONS.md` — mixin-based mod, yarn mapping pitfalls
-6. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
-7. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
+3. `docs/examples/ACCOUNT_SWITCHER_ALL_VERSIONS.md` — client-side overlay mod, Fabric mixin + Forge ScreenEvent, all eras documented
+4. `docs/examples/OPTIMIZED_VEIN_MINER_ALL_VERSIONS.md` — event-based client+server mod, all issues documented
+5. `docs/examples/TPA_TELEPORT_ALL_VERSIONS.md` — server-side command mod, 7 runs, 68 versions
+6. `docs/examples/SEED_PROTECT_ALL_VERSIONS.md` — mixin-based mod, yarn mapping pitfalls
+7. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
+8. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
 
 ---
 
-*Last updated: April 2026 — based on TPA Teleport all-versions port session*
+*Last updated: April 2026 — based on Account Switcher all-versions port session*
