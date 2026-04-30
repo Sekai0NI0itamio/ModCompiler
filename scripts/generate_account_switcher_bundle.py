@@ -484,7 +484,7 @@ FORGE_120_RENDER = """\
         } catch (Exception e) { LOGGER.error("Render error", e); }"""
 
 # 26.1.2 Forge — ScreenEvent.Render.Post.BUS.addListener, GuiGraphicsExtractor.text()
-FORGE_26_SRC = """\
+FORGE_26_SRC = f"""\
 package com.itamio.accountswitcher;
 
 import net.minecraft.client.Minecraft;
