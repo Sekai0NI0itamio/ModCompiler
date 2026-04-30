@@ -9,22 +9,22 @@ import net.minecraftforge.fml.common.Mod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-@Mod("{MOD_ID}")
-public class AccountSwitcherMod {{
-    public static final String MODID = "{MOD_ID}";
+@Mod("accountswitcher")
+public class AccountSwitcherMod {
+    public static final String MODID = "accountswitcher";
     private static final Logger LOGGER = LogManager.getLogger("AccountSwitcher");
     private ConfigHandler configHandler;
     private static String currentAccount = "Unknown";
 
-    public AccountSwitcherMod() {{
+    public AccountSwitcherMod() {
         ScreenEvent.Render.Post.BUS.addListener(this::onRenderScreen);
         configHandler = new ConfigHandler();
         configHandler.startMonitoring();
-        LOGGER.info("Account Switcher Mod v{MOD_VERSION} initialized");
-    }}
+        LOGGER.info("Account Switcher Mod v2.0.0 initialized");
+    }
 
-    private void onRenderScreen(ScreenEvent.Render.Post event) {{
-        try {{
+    private void onRenderScreen(ScreenEvent.Render.Post event) {
+        try {
             if (!(event.getScreen() instanceof TitleScreen)) return;
             GuiGraphicsExtractor gg = event.getGuiGraphics();
             net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
@@ -32,10 +32,10 @@ public class AccountSwitcherMod {{
             String account = currentAccount;
             gg.text(font, prefix, 10, 10, 0xFFFFFF);
             gg.text(font, account, 10 + font.width(prefix), 10, 0x00FF00);
-        }} catch (Exception e) {{ LOGGER.error("Render error", e); }}
-    }}
+        } catch (Exception e) { LOGGER.error("Render error", e); }
+    }
 
-    public static Logger getLogger() {{ return LOGGER; }}
-    public static String getCurrentAccount() {{ return currentAccount; }}
-    public static void updateCurrentAccount(String account) {{ currentAccount = account; }}
-}}
+    public static Logger getLogger() { return LOGGER; }
+    public static String getCurrentAccount() { return currentAccount; }
+    public static void updateCurrentAccount(String account) { currentAccount = account; }
+}
