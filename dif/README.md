@@ -102,11 +102,19 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 | FABRIC-PROTECTED-FIELDS-REFLECTION | Fabric HandledScreen protected fields | fabric | all |
 | NEVER-REBUILD-GREEN-TARGETS | Best practice: use --failed-only | all | — |
 | FORGE-26-FORGELAYER-EXTRACT-PATTERN | Forge 26.1.2 ForgeLayer.extract() pattern | forge | 26.1.2 |
+| FORGE-FSTRING-ESCAPING-IN-GENERATOR | Generator script — Python f-string not applied, leaving {MOD_ID} and {{ literal braces in Java output | all | — |
+| FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION | Fabric supported_versions differs from Forge for same range (1.17 not 1.17.1, 1.21 not 1.21.1) | fabric | 1.17, 1.21 |
+| FORGE-SCREEN-EVENT-RENDER-SUBCLASS-HISTORY | Full history of Forge ScreenEvent subclass names and graphics accessors across all versions | forge | 1.16.5–26.1.2 |
+| FABRIC-TITLESCREEN-MIXIN-RENDER-SIGNATURE-HISTORY | Full history of Fabric TitleScreen mixin render() signature across all versions | fabric | 1.16.5–26.1.2 |
 
 ## Recently Added
 
 | ID | Title | Loaders | Versions |
 |----|-------|---------|----------|
+| FORGE-FSTRING-ESCAPING-IN-GENERATOR | Generator script — Python f-string not applied, leaving {MOD_ID} and {{ literal braces in Java output | all | — |
+| FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION | Fabric supported_versions differs from Forge for same range (1.17 not 1.17.1, 1.21 not 1.21.1) | fabric | 1.17, 1.21 |
+| FORGE-SCREEN-EVENT-RENDER-SUBCLASS-HISTORY | Full history of Forge ScreenEvent subclass names and graphics accessors (DrawScreenEvent.Post → Render.Post, getPoseStack → getGuiGraphics) | forge | 1.16.5–26.1.2 |
+| FABRIC-TITLESCREEN-MIXIN-RENDER-SIGNATURE-HISTORY | Full history of Fabric TitleScreen mixin render() signature (MatrixStack → DrawContext → GuiGraphics → extractRenderState) | fabric | 1.16.5–26.1.2 |
 | ALWAYS-CHECK-FULL-MANIFEST-NOT-JUST-PUBLISHED | Always compute missing targets from version-manifest.json, not just from what's published | all | — |
 | FORGE-LIVINGUSETOTEM-NOT-IN-41X | Forge 1.19–1.19.2 (41.x) — LivingUseTotemEvent does not exist, added in 44.x (1.19.3+) | forge | 1.19–1.19.2 |
 | FORGE-EB7-FMLCOMMONSETUPEVENT-GETBUS | Forge 1.21.6+ EventBus 7 — FMLCommonSetupEvent.getBus(context.getModBusGroup()) replaces getModEventBus() | forge | 1.21.6–26.1.2 |

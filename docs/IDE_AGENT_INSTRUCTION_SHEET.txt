@@ -718,6 +718,26 @@ documented:
    - 1.12.2 Forge SRG field name: field_77777_bU (not f_41370_)16.5+build.10)
      Do NOT trust DecompiledMinecraftSourceCode for anchor_only templates
    - Fabric 1.16.5–1.18.x: command.v1 with 2-arg callback (dispatcher, dedicated)
+
+8. Account Switcher mod (docs/examples/ACCOUNT_SWITCHER_ALL_VERSIONS.md)
+   - Client-side only mod (title screen overlay + session switching via reflection)
+   - 43 new versions added: Forge 1.12+26.1.2, NeoForge 1.20.2-26.1.2, Fabric 1.16.5-26.1.2
+   - 3 build runs to reach full coverage
+   - Fabric uses a TitleScreen mixin — 4 distinct eras of render() signature:
+     MatrixStack (1.16.5-1.19.4), DrawContext (1.20.1-1.20.6), GuiGraphics (1.21-1.21.11),
+     GuiGraphicsExtractor + extractRenderState() (26.1+)
+   - Forge ScreenEvent has 5 eras: GuiScreenEvent.DrawScreenEvent.Post (1.16.5-1.17.1),
+     ScreenEvent.DrawScreenEvent.Post (1.18-1.18.2), ScreenEvent.Render.Post (1.19+),
+     with getPoseStack() (1.18-1.19.4), getGuiGraphics()→GuiGraphics (1.20.1-1.21.11),
+     getGuiGraphics()→GuiGraphicsExtractor (26.1.2)
+   - CRITICAL: Generator source strings must use f"""...""" not """...""" — otherwise
+     {MOD_ID} and {{ are not substituted, causing Java compile errors
+   - CRITICAL: Fabric supported_versions differs from Forge for same range folder:
+     1.17-1.17.1/fabric targets "1.17" (not "1.17.1")
+     1.21-1.21.1/fabric targets "1.21" (not "1.21.1")
+     Always read per-loader from version-manifest.json, never assume Fabric=Forge
+   - NeoForge 1.21.9+: ModContainer required in constructor
+   - NeoForge 26.1: GuiGraphicsExtractor.text() not GuiGraphics.drawString()
    - Fabric 1.19+: command.v2 with 3-arg callback (dispatcher, registryAccess, dedicated)
    - Fabric sendMessage: takes (Text, boolean overlay) — pass false for chat, NOT a UUID
    - Lambda count capture: sendSuccess(() -> ...) in 1.20+ captures count — add
