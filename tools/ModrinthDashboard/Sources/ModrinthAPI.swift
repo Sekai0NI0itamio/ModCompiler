@@ -1,13 +1,17 @@
 import Foundation
 
 // MARK: - API Client
+// Token format: bare PAT string, no "Bearer" prefix.
+// Matches exactly how the Python scripts use it:
+//   h["Authorization"] = token   (not "Bearer " + token)
 
 actor ModrinthAPI {
     static let shared = ModrinthAPI()
-    private let base = "https://api.modrinth.com"
-    private let v2   = "https://api.modrinth.com/v2"
-    private let v3   = "https://api.modrinth.com/v3"
-    private let userAgent = "itamio/ModrinthDashboard/1.0 (contact@itamio.com)"
+
+    private let v2 = "https://api.modrinth.com/v2"
+    private let v3 = "https://api.modrinth.com/v3"
+    // User-Agent is required by Modrinth — requests without it may be blocked
+    private let userAgent = "itamio/ModrinthDashboard/1.0 (github.com/Sekai0NI0itamio/ModCompiler)"
 
     var token: String = ""
 
@@ -16,18 +20,23 @@ actor ModrinthAPI {
     func fetchUserProjects(username: String) async throws -> [ModrinthProject] {
         let url = URL(string: "\(v2)/user/\(username)/projects")!
         let data = try await get(url: url)
-        return try JSONDecoder().decode([ModrinthProject].self, from: data)
+        let decoder = JSONDecoder()
+        return try decoder.decode([ModrinthProject].self, from: data)
     }
 
-    // MARK: - Project Versions (for ghost detection)
+    // MARK: - Project Versions (for ghost/missing detection)
 
     func fetchVersions(projectId: String) async throws -> [ModrinthVersion] {
-        let url = URL(string: "\(v2)/project/\(projectId)/version")!
+        // No filters — fetch ALL versions across all loaders and game versions
+        let encoded = projectId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? projectId
+        let url = URL(string: "\(v2)/project/\(encoded)/version")!
         let data = try await get(url: url)
         return try JSONDecoder().decode([ModrinthVersion].self, from: data)
     }
 
-    // MARK: - Analytics (v3, requires token)
+    // MARK: - Analytics (v3, requires PAT with ANALYTICS_READ + PAYOUTS_READ)
+    // POST /v3/analytics
+    // Returns array of time slices, each slice is array of data points.
 
     func fetchAnalytics(
         projectIds: [String],
@@ -40,57 +49,76 @@ actor ModrinthAPI {
         let fmt = ISO8601DateFormatter()
         fmt.formatOptions = [.withInternetDateTime]
 
+        // The v3 analytics API requires:
+        //   - "project_ids": array of project IDs (top-level field)
+        //   - "time_range": { "start", "end", "resolution" }
+        //   - "return_metrics": { metric_name: { "bucket_by": [...] } }
         let body: [String: Any] = [
+            "project_ids": projectIds,
             "time_range": [
-                "start": fmt.string(from: start),
-                "end":   fmt.string(from: end),
-                "resolution": ["slices": slices]
+                "start":      fmt.string(from: start),
+                "end":        fmt.string(from: end),
+                "resolution": ["slices": min(slices, 1024)]
             ],
             "return_metrics": [
-                "project_views": ["bucket_by": ["project_id"]],
-                "project_downloads": ["bucket_by": ["project_id"]],
-                "project_revenue": ["bucket_by": ["project_id"]]
+                "project_views": [
+                    "bucket_by": ["project_id"]
+                ],
+                "project_downloads": [
+                    "bucket_by": ["project_id"]
+                ],
+                "project_revenue": [
+                    "bucket_by": ["project_id"]
+                ]
             ]
         ]
 
         let url = URL(string: "\(v3)/analytics")!
         let data = try await post(url: url, body: body)
 
-        // Response: array of time slices, each slice is array of data points
-        guard let sliceArray = try JSONSerialization.jsonObject(with: data) as? [[Any]] else {
-            throw APIError.parseError("analytics response not array of arrays")
+        // Response: [[DataPoint]] — outer array = time slices, inner = data points in that slice
+        guard let sliceArray = try? JSONSerialization.jsonObject(with: data) as? [[Any]] else {
+            // Try to decode error message
+            if let errStr = String(data: data, encoding: .utf8) {
+                throw APIError.parseError("analytics: \(errStr.prefix(200))")
+            }
+            throw APIError.parseError("analytics response not [[Any]]")
         }
 
-        // Build one point per slice, summing across all projects
         let sliceCount = sliceArray.count
         guard sliceCount > 0 else { return [] }
 
-        // Compute date for each slice
         let totalSeconds = end.timeIntervalSince(start)
         let sliceDuration = totalSeconds / Double(sliceCount)
 
         var points: [AnalyticsPoint] = []
         for (i, slice) in sliceArray.enumerated() {
-            let sliceDate = start.addingTimeInterval(Double(i) * sliceDuration + sliceDuration / 2)
+            // Date = start of this slice
+            let sliceDate = start.addingTimeInterval(Double(i) * sliceDuration)
             var downloads = 0.0
-            var views = 0.0
-            var revenue = 0.0
+            var views     = 0.0
+            var revenue   = 0.0
 
             for item in slice {
                 guard let dict = item as? [String: Any] else { continue }
                 let kind = dict["metric_kind"] as? String ?? ""
                 switch kind {
                 case "downloads":
-                    downloads += (dict["downloads"] as? Double) ?? Double(dict["downloads"] as? Int ?? 0)
+                    downloads += doubleFrom(dict["downloads"])
                 case "views":
-                    views += (dict["views"] as? Double) ?? Double(dict["views"] as? Int ?? 0)
+                    views += doubleFrom(dict["views"])
                 case "revenue":
-                    if let r = dict["revenue"] as? Double { revenue += r }
-                    else if let r = dict["revenue"] as? String { revenue += Double(r) ?? 0 }
-                default: break
+                    revenue += doubleFrom(dict["revenue"])
+                default:
+                    break
                 }
             }
-            points.append(AnalyticsPoint(date: sliceDate, downloads: downloads, views: views, revenue: revenue))
+            points.append(AnalyticsPoint(
+                date: sliceDate,
+                downloads: downloads,
+                views: views,
+                revenue: revenue
+            ))
         }
         return points
     }
@@ -99,40 +127,62 @@ actor ModrinthAPI {
 
     private func get(url: URL) async throws -> Data {
         var req = URLRequest(url: url)
+        req.httpMethod = "GET"
         req.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        if !token.isEmpty { req.setValue(token, forHTTPHeaderField: "Authorization") }
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        try checkStatus(resp, data: data)
-        return data
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        // Token: bare PAT, no "Bearer" prefix — matches Python scripts exactly
+        if !token.isEmpty {
+            req.setValue(token, forHTTPHeaderField: "Authorization")
+        }
+        return try await perform(req)
     }
 
     private func post(url: URL, body: [String: Any]) async throws -> Data {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
         req.setValue(userAgent, forHTTPHeaderField: "User-Agent")
-        if !token.isEmpty { req.setValue(token, forHTTPHeaderField: "Authorization") }
+        if !token.isEmpty {
+            req.setValue(token, forHTTPHeaderField: "Authorization")
+        }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        try checkStatus(resp, data: data)
-        return data
+        return try await perform(req)
     }
 
-    private func checkStatus(_ response: URLResponse, data: Data) throws {
-        guard let http = response as? HTTPURLResponse else { return }
-        if http.statusCode == 401 { throw APIError.unauthorized }
-        if http.statusCode == 404 { throw APIError.notFound }
-        if http.statusCode == 429 { throw APIError.rateLimited }
-        if http.statusCode >= 400 {
+    private func perform(_ req: URLRequest) async throws -> Data {
+        let (data, response) = try await URLSession.shared.data(for: req)
+        guard let http = response as? HTTPURLResponse else { return data }
+        switch http.statusCode {
+        case 200...299: return data
+        case 401:       throw APIError.unauthorized
+        case 403:       throw APIError.forbidden
+        case 404:       throw APIError.notFound
+        case 429:       throw APIError.rateLimited
+        default:
             let msg = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
-            throw APIError.httpError(http.statusCode, msg)
+            throw APIError.httpError(http.statusCode, String(msg.prefix(300)))
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func doubleFrom(_ val: Any?) -> Double {
+        switch val {
+        case let d as Double:  return d
+        case let i as Int:     return Double(i)
+        case let s as String:  return Double(s) ?? 0
+        default:               return 0
         }
     }
 }
 
+// MARK: - Errors
+
 enum APIError: LocalizedError {
     case noToken
     case unauthorized
+    case forbidden
     case notFound
     case rateLimited
     case parseError(String)
@@ -140,12 +190,20 @@ enum APIError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noToken:          return "No API token set. Add your Modrinth PAT in Settings."
-        case .unauthorized:     return "Invalid or expired API token."
-        case .notFound:         return "Resource not found."
-        case .rateLimited:      return "Rate limited — wait a moment and refresh."
-        case .parseError(let m): return "Parse error: \(m)"
-        case .httpError(let c, let m): return "HTTP \(c): \(m)"
+        case .noToken:
+            return "No API token. Open Settings (⚙️) and add your Modrinth PAT to see analytics."
+        case .unauthorized:
+            return "Invalid or expired API token. Check your PAT in Settings."
+        case .forbidden:
+            return "Token missing required scopes. Needs ANALYTICS_READ + PAYOUTS_READ."
+        case .notFound:
+            return "Resource not found on Modrinth."
+        case .rateLimited:
+            return "Rate limited (300 req/min). Wait a moment and refresh."
+        case .parseError(let m):
+            return "Parse error: \(m)"
+        case .httpError(let c, let m):
+            return "HTTP \(c): \(m)"
         }
     }
 }
