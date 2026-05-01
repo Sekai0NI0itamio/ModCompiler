@@ -245,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         epilog=__doc__,
     )
     parser.add_argument("modrinth_url",   help="Modrinth project URL or slug")
-    parser.add_argument("curseforge_url", help="CurseForge project URL or numeric project ID")
+    parser.add_argument("curseforge_url", help="CurseForge numeric project ID (find it in the right sidebar of your project page under 'Project ID')")
     parser.add_argument(
         "--dry-run", action="store_true",
         help="Pass dry_run=true to the workflow (shows diff, no uploads).",
