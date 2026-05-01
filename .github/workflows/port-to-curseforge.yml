@@ -292,7 +292,10 @@ jobs:
           print(f"  CurseForge MC version entries (uploadable): {len(cf_mc_lookup)}")
           # Spot-check a few versions to confirm correct IDs
           for chk in ["1.8.9", "1.12.2", "1.16.5", "1.17.1", "1.20.1", "1.21.1", "1.21.3", "1.21.9", "26.1", "26.1.2"]:
-              print(f"    {chk} -> {cf_mc_lookup.get(chk, 'NOT FOUND')}")
+              resolved_id = cf_mc_lookup.get(chk)
+              # Also find the typeID for this entry
+              type_id = next((v.get("gameVersionTypeID") for v in cf_game_versions if v["name"] == chk and v["id"] == resolved_id), "?") if resolved_id else "NOT FOUND"
+              print(f"    {chk} -> id={resolved_id}  typeID={type_id}")
           cf_numeric_id = resolve_cf_numeric_id(cf_id)
 
           # NOTE: The /api/projects/{id}/files listing endpoint requires project
