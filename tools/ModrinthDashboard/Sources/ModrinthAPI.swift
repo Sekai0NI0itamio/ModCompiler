@@ -82,18 +82,39 @@ actor ModrinthAPI {
         let totalSeconds = end.timeIntervalSince(start)
         let sliceDuration = totalSeconds / Double(sliceCount)
 
+        // Build a set of requested project IDs for filtering
+        let requestedIds = Set(projectIds)
+
         var points: [AnalyticsPoint] = []
         for (i, slice) in sliceArray.enumerated() {
             let sliceDate = start.addingTimeInterval(Double(i) * sliceDuration)
+
+            // Aggregate per metric across all requested projects in this slice.
+            // Each data point has: source_project, metric_kind, and the value field.
+            // We only sum entries whose source_project is in our requested set.
             var downloads = 0.0, views = 0.0, revenue = 0.0
 
             for item in slice {
                 guard let dict = item as? [String: Any] else { continue }
+
+                // Filter to only our requested projects
+                if let sourceProject = dict["source_project"] as? String,
+                   !requestedIds.isEmpty,
+                   !requestedIds.contains(sourceProject) {
+                    continue
+                }
+
                 switch dict["metric_kind"] as? String ?? "" {
-                case "downloads": downloads += doubleFrom(dict["downloads"])
-                case "views":     views     += doubleFrom(dict["views"])
-                case "revenue":   revenue   += doubleFrom(dict["revenue"])
-                default: break
+                case "downloads":
+                    downloads += doubleFrom(dict["downloads"])
+                case "views":
+                    views     += doubleFrom(dict["views"])
+                case "revenue":
+                    // Revenue is a decimal — Modrinth returns it as a number or string
+                    // representing USD earned in that time slice for that project.
+                    revenue   += doubleFrom(dict["revenue"])
+                default:
+                    break
                 }
             }
             points.append(AnalyticsPoint(date: sliceDate, downloads: downloads, views: views, revenue: revenue))
