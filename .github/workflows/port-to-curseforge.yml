@@ -274,38 +274,25 @@ jobs:
               cf_game_versions = []
 
           # MC-version-only lookup.
-          # We filter by name pattern: real MC versions look like "1.20.1", "1.8.9", "26.1.2"
-          # We explicitly exclude entries whose names look like Java versions ("Java 17"),
-          # environment tags ("Client", "Server"), or other non-MC entries.
-          # The gameVersionTypeID approach is unreliable because CurseForge uses multiple
-          # type IDs for different MC version families (e.g. 1.x uses one type, 26.x another).
+          # typeID 615 = "dependency/compatibility" entries — these look like MC versions
+          # by name (e.g. "1.21.3", "26.1") but are NOT valid for file uploads.
+          # CurseForge returns errorCode 1009 "belongs to an invalid dependency" when used.
+          # The uploadable MC version entries use different typeIDs (e.g. 1, 17, 73247, 77784).
+          # We exclude typeID 615 and also the loader typeID 68441.
+          _INVALID_TYPE_IDS = {615, CF_LOADER_TYPE_ID}
           import re as _re
-          _mc_pattern = _re.compile(r'^\d+\.\d+')  # starts with digits.digits
-          _exclude_names = {"client", "server", "bukkit", "cauldron", "thermos"}
+          _mc_pattern = _re.compile(r'^\d+\.\d+')
           cf_mc_lookup = {
               v["name"]: v["id"]
               for v in cf_game_versions
-              if _mc_pattern.match(v.get("name", ""))
-              and v.get("name", "").lower() not in _exclude_names
+              if v.get("gameVersionTypeID") not in _INVALID_TYPE_IDS
+              and _mc_pattern.match(v.get("name", ""))
               and "snapshot" not in v.get("name", "").lower()
-              and "pre" not in v.get("name", "").lower()
-              and "rc" not in v.get("name", "").lower()
-              and "alpha" not in v.get("name", "").lower()
-              and "beta" not in v.get("name", "").lower()
           }
-          print(f"  CurseForge MC version entries: {len(cf_mc_lookup)}")
-
-          # Debug: show what IDs the failing versions map to
-          # Print all entries whose ID is in the 16100-16200 range (the bad ones)
-          bad_range = {v["name"]: v for v in cf_game_versions if 16100 <= v.get("id", 0) <= 16200}
-          if bad_range:
-              print(f"  DEBUG — game version entries with IDs 16100-16200 ({len(bad_range)} entries):")
-              for name, entry in sorted(bad_range.items()):
-                  print(f"    id={entry['id']}  typeID={entry.get('gameVersionTypeID')}  name={name!r}  slug={entry.get('slug')!r}")
-          # Also show what 1.21.3, 1.21.4 etc. resolve to
-          for test_ver in ["1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "26.1", "26.1.1", "26.1.2"]:
-              resolved = cf_mc_lookup.get(test_ver)
-              print(f"  DEBUG — {test_ver!r} -> {resolved}")
+          print(f"  CurseForge MC version entries (uploadable): {len(cf_mc_lookup)}")
+          # Spot-check a few versions to confirm correct IDs
+          for chk in ["1.8.9", "1.12.2", "1.16.5", "1.17.1", "1.20.1", "1.21.1", "1.21.3", "1.21.9", "26.1", "26.1.2"]:
+              print(f"    {chk} -> {cf_mc_lookup.get(chk, 'NOT FOUND')}")
           cf_numeric_id = resolve_cf_numeric_id(cf_id)
 
           # NOTE: The /api/projects/{id}/files listing endpoint requires project
