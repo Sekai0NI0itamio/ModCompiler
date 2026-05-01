@@ -82,6 +82,10 @@ struct DetailSidebar: View {
                 statBadge("↓ \(formatNum(p.downloads))", color: .green)
                 statBadge("♥ \(p.followers)", color: .pink)
                 statBadge(p.status.capitalized, color: p.status == "approved" ? .green : .orange)
+                if let ms = p.monetization_status {
+                    statBadge(ms == "monetized" ? "💰 Monetised" : "🚫 \(ms.capitalized)",
+                              color: ms == "monetized" ? Color(red: 1.0, green: 0.84, blue: 0.0) : .red)
+                }
                 if let pub = p.publishedDate {
                     statBadge("Since \(yearString(pub))", color: .gray)
                 }

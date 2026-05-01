@@ -76,7 +76,16 @@ struct VersionRangeMap {
     }
 }
 
-// MARK: - Modrinth Project
+// MARK: - Payout Balance (actual real USD from Modrinth payouts API)
+
+struct PayoutBalance {
+    let available: Double          // USD you can withdraw right now
+    let pending: Double            // USD earned but in 30-day hold
+    let withdrawnLifetime: Double  // Total USD ever withdrawn
+    let withdrawnYtd: Double       // USD withdrawn this calendar year
+
+    var totalEarned: Double { available + pending + withdrawnLifetime }
+}
 
 struct ModrinthProject: Identifiable, Decodable {
     let id: String
@@ -91,6 +100,7 @@ struct ModrinthProject: Identifiable, Decodable {
     let game_versions: [String]
     let loaders: [String]
     let status: String
+    let monetization_status: String?   // "monetized", "demonetized", "force-demonetized"
     let color: Int?
     let issues_url: String?
     let source_url: String?
@@ -102,6 +112,16 @@ struct ModrinthProject: Identifiable, Decodable {
 
     var iconURL: URL? { icon_url.flatMap { URL(string: $0) } }
     var publishedDate: Date? { ISO8601DateFormatter().date(from: published) }
+
+    /// True only if the project is publicly visible and eligible for revenue
+    var isMonetized: Bool {
+        status == "approved" && (monetization_status == "monetized" || monetization_status == nil)
+    }
+
+    /// True if the project is publicly visible (approved or archived)
+    var isPublic: Bool {
+        status == "approved" || status == "archived"
+    }
 }
 
 struct DonationURL: Decodable {
@@ -274,15 +294,16 @@ struct CoverageInfo {
 struct InvestmentRecommendation: Identifiable {
     let id = UUID()
     let project: ModrinthProject
-    let score: Double              // 0–100 composite investment score
-    let reason: String             // Primary reason to invest
-    let actions: [String]          // Specific actions to take
+    let score: Double
+    let reason: String
+    let actions: [String]
     let missingVersions: Int
     let aestheticsScore: Double
-    let velocityScore: Double      // Normalised 0–100 vs portfolio max
-    let revenueScore: Double       // Normalised revenue/view score 0–100
-    let revenuePerView: Double     // Raw $/view from API
-    let revenuePerDownload: Double // Raw $/download from API
+    let velocityScore: Double
+    let revenueScore: Double
+    let revenuePerView: Double
+    let revenuePerDownload: Double
+    let hasRealRevenue: Bool   // false = no API revenue data available
 }
 
 // MARK: - Business Metrics

@@ -36,51 +36,79 @@ struct AllProjectsView: View {
     // MARK: - Header
 
     private var portfolioHeader: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(LinearGradient(
-                        colors: [Color(red: 0.1, green: 0.6, blue: 0.4), Color(red: 0.05, green: 0.4, blue: 0.7)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ))
-                Image(systemName: "chart.bar.xaxis")
-                    .font(.system(size: 22))
-                    .foregroundColor(.white)
-            }
-            .frame(width: 44, height: 44)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("All Projects")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
-                Text("\(vm.projects.count) mods · Portfolio overview")
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.4))
-            }
-            Spacer()
-
-            // History refresh buttons
-            VStack(alignment: .trailing, spacing: 4) {
-                Button(action: { Task { await vm.refreshAllHistory() } }) {
-                    Label("Refresh All History", systemImage: "arrow.clockwise")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(green)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(LinearGradient(
+                            colors: [Color(red: 0.1, green: 0.6, blue: 0.4), Color(red: 0.05, green: 0.4, blue: 0.7)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ))
+                    Image(systemName: "chart.bar.xaxis")
+                        .font(.system(size: 22)).foregroundColor(.white)
                 }
-                .buttonStyle(.plain)
-                .help("Re-download last 2 days for all mods")
+                .frame(width: 44, height: 44)
 
-                Button(action: { Task {
-                    await HistoryStore.shared.deleteAll()
-                    await vm.downloadAllHistory()
-                }}) {
-                    Label("Full Re-download", systemImage: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 10))
-                        .foregroundColor(.white.opacity(0.4))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("All Projects")
+                        .font(.system(size: 18, weight: .bold)).foregroundColor(.white)
+                    Text("\(vm.projects.count) mods · Portfolio overview")
+                        .font(.system(size: 11)).foregroundColor(.white.opacity(0.4))
                 }
-                .buttonStyle(.plain)
-                .help("Delete all cached history and re-download everything")
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Button(action: { Task { await vm.refreshAllHistory() } }) {
+                        Label("Refresh History", systemImage: "arrow.clockwise")
+                            .font(.system(size: 10, weight: .medium)).foregroundColor(green)
+                    }
+                    .buttonStyle(.plain)
+                    Button(action: { Task {
+                        await HistoryStore.shared.deleteAll()
+                        await vm.downloadAllHistory()
+                    }}) {
+                        Label("Full Re-download", systemImage: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 10)).foregroundColor(.white.opacity(0.4))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // Real payout balance from Modrinth payouts API
+            if let bal = vm.payoutBalance {
+                payoutBalanceCard(bal)
             }
         }
+    }
+
+    private func payoutBalanceCard(_ bal: PayoutBalance) -> some View {
+        HStack(spacing: 0) {
+            balanceTile("Available",  value: bal.available,         color: green,  note: "Ready to withdraw")
+            Divider().background(Color.white.opacity(0.08)).frame(height: 40)
+            balanceTile("Pending",    value: bal.pending,           color: .orange, note: "In 30-day hold")
+            Divider().background(Color.white.opacity(0.08)).frame(height: 40)
+            balanceTile("Withdrawn",  value: bal.withdrawnLifetime, color: gray,   note: "All time")
+            Divider().background(Color.white.opacity(0.08)).frame(height: 40)
+            balanceTile("Total Earned", value: bal.totalEarned,     color: purple, note: "Available + Pending + Withdrawn")
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(white: 0.1))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(green.opacity(0.2), lineWidth: 1))
+        )
+    }
+
+    private func balanceTile(_ label: String, value: Double, color: Color, note: String) -> some View {
+        VStack(alignment: .center, spacing: 2) {
+            Text(label)
+                .font(.system(size: 9, weight: .medium)).foregroundColor(.white.opacity(0.4))
+            Text(String(format: "$%.2f", value))
+                .font(.system(size: 16, weight: .black, design: .rounded)).foregroundColor(color)
+            Text(note)
+                .font(.system(size: 8)).foregroundColor(.white.opacity(0.25))
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Loading
@@ -132,19 +160,30 @@ struct AllProjectsView: View {
 
     private func portfolioStats(_ m: BusinessMetrics) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Portfolio Metrics")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white.opacity(0.5))
+            HStack {
+                Text("Portfolio Metrics")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.5))
+                Spacer()
+                // Clarify that analytics revenue ≠ payout balance
+                if vm.payoutBalance != nil {
+                    Text("Revenue figures are Modrinth's internal accounting units — see balance above for actual USD")
+                        .font(.system(size: 9))
+                        .foregroundColor(.white.opacity(0.25))
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 220)
+                }
+            }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                statCard("Total Downloads", value: m.totalDownloads,          format: .number,       color: green)
-                statCard("Total Views",     value: m.totalViews,              format: .number,       color: gray)
-                statCard("Total Revenue",   value: m.totalRevenue,            format: .currency,     color: purple)
-                statCard("$/view",          value: m.revenuePerView,          format: .microCurrency, color: Color(red: 1.0, green: 0.84, blue: 0.0))
-                statCard("Today Downloads", value: m.todayDownloads,          format: .number,       color: .blue)
-                statCard("7d Velocity",     value: m.downloadVelocity7d,      format: .number,       color: green)
-                statCard("MoM Growth",      value: m.downloadGrowthRate,      format: .percent,      color: growthColor(m.downloadGrowthRate))
-                statCard("Conversion",      value: m.viewToDownloadConversion, format: .percent,     color: .orange)
+                statCard("Total Downloads", value: m.totalDownloads,           format: .number,        color: green)
+                statCard("Total Views",     value: m.totalViews,               format: .number,        color: gray)
+                statCard("Today Downloads", value: m.todayDownloads,           format: .number,        color: .blue)
+                statCard("7d Velocity",     value: m.downloadVelocity7d,       format: .number,        color: green)
+                statCard("MoM Growth",      value: m.downloadGrowthRate,       format: .percent,       color: growthColor(m.downloadGrowthRate))
+                statCard("Conversion",      value: m.viewToDownloadConversion, format: .percent,       color: .orange)
+                statCard("30d Velocity",    value: m.downloadVelocity30d,      format: .number,        color: green.opacity(0.7))
+                statCard("$/view (API)",    value: m.revenuePerView,           format: .microCurrency, color: purple)
             }
         }
     }
@@ -252,21 +291,12 @@ struct InvestmentCard: View {
                 }
             }
 
-            // Revenue per view — the key monetisation signal
-            if rec.revenuePerView > 0 || rec.revenuePerDownload > 0 {
+            // Revenue per view — only show when we have real API revenue data
+            if rec.hasRealRevenue {
                 HStack(spacing: 12) {
-                    revenueTag(
-                        label: "$/view",
-                        value: rec.revenuePerView,
-                        threshold: (low: 0.00001, high: 0.0001)
-                    )
-                    revenueTag(
-                        label: "$/download",
-                        value: rec.revenuePerDownload,
-                        threshold: (low: 0.0001, high: 0.001)
-                    )
+                    revenueTag(label: "$/view",     value: rec.revenuePerView,     threshold: (low: 0.00001, high: 0.0001))
+                    revenueTag(label: "$/download", value: rec.revenuePerDownload, threshold: (low: 0.0001,  high: 0.001))
                     Spacer()
-                    // Monetisation quality label
                     if rec.revenuePerView > 0.0001 {
                         Text("💰 High-value traffic")
                             .font(.system(size: 9, weight: .semibold))
@@ -275,7 +305,7 @@ struct InvestmentCard: View {
                         Text("📈 Monetising")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(Color(red: 0.95, green: 0.6, blue: 0.1))
-                    } else if rec.revenuePerView > 0 {
+                    } else {
                         Text("💡 Low monetisation")
                             .font(.system(size: 9))
                             .foregroundColor(.white.opacity(0.4))
@@ -283,14 +313,28 @@ struct InvestmentCard: View {
                 }
                 .padding(8)
                 .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.07)))
+            } else {
+                // No revenue data — explain why
+                HStack(spacing: 6) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 9)).foregroundColor(.white.opacity(0.3))
+                    Text(rec.project.isMonetized
+                         ? "No revenue data yet — add API token with PAYOUTS_READ scope"
+                         : "Not monetised — ranked by velocity and coverage only")
+                        .font(.system(size: 9)).foregroundColor(.white.opacity(0.3))
+                }
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.07)))
             }
 
             // Score bars
             HStack(spacing: 8) {
-                scorePill("$/view",     value: rec.revenueScore,   color: Color(red: 0.9, green: 0.8, blue: 0.2))
-                scorePill("Velocity",   value: rec.velocityScore,  color: green)
-                scorePill("Coverage ↑", value: Double(rec.missingVersions) / 68.0 * 100, color: orange)
-                scorePill("Page ↑",     value: 100 - rec.aestheticsScore, color: purple)
+                if rec.hasRealRevenue {
+                    scorePill("$/view", value: rec.revenueScore, color: Color(red: 0.9, green: 0.8, blue: 0.2))
+                }
+                scorePill("Velocity",   value: rec.velocityScore,                              color: green)
+                scorePill("Coverage ↑", value: Double(rec.missingVersions) / 68.0 * 100,      color: orange)
+                scorePill("Page ↑",     value: 100 - rec.aestheticsScore,                     color: purple)
             }
 
             // Action items

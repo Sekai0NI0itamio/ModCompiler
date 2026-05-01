@@ -122,7 +122,37 @@ actor ModrinthAPI {
         return points
     }
 
-    // MARK: - HTTP
+    // MARK: - Payout balance (actual withdrawable USD from Modrinth)
+    // GET /v3/payouts/balance — requires PAYOUTS_READ scope
+    // Returns: { "available": "125.50", "pending": "75.25", "withdrawn_lifetime": "450.00", ... }
+
+    func fetchPayoutBalance() async throws -> PayoutBalance {
+        guard !token.isEmpty else { throw APIError.noToken }
+        let url = URL(string: "\(v3)/payouts/balance")!
+        let data = try await get(url: url)
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw APIError.parseError("payout balance response not object")
+        }
+        let available         = doubleFromString(json["available"])
+        let pending           = doubleFromString(json["pending"])
+        let withdrawnLifetime = doubleFromString(json["withdrawn_lifetime"])
+        let withdrawnYtd      = doubleFromString(json["withdrawn_ytd"])
+        return PayoutBalance(
+            available: available,
+            pending: pending,
+            withdrawnLifetime: withdrawnLifetime,
+            withdrawnYtd: withdrawnYtd
+        )
+    }
+
+    private func doubleFromString(_ val: Any?) -> Double {
+        switch val {
+        case let s as String: return Double(s) ?? 0
+        case let d as Double: return d
+        case let i as Int:    return Double(i)
+        default:              return 0
+        }
+    }
 
     private func get(url: URL) async throws -> Data {
         var req = URLRequest(url: url)

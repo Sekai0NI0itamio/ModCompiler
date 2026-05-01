@@ -33,6 +33,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var recommendations: [InvestmentRecommendation] = []
     @Published var coverageByProject: [String: CoverageInfo] = [:]
     @Published var aestheticsByProject: [String: AestheticsScore] = [:]
+    @Published var payoutBalance: PayoutBalance?   // real USD from Modrinth payouts API
 
     // Portfolio stats for relative KPI scoring
     @Published var bestModDownloads: Double = 1
@@ -54,9 +55,8 @@ final class DashboardViewModel: ObservableObject {
         await ModrinthAPI.shared.setToken(settings.apiToken)
 
         do {
-            // Fetch with full body for aesthetics scoring
             var fetched = try await ModrinthAPI.shared.fetchUserProjects(username: settings.username)
-            // Fetch full project details (includes body, gallery, links) for each
+            // Fetch full project details (body, gallery, links, monetization_status)
             fetched = await withTaskGroup(of: ModrinthProject?.self) { group in
                 for p in fetched {
                     group.addTask {
@@ -67,19 +67,28 @@ final class DashboardViewModel: ObservableObject {
                 for await p in group { if let p { result.append(p) } }
                 return result
             }
-            projects = fetched.sorted { $0.downloads > $1.downloads }
+            // Only show public projects in the list (approved or archived)
+            // Rejected/draft/processing projects are excluded
+            projects = fetched
+                .filter { $0.isPublic }
+                .sorted { $0.downloads > $1.downloads }
 
             let dl = projects.map { Double($0.downloads) }
             avgModDownloads  = dl.isEmpty ? 1 : dl.reduce(0, +) / Double(dl.count)
             bestModDownloads = dl.max() ?? 1
 
-            // Score aesthetics for all projects
             for p in projects {
                 aestheticsByProject[p.id] = AestheticsScore.evaluate(p)
             }
         } catch {
             errorMessage = error.localizedDescription
         }
+
+        // Fetch real payout balance (actual USD) — non-fatal if it fails
+        if !settings.apiToken.isEmpty {
+            payoutBalance = try? await ModrinthAPI.shared.fetchPayoutBalance()
+        }
+
         isLoadingList = false
     }
 
@@ -326,122 +335,139 @@ final class DashboardViewModel: ObservableObject {
     func buildRecommendations() {
         guard !projects.isEmpty else { return }
 
-        // First pass: compute per-mod metrics to find portfolio maximums for normalisation
+        // Only score public, approved projects — rejected/draft/archived don't earn revenue
+        let scorableProjects = projects.filter { $0.status == "approved" }
+        guard !scorableProjects.isEmpty else { return }
+
         struct ModStats {
             let project: ModrinthProject
-            let metrics: BusinessMetrics
             let missingCount: Int
             let aestheticsScore: Double
-            let revenuePerView: Double      // $ earned per page view — key monetisation signal
-            let revenuePerDownload: Double  // $ earned per download
+            // Revenue metrics — only valid if project is monetized AND has real API data
+            let revenuePerView: Double
+            let revenuePerDownload: Double
+            let totalRevenue: Double
+            let hasRealRevenue: Bool   // false = no API data, revenue fields are 0
             let velocity7d: Double
+            let velocity30d: Double
         }
 
         var allStats: [ModStats] = []
 
-        for project in projects {
+        for project in scorableProjects {
             let cov = coverageByProject[project.id]
             let aes = aestheticsByProject[project.id] ?? AestheticsScore.evaluate(project)
             let missingCount = cov?.missing.count ?? max(0, manifestTargets.count - project.game_versions.count)
 
-            let pts: [AnalyticsPoint]
-            if let history = HistoryStore.shared.loadSync(projectId: project.id),
-               !history.points.isEmpty {
-                pts = history.points
-            } else {
-                pts = syntheticPoints(for: project)
-            }
+            let history = HistoryStore.shared.loadSync(projectId: project.id)
+            let hasRealData = !(history?.points.isEmpty ?? true)
+            let pts: [AnalyticsPoint] = hasRealData ? (history?.points ?? []) : syntheticPoints(for: project)
 
             let totalDl  = max(pts.reduce(0) { $0 + $1.downloads }, Double(project.downloads))
             let totalV   = pts.reduce(0) { $0 + $1.views }
-            let totalRev = pts.reduce(0) { $0 + $1.revenue }
+            // Only count revenue if project is monetized AND we have real API data
+            // Synthetic points always have revenue=0, so this is safe
+            let totalRev = (project.isMonetized && hasRealData)
+                ? pts.reduce(0) { $0 + $1.revenue }
+                : 0.0
 
-            let m = BusinessMetrics(
-                totalDownloads: totalDl,
-                totalViews:     totalV,
-                totalRevenue:   totalRev,
-                dailyDownloads: pts
-            )
+            let velocity7d  = pts.suffix(7).reduce(0)  { $0 + $1.downloads } / max(Double(min(pts.count, 7)), 1)
+            let velocity30d = pts.suffix(30).reduce(0) { $0 + $1.downloads } / max(Double(min(pts.count, 30)), 1)
 
-            // Revenue per view: how much each page view earns.
-            // This is the most important signal — a high $/view mod attracts
-            // high-value traffic that Modrinth's ad system monetises well.
-            let revenuePerView     = totalV > 0 ? totalRev / totalV : 0
-            let revenuePerDownload = totalDl > 0 ? totalRev / totalDl : 0
+            // Revenue per view: only meaningful if we have real revenue data
+            let revenuePerView     = (totalV > 0 && totalRev > 0) ? totalRev / totalV : 0
+            let revenuePerDownload = (totalDl > 0 && totalRev > 0) ? totalRev / totalDl : 0
 
             allStats.append(ModStats(
                 project: project,
-                metrics: m,
                 missingCount: missingCount,
                 aestheticsScore: aes.score,
                 revenuePerView: revenuePerView,
                 revenuePerDownload: revenuePerDownload,
-                velocity7d: m.downloadVelocity7d
+                totalRevenue: totalRev,
+                hasRealRevenue: project.isMonetized && hasRealData && totalRev > 0,
+                velocity7d: velocity7d,
+                velocity30d: velocity30d
             ))
         }
 
-        // Portfolio maximums for normalisation (avoid division by zero)
-        let maxRevenuePerView     = allStats.map { $0.revenuePerView }.max() ?? 1
-        let maxRevenuePerDownload = allStats.map { $0.revenuePerDownload }.max() ?? 1
-        let maxVelocity           = allStats.map { $0.velocity7d }.max() ?? 1
+        // Normalise against portfolio maximums
+        let maxRPV      = allStats.map { $0.revenuePerView }.max() ?? 0
+        let maxRPD      = allStats.map { $0.revenuePerDownload }.max() ?? 0
+        let maxVelocity = allStats.map { $0.velocity7d }.max() ?? 1
 
         var recs: [InvestmentRecommendation] = []
 
         for stats in allStats {
             let aes = aestheticsByProject[stats.project.id] ?? AestheticsScore.evaluate(stats.project)
 
-            // Normalised scores 0–100
-            // Revenue per view (40%): the single most important signal.
-            // A mod with high $/view is attracting premium traffic — worth investing in.
-            let revenuePerViewScore = maxRevenuePerView > 0
-                ? min(stats.revenuePerView / maxRevenuePerView * 100, 100)
-                : 0
+            // Revenue per view score (40%) — only non-zero if we have real revenue data
+            let revenuePerViewScore: Double
+            if maxRPV > 0 && stats.revenuePerView > 0 {
+                revenuePerViewScore = min(stats.revenuePerView / maxRPV * 100, 100)
+            } else {
+                revenuePerViewScore = 0
+            }
 
-            // Revenue per download (15%): secondary monetisation signal
-            let revenuePerDlScore = maxRevenuePerDownload > 0
-                ? min(stats.revenuePerDownload / maxRevenuePerDownload * 100, 100)
-                : 0
+            // Revenue per download score (15%)
+            let revenuePerDlScore: Double
+            if maxRPD > 0 && stats.revenuePerDownload > 0 {
+                revenuePerDlScore = min(stats.revenuePerDownload / maxRPD * 100, 100)
+            } else {
+                revenuePerDlScore = 0
+            }
 
-            // Velocity (25%): current momentum — high velocity = audience is active
+            // Velocity score (25%)
             let velocityScore = maxVelocity > 0
                 ? min(stats.velocity7d / maxVelocity * 100, 100)
                 : 0
 
-            // Coverage gap (15%): missing versions = untapped audience
+            // Coverage gap score (15%) — missing versions = untapped audience
             let coverageGapScore = Double(stats.missingCount) / Double(max(manifestTargets.count, 1)) * 100
 
-            // Aesthetics gap (5%): poor page = easy wins (lower weight — less impactful than revenue)
+            // Aesthetics gap score (5%)
             let aestheticsGapScore = 100 - stats.aestheticsScore
 
-            // Composite investment score
-            // Weights: revenue/view 40%, velocity 25%, coverage gap 15%, revenue/dl 15%, aesthetics 5%
-            let investScore = (revenuePerViewScore  * 0.40)
-                            + (velocityScore         * 0.25)
-                            + (coverageGapScore      * 0.15)
-                            + (revenuePerDlScore     * 0.15)
-                            + (aestheticsGapScore    * 0.05)
+            // When no revenue data is available, shift weight to velocity + coverage
+            // so mods without API data are still ranked meaningfully
+            let investScore: Double
+            if stats.hasRealRevenue {
+                // Full formula with revenue signals
+                investScore = (revenuePerViewScore * 0.40)
+                            + (velocityScore        * 0.25)
+                            + (coverageGapScore     * 0.15)
+                            + (revenuePerDlScore    * 0.15)
+                            + (aestheticsGapScore   * 0.05)
+            } else {
+                // No revenue data — weight velocity and coverage more heavily
+                investScore = (velocityScore      * 0.50)
+                            + (coverageGapScore   * 0.30)
+                            + (aestheticsGapScore * 0.20)
+            }
 
-            // Build action list
+            // Actions
             var actions: [String] = []
             if stats.missingCount > 0 {
-                actions.append("Port to \(stats.missingCount) missing version\(stats.missingCount == 1 ? "" : "s") — more downloads = more revenue")
+                actions.append("Port to \(stats.missingCount) missing version\(stats.missingCount == 1 ? "" : "s")")
             }
-            if stats.revenuePerView > 0 {
-                actions.append(String(format: "High value: $%.5f/view — prioritise traffic growth", stats.revenuePerView))
+            if stats.hasRealRevenue && stats.revenuePerView > 0 {
+                actions.append(String(format: "High-value traffic ($%.6f/view) — grow audience", stats.revenuePerView))
+            } else if !stats.project.isMonetized {
+                actions.append("Project is demonetised — check Modrinth monetisation settings")
             }
             for check in aes.missing.prefix(2) {
                 actions.append("Add \(check.name.lowercased()) to improve discoverability")
             }
-            if stats.metrics.downloadVelocity7d < stats.metrics.downloadVelocity30d * 0.7 {
+            if stats.velocity7d < stats.velocity30d * 0.7 && stats.velocity30d > 0 {
                 actions.append("Momentum declining — post an update or announcement")
             }
 
-            // Primary reason — lead with the most impactful signal
+            // Primary reason
             let reason: String
-            if revenuePerViewScore > 70 {
-                reason = String(format: "$%.5f/view — top earning mod, maximise its reach", stats.revenuePerView)
-            } else if revenuePerViewScore > 30 {
-                reason = String(format: "$%.5f/view — solid earner, more versions = more revenue", stats.revenuePerView)
+            if stats.hasRealRevenue && revenuePerViewScore > 60 {
+                reason = String(format: "Top earner: $%.6f/view — maximise its reach", stats.revenuePerView)
+            } else if stats.hasRealRevenue && revenuePerViewScore > 20 {
+                reason = String(format: "Earns $%.6f/view — more versions = more revenue", stats.revenuePerView)
             } else if velocityScore > 70 {
                 reason = String(format: "%.0f dl/day momentum — capitalise with more versions", stats.velocity7d)
             } else if coverageGapScore > 50 {
@@ -449,7 +475,7 @@ final class DashboardViewModel: ObservableObject {
             } else if aestheticsGapScore > 40 {
                 reason = String(format: "Page quality %.0f%% — easy wins to boost discoverability", stats.aestheticsScore)
             } else {
-                reason = "Balanced opportunity across revenue, versions, and page quality"
+                reason = "Balanced opportunity across versions and page quality"
             }
 
             recs.append(InvestmentRecommendation(
@@ -462,7 +488,8 @@ final class DashboardViewModel: ObservableObject {
                 velocityScore: velocityScore,
                 revenueScore: revenuePerViewScore,
                 revenuePerView: stats.revenuePerView,
-                revenuePerDownload: stats.revenuePerDownload
+                revenuePerDownload: stats.revenuePerDownload,
+                hasRealRevenue: stats.hasRealRevenue
             ))
         }
 
