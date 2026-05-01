@@ -189,47 +189,6 @@ jobs:
                           continue
                       sys.exit(f"[ERROR] Download failed {url}: {e.reason}")
 
-          def curseforge_upload(project_id: str, metadata: dict, jar_path: Path) -> int:
-              boundary = f"cfport-{uuid.uuid4().hex}"
-              body = bytearray()
-
-              meta_bytes = json.dumps(metadata).encode("utf-8")
-              body += f"--{boundary}\r\n".encode()
-              body += b'Content-Disposition: form-data; name="metadata"\r\n'
-              body += b"Content-Type: application/json\r\n\r\n"
-              body += meta_bytes + b"\r\n"
-
-              jar_bytes = jar_path.read_bytes()
-              body += f"--{boundary}\r\n".encode()
-              body += f'Content-Disposition: form-data; name="file"; filename="{jar_path.name}"\r\n'.encode()
-              body += b"Content-Type: application/java-archive\r\n\r\n"
-              body += jar_bytes + b"\r\n"
-              body += f"--{boundary}--\r\n".encode()
-
-              url = f"{CURSEFORGE_API}/api/projects/{project_id}/upload-file"
-              headers = {
-                  "User-Agent": USER_AGENT,
-                  "X-Api-Token": CURSEFORGE_TOKEN,
-                  "Content-Type": f"multipart/form-data; boundary={boundary}",
-              }
-              req = urllib.request.Request(url, data=bytes(body), method="POST", headers=headers)
-              for attempt in range(1, 4):
-                  try:
-                      with urllib.request.urlopen(req, timeout=120) as r:
-                          return int(json.loads(r.read().decode("utf-8", errors="replace"))["id"])
-                  except urllib.error.HTTPError as e:
-                      body_text = e.read().decode("utf-8", errors="replace")[:500]
-                      if e.code in {429, 500, 502, 503, 504} and attempt < 3:
-                          time.sleep(5 * attempt)
-                          continue
-                      sys.exit(f"[ERROR] CurseForge upload HTTP {e.code}: {body_text}")
-                  except urllib.error.URLError as e:
-                      if attempt < 3:
-                          time.sleep(5)
-                          continue
-                      sys.exit(f"[ERROR] Upload network error: {e.reason}")
-              sys.exit("[ERROR] Upload failed after retries.")
-
           # ----------------------------------------------------------------
           # Helpers: version logic
           # ----------------------------------------------------------------
@@ -251,26 +210,6 @@ jobs:
                           if key not in best or pub > best[key].get("date_published", ""):
                               best[key] = v
               return best
-
-          def is_loader(name: str) -> bool:
-              return name.lower() in {l.lower() for l in KNOWN_LOADERS}
-
-          def cf_combos_present(cf_files: list, cf_mc_version_names: set) -> set:
-              """
-              Build (mc_version_name, loader_lowercase) set from CurseForge file list.
-              Uses the known MC version names to distinguish MC versions from loaders.
-              """
-              combos = set()
-              for f in cf_files:
-                  gvs: list = f.get("gameVersions", [])
-                  mc_versions = [g for g in gvs if g in cf_mc_version_names]
-                  loaders     = [g.lower() for g in gvs if g.lower() in CF_LOADER_IDS]
-                  if not loaders:
-                      loaders = ["unknown"]
-                  for mc in mc_versions:
-                      for loader in loaders:
-                          combos.add((mc, loader))
-              return combos
 
           def resolve_cf_version_ids(mc_version: str, loader: str, cf_mc_lookup: dict) -> list:
               """
@@ -327,55 +266,41 @@ jobs:
           print(f"  Unique (mc_version, loader) combos: {len(mr_latest)}")
 
           # ----------------------------------------------------------------
-          # Step 2: Fetch CurseForge
+          # Step 2: Fetch CurseForge game version IDs (public, no auth needed)
           # ----------------------------------------------------------------
-          print("\n[2/4] Fetching CurseForge game versions and existing files...")
+          print("\n[2/4] Fetching CurseForge game version list...")
           cf_game_versions = curseforge_get("/api/game/versions")
           if not isinstance(cf_game_versions, list):
               cf_game_versions = []
 
-          # Build MC-version-only lookup (exclude loader entries which have their own fixed IDs)
-          # Loader entries have gameVersionTypeID == CF_LOADER_TYPE_ID (68441)
+          # MC-version-only lookup — exclude loader entries (gameVersionTypeID 68441)
           cf_mc_lookup = {
               v["name"]: v["id"]
               for v in cf_game_versions
               if v.get("gameVersionTypeID") != CF_LOADER_TYPE_ID
           }
-          cf_mc_version_names = set(cf_mc_lookup.keys())
           print(f"  CurseForge MC version entries: {len(cf_mc_lookup)}")
 
-          # Resolve slug -> numeric ID (required by the upload and files endpoints)
           cf_numeric_id = resolve_cf_numeric_id(cf_id)
 
-          cf_files = curseforge_get(f"/api/projects/{cf_numeric_id}/files")
-          if not isinstance(cf_files, list):
-              cf_files = []
-          cf_present = cf_combos_present(cf_files, cf_mc_version_names)
-          print(f"  Existing CurseForge files: {len(cf_files)}")
-          print(f"  Unique (mc_version, loader) combos on CurseForge: {len(cf_present)}")
+          # NOTE: The /api/projects/{id}/files listing endpoint requires project
+          # ownership and returns 403 for tokens that can upload but not list.
+          # We skip the diff check entirely and just attempt to upload all versions
+          # from Modrinth. CurseForge will return a clear error if a file already
+          # exists (errorCode 1009), which we treat as "already present, skip".
+
           # ----------------------------------------------------------------
-          # Step 3: Diff
+          # Step 3: Build upload list (all Modrinth combos)
           # ----------------------------------------------------------------
-          print("\n[3/4] Computing diff...")
-          missing = []
-          for (mc, loader), version in sorted(mr_latest.items()):
-              cf_loader = LOADER_MAP.get(loader, loader.capitalize()).lower()
-              if (mc, cf_loader) not in cf_present and (mc, loader) not in cf_present:
-                  missing.append(((mc, loader), version))
+          print("\n[3/4] Building upload list from Modrinth versions...")
+          to_upload = sorted(mr_latest.items())
 
-          missing.sort(key=lambda x: (x[0][0], x[0][1]))
-
-          if not missing:
-              print("\n  All Modrinth versions are already present on CurseForge. Nothing to do!")
-              sys.exit(0)
-
-          # Print table
           print(f"\n  {'='*68}")
-          print(f"  Versions on Modrinth missing from CurseForge: {len(missing)}")
+          print(f"  Versions to upload to CurseForge: {len(to_upload)}")
           print(f"  {'-'*68}")
           print(f"  {'#':<4} {'MC Version':<14} {'Loader':<12} {'Version #':<20} {'Type':<10} {'Published'}")
           print(f"  {'-'*68}")
-          for i, ((mc, loader), v) in enumerate(missing, 1):
+          for i, ((mc, loader), v) in enumerate(to_upload, 1):
               vnum  = v.get("version_number", "?")
               vtype = v.get("version_type", "release")
               pub   = v.get("date_published", "")[:19].replace("T", " ")
@@ -391,13 +316,14 @@ jobs:
           # ----------------------------------------------------------------
           # Step 4: Upload
           # ----------------------------------------------------------------
-          print(f"[4/4] Uploading {len(missing)} version(s) to CurseForge...\n")
-          success = 0
-          failed  = 0
+          print(f"[4/4] Uploading {len(to_upload)} version(s) to CurseForge...\n")
+          success  = 0
+          skipped  = 0
+          failed   = 0
 
           with tempfile.TemporaryDirectory(prefix="cf_port_") as tmpdir:
               tmp = Path(tmpdir)
-              for i, ((mc, loader), version) in enumerate(missing, 1):
+              for i, ((mc, loader), version) in enumerate(to_upload, 1):
                   vnum      = version.get("version_number", "?")
                   vname     = version.get("name") or f"{mr_project.get('title', '')} {vnum}"
                   vtype     = RELEASE_TYPE_MAP.get(version.get("version_type", "release"), "release")
@@ -405,21 +331,21 @@ jobs:
 
                   pf = primary_file(version)
                   if not pf:
-                      print(f"  [{i}/{len(missing)}] SKIP {mc}/{loader} {vnum} — no file on Modrinth.")
-                      failed += 1
+                      print(f"  [{i}/{len(to_upload)}] SKIP {mc}/{loader} {vnum} — no file on Modrinth.")
+                      skipped += 1
                       continue
 
                   filename     = pf.get("filename", f"mod-{vnum}.jar")
                   download_url = pf.get("url", "")
 
-                  print(f"  [{i}/{len(missing)}] {mc} / {loader} — {vnum} ({vtype})")
+                  print(f"  [{i}/{len(to_upload)}] {mc} / {loader} — {vnum} ({vtype})")
                   print(f"    File     : {filename}")
                   print(f"    Changelog: {changelog[:100].strip()!r}{'...' if len(changelog) > 100 else ''}")
 
                   cf_version_ids = resolve_cf_version_ids(mc, loader, cf_mc_lookup)
                   if not cf_version_ids:
                       print(f"    [SKIP] Could not resolve CurseForge version IDs for {mc}/{loader}.")
-                      failed += 1
+                      skipped += 1
                       continue
                   print(f"    CF IDs   : {cf_version_ids}")
 
@@ -437,15 +363,74 @@ jobs:
                   }
 
                   print(f"    Uploading to CurseForge...")
-                  new_id = curseforge_upload(cf_numeric_id, cf_metadata, jar_path)
-                  print(f"    ✓ Uploaded — CurseForge file ID: {new_id}")
-                  success += 1
+                  # curseforge_upload returns (file_id, error_code, error_msg)
+                  # errorCode 1009 = file already exists — treat as success
+                  url = f"{CURSEFORGE_API}/api/projects/{cf_numeric_id}/upload-file"
+                  boundary = f"cfport-{uuid.uuid4().hex}"
+                  body = bytearray()
+                  meta_bytes = json.dumps(cf_metadata).encode("utf-8")
+                  body += f"--{boundary}\r\n".encode()
+                  body += b'Content-Disposition: form-data; name="metadata"\r\n'
+                  body += b"Content-Type: application/json\r\n\r\n"
+                  body += meta_bytes + b"\r\n"
+                  jar_bytes = jar_path.read_bytes()
+                  body += f"--{boundary}\r\n".encode()
+                  body += f'Content-Disposition: form-data; name="file"; filename="{jar_path.name}"\r\n'.encode()
+                  body += b"Content-Type: application/java-archive\r\n\r\n"
+                  body += jar_bytes + b"\r\n"
+                  body += f"--{boundary}--\r\n".encode()
+                  headers = {
+                      "User-Agent": USER_AGENT,
+                      "X-Api-Token": CURSEFORGE_TOKEN,
+                      "Content-Type": f"multipart/form-data; boundary={boundary}",
+                  }
+                  req = urllib.request.Request(url, data=bytes(body), method="POST", headers=headers)
+                  upload_ok = False
+                  for attempt in range(1, 4):
+                      try:
+                          with urllib.request.urlopen(req, timeout=120) as r:
+                              result = json.loads(r.read().decode("utf-8", errors="replace"))
+                              print(f"    ✓ Uploaded — CurseForge file ID: {result['id']}")
+                              success += 1
+                              upload_ok = True
+                              break
+                      except urllib.error.HTTPError as e:
+                          body_text = e.read().decode("utf-8", errors="replace")
+                          try:
+                              err = json.loads(body_text)
+                              err_code = err.get("errorCode")
+                              err_msg  = err.get("errorMessage", body_text[:200])
+                          except Exception:
+                              err_code, err_msg = None, body_text[:200]
+                          if err_code == 1009:
+                              print(f"    ~ Already exists on CurseForge (skipping).")
+                              skipped += 1
+                              upload_ok = True
+                              break
+                          if e.code in {429, 500, 502, 503, 504} and attempt < 3:
+                              time.sleep(5 * attempt)
+                              continue
+                          print(f"    ✗ Upload failed HTTP {e.code} errorCode={err_code}: {err_msg}")
+                          failed += 1
+                          upload_ok = True
+                          break
+                      except urllib.error.URLError as e:
+                          if attempt < 3:
+                              time.sleep(5)
+                              continue
+                          print(f"    ✗ Upload network error: {e.reason}")
+                          failed += 1
+                          upload_ok = True
+                          break
+                  if not upload_ok:
+                      print(f"    ✗ Upload failed after retries.")
+                      failed += 1
 
-                  if i < len(missing):
+                  if i < len(to_upload):
                       time.sleep(1)
 
           print(f"\n{'='*70}")
-          print(f"  Done.  {success} uploaded,  {failed} failed/skipped.")
+          print(f"  Done.  {success} uploaded,  {skipped} skipped (already exists / no file),  {failed} failed.")
           print(f"{'='*70}\n")
 
           if failed:
