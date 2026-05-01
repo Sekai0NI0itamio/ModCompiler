@@ -1,0 +1,113 @@
+name: Build ModrinthFetcher macOS App
+
+# ---------------------------------------------------------------------------
+# Builds the ModrinthFetcher SwiftUI app on a macOS GitHub Actions runner
+# and uploads the .app bundle as a downloadable artifact.
+#
+# To run:
+#   Actions → Build ModrinthFetcher macOS App → Run workflow
+#
+# Artifact: "ModrinthFetcher-app"
+#   Contains ModrinthFetcher.app — drag it to /Applications or double-click.
+#   macOS will ask you to allow it on first launch (right-click → Open).
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ModrinthFetcher/**"
+      - ".github/workflows/build-modrinth-fetcher-app.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build macOS app
+    runs-on: macos-15        # Apple Silicon runner, Xcode 16
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Show available Xcode versions ────────────────────────────────────
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # ── Build ────────────────────────────────────────────────────────────
+      - name: Build ModrinthFetcher
+        run: |
+          xcodebuild \
+            -project ModrinthFetcher/ModrinthFetcher.xcodeproj \
+            -scheme ModrinthFetcher \
+            -configuration Release \
+            -destination "platform=macOS,arch=arm64" \
+            -derivedDataPath /tmp/DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            | xcpretty || true
+
+          # xcpretty may not be installed — fall back to raw output
+          if [ ! -d /tmp/DerivedData/Build/Products/Release/ModrinthFetcher.app ]; then
+            echo "xcpretty path failed, retrying with raw output..."
+            xcodebuild \
+              -project ModrinthFetcher/ModrinthFetcher.xcodeproj \
+              -scheme ModrinthFetcher \
+              -configuration Release \
+              -destination "platform=macOS,arch=arm64" \
+              -derivedDataPath /tmp/DerivedData \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              ONLY_ACTIVE_ARCH=NO
+          fi
+
+      # ── Verify build output ──────────────────────────────────────────────
+      - name: Verify .app exists
+        run: |
+          APP=/tmp/DerivedData/Build/Products/Release/ModrinthFetcher.app
+          if [ ! -d "$APP" ]; then
+            echo "ERROR: ModrinthFetcher.app not found at $APP"
+            echo "Contents of build products:"
+            find /tmp/DerivedData/Build/Products -maxdepth 3 | head -40
+            exit 1
+          fi
+          echo "Build succeeded: $APP"
+          du -sh "$APP"
+
+      # ── Package into zip ─────────────────────────────────────────────────
+      - name: Package app
+        run: |
+          cd /tmp/DerivedData/Build/Products/Release
+          zip -r /tmp/ModrinthFetcher.zip ModrinthFetcher.app
+          echo "Zip size: $(du -sh /tmp/ModrinthFetcher.zip | cut -f1)"
+
+      # ── Upload artifact ──────────────────────────────────────────────────
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ModrinthFetcher-app
+          path: /tmp/ModrinthFetcher.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      # ── Step summary ─────────────────────────────────────────────────────
+      - name: Write step summary
+        if: always()
+        run: |
+          echo "## ModrinthFetcher Build" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f /tmp/ModrinthFetcher.zip ]; then
+            SIZE=$(du -sh /tmp/ModrinthFetcher.zip | cut -f1)
+            echo "✅ Build succeeded — artifact: \`ModrinthFetcher-app\` ($SIZE)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "### How to install" >> "$GITHUB_STEP_SUMMARY"
+            echo "1. Download and unzip \`ModrinthFetcher.zip\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "2. Drag \`ModrinthFetcher.app\` to your Applications folder" >> "$GITHUB_STEP_SUMMARY"
+            echo "3. First launch: right-click → Open (bypasses Gatekeeper for unsigned apps)" >> "$GITHUB_STEP_SUMMARY"
+            echo "4. Make sure \`gh\` CLI is authenticated: \`gh auth login\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Build failed — no artifact produced" >> "$GITHUB_STEP_SUMMARY"
+          fi
