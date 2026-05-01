@@ -273,11 +273,25 @@ jobs:
           if not isinstance(cf_game_versions, list):
               cf_game_versions = []
 
-          # MC-version-only lookup — exclude loader entries (gameVersionTypeID 68441)
+          # MC-version-only lookup.
+          # We filter by name pattern: real MC versions look like "1.20.1", "1.8.9", "26.1.2"
+          # We explicitly exclude entries whose names look like Java versions ("Java 17"),
+          # environment tags ("Client", "Server"), or other non-MC entries.
+          # The gameVersionTypeID approach is unreliable because CurseForge uses multiple
+          # type IDs for different MC version families (e.g. 1.x uses one type, 26.x another).
+          import re as _re
+          _mc_pattern = _re.compile(r'^\d+\.\d+')  # starts with digits.digits
+          _exclude_names = {"client", "server", "bukkit", "cauldron", "thermos"}
           cf_mc_lookup = {
               v["name"]: v["id"]
               for v in cf_game_versions
-              if v.get("gameVersionTypeID") != CF_LOADER_TYPE_ID
+              if _mc_pattern.match(v.get("name", ""))
+              and v.get("name", "").lower() not in _exclude_names
+              and "snapshot" not in v.get("name", "").lower()
+              and "pre" not in v.get("name", "").lower()
+              and "rc" not in v.get("name", "").lower()
+              and "alpha" not in v.get("name", "").lower()
+              and "beta" not in v.get("name", "").lower()
           }
           print(f"  CurseForge MC version entries: {len(cf_mc_lookup)}")
 
