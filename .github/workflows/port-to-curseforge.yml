@@ -111,6 +111,31 @@ jobs:
               "liteloader": 5000,
           }
 
+          # CurseForge environment (client/server) IDs — added to gameVersions array
+          # Source: https://wiki.devnemo.com/third-party/curseforge-upload-api
+          CF_ENV_CLIENT = 9638
+          CF_ENV_SERVER = 9639
+
+          def cf_environment_ids(client_side: str, server_side: str) -> list:
+              """
+              Map Modrinth client_side/server_side to CurseForge environment IDs.
+              Modrinth values: "required", "optional", "unsupported"
+              CurseForge: include 9638 (Client) and/or 9639 (Server) in gameVersions.
+              """
+              c = (client_side or "").lower()
+              s = (server_side or "").lower()
+              client_ok = c in {"required", "optional"}
+              server_ok = s in {"required", "optional"}
+              ids = []
+              if client_ok:
+                  ids.append(CF_ENV_CLIENT)
+              if server_ok:
+                  ids.append(CF_ENV_SERVER)
+              # Unknown/missing — include both as safe default
+              if not ids:
+                  ids = [CF_ENV_CLIENT, CF_ENV_SERVER]
+              return ids
+
           # gameVersionTypeID for Minecraft versions on CurseForge
           # All MC versions share type 1 (the main Minecraft game type)
           # Loaders use gameVersionTypeID 68441
@@ -256,6 +281,7 @@ jobs:
           mr_project = modrinth_get(f"/project/{urllib.parse.quote(mr_ref, safe='')}")
           mr_id      = mr_project["id"]
           print(f"  Title: {mr_project.get('title')}  ID: {mr_id}")
+          print(f"  client_side={mr_project.get('client_side')}  server_side={mr_project.get('server_side')}")
 
           all_versions = modrinth_get(f"/project/{urllib.parse.quote(mr_id, safe='')}/version")
           if not isinstance(all_versions, list):
@@ -362,7 +388,14 @@ jobs:
                       print(f"    [SKIP] Could not resolve CurseForge version IDs for {mc}/{loader}.")
                       skipped += 1
                       continue
-                  print(f"    CF IDs   : {cf_version_ids}")
+
+                  # Add environment (client/server) IDs from Modrinth project metadata
+                  env_ids = cf_environment_ids(
+                      mr_project.get("client_side", ""),
+                      mr_project.get("server_side", ""),
+                  )
+                  cf_version_ids = cf_version_ids + env_ids
+                  print(f"    CF IDs   : {cf_version_ids}  (env: {env_ids})")
 
                   jar_path = tmp / filename
                   print(f"    Downloading from Modrinth CDN...")
