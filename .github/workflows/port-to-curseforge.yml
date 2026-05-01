@@ -295,6 +295,17 @@ jobs:
           }
           print(f"  CurseForge MC version entries: {len(cf_mc_lookup)}")
 
+          # Debug: show what IDs the failing versions map to
+          # Print all entries whose ID is in the 16100-16200 range (the bad ones)
+          bad_range = {v["name"]: v for v in cf_game_versions if 16100 <= v.get("id", 0) <= 16200}
+          if bad_range:
+              print(f"  DEBUG — game version entries with IDs 16100-16200 ({len(bad_range)} entries):")
+              for name, entry in sorted(bad_range.items()):
+                  print(f"    id={entry['id']}  typeID={entry.get('gameVersionTypeID')}  name={name!r}  slug={entry.get('slug')!r}")
+          # Also show what 1.21.3, 1.21.4 etc. resolve to
+          for test_ver in ["1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "26.1", "26.1.1", "26.1.2"]:
+              resolved = cf_mc_lookup.get(test_ver)
+              print(f"  DEBUG — {test_ver!r} -> {resolved}")
           cf_numeric_id = resolve_cf_numeric_id(cf_id)
 
           # NOTE: The /api/projects/{id}/files listing endpoint requires project
