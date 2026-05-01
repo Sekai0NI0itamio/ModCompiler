@@ -1,0 +1,434 @@
+name: Port Mod to CurseForge
+
+# ---------------------------------------------------------------------------
+# Purpose
+# -------
+# Reads all versions from a Modrinth project, compares them against an
+# existing CurseForge project, and uploads every (mc_version, loader) combo
+# that is present on Modrinth but missing on CurseForge.
+#
+# Only the latest upload per (mc_version, loader) pair is considered from
+# Modrinth (chosen by date_published), so superseded re-uploads are ignored.
+#
+# Tokens used
+# -----------
+#   MODRINTH_TOKEN   - repository secret (read access, for private/draft projects)
+#   CURSEFORGE_TOKEN - repository secret (upload access)
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      modrinth_url:
+        description: >
+          Modrinth project URL or slug.
+          Example: https://modrinth.com/mod/world-auto-feeder
+        required: true
+        type: string
+      curseforge_url:
+        description: >
+          CurseForge project URL or numeric project ID.
+          Example: https://www.curseforge.com/minecraft/mc-mods/world-auto-feeder
+        required: true
+        type: string
+      dry_run:
+        description: >
+          Dry run — show what would be uploaded without uploading anything.
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+jobs:
+  port:
+    name: Port versions to CurseForge
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ── Mask secrets so they never appear in logs ────────────────────────
+      - name: Mask secrets
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ];   then echo "::add-mask::$MODRINTH_TOKEN";   fi
+          if [ -n "$CURSEFORGE_TOKEN" ]; then echo "::add-mask::$CURSEFORGE_TOKEN"; fi
+
+      # ── Main porting logic ───────────────────────────────────────────────
+      - name: Diff and upload
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          MODRINTH_URL: ${{ inputs.modrinth_url }}
+          CURSEFORGE_URL: ${{ inputs.curseforge_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys, tempfile, time, urllib.error, urllib.parse, urllib.request, uuid
+          from pathlib import Path
+
+          # ----------------------------------------------------------------
+          # Config
+          # ----------------------------------------------------------------
+          MODRINTH_API   = "https://api.modrinth.com/v2"
+          CURSEFORGE_API = "https://minecraft.curseforge.com"
+          USER_AGENT     = "ModCompilerPortScript/1.0 (github.com/modcompiler)"
+
+          MODRINTH_TOKEN   = os.environ.get("MODRINTH_TOKEN", "").strip()
+          CURSEFORGE_TOKEN = os.environ.get("CURSEFORGE_TOKEN", "").strip()
+          DRY_RUN          = os.environ.get("DRY_RUN", "false").strip().lower() in {"true", "1", "yes"}
+
+          if not CURSEFORGE_TOKEN:
+              sys.exit("[ERROR] CURSEFORGE_TOKEN secret is not set on this repository.")
+
+          # Loader name mapping: Modrinth (lowercase) -> CurseForge display name
+          LOADER_MAP = {"forge": "Forge", "fabric": "Fabric", "neoforge": "NeoForge", "quilt": "Quilt"}
+          KNOWN_LOADERS = set(LOADER_MAP.values()) | {"liteloader", "rift"}
+
+          RELEASE_TYPE_MAP = {"release": "release", "beta": "beta", "alpha": "alpha"}
+
+          # ----------------------------------------------------------------
+          # Helpers: URL normalisation
+          # ----------------------------------------------------------------
+          def modrinth_ref(url: str) -> str:
+              url = url.strip().rstrip("/")
+              m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", url)
+              return m.group(1) if m else url
+
+          def curseforge_project_id(url: str) -> str:
+              url = url.strip().rstrip("/")
+              m = re.search(r"curseforge\.com/minecraft/mc-mods/([^/?#]+)", url)
+              return m.group(1) if m else url
+
+          # ----------------------------------------------------------------
+          # Helpers: HTTP
+          # ----------------------------------------------------------------
+          def _get(base: str, path: str, token: str | None, extra_headers: dict | None = None) -> object:
+              url = base + path
+              headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+              if token:
+                  key = "Authorization" if base == MODRINTH_API else "X-Api-Token"
+                  headers[key] = token
+              if extra_headers:
+                  headers.update(extra_headers)
+              req = urllib.request.Request(url, headers=headers)
+              for attempt in range(1, 6):
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          return json.loads(r.read().decode("utf-8", errors="replace"))
+                  except urllib.error.HTTPError as e:
+                      body = e.read().decode("utf-8", errors="replace")[:300]
+                      if e.code == 404:
+                          sys.exit(f"[ERROR] Not found (HTTP 404): {url}")
+                      if e.code in {429, 500, 502, 503, 504} and attempt < 5:
+                          time.sleep(2 ** attempt)
+                          continue
+                      sys.exit(f"[ERROR] HTTP {e.code}: {url}\n{body}")
+                  except urllib.error.URLError as e:
+                      if attempt < 5:
+                          time.sleep(2 ** attempt)
+                          continue
+                      sys.exit(f"[ERROR] Network error: {e.reason}")
+              sys.exit("[ERROR] API request failed after retries.")
+
+          def modrinth_get(path: str) -> object:
+              return _get(MODRINTH_API, path, MODRINTH_TOKEN or None)
+
+          def curseforge_get(path: str) -> object:
+              return _get(CURSEFORGE_API, path, CURSEFORGE_TOKEN)
+
+          def download_file(url: str, dest: Path) -> None:
+              req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+              for attempt in range(1, 4):
+                  try:
+                      with urllib.request.urlopen(req, timeout=120) as r:
+                          dest.write_bytes(r.read())
+                      return
+                  except urllib.error.URLError as e:
+                      if attempt < 3:
+                          time.sleep(3)
+                          continue
+                      sys.exit(f"[ERROR] Download failed {url}: {e.reason}")
+
+          def curseforge_upload(project_id: str, metadata: dict, jar_path: Path) -> int:
+              boundary = f"cfport-{uuid.uuid4().hex}"
+              body = bytearray()
+
+              meta_bytes = json.dumps(metadata).encode("utf-8")
+              body += f"--{boundary}\r\n".encode()
+              body += b'Content-Disposition: form-data; name="metadata"\r\n'
+              body += b"Content-Type: application/json\r\n\r\n"
+              body += meta_bytes + b"\r\n"
+
+              jar_bytes = jar_path.read_bytes()
+              body += f"--{boundary}\r\n".encode()
+              body += f'Content-Disposition: form-data; name="file"; filename="{jar_path.name}"\r\n'.encode()
+              body += b"Content-Type: application/java-archive\r\n\r\n"
+              body += jar_bytes + b"\r\n"
+              body += f"--{boundary}--\r\n".encode()
+
+              url = f"{CURSEFORGE_API}/api/projects/{project_id}/upload-file"
+              headers = {
+                  "User-Agent": USER_AGENT,
+                  "X-Api-Token": CURSEFORGE_TOKEN,
+                  "Content-Type": f"multipart/form-data; boundary={boundary}",
+              }
+              req = urllib.request.Request(url, data=bytes(body), method="POST", headers=headers)
+              for attempt in range(1, 4):
+                  try:
+                      with urllib.request.urlopen(req, timeout=120) as r:
+                          return int(json.loads(r.read().decode("utf-8", errors="replace"))["id"])
+                  except urllib.error.HTTPError as e:
+                      body_text = e.read().decode("utf-8", errors="replace")[:500]
+                      if e.code in {429, 500, 502, 503, 504} and attempt < 3:
+                          time.sleep(5 * attempt)
+                          continue
+                      sys.exit(f"[ERROR] CurseForge upload HTTP {e.code}: {body_text}")
+                  except urllib.error.URLError as e:
+                      if attempt < 3:
+                          time.sleep(5)
+                          continue
+                      sys.exit(f"[ERROR] Upload network error: {e.reason}")
+              sys.exit("[ERROR] Upload failed after retries.")
+
+          # ----------------------------------------------------------------
+          # Helpers: version logic
+          # ----------------------------------------------------------------
+          def primary_file(version: dict) -> dict | None:
+              files = version.get("files", [])
+              if not files:
+                  return None
+              primary = [f for f in files if f.get("primary")]
+              return (primary or files)[0]
+
+          def latest_per_combo(versions: list) -> dict:
+              """Keep the most recently published version per (mc_version, loader) pair."""
+              best: dict[tuple, dict] = {}
+              for v in versions:
+                  pub = v.get("date_published", "")
+                  for mc in v.get("game_versions", []):
+                      for loader in v.get("loaders", []):
+                          key = (mc, loader.lower())
+                          if key not in best or pub > best[key].get("date_published", ""):
+                              best[key] = v
+              return best
+
+          def is_loader(name: str) -> bool:
+              return name.lower() in {l.lower() for l in KNOWN_LOADERS}
+
+          def cf_combos_present(cf_files: list) -> set:
+              """Build (mc_version, loader_lowercase) set from CurseForge file list."""
+              combos = set()
+              for f in cf_files:
+                  gvs: list = f.get("gameVersions", [])
+                  mc_versions = [g for g in gvs if not is_loader(g)]
+                  loaders     = [g.lower() for g in gvs if is_loader(g)]
+                  if not loaders:
+                      loaders = ["unknown"]
+                  for mc in mc_versions:
+                      for loader in loaders:
+                          combos.add((mc, loader))
+              return combos
+
+          def resolve_cf_version_ids(mc_version: str, loader: str, cf_lookup: dict) -> list:
+              """Return the list of CurseForge version IDs for a mc_version + loader pair."""
+              ids = []
+              # MC version — exact, then strip patch (1.20.1 -> 1.20)
+              if mc_version in cf_lookup:
+                  ids.append(cf_lookup[mc_version])
+              else:
+                  parts = mc_version.split(".")
+                  if len(parts) == 3:
+                      short = f"{parts[0]}.{parts[1]}"
+                      if short in cf_lookup:
+                          ids.append(cf_lookup[short])
+              if not ids:
+                  print(f"  [WARN] No CurseForge version ID found for MC {mc_version!r}")
+
+              # Loader
+              loader_name = LOADER_MAP.get(loader.lower(), loader.capitalize())
+              matched = cf_lookup.get(loader_name)
+              if matched is None:
+                  # case-insensitive fallback
+                  for k, v in cf_lookup.items():
+                      if k.lower() == loader_name.lower():
+                          matched = v
+                          break
+              if matched is not None:
+                  ids.append(matched)
+              else:
+                  print(f"  [WARN] No CurseForge version ID found for loader {loader!r}")
+              return ids
+
+          # ----------------------------------------------------------------
+          # Step 1: Fetch Modrinth
+          # ----------------------------------------------------------------
+          mr_ref = modrinth_ref(os.environ["MODRINTH_URL"])
+          cf_id  = curseforge_project_id(os.environ["CURSEFORGE_URL"])
+
+          print(f"\n{'='*70}")
+          print(f"  Modrinth  : {mr_ref}")
+          print(f"  CurseForge: {cf_id}")
+          print(f"  Dry run   : {DRY_RUN}")
+          print(f"{'='*70}\n")
+
+          print("[1/4] Fetching Modrinth project and versions...")
+          mr_project = modrinth_get(f"/project/{urllib.parse.quote(mr_ref, safe='')}")
+          mr_id      = mr_project["id"]
+          print(f"  Title: {mr_project.get('title')}  ID: {mr_id}")
+
+          all_versions = modrinth_get(f"/project/{urllib.parse.quote(mr_id, safe='')}/version")
+          if not isinstance(all_versions, list):
+              all_versions = []
+          print(f"  Total version entries: {len(all_versions)}")
+
+          mr_latest = latest_per_combo(all_versions)
+          print(f"  Unique (mc_version, loader) combos: {len(mr_latest)}")
+
+          # ----------------------------------------------------------------
+          # Step 2: Fetch CurseForge
+          # ----------------------------------------------------------------
+          print("\n[2/4] Fetching CurseForge game versions and existing files...")
+          cf_game_versions = curseforge_get("/api/game/versions")
+          if not isinstance(cf_game_versions, list):
+              cf_game_versions = []
+          cf_lookup = {v["name"]: v["id"] for v in cf_game_versions}
+          print(f"  CurseForge game version entries: {len(cf_lookup)}")
+
+          cf_files = curseforge_get(f"/api/projects/{cf_id}/files")
+          if not isinstance(cf_files, list):
+              cf_files = []
+          cf_present = cf_combos_present(cf_files)
+          print(f"  Existing CurseForge files: {len(cf_files)}")
+          print(f"  Unique (mc_version, loader) combos on CurseForge: {len(cf_present)}")
+
+          # ----------------------------------------------------------------
+          # Step 3: Diff
+          # ----------------------------------------------------------------
+          print("\n[3/4] Computing diff...")
+          missing = []
+          for (mc, loader), version in sorted(mr_latest.items()):
+              cf_loader = LOADER_MAP.get(loader, loader.capitalize()).lower()
+              if (mc, cf_loader) not in cf_present and (mc, loader) not in cf_present:
+                  missing.append(((mc, loader), version))
+
+          missing.sort(key=lambda x: (x[0][0], x[0][1]))
+
+          if not missing:
+              print("\n  All Modrinth versions are already present on CurseForge. Nothing to do!")
+              sys.exit(0)
+
+          # Print table
+          print(f"\n  {'='*68}")
+          print(f"  Versions on Modrinth missing from CurseForge: {len(missing)}")
+          print(f"  {'-'*68}")
+          print(f"  {'#':<4} {'MC Version':<14} {'Loader':<12} {'Version #':<20} {'Type':<10} {'Published'}")
+          print(f"  {'-'*68}")
+          for i, ((mc, loader), v) in enumerate(missing, 1):
+              vnum  = v.get("version_number", "?")
+              vtype = v.get("version_type", "release")
+              pub   = v.get("date_published", "")[:19].replace("T", " ")
+              pf    = primary_file(v)
+              fname = pf["filename"] if pf else "(no file)"
+              print(f"  {i:<4} {mc:<14} {loader:<12} {vnum:<20} {vtype:<10} {pub}  {fname}")
+          print(f"  {'='*68}\n")
+
+          if DRY_RUN:
+              print("  [DRY RUN] No files uploaded.")
+              sys.exit(0)
+
+          # ----------------------------------------------------------------
+          # Step 4: Upload
+          # ----------------------------------------------------------------
+          print(f"[4/4] Uploading {len(missing)} version(s) to CurseForge...\n")
+          success = 0
+          failed  = 0
+
+          with tempfile.TemporaryDirectory(prefix="cf_port_") as tmpdir:
+              tmp = Path(tmpdir)
+              for i, ((mc, loader), version) in enumerate(missing, 1):
+                  vnum      = version.get("version_number", "?")
+                  vname     = version.get("name") or f"{mr_project.get('title', '')} {vnum}"
+                  vtype     = RELEASE_TYPE_MAP.get(version.get("version_type", "release"), "release")
+                  changelog = version.get("changelog") or f"Ported from Modrinth. Version {vnum} for {mc} ({loader})."
+
+                  pf = primary_file(version)
+                  if not pf:
+                      print(f"  [{i}/{len(missing)}] SKIP {mc}/{loader} {vnum} — no file on Modrinth.")
+                      failed += 1
+                      continue
+
+                  filename     = pf.get("filename", f"mod-{vnum}.jar")
+                  download_url = pf.get("url", "")
+
+                  print(f"  [{i}/{len(missing)}] {mc} / {loader} — {vnum} ({vtype})")
+                  print(f"    File     : {filename}")
+                  print(f"    Changelog: {changelog[:100].strip()!r}{'...' if len(changelog) > 100 else ''}")
+
+                  cf_version_ids = resolve_cf_version_ids(mc, loader, cf_lookup)
+                  if not cf_version_ids:
+                      print(f"    [SKIP] Could not resolve CurseForge version IDs for {mc}/{loader}.")
+                      failed += 1
+                      continue
+                  print(f"    CF IDs   : {cf_version_ids}")
+
+                  jar_path = tmp / filename
+                  print(f"    Downloading from Modrinth CDN...")
+                  download_file(download_url, jar_path)
+                  print(f"    Downloaded {jar_path.stat().st_size:,} bytes.")
+
+                  cf_metadata = {
+                      "changelog":     changelog,
+                      "changelogType": "markdown",
+                      "displayName":   vname,
+                      "gameVersions":  cf_version_ids,
+                      "releaseType":   vtype,
+                  }
+
+                  print(f"    Uploading to CurseForge...")
+                  new_id = curseforge_upload(cf_id, cf_metadata, jar_path)
+                  print(f"    ✓ Uploaded — CurseForge file ID: {new_id}")
+                  success += 1
+
+                  if i < len(missing):
+                      time.sleep(1)
+
+          print(f"\n{'='*70}")
+          print(f"  Done.  {success} uploaded,  {failed} failed/skipped.")
+          print(f"{'='*70}\n")
+
+          if failed:
+              sys.exit(1)
+          PY
+
+      # ── Write step summary ───────────────────────────────────────────────
+      - name: Write step summary
+        if: always()
+        shell: bash
+        env:
+          MODRINTH_URL: ${{ inputs.modrinth_url }}
+          CURSEFORGE_URL: ${{ inputs.curseforge_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## CurseForge Port"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Modrinth | \`$MODRINTH_URL\` |"
+            echo "| CurseForge | \`$CURSEFORGE_URL\` |"
+            echo "| Dry run | \`$DRY_RUN\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
