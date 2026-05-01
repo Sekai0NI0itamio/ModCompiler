@@ -83,9 +83,10 @@ jobs:
           # ----------------------------------------------------------------
           # Config
           # ----------------------------------------------------------------
-          MODRINTH_API   = "https://api.modrinth.com/v2"
-          CURSEFORGE_API = "https://minecraft.curseforge.com"
-          USER_AGENT     = "ModCompilerPortScript/1.0 (github.com/modcompiler)"
+          MODRINTH_API      = "https://api.modrinth.com/v2"
+          CURSEFORGE_API    = "https://minecraft.curseforge.com"   # upload endpoint
+          CURSEFORGE_V1_API = "https://api.curseforge.com/v1"      # search/lookup endpoint
+          USER_AGENT        = "ModCompilerPortScript/1.0 (github.com/modcompiler)"
 
           MODRINTH_TOKEN   = os.environ.get("MODRINTH_TOKEN", "").strip()
           CURSEFORGE_TOKEN = os.environ.get("CURSEFORGE_TOKEN", "").strip()
@@ -149,6 +150,66 @@ jobs:
 
           def curseforge_get(path: str) -> object:
               return _get(CURSEFORGE_API, path, CURSEFORGE_TOKEN)
+
+          def curseforge_v1_get(path: str, params: dict | None = None) -> object:
+              """Call api.curseforge.com/v1 (uses same token, different header name)."""
+              url = CURSEFORGE_V1_API + path
+              if params:
+                  url += "?" + urllib.parse.urlencode(params)
+              headers = {
+                  "User-Agent": USER_AGENT,
+                  "Accept": "application/json",
+                  "x-api-key": CURSEFORGE_TOKEN,
+              }
+              req = urllib.request.Request(url, headers=headers)
+              for attempt in range(1, 6):
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          return json.loads(r.read().decode("utf-8", errors="replace"))
+                  except urllib.error.HTTPError as e:
+                      body = e.read().decode("utf-8", errors="replace")[:300]
+                      if e.code == 404:
+                          return None
+                      if e.code in {429, 500, 502, 503, 504} and attempt < 5:
+                          time.sleep(2 ** attempt)
+                          continue
+                      sys.exit(f"[ERROR] CurseForge v1 HTTP {e.code}: {url}\n{body}")
+                  except urllib.error.URLError as e:
+                      if attempt < 5:
+                          time.sleep(2 ** attempt)
+                          continue
+                      sys.exit(f"[ERROR] Network error: {e.reason}")
+              sys.exit("[ERROR] CurseForge v1 API request failed after retries.")
+
+          def resolve_cf_numeric_id(slug_or_id: str) -> str:
+              """
+              Resolve a CurseForge slug to its numeric project ID.
+              If already numeric, return as-is.
+              Uses api.curseforge.com/v1/mods/search with the same token.
+              """
+              if slug_or_id.isdigit():
+                  return slug_or_id
+              # Search by slug (gameId 432 = Minecraft)
+              result = curseforge_v1_get("/mods/search", {
+                  "gameId": "432",
+                  "slug": slug_or_id,
+                  "pageSize": "5",
+              })
+              if result and isinstance(result, dict):
+                  data = result.get("data", [])
+                  if data:
+                      # Find exact slug match
+                      for mod in data:
+                          if mod.get("slug", "").lower() == slug_or_id.lower():
+                              numeric_id = str(mod["id"])
+                              print(f"  Resolved slug '{slug_or_id}' -> numeric ID {numeric_id} ({mod.get('name', '')})")
+                              return numeric_id
+                      # Fallback: first result
+                      numeric_id = str(data[0]["id"])
+                      print(f"  Resolved slug '{slug_or_id}' -> numeric ID {numeric_id} (first result: {data[0].get('name', '')})")
+                      return numeric_id
+              sys.exit(f"[ERROR] Could not resolve CurseForge slug '{slug_or_id}' to a numeric project ID.\n"
+                       f"Make sure the slug is correct and the project exists on CurseForge.")
 
           def download_file(url: str, dest: Path) -> None:
               req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
@@ -308,7 +369,10 @@ jobs:
           cf_lookup = {v["name"]: v["id"] for v in cf_game_versions}
           print(f"  CurseForge game version entries: {len(cf_lookup)}")
 
-          cf_files = curseforge_get(f"/api/projects/{cf_id}/files")
+          # Resolve slug -> numeric ID (required by the upload and files endpoints)
+          cf_numeric_id = resolve_cf_numeric_id(cf_id)
+
+          cf_files = curseforge_get(f"/api/projects/{cf_numeric_id}/files")
           if not isinstance(cf_files, list):
               cf_files = []
           cf_present = cf_combos_present(cf_files)
@@ -399,7 +463,7 @@ jobs:
                   }
 
                   print(f"    Uploading to CurseForge...")
-                  new_id = curseforge_upload(cf_id, cf_metadata, jar_path)
+                  new_id = curseforge_upload(cf_numeric_id, cf_metadata, jar_path)
                   print(f"    ✓ Uploaded — CurseForge file ID: {new_id}")
                   success += 1
 
