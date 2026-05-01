@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "ModrinthFetcher/**"
+      - "tools/ModrinthFetcher/**"
       - ".github/workflows/build-modrinth-fetcher-app.yml"
 
 permissions:
@@ -30,48 +30,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── Show available Xcode versions ────────────────────────────────────
-      - name: Show Xcode version
-        run: xcodebuild -version
+      # ── Show Swift version ───────────────────────────────────────────────
+      - name: Show Swift version
+        run: swift --version
 
       # ── Build ────────────────────────────────────────────────────────────
       - name: Build ModrinthFetcher
         run: |
-          xcodebuild \
-            -project ModrinthFetcher/ModrinthFetcher.xcodeproj \
-            -scheme ModrinthFetcher \
-            -configuration Release \
-            -destination "platform=macOS,arch=arm64" \
-            -derivedDataPath /tmp/DerivedData \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO \
-            | xcpretty || true
-
-          # xcpretty may not be installed — fall back to raw output
-          if [ ! -d /tmp/DerivedData/Build/Products/Release/ModrinthFetcher.app ]; then
-            echo "xcpretty path failed, retrying with raw output..."
-            xcodebuild \
-              -project ModrinthFetcher/ModrinthFetcher.xcodeproj \
-              -scheme ModrinthFetcher \
-              -configuration Release \
-              -destination "platform=macOS,arch=arm64" \
-              -derivedDataPath /tmp/DerivedData \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO \
-              ONLY_ACTIVE_ARCH=NO
-          fi
+          chmod +x tools/ModrinthFetcher/build.sh
+          tools/ModrinthFetcher/build.sh
 
       # ── Verify build output ──────────────────────────────────────────────
       - name: Verify .app exists
         run: |
-          APP=/tmp/DerivedData/Build/Products/Release/ModrinthFetcher.app
+          APP=tools/ModrinthFetcher/build/ModrinthFetcher.app
           if [ ! -d "$APP" ]; then
-            echo "ERROR: ModrinthFetcher.app not found at $APP"
-            echo "Contents of build products:"
-            find /tmp/DerivedData/Build/Products -maxdepth 3 | head -40
+            echo "ERROR: ModrinthFetcher.app not found"
             exit 1
           fi
           echo "Build succeeded: $APP"
@@ -80,7 +54,7 @@ jobs:
       # ── Package into zip ─────────────────────────────────────────────────
       - name: Package app
         run: |
-          cd /tmp/DerivedData/Build/Products/Release
+          cd tools/ModrinthFetcher/build
           zip -r /tmp/ModrinthFetcher.zip ModrinthFetcher.app
           echo "Zip size: $(du -sh /tmp/ModrinthFetcher.zip | cut -f1)"
 
