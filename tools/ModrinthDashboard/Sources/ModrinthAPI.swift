@@ -8,22 +8,19 @@ actor ModrinthAPI {
     private let userAgent = "itamio/ModrinthDashboard/1.0 (github.com/Sekai0NI0itamio/ModCompiler)"
 
     var token: String = ""
-
     func setToken(_ t: String) { token = t }
 
-    // MARK: - User Projects (with full body/gallery for aesthetics)
+    // MARK: - User Projects
 
     func fetchUserProjects(username: String) async throws -> [ModrinthProject] {
-        let url = URL(string: "\(v2)/user/\(username)/projects")!
-        let data = try await get(url: url)
+        let data = try await get(url: URL(string: "\(v2)/user/\(username)/projects")!)
         return try JSONDecoder().decode([ModrinthProject].self, from: data)
     }
 
-    // MARK: - Single project (full body for aesthetics scoring)
+    // MARK: - Single project (full body/gallery for aesthetics)
 
     func fetchProject(id: String) async throws -> ModrinthProject {
-        let url = URL(string: "\(v2)/project/\(id)")!
-        let data = try await get(url: url)
+        let data = try await get(url: URL(string: "\(v2)/project/\(id)")!)
         return try JSONDecoder().decode(ModrinthProject.self, from: data)
     }
 
@@ -31,15 +28,13 @@ actor ModrinthAPI {
 
     func fetchVersions(projectId: String) async throws -> [ModrinthVersion] {
         let encoded = projectId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? projectId
-        let url = URL(string: "\(v2)/project/\(encoded)/version")!
-        let data = try await get(url: url)
+        let data = try await get(url: URL(string: "\(v2)/project/\(encoded)/version")!)
         return try JSONDecoder().decode([ModrinthVersion].self, from: data)
     }
 
-    // MARK: - Analytics (v3)
-    // POST /v3/analytics
-    // Requires: project_ids (top-level), time_range, return_metrics
-    // Returns: [[DataPoint]] — array of time slices
+    // MARK: - Analytics (downloads + views only — no revenue)
+    // Revenue removed: Modrinth's internal accounting units are unreliable for display.
+    // Conversion rate (views → downloads) is the meaningful signal instead.
 
     func fetchAnalytics(
         projectIds: [String],
@@ -61,8 +56,7 @@ actor ModrinthAPI {
             ],
             "return_metrics": [
                 "project_views":     ["bucket_by": ["project_id"]],
-                "project_downloads": ["bucket_by": ["project_id"]],
-                "project_revenue":   ["bucket_by": ["project_id"]]
+                "project_downloads": ["bucket_by": ["project_id"]]
             ]
         ]
 
@@ -79,80 +73,31 @@ actor ModrinthAPI {
         let sliceCount = sliceArray.count
         guard sliceCount > 0 else { return [] }
 
-        let totalSeconds = end.timeIntervalSince(start)
+        let totalSeconds  = end.timeIntervalSince(start)
         let sliceDuration = totalSeconds / Double(sliceCount)
-
-        // Build a set of requested project IDs for filtering
-        let requestedIds = Set(projectIds)
+        let requestedIds  = Set(projectIds)
 
         var points: [AnalyticsPoint] = []
         for (i, slice) in sliceArray.enumerated() {
             let sliceDate = start.addingTimeInterval(Double(i) * sliceDuration)
-
-            // Aggregate per metric across all requested projects in this slice.
-            // Each data point has: source_project, metric_kind, and the value field.
-            // We only sum entries whose source_project is in our requested set.
-            var downloads = 0.0, views = 0.0, revenue = 0.0
+            var downloads = 0.0, views = 0.0
 
             for item in slice {
                 guard let dict = item as? [String: Any] else { continue }
-
-                // Filter to only our requested projects
-                if let sourceProject = dict["source_project"] as? String,
-                   !requestedIds.isEmpty,
-                   !requestedIds.contains(sourceProject) {
-                    continue
-                }
-
+                if let src = dict["source_project"] as? String,
+                   !requestedIds.isEmpty, !requestedIds.contains(src) { continue }
                 switch dict["metric_kind"] as? String ?? "" {
-                case "downloads":
-                    downloads += doubleFrom(dict["downloads"])
-                case "views":
-                    views     += doubleFrom(dict["views"])
-                case "revenue":
-                    // Revenue is a decimal — Modrinth returns it as a number or string
-                    // representing USD earned in that time slice for that project.
-                    revenue   += doubleFrom(dict["revenue"])
-                default:
-                    break
+                case "downloads": downloads += doubleFrom(dict["downloads"])
+                case "views":     views     += doubleFrom(dict["views"])
+                default: break
                 }
             }
-            points.append(AnalyticsPoint(date: sliceDate, downloads: downloads, views: views, revenue: revenue))
+            points.append(AnalyticsPoint(date: sliceDate, downloads: downloads, views: views))
         }
         return points
     }
 
-    // MARK: - Payout balance (actual withdrawable USD from Modrinth)
-    // GET /v3/payouts/balance — requires PAYOUTS_READ scope
-    // Returns: { "available": "125.50", "pending": "75.25", "withdrawn_lifetime": "450.00", ... }
-
-    func fetchPayoutBalance() async throws -> PayoutBalance {
-        guard !token.isEmpty else { throw APIError.noToken }
-        let url = URL(string: "\(v3)/payouts/balance")!
-        let data = try await get(url: url)
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw APIError.parseError("payout balance response not object")
-        }
-        let available         = doubleFromString(json["available"])
-        let pending           = doubleFromString(json["pending"])
-        let withdrawnLifetime = doubleFromString(json["withdrawn_lifetime"])
-        let withdrawnYtd      = doubleFromString(json["withdrawn_ytd"])
-        return PayoutBalance(
-            available: available,
-            pending: pending,
-            withdrawnLifetime: withdrawnLifetime,
-            withdrawnYtd: withdrawnYtd
-        )
-    }
-
-    private func doubleFromString(_ val: Any?) -> Double {
-        switch val {
-        case let s as String: return Double(s) ?? 0
-        case let d as Double: return d
-        case let i as Int:    return Double(i)
-        default:              return 0
-        }
-    }
+    // MARK: - HTTP
 
     private func get(url: URL) async throws -> Data {
         var req = URLRequest(url: url)
@@ -207,7 +152,7 @@ enum APIError: LocalizedError {
         switch self {
         case .noToken:           return "No API token. Open Settings (⚙️) and add your Modrinth PAT."
         case .unauthorized:      return "Invalid or expired API token."
-        case .forbidden:         return "Token missing ANALYTICS_READ or PAYOUTS_READ scope."
+        case .forbidden:         return "Token missing ANALYTICS_READ scope."
         case .notFound:          return "Resource not found."
         case .rateLimited:       return "Rate limited — wait a moment and refresh."
         case .parseError(let m): return "Parse error: \(m)"

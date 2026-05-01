@@ -4,7 +4,6 @@ struct DetailSidebar: View {
     @ObservedObject var vm: DashboardViewModel
     @State private var showDownloads = true
     @State private var showViews     = true
-    @State private var showRevenue   = true
 
     var body: some View {
         Group {
@@ -82,10 +81,6 @@ struct DetailSidebar: View {
                 statBadge("↓ \(formatNum(p.downloads))", color: .green)
                 statBadge("♥ \(p.followers)", color: .pink)
                 statBadge(p.status.capitalized, color: p.status == "approved" ? .green : .orange)
-                if let ms = p.monetization_status {
-                    statBadge(ms == "monetized" ? "💰 Monetised" : "🚫 \(ms.capitalized)",
-                              color: ms == "monetized" ? Color(red: 1.0, green: 0.84, blue: 0.0) : .red)
-                }
                 if let pub = p.publishedDate {
                     statBadge("Since \(yearString(pub))", color: .gray)
                 }
@@ -157,7 +152,6 @@ struct DetailSidebar: View {
             HStack(spacing: 14) {
                 ChartLegendToggle(label: "Downloads", color: Color(red: 0.2, green: 0.8, blue: 0.4), isOn: $showDownloads)
                 ChartLegendToggle(label: "Views",     color: Color(red: 0.6, green: 0.6, blue: 0.6), isOn: $showViews)
-                ChartLegendToggle(label: "Revenue",   color: Color(red: 0.6, green: 0.3, blue: 0.9), isOn: $showRevenue)
                 Spacer()
                 Text("\(vm.analyticsPoints.count) data points")
                     .font(.system(size: 10)).foregroundColor(.white.opacity(0.3))
@@ -165,8 +159,7 @@ struct DetailSidebar: View {
             AnalyticsChartView(
                 points: vm.analyticsPoints,
                 showDownloads: showDownloads,
-                showViews: showViews,
-                showRevenue: showRevenue
+                showViews: showViews
             )
             .frame(height: 200)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color(white: 0.07)))
