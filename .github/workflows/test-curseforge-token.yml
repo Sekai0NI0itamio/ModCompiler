@@ -1,0 +1,182 @@
+name: Test CurseForge Token
+
+# Runs a series of diagnostic API calls against the CurseForge upload API
+# using the stored CURSEFORGE_TOKEN secret, and reports exactly what works
+# and what doesn't — without uploading anything.
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "CurseForge numeric project ID to test against (e.g. 1526309)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Diagnose CurseForge token
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Mask token
+        shell: bash
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          if [ -n "$CURSEFORGE_TOKEN" ]; then
+            echo "::add-mask::$CURSEFORGE_TOKEN"
+          fi
+
+      - name: Run diagnostics
+        shell: bash
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          PROJECT_ID: ${{ inputs.project_id }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, urllib.error, urllib.parse, urllib.request
+
+          TOKEN      = os.environ.get("CURSEFORGE_TOKEN", "").strip()
+          PROJECT_ID = os.environ.get("PROJECT_ID", "").strip()
+          BASE       = "https://minecraft.curseforge.com"
+          UA         = "ModCompilerDiag/1.0"
+
+          PASS = "✓ PASS"
+          FAIL = "✗ FAIL"
+          WARN = "⚠ WARN"
+
+          results = []
+
+          def req(method, path, body=None, content_type=None):
+              url = BASE + path
+              headers = {"User-Agent": UA, "Accept": "application/json"}
+              if TOKEN:
+                  headers["X-Api-Token"] = TOKEN
+              if content_type:
+                  headers["Content-Type"] = content_type
+              r = urllib.request.Request(url, data=body, method=method, headers=headers)
+              try:
+                  with urllib.request.urlopen(r, timeout=15) as resp:
+                      raw = resp.read().decode("utf-8", errors="replace")
+                      return resp.status, raw
+              except urllib.error.HTTPError as e:
+                  raw = e.read().decode("utf-8", errors="replace")
+                  return e.code, raw
+              except urllib.error.URLError as e:
+                  return 0, str(e.reason)
+
+          def section(title):
+              print(f"\n{'='*60}")
+              print(f"  {title}")
+              print(f"{'='*60}")
+
+          def check(label, status, body, expect_ok=True):
+              ok = 200 <= status < 300
+              icon = PASS if ok == expect_ok else FAIL
+              results.append((icon, label, status))
+              print(f"  {icon}  {label}")
+              print(f"       HTTP {status}")
+              try:
+                  parsed = json.loads(body)
+                  snippet = json.dumps(parsed, indent=2)[:400]
+              except Exception:
+                  snippet = body[:400]
+              if snippet.strip():
+                  for line in snippet.splitlines():
+                      print(f"       {line}")
+              print()
+
+          # ----------------------------------------------------------------
+          section("1. Token presence check")
+          # ----------------------------------------------------------------
+          if not TOKEN:
+              print(f"  {FAIL}  CURSEFORGE_TOKEN secret is EMPTY or not set.")
+              print("       Go to: GitHub → Repo → Settings → Secrets → Actions")
+              print("       Add secret named: CURSEFORGE_TOKEN")
+              sys.exit(1)
+
+          masked = TOKEN[:4] + "*" * (len(TOKEN) - 8) + TOKEN[-4:] if len(TOKEN) >= 8 else "****"
+          print(f"  {PASS}  Token is present  (length={len(TOKEN)}, preview={masked})")
+
+          # ----------------------------------------------------------------
+          section("2. Public endpoint — game versions (no auth needed)")
+          # ----------------------------------------------------------------
+          status, body = req("GET", "/api/game/versions")
+          check("GET /api/game/versions (public, no token)", status, body)
+
+          # ----------------------------------------------------------------
+          section("3. Same endpoint WITH token in header")
+          # ----------------------------------------------------------------
+          status, body = req("GET", "/api/game/versions")
+          check("GET /api/game/versions (with X-Api-Token header)", status, body)
+
+          # ----------------------------------------------------------------
+          section("4. Project files listing (requires project ownership)")
+          # ----------------------------------------------------------------
+          status, body = req("GET", f"/api/projects/{PROJECT_ID}/files")
+          check(f"GET /api/projects/{PROJECT_ID}/files", status, body)
+
+          if status == 403:
+              try:
+                  err = json.loads(body)
+                  code = err.get("errorCode")
+                  msg  = err.get("errorMessage", "")
+              except Exception:
+                  code, msg = None, body
+              print(f"  {WARN}  403 details: errorCode={code}  message={msg!r}")
+              if code == 5100:
+                  print(f"  {WARN}  errorCode 5100 = 'You do not have permission to access this method.'")
+                  print(f"       This means the token does NOT own project {PROJECT_ID},")
+                  print(f"       OR the token was generated on a different CurseForge account.")
+              print()
+
+          # ----------------------------------------------------------------
+          section("5. Upload endpoint reachability (OPTIONS probe, no file sent)")
+          # ----------------------------------------------------------------
+          # Send a POST with no body — expect 400/422 (bad request) not 401/403
+          # A 401/403 means auth failed; a 400/422 means auth passed but data is wrong
+          status, body = req("POST", f"/api/projects/{PROJECT_ID}/upload-file",
+                             body=b"", content_type="application/json")
+          if status in {400, 422}:
+              check(f"POST /api/projects/{PROJECT_ID}/upload-file (empty body probe)", status, body)
+              print(f"  {PASS}  Token IS accepted for uploads — server rejected the empty body,")
+              print(f"       not the token. This is the expected result for a valid token.")
+          elif status in {401, 403}:
+              check(f"POST /api/projects/{PROJECT_ID}/upload-file (empty body probe)", status, body, expect_ok=False)
+              print(f"  {FAIL}  Token is REJECTED for uploads (HTTP {status}).")
+              print(f"       The token either doesn't exist, is expired, or doesn't own this project.")
+          else:
+              check(f"POST /api/projects/{PROJECT_ID}/upload-file (empty body probe)", status, body)
+
+          # ----------------------------------------------------------------
+          section("6. Token format check")
+          # ----------------------------------------------------------------
+          print(f"  Token length : {len(TOKEN)}")
+          print(f"  Starts with  : {TOKEN[:6]!r}")
+          print(f"  Ends with    : {TOKEN[-4:]!r}")
+          print(f"  Contains spaces: {' ' in TOKEN}")
+          print(f"  Contains newlines: {chr(10) in TOKEN or chr(13) in TOKEN}")
+          if ' ' in TOKEN or '\n' in TOKEN or '\r' in TOKEN:
+              print(f"  {FAIL}  Token contains whitespace — this will cause auth failures.")
+              print(f"       Re-copy the token from curseforge.com/account/api-tokens")
+              print(f"       and make sure there are no leading/trailing spaces.")
+          else:
+              print(f"  {PASS}  Token format looks clean (no whitespace)")
+
+          # ----------------------------------------------------------------
+          section("Summary")
+          # ----------------------------------------------------------------
+          for icon, label, status in results:
+              print(f"  {icon}  [{status}]  {label}")
+
+          print()
+          any_fail = any(r[0] == FAIL for r in results)
+          if any_fail:
+              print("  One or more checks FAILED. See details above.")
+              sys.exit(1)
+          else:
+              print("  All checks passed.")
+          PY
