@@ -7,85 +7,7 @@ struct ManifestTarget: Hashable, Codable {
     let loader: String
 }
 
-// MARK: - Version range mapping
-// Maps a published MC version string to the manifest target version string.
-// e.g. "1.12.2" → "1.12" (because manifest uses min_version "1.12" for that range)
-// e.g. "1.18.1" → "1.18.1" (explicit in supported_versions)
-struct VersionRangeMap {
-    // Maps published version → manifest target version
-    // Built from version-manifest.json at startup
-    private let map: [String: String]  // "1.12.2" → "1.12"
-
-    init(manifestTargets: Set<ManifestTarget>) {
-        // Build reverse lookup: for each published version that doesn't directly
-        // match a manifest target, find the closest manifest target in the same range.
-        // The key insight: manifest uses min_version for anchor_only ranges,
-        // but mods publish the actual patch version (e.g. 1.12.2 not 1.12).
-        var m: [String: String] = [:]
-
-        // Known range mappings from version-manifest.json
-        // Format: [publishedVersion: manifestTargetVersion]
-        let knownMappings: [String: String] = [
-            // 1.12-1.12.2 range: manifest target is "1.12" (min_version)
-            // but mods publish "1.12", "1.12.1", "1.12.2"
-            "1.12.1": "1.12",
-            "1.12.2": "1.12",
-            // 1.17-1.17.1 fabric: manifest target is "1.17" (min_version)
-            // but mods may publish "1.17.1"
-            // (forge has supported_versions: ["1.17.1"] so 1.17.1 maps directly)
-            // 1.18-1.18.2 fabric: manifest target is "1.18" (min_version)
-            // but mods publish "1.18.1", "1.18.2"
-            // (forge has explicit supported_versions so those map directly)
-            // 1.21-1.21.1 fabric: manifest target is "1.21" (min_version)
-            // but mods may publish "1.21.1"
-            // 1.21.2-1.21.8 fabric: manifest target is "1.21.2" (min_version)
-            // but mods publish "1.21.3" through "1.21.8"
-            // (forge/neo have explicit supported_versions so those map directly)
-            // 1.21.9-1.21.11 fabric: manifest target is "1.21.9" (min_version)
-            // but mods publish "1.21.10", "1.21.11"
-            // (forge/neo have explicit supported_versions so those map directly)
-        ]
-        m = knownMappings
-        self.map = m
-    }
-
-    /// Returns the manifest target version for a published version string.
-    /// If the published version is already a manifest target, returns it unchanged.
-    /// Otherwise looks up the range mapping.
-    func manifestVersion(for published: String, loader: String, manifestTargets: Set<ManifestTarget>) -> String? {
-        // Direct match first
-        if manifestTargets.contains(ManifestTarget(version: published, loader: loader)) {
-            return published
-        }
-        // Try range mapping
-        if let mapped = map[published],
-           manifestTargets.contains(ManifestTarget(version: mapped, loader: loader)) {
-            return mapped
-        }
-        // Try prefix match: "1.12.2" → check if "1.12" is a target
-        // Split on "." and try progressively shorter prefixes
-        let parts = published.split(separator: ".")
-        if parts.count >= 3 {
-            // Try major.minor (e.g. "1.12" from "1.12.2")
-            let majorMinor = "\(parts[0]).\(parts[1])"
-            if manifestTargets.contains(ManifestTarget(version: majorMinor, loader: loader)) {
-                return majorMinor
-            }
-        }
-        return nil
-    }
-}
-
-// MARK: - Payout Balance (actual real USD from Modrinth payouts API)
-
-struct PayoutBalance {
-    let available: Double          // USD you can withdraw right now
-    let pending: Double            // USD earned but in 30-day hold
-    let withdrawnLifetime: Double  // Total USD ever withdrawn
-    let withdrawnYtd: Double       // USD withdrawn this calendar year
-
-    var totalEarned: Double { available + pending + withdrawnLifetime }
-}
+// MARK: - Modrinth Project
 
 struct ModrinthProject: Identifiable, Decodable {
     let id: String
@@ -100,7 +22,7 @@ struct ModrinthProject: Identifiable, Decodable {
     let game_versions: [String]
     let loaders: [String]
     let status: String
-    let monetization_status: String?   // "monetized", "demonetized", "force-demonetized"
+    let monetization_status: String?
     let color: Int?
     let issues_url: String?
     let source_url: String?
@@ -113,12 +35,6 @@ struct ModrinthProject: Identifiable, Decodable {
     var iconURL: URL? { icon_url.flatMap { URL(string: $0) } }
     var publishedDate: Date? { ISO8601DateFormatter().date(from: published) }
 
-    /// True only if the project is publicly visible and eligible for revenue
-    var isMonetized: Bool {
-        status == "approved" && (monetization_status == "monetized" || monetization_status == nil)
-    }
-
-    /// True if the project is publicly visible (approved or archived)
     var isPublic: Bool {
         status == "approved" || status == "archived"
     }
@@ -150,8 +66,7 @@ struct AestheticsScore {
 
     var score: Double {
         guard !checks.isEmpty else { return 0 }
-        let passed = checks.filter { $0.passed }.count
-        return Double(passed) / Double(checks.count) * 100.0
+        return Double(checks.filter { $0.passed }.count) / Double(checks.count) * 100.0
     }
 
     var missing: [Check] { checks.filter { !$0.passed } }
@@ -159,74 +74,44 @@ struct AestheticsScore {
 
     static func evaluate(_ p: ModrinthProject) -> AestheticsScore {
         var checks: [Check] = []
-
-        checks.append(Check(
-            name: "Icon",
+        checks.append(Check(name: "Icon",
             passed: p.icon_url != nil && !(p.icon_url?.isEmpty ?? true),
-            tip: "Upload a mod icon (at least 128×128 PNG)"
-        ))
-        checks.append(Check(
-            name: "Title",
+            tip: "Upload a mod icon (at least 128×128 PNG)"))
+        checks.append(Check(name: "Title",
             passed: p.title.count >= 4,
-            tip: "Set a clear, descriptive title"
-        ))
-        checks.append(Check(
-            name: "Description",
+            tip: "Set a clear, descriptive title"))
+        checks.append(Check(name: "Description",
             passed: p.description.count >= 50,
-            tip: "Write a detailed description (50+ chars)"
-        ))
-        let bodyLen = p.body?.count ?? 0
-        checks.append(Check(
-            name: "Body / Long Description",
-            passed: bodyLen >= 200,
-            tip: "Add a rich body with features, screenshots, and usage instructions"
-        ))
-        let hasBodyImage = p.body.map { $0.contains("![") || $0.contains("<img") } ?? false
-        checks.append(Check(
-            name: "Images in Body",
-            passed: hasBodyImage,
-            tip: "Add screenshots or GIFs to the body using Markdown ![alt](url)"
-        ))
-        let hasYouTube = p.body.map {
-            $0.contains("youtube.com") || $0.contains("youtu.be")
-        } ?? false
-        checks.append(Check(
-            name: "YouTube Video",
-            passed: hasYouTube,
-            tip: "Embed a YouTube showcase video in the body"
-        ))
-        checks.append(Check(
-            name: "Gallery",
+            tip: "Write a detailed description (50+ chars)"))
+        checks.append(Check(name: "Body / Long Description",
+            passed: (p.body?.count ?? 0) >= 200,
+            tip: "Add a rich body with features, screenshots, and usage instructions"))
+        checks.append(Check(name: "Images in Body",
+            passed: p.body.map { $0.contains("![") || $0.contains("<img") } ?? false,
+            tip: "Add screenshots or GIFs to the body using Markdown ![alt](url)"))
+        checks.append(Check(name: "YouTube Video",
+            passed: p.body.map { $0.contains("youtube.com") || $0.contains("youtu.be") } ?? false,
+            tip: "Embed a YouTube showcase video in the body"))
+        checks.append(Check(name: "Gallery",
             passed: !(p.gallery?.isEmpty ?? true),
-            tip: "Upload gallery images to showcase your mod visually"
-        ))
-        checks.append(Check(
-            name: "Issues / Bug Tracker",
+            tip: "Upload gallery images to showcase your mod visually"))
+        checks.append(Check(name: "Issues / Bug Tracker",
             passed: !(p.issues_url?.isEmpty ?? true),
-            tip: "Link to a GitHub Issues page or bug tracker"
-        ))
-        checks.append(Check(
-            name: "Source Code",
+            tip: "Link to a GitHub Issues page or bug tracker"))
+        checks.append(Check(name: "Source Code",
             passed: !(p.source_url?.isEmpty ?? true),
-            tip: "Link to your source code repository"
-        ))
-        checks.append(Check(
-            name: "Discord",
+            tip: "Link to your source code repository"))
+        checks.append(Check(name: "Discord",
             passed: !(p.discord_url?.isEmpty ?? true),
-            tip: "Add a Discord invite link for community support"
-        ))
-        let hasDonation = !(p.donation_urls?.isEmpty ?? true)
-        checks.append(Check(
-            name: "Donation Links",
-            passed: hasDonation,
-            tip: "Add donation links (Ko-fi, Patreon, etc.) to support your work"
-        ))
-
+            tip: "Add a Discord invite link for community support"))
+        checks.append(Check(name: "Donation Links",
+            passed: !(p.donation_urls?.isEmpty ?? true),
+            tip: "Add donation links (Ko-fi, Patreon, etc.) to support your work"))
         return AestheticsScore(checks: checks)
     }
 }
 
-// MARK: - Modrinth Version (for ghost detection)
+// MARK: - Modrinth Version
 
 struct ModrinthVersion: Decodable {
     let id: String
@@ -248,30 +133,29 @@ struct ModrinthFile: Decodable {
 }
 
 // MARK: - Analytics
+// Revenue field removed — Modrinth's internal accounting units are not reliable
+// for display. Conversion rate (views → downloads) is the meaningful signal.
 
 struct AnalyticsPoint: Identifiable, Codable {
     let id: UUID
     let date: Date
     let downloads: Double
     let views: Double
-    let revenue: Double
 
-    init(date: Date, downloads: Double, views: Double, revenue: Double) {
+    init(date: Date, downloads: Double, views: Double) {
         self.id = UUID()
         self.date = date
         self.downloads = downloads
         self.views = views
-        self.revenue = revenue
     }
 }
 
-// MARK: - Cached history entry
+// MARK: - Cached history
 
 struct ProjectHistory: Codable {
     let projectId: String
     var points: [AnalyticsPoint]
     var lastFetched: Date
-    // The date up to which we have "complete" history (day before yesterday)
     var historyThrough: Date
 }
 
@@ -290,20 +174,21 @@ struct CoverageInfo {
 }
 
 // MARK: - Investment Recommendation
+// Ranked by conversion rate (views → downloads) as the primary signal.
+// High conversion = the mod page convinces visitors to download = high quality audience.
 
 struct InvestmentRecommendation: Identifiable {
     let id = UUID()
     let project: ModrinthProject
-    let score: Double
+    let score: Double              // 0–100 composite score
     let reason: String
     let actions: [String]
     let missingVersions: Int
     let aestheticsScore: Double
-    let velocityScore: Double
-    let revenueScore: Double
-    let revenuePerView: Double
-    let revenuePerDownload: Double
-    let hasRealRevenue: Bool   // false = no API revenue data available
+    let conversionRate: Double     // % of views that become downloads (primary signal)
+    let conversionScore: Double    // normalised 0–100 vs portfolio
+    let velocityScore: Double      // normalised 0–100 vs portfolio
+    let coverageGapScore: Double   // 0–100, higher = more missing versions
 }
 
 // MARK: - Business Metrics
@@ -311,8 +196,15 @@ struct InvestmentRecommendation: Identifiable {
 struct BusinessMetrics {
     let totalDownloads: Double
     let totalViews: Double
-    let totalRevenue: Double
     let dailyDownloads: [AnalyticsPoint]
+
+    // Conversion rate: % of page views that result in a download.
+    // This is the primary quality signal — a high conversion rate means
+    // the mod page is compelling and the audience is engaged.
+    var viewToDownloadConversion: Double {
+        guard totalViews > 0 else { return 0 }
+        return totalDownloads / totalViews * 100.0
+    }
 
     var downloadGrowthRate: Double {
         guard dailyDownloads.count >= 60 else { return 0 }
@@ -322,24 +214,12 @@ struct BusinessMetrics {
         return (recent - prior) / prior * 100.0
     }
 
-    var viewToDownloadConversion: Double {
-        guard totalViews > 0 else { return 0 }
-        return totalDownloads / totalViews * 100.0
-    }
-
-    var avgDailyDownloads: Double {
-        guard !dailyDownloads.isEmpty else { return 0 }
-        return dailyDownloads.reduce(0) { $0 + $1.downloads } / Double(dailyDownloads.count)
-    }
-
-    var revenuePerDownload: Double {
-        guard totalDownloads > 0 else { return 0 }
-        return totalRevenue / totalDownloads
-    }
-
-    var revenuePerView: Double {
-        guard totalViews > 0 else { return 0 }
-        return totalRevenue / totalViews
+    var viewGrowthRate: Double {
+        guard dailyDownloads.count >= 60 else { return 0 }
+        let recent = dailyDownloads.suffix(30).reduce(0) { $0 + $1.views }
+        let prior  = dailyDownloads.dropLast(30).suffix(30).reduce(0) { $0 + $1.views }
+        guard prior > 0 else { return recent > 0 ? 100 : 0 }
+        return (recent - prior) / prior * 100.0
     }
 
     var downloadVelocity7d: Double {
@@ -352,6 +232,12 @@ struct BusinessMetrics {
         let pts = dailyDownloads.suffix(30)
         guard !pts.isEmpty else { return 0 }
         return pts.reduce(0) { $0 + $1.downloads } / Double(pts.count)
+    }
+
+    var viewVelocity7d: Double {
+        let pts = dailyDownloads.suffix(7)
+        guard !pts.isEmpty else { return 0 }
+        return pts.reduce(0) { $0 + $1.views } / Double(pts.count)
     }
 
     var peakDailyDownloads: Double {
@@ -371,6 +257,15 @@ struct BusinessMetrics {
         let years = Double(dailyDownloads.count) / 365.0
         guard years > 0 else { return 0 }
         return (pow(last30 / first30, 1.0 / years) - 1.0) * 100.0
+    }
+
+    // Conversion rate over last 30 days (more recent signal)
+    var recentConversionRate: Double {
+        let pts = dailyDownloads.suffix(30)
+        let dl = pts.reduce(0) { $0 + $1.downloads }
+        let v  = pts.reduce(0) { $0 + $1.views }
+        guard v > 0 else { return 0 }
+        return dl / v * 100.0
     }
 
     var todayDownloads: Double { dailyDownloads.last?.downloads ?? 0 }
