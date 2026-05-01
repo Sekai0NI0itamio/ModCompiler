@@ -17,12 +17,29 @@ final class GitHubService {
     // MARK: - Repo discovery
 
     static func discoverRepo() throws -> String {
-        let raw = try shell(["git", "remote", "get-url", "origin"]).trimmingCharacters(in: .whitespacesAndNewlines)
-        for pattern in [#"git@github\.com:([^/]+/[^/]+?)(?:\.git)?$"#,
-                        #"https?://github\.com/([^/]+/[^/]+?)(?:\.git)?$"#] {
-            if let cap = raw.firstCapture(pattern) { return cap }
+        // Walk up from the app bundle location looking for a .git directory
+        var dir = Bundle.main.bundleURL.deletingLastPathComponent()
+        for _ in 0..<12 {
+            let gitDir = dir.appendingPathComponent(".git")
+            if FileManager.default.fileExists(atPath: gitDir.path) {
+                // Found the repo root — now read the remote URL
+                let raw = try shell(["git", "-C", dir.path,
+                                     "remote", "get-url", "origin"])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                for pattern in [#"git@github\.com:([^/]+/[^/]+?)(?:\.git)?$"#,
+                                #"https?://github\.com/([^/]+/[^/]+?)(?:\.git)?$"#] {
+                    if let cap = raw.firstCapture(pattern) { return cap }
+                }
+                throw AppError("Cannot parse repo from remote URL: \(raw)")
+            }
+            let parent = dir.deletingLastPathComponent()
+            if parent == dir { break }   // reached filesystem root
+            dir = parent
         }
-        throw AppError("Cannot parse repo from: \(raw)")
+        throw AppError(
+            "Could not find a .git directory near the app.\n" +
+            "Make sure ModrinthFetcher.app is inside the ModCompiler repo folder."
+        )
     }
 
     static func defaultBranch(repo: String) throws -> String {
@@ -32,7 +49,6 @@ final class GitHubService {
         let s = out.trimmingCharacters(in: .whitespacesAndNewlines)
         return s.isEmpty ? "main" : s
     }
-
     // MARK: - Dispatch
 
     func dispatch(modrinthURL: String, branch: String) throws -> Int {
