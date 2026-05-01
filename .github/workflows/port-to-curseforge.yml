@@ -399,9 +399,10 @@ jobs:
                           try:
                               err = json.loads(body_text)
                               err_code = err.get("errorCode")
-                              err_msg  = err.get("errorMessage", body_text[:200])
+                              err_msg  = err.get("errorMessage", body_text[:300])
                           except Exception:
-                              err_code, err_msg = None, body_text[:200]
+                              err_code, err_msg = None, body_text[:300]
+                          print(f"    HTTP {e.code}  errorCode={err_code}  msg={err_msg!r}")
                           if err_code == 1009:
                               print(f"    ~ Already exists on CurseForge (skipping).")
                               skipped += 1
@@ -410,7 +411,7 @@ jobs:
                           if e.code in {429, 500, 502, 503, 504} and attempt < 3:
                               time.sleep(5 * attempt)
                               continue
-                          print(f"    ✗ Upload failed HTTP {e.code} errorCode={err_code}: {err_msg}")
+                          print(f"    ✗ Upload failed — not retrying.")
                           failed += 1
                           upload_ok = True
                           break
