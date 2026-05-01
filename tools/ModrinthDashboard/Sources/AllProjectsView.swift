@@ -137,14 +137,14 @@ struct AllProjectsView: View {
                 .foregroundColor(.white.opacity(0.5))
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                statCard("Total Downloads", value: m.totalDownloads, format: .number, color: green)
-                statCard("Total Views",     value: m.totalViews,     format: .number, color: gray)
-                statCard("Total Revenue",   value: m.totalRevenue,   format: .currency, color: purple)
-                statCard("Today Downloads", value: m.todayDownloads, format: .number, color: .blue)
-                statCard("7d Velocity",     value: m.downloadVelocity7d,  format: .number, color: green)
-                statCard("30d Velocity",    value: m.downloadVelocity30d, format: .number, color: green.opacity(0.7))
-                statCard("MoM Growth",      value: m.downloadGrowthRate,  format: .percent, color: growthColor(m.downloadGrowthRate))
-                statCard("Conversion",      value: m.viewToDownloadConversion, format: .percent, color: .orange)
+                statCard("Total Downloads", value: m.totalDownloads,          format: .number,       color: green)
+                statCard("Total Views",     value: m.totalViews,              format: .number,       color: gray)
+                statCard("Total Revenue",   value: m.totalRevenue,            format: .currency,     color: purple)
+                statCard("$/view",          value: m.revenuePerView,          format: .microCurrency, color: Color(red: 1.0, green: 0.84, blue: 0.0))
+                statCard("Today Downloads", value: m.todayDownloads,          format: .number,       color: .blue)
+                statCard("7d Velocity",     value: m.downloadVelocity7d,      format: .number,       color: green)
+                statCard("MoM Growth",      value: m.downloadGrowthRate,      format: .percent,      color: growthColor(m.downloadGrowthRate))
+                statCard("Conversion",      value: m.viewToDownloadConversion, format: .percent,     color: .orange)
             }
         }
     }
@@ -192,7 +192,7 @@ struct AllProjectsView: View {
 
     // MARK: - Helpers
 
-    enum StatFormat { case number, percent, currency }
+    enum StatFormat { case number, percent, currency, microCurrency }
 
     private func formatStat(_ v: Double, format: StatFormat) -> String {
         switch format {
@@ -200,8 +200,13 @@ struct AllProjectsView: View {
             if v >= 1_000_000 { return String(format: "%.1fM", v / 1_000_000) }
             if v >= 1_000     { return String(format: "%.1fk", v / 1_000) }
             return String(format: "%.0f", v)
-        case .percent:  return String(format: "%.1f%%", v)
-        case .currency: return v == 0 ? "$0" : String(format: "$%.2f", v)
+        case .percent:       return String(format: "%.1f%%", v)
+        case .currency:      return v == 0 ? "$0.00" : String(format: "$%.2f", v)
+        case .microCurrency:
+            if v == 0        { return "$0" }
+            if v >= 0.01     { return String(format: "$%.4f", v) }
+            if v >= 0.0001   { return String(format: "$%.5f", v) }
+            return String(format: "$%.7f", v)
         }
     }
 
@@ -227,62 +232,78 @@ struct InvestmentCard: View {
         VStack(alignment: .leading, spacing: 10) {
             // Header row
             HStack(spacing: 10) {
-                // Rank badge
                 ZStack {
-                    Circle()
-                        .fill(rankColor.opacity(0.2))
-                        .frame(width: 28, height: 28)
+                    Circle().fill(rankColor.opacity(0.2)).frame(width: 28, height: 28)
                     Text("#\(rank)")
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundColor(rankColor)
+                        .font(.system(size: 10, weight: .black)).foregroundColor(rankColor)
                 }
-
                 AsyncIconView(url: rec.project.iconURL, size: 32)
-
                 VStack(alignment: .leading, spacing: 1) {
                     Text(rec.project.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
+                        .font(.system(size: 13, weight: .semibold)).foregroundColor(.white)
                     Text(rec.reason)
-                        .font(.system(size: 10))
-                        .foregroundColor(.white.opacity(0.5))
-                        .lineLimit(2)
+                        .font(.system(size: 10)).foregroundColor(.white.opacity(0.5)).lineLimit(2)
                 }
                 Spacer()
-
-                // Score
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(String(format: "%.0f", rec.score))
-                        .font(.system(size: 20, weight: .black, design: .rounded))
-                        .foregroundColor(rankColor)
-                    Text("score")
-                        .font(.system(size: 8))
-                        .foregroundColor(.white.opacity(0.3))
+                        .font(.system(size: 20, weight: .black, design: .rounded)).foregroundColor(rankColor)
+                    Text("score").font(.system(size: 8)).foregroundColor(.white.opacity(0.3))
                 }
+            }
+
+            // Revenue per view — the key monetisation signal
+            if rec.revenuePerView > 0 || rec.revenuePerDownload > 0 {
+                HStack(spacing: 12) {
+                    revenueTag(
+                        label: "$/view",
+                        value: rec.revenuePerView,
+                        threshold: (low: 0.00001, high: 0.0001)
+                    )
+                    revenueTag(
+                        label: "$/download",
+                        value: rec.revenuePerDownload,
+                        threshold: (low: 0.0001, high: 0.001)
+                    )
+                    Spacer()
+                    // Monetisation quality label
+                    if rec.revenuePerView > 0.0001 {
+                        Text("💰 High-value traffic")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(Color(red: 1.0, green: 0.84, blue: 0.0))
+                    } else if rec.revenuePerView > 0.00001 {
+                        Text("📈 Monetising")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(Color(red: 0.95, green: 0.6, blue: 0.1))
+                    } else if rec.revenuePerView > 0 {
+                        Text("💡 Low monetisation")
+                            .font(.system(size: 9))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                }
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.07)))
             }
 
             // Score bars
             HStack(spacing: 8) {
-                scorePill("Velocity",   value: rec.velocityScore,   color: green)
-                scorePill("Coverage",   value: Double(rec.missingVersions) / 68.0 * 100, color: orange)
-                scorePill("Aesthetics", value: 100 - rec.aestheticsScore, color: purple)
-                scorePill("Revenue",    value: rec.revenueScore,    color: Color(red: 0.9, green: 0.8, blue: 0.2))
+                scorePill("$/view",     value: rec.revenueScore,   color: Color(red: 0.9, green: 0.8, blue: 0.2))
+                scorePill("Velocity",   value: rec.velocityScore,  color: green)
+                scorePill("Coverage ↑", value: Double(rec.missingVersions) / 68.0 * 100, color: orange)
+                scorePill("Page ↑",     value: 100 - rec.aestheticsScore, color: purple)
             }
 
             // Action items
             if !rec.actions.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Recommended actions:")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.35))
+                        .font(.system(size: 9, weight: .semibold)).foregroundColor(.white.opacity(0.35))
                     ForEach(rec.actions.prefix(4), id: \.self) { action in
                         HStack(spacing: 5) {
                             Image(systemName: "arrow.right.circle.fill")
-                                .font(.system(size: 9))
-                                .foregroundColor(rankColor.opacity(0.7))
+                                .font(.system(size: 9)).foregroundColor(rankColor.opacity(0.7))
                             Text(action)
-                                .font(.system(size: 10))
-                                .foregroundColor(.white.opacity(0.65))
+                                .font(.system(size: 10)).foregroundColor(.white.opacity(0.65))
                         }
                     }
                 }
@@ -292,11 +313,29 @@ struct InvestmentCard: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(white: 0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(rankColor.opacity(0.2), lineWidth: 1)
-                )
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(rankColor.opacity(0.2), lineWidth: 1))
         )
+    }
+
+    private func revenueTag(label: String, value: Double, threshold: (low: Double, high: Double)) -> some View {
+        let color: Color = value >= threshold.high
+            ? Color(red: 0.2, green: 0.85, blue: 0.4)
+            : value >= threshold.low
+                ? Color(red: 0.95, green: 0.6, blue: 0.1)
+                : Color(red: 0.6, green: 0.6, blue: 0.6)
+
+        let formatted: String
+        if value == 0 { formatted = "$0" }
+        else if value < 0.00001 { formatted = String(format: "$%.7f", value) }
+        else if value < 0.001   { formatted = String(format: "$%.5f", value) }
+        else                    { formatted = String(format: "$%.4f", value) }
+
+        return VStack(alignment: .leading, spacing: 1) {
+            Text(label).font(.system(size: 8)).foregroundColor(.white.opacity(0.35))
+            Text(formatted)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(color)
+        }
     }
 
     private var rankColor: Color {

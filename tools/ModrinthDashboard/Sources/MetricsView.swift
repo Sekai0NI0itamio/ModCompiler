@@ -16,6 +16,20 @@ struct MetricsView: View {
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 kpiCard(
+                    title: "Revenue / View",
+                    value: metrics.revenuePerView,
+                    format: .microCurrency,
+                    explanation: "$ earned per page view. The key monetisation signal — high $/view means Modrinth's ad system values your audience. Invest in mods with high $/view.",
+                    higherIsBetter: true
+                )
+                kpiCard(
+                    title: "Revenue / Download",
+                    value: metrics.revenuePerDownload,
+                    format: .microCurrency,
+                    explanation: "$ earned per download. More versions = more downloads = more revenue.",
+                    higherIsBetter: true
+                )
+                kpiCard(
                     title: "MoM Growth",
                     value: metrics.downloadGrowthRate,
                     format: .percent,
@@ -58,27 +72,28 @@ struct MetricsView: View {
                     higherIsBetter: true
                 )
                 kpiCard(
-                    title: "Rev / Download",
-                    value: metrics.revenuePerDownload,
-                    format: .currency,
-                    explanation: "Average revenue earned per download. Higher = better monetisation.",
-                    higherIsBetter: true
-                )
-                kpiCard(
                     title: "Peak Daily DL",
                     value: metrics.peakDailyDownloads,
                     format: .number,
                     explanation: "Highest single-day download count. Indicates viral/launch potential.",
                     higherIsBetter: true
                 )
+                kpiCard(
+                    title: "Total Revenue",
+                    value: metrics.totalRevenue,
+                    format: .currency,
+                    explanation: "Total revenue earned from Modrinth's ad payouts. Exact from API.",
+                    higherIsBetter: true
+                )
             }
 
             // Today's stats
             HStack(spacing: 16) {
-                todayStat(label: "Today Downloads", value: metrics.todayDownloads, color: .green)
-                todayStat(label: "Today Views",     value: metrics.todayViews,     color: .gray)
-                todayStat(label: "Total Downloads", value: metrics.totalDownloads, color: .blue)
-                todayStat(label: "Total Revenue",   value: metrics.totalRevenue,   color: Color(red: 0.6, green: 0.3, blue: 0.9))
+                todayStat(label: "Today Downloads", value: metrics.todayDownloads, color: .green,  format: .number)
+                todayStat(label: "Today Views",     value: metrics.todayViews,     color: .gray,   format: .number)
+                todayStat(label: "Total Downloads", value: metrics.totalDownloads, color: .blue,   format: .number)
+                todayStat(label: "Total Revenue",   value: metrics.totalRevenue,   color: Color(red: 0.6, green: 0.3, blue: 0.9), format: .currency)
+                todayStat(label: "$/view",          value: metrics.revenuePerView, color: Color(red: 1.0, green: 0.84, blue: 0.0), format: .microCurrency)
             }
             .padding(.top, 4)
         }
@@ -124,13 +139,13 @@ struct MetricsView: View {
 
     // MARK: - Today stat
 
-    private func todayStat(label: String, value: Double, color: Color) -> some View {
+    private func todayStat(label: String, value: Double, color: Color, format: ValueFormat) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.system(size: 9))
                 .foregroundColor(.white.opacity(0.4))
-            Text(formatValue(value, format: value < 1 ? .currency : .number))
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+            Text(formatValue(value, format: format))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundColor(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -138,13 +153,21 @@ struct MetricsView: View {
 
     // MARK: - Scoring helpers
 
-    enum ValueFormat { case percent, number, currency }
+    enum ValueFormat { case percent, number, currency, microCurrency }
 
     private func formatValue(_ v: Double, format: ValueFormat) -> String {
         switch format {
         case .percent:  return String(format: "%.1f%%", v)
-        case .number:   return v >= 1000 ? String(format: "%.1fk", v / 1000) : String(format: "%.0f", v)
-        case .currency: return String(format: "$%.4f", v)
+        case .number:   return v >= 1_000_000 ? String(format: "%.1fM", v / 1_000_000)
+                             : v >= 1_000     ? String(format: "%.1fk", v / 1_000)
+                             : String(format: "%.0f", v)
+        case .currency: return v == 0 ? "$0.00" : String(format: "$%.2f", v)
+        case .microCurrency:
+            if v == 0          { return "$0" }
+            if v >= 0.01       { return String(format: "$%.4f", v) }
+            if v >= 0.0001     { return String(format: "$%.5f", v) }
+            if v >= 0.000001   { return String(format: "$%.7f", v) }
+            return String(format: "$%.9f", v)
         }
     }
 

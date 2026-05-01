@@ -274,13 +274,15 @@ struct CoverageInfo {
 struct InvestmentRecommendation: Identifiable {
     let id = UUID()
     let project: ModrinthProject
-    let score: Double          // 0–100 composite investment score
-    let reason: String         // Primary reason to invest
-    let actions: [String]      // Specific actions to take
+    let score: Double              // 0–100 composite investment score
+    let reason: String             // Primary reason to invest
+    let actions: [String]          // Specific actions to take
     let missingVersions: Int
     let aestheticsScore: Double
-    let velocityScore: Double  // Recent download momentum
-    let revenueScore: Double
+    let velocityScore: Double      // Normalised 0–100 vs portfolio max
+    let revenueScore: Double       // Normalised revenue/view score 0–100
+    let revenuePerView: Double     // Raw $/view from API
+    let revenuePerDownload: Double // Raw $/download from API
 }
 
 // MARK: - Business Metrics
@@ -312,6 +314,11 @@ struct BusinessMetrics {
     var revenuePerDownload: Double {
         guard totalDownloads > 0 else { return 0 }
         return totalRevenue / totalDownloads
+    }
+
+    var revenuePerView: Double {
+        guard totalViews > 0 else { return 0 }
+        return totalRevenue / totalViews
     }
 
     var downloadVelocity7d: Double {
