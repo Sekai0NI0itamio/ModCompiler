@@ -15,14 +15,16 @@ struct BundleIndex: Codable {
     var sourceUrl: String
     var issuesUrl: String
     var wikiUrl: String
+    var discordUrl: String
     var modrinthUrl: String
     var iconUrl: String
+    var gallery: [String]
     var versions: [VersionEntry]
     var totalVersionsOnModrinth: Int
     var versionsInBundle: Int
 
     enum CodingKeys: String, CodingKey {
-        case title, slug, description, license, categories, loaders, downloads, versions
+        case title, slug, description, license, categories, loaders, downloads, versions, gallery
         case projectId      = "project_id"
         case clientSide     = "client_side"
         case serverSide     = "server_side"
@@ -30,6 +32,7 @@ struct BundleIndex: Codable {
         case sourceUrl      = "source_url"
         case issuesUrl      = "issues_url"
         case wikiUrl        = "wiki_url"
+        case discordUrl     = "discord_url"
         case modrinthUrl    = "modrinth_url"
         case iconUrl        = "icon_url"
         case totalVersionsOnModrinth = "total_versions_on_modrinth"

@@ -266,6 +266,28 @@ for i, v in enumerate(versions, 1):
         "changelog":      changelog,
     })
 
+# ── gallery images ────────────────────────────────────────────────────────────
+gallery_dir = out / "gallery"
+gallery_filenames = []
+raw_gallery = project.get("gallery") or []
+if raw_gallery:
+    gallery_dir.mkdir(exist_ok=True)
+    for img in raw_gallery:
+        img_url = img.get("url") or ""
+        if not img_url:
+            continue
+        ext = img_url.rsplit(".", 1)[-1].split("?")[0] or "webp"
+        # Use ordering + title as filename
+        order = img.get("ordering", 0)
+        raw_title = re.sub(r"[^\w\-]", "_", img.get("title") or f"image_{order}")
+        fname = f"{order:03d}_{raw_title}.{ext}"
+        ok = download(img_url, gallery_dir / fname)
+        if ok:
+            gallery_filenames.append(fname)
+            print(f"  [gallery] {fname}")
+        else:
+            print(f"  [gallery] FAILED: {img_url}")
+
 index = {
     "title":         title,
     "slug":          slug,
@@ -281,12 +303,14 @@ index = {
     "source_url":    project.get("source_url") or "",
     "issues_url":    project.get("issues_url") or "",
     "wiki_url":      project.get("wiki_url") or "",
+    "discord_url":   project.get("discord_url") or "",
     "modrinth_url":  f"https://modrinth.com/mod/{slug}",
     "icon_url":      project.get("icon_url") or "",
+    "gallery":       gallery_filenames,
     "versions":      version_index,
     "total_versions_on_modrinth": len(all_versions),
     "versions_in_bundle":         len(versions),
 }
 (out / "index.json").write_text(json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8")
 
-print(f"\nBundle ready: {len(versions)} versions, {len(version_index)} folders")
+print(f"\nBundle ready: {len(versions)} versions, {len(version_index)} folders, {len(gallery_filenames)} gallery images")
