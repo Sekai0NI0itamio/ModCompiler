@@ -266,6 +266,19 @@ for i, v in enumerate(versions, 1):
         "changelog":      changelog,
     })
 
+# ── project icon ─────────────────────────────────────────────────────────────
+icon_filename = ""
+icon_url = project.get("icon_url") or ""
+if icon_url:
+    ext = icon_url.rsplit(".", 1)[-1].split("?")[0] or "webp"
+    icon_filename = f"icon.{ext}"
+    ok = download(icon_url, out / icon_filename)
+    if ok:
+        print(f"  [icon] {icon_filename}")
+    else:
+        icon_filename = ""
+        print(f"  [icon] FAILED: {icon_url}")
+
 # ── gallery images ────────────────────────────────────────────────────────────
 gallery_dir = out / "gallery"
 gallery_filenames = []
@@ -306,6 +319,7 @@ index = {
     "discord_url":   project.get("discord_url") or "",
     "modrinth_url":  f"https://modrinth.com/mod/{slug}",
     "icon_url":      project.get("icon_url") or "",
+    "icon_file":     icon_filename,
     "gallery":       gallery_filenames,
     "versions":      version_index,
     "total_versions_on_modrinth": len(all_versions),
