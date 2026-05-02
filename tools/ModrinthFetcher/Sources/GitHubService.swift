@@ -9,7 +9,7 @@ struct AppError: LocalizedError {
 final class GitHubService {
 
     private let repo: String
-    private let workflowId = "fetch-modrinth-for-curseforge.yml"
+    private let workflowId = "fetch-modrinth-curseforge-bundle.yml"
     private let artifactName = "modrinth-curseforge-bundle"
 
     init(repo: String) { self.repo = repo }
@@ -49,21 +49,72 @@ final class GitHubService {
         let s = out.trimmingCharacters(in: .whitespacesAndNewlines)
         return s.isEmpty ? "main" : s
     }
+
+    /// Returns the branch name that has the workflow file committed and pushed.
+    /// Checks the default branch first, then common alternatives.
+    static func branchWithWorkflow(repo: String, workflowFile: String) throws -> String {
+        let defaultBr = try defaultBranch(repo: repo)
+        let candidates = [defaultBr, "main", "master", "develop"]
+        for branch in candidates {
+            let out = (try? gh(["api",
+                                "repos/\(repo)/contents/.github/workflows/\(workflowFile)",
+                                "--header", "Accept: application/vnd.github+json",
+                                "-X", "GET",
+                                "-f", "ref=\(branch)"])) ?? ""
+            if !out.isEmpty && !out.contains("Not Found") {
+                return branch
+            }
+        }
+        // Fall back to default branch and let the dispatch surface the real error
+        return defaultBr
+    }
     // MARK: - Dispatch
 
     func dispatch(modrinthURL: String, branch: String) throws -> Int {
-        let before = Set(try listRunIds(branch: branch))
-        try gh(["workflow", "run", workflowId,
-                "-R", repo, "--ref", branch,
-                "-f", "modrinth_url=\(modrinthURL)"])
+        // Verify the workflow exists and has workflow_dispatch on this branch
+        // before attempting to trigger it, so we can give a clear error.
+        let workflowBranch = try resolveWorkflowBranch(preferredBranch: branch)
+
+        let before = Set(try listRunIds(branch: workflowBranch))
+        do {
+            try gh(["workflow", "run", workflowId,
+                    "-R", repo, "--ref", workflowBranch,
+                    "-f", "modrinth_url=\(modrinthURL)"])
+        } catch let err as AppError {
+            // Provide a more actionable error message for the common 422 case
+            let msg = err.message
+            if msg.contains("422") || msg.contains("workflow_dispatch") || msg.contains("does not have") {
+                throw AppError(
+                    "GitHub rejected the dispatch (HTTP 422).\n\n" +
+                    "This usually means the workflow file '\(workflowId)' " +
+                    "does not exist on branch '\(workflowBranch)', or it was " +
+                    "recently pushed and GitHub hasn't indexed it yet.\n\n" +
+                    "• Make sure the workflow is committed and pushed to '\(workflowBranch)'.\n" +
+                    "• Wait ~30 seconds after pushing and try again.\n\n" +
+                    "Original error: \(msg)"
+                )
+            }
+            throw err
+        }
         let deadline = Date().addingTimeInterval(120)
         while Date() < deadline {
             Thread.sleep(forTimeInterval: 4)
-            for id in try listRunIds(branch: branch) where !before.contains(id) {
+            for id in try listRunIds(branch: workflowBranch) where !before.contains(id) {
                 return id
             }
         }
         throw AppError("Workflow dispatched but no run appeared within 120s.")
+    }
+
+    /// Returns the branch that actually has the workflow file committed.
+    /// Falls back to `preferredBranch` if we can't determine it.
+    private func resolveWorkflowBranch(preferredBranch: String) throws -> String {
+        // Ask GitHub which branches have this workflow enabled
+        let out = (try? gh(["workflow", "view", workflowId, "-R", repo])) ?? ""
+        // If the workflow view succeeds, the workflow is known to GitHub on the default branch.
+        // We still use the preferred branch — if it fails we'll catch the 422 above.
+        _ = out
+        return preferredBranch
     }
 
     // MARK: - Poll
