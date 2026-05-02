@@ -18,6 +18,7 @@ struct BundleIndex: Codable {
     var discordUrl: String
     var modrinthUrl: String
     var iconUrl: String
+    var iconFile: String
     var gallery: [String]
     var versions: [VersionEntry]
     var totalVersionsOnModrinth: Int
@@ -35,6 +36,7 @@ struct BundleIndex: Codable {
         case discordUrl     = "discord_url"
         case modrinthUrl    = "modrinth_url"
         case iconUrl        = "icon_url"
+        case iconFile       = "icon_file"
         case totalVersionsOnModrinth = "total_versions_on_modrinth"
         case versionsInBundle        = "versions_in_bundle"
     }
