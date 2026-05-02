@@ -140,6 +140,15 @@ final class GitHubService {
         try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
         try gh(["run", "download", String(runId), "-R", repo,
                 "-n", artifactName, "-D", dest.path])
+        // Verify something was actually written
+        let index = dest.appendingPathComponent("index.json")
+        guard FileManager.default.fileExists(atPath: index.path) else {
+            throw AppError(
+                "gh run download completed but no files were written to:\n\(dest.path)\n\n" +
+                "The artifact may have expired (GitHub keeps artifacts for 90 days by default). " +
+                "Try fetching again to create a fresh run."
+            )
+        }
         return dest
     }
 

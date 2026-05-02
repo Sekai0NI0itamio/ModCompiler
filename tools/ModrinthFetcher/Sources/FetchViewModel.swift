@@ -46,18 +46,36 @@ final class FetchViewModel: ObservableObject {
                     let info = try await offload { try svc.pollRun(runId: runId) }
                     await update("[\(ts())] \(info.status)")
                     if info.status == "completed" {
-                        await update("Completed (\(info.conclusion)). Downloading…")
+                        if info.conclusion != "success" {
+                            await MainActor.run {
+                                self.state = .failed("Workflow run \(info.conclusion). Check the run for details:\n\(ghURL)")
+                            }
+                            return
+                        }
+                        await update("Completed. Downloading artifact…")
                         let outDir = FileManager.default
                             .urls(for: .downloadsDirectory, in: .userDomainMask)[0]
                             .appendingPathComponent("ModrinthBundles")
                         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
                         let dir = try await offload { try svc.downloadArtifact(runId: runId, into: outDir) }
                         let indexURL = dir.appendingPathComponent("index.json")
-                        if let data = try? Data(contentsOf: indexURL),
-                           let idx  = try? JSONDecoder().decode(BundleIndex.self, from: data) {
+                        guard FileManager.default.fileExists(atPath: indexURL.path) else {
+                            await MainActor.run {
+                                self.state = .failed(
+                                    "Artifact downloaded but index.json not found at:\n\(indexURL.path)\n\n" +
+                                    "The bundle folder may be empty — check that the workflow run produced files."
+                                )
+                            }
+                            return
+                        }
+                        do {
+                            let data = try Data(contentsOf: indexURL)
+                            let idx  = try JSONDecoder().decode(BundleIndex.self, from: data)
                             await MainActor.run { self.state = .done(bundleDir: dir, index: idx) }
-                        } else {
-                            await MainActor.run { self.state = .failed("Downloaded but could not read index.json") }
+                        } catch {
+                            await MainActor.run {
+                                self.state = .failed("Downloaded but could not parse index.json:\n\(error.localizedDescription)")
+                            }
                         }
                         return
                     }
