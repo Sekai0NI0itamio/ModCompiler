@@ -36,7 +36,6 @@ struct ContentView: View {
 
             Divider()
 
-            // ── Body ─────────────────────────────────────────────────────
             switch vm.state {
             case .idle:
                 IdlePlaceholder()
@@ -126,7 +125,6 @@ struct ResultView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            // ── Left column ───────────────────────────────────────────────
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     LeftColumn(index: index, bundleDir: bundleDir)
@@ -137,7 +135,6 @@ struct ResultView: View {
 
             Divider()
 
-            // ── Right column ──────────────────────────────────────────────
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     RightColumn(index: index, bundleDir: bundleDir)
@@ -156,33 +153,29 @@ struct LeftColumn: View {
     let bundleDir: URL
 
     var body: some View {
-        // Project Name
         PanelSection(title: "Project Name") {
             CopyOnlyRow(value: index.title)
         }
 
-        // Project Summary
         PanelSection(title: "Project Summary") {
             CopyOnlyRow(value: index.description)
         }
 
-        // Project Tags
         PanelSection(title: "Project Tags") {
             let tags = (index.categories + index.loaders).filter { !$0.isEmpty }
             CopyOnlyRow(value: tags.joined(separator: ", "))
         }
 
-        // Links
         PanelSection(title: "Links") {
-            VStack(spacing: 0) {
-                let links: [(String, String)] = [
-                    ("Modrinth",  index.modrinthUrl),
-                    ("Source",    index.sourceUrl),
-                    ("Issues",    index.issuesUrl),
-                    ("Wiki",      index.wikiUrl),
-                    ("Discord",   index.discordUrl),
-                ].filter { !$1.isEmpty }
+            let links: [(String, String)] = [
+                ("Modrinth", index.modrinthUrl),
+                ("Source",   index.sourceUrl),
+                ("Issues",   index.issuesUrl),
+                ("Wiki",     index.wikiUrl),
+                ("Discord",  index.discordUrl),
+            ].filter { !$1.isEmpty }
 
+            VStack(spacing: 0) {
                 if links.isEmpty {
                     Text("No links available")
                         .font(.callout)
@@ -193,7 +186,7 @@ struct LeftColumn: View {
                     ForEach(Array(links.enumerated()), id: \.offset) { i, link in
                         LinkCopyRow(label: link.0, value: link.1)
                         if i < links.count - 1 {
-                            Divider().padding(.leading, 70)
+                            Divider().padding(.leading, 46)
                         }
                     }
                 }
@@ -211,7 +204,6 @@ struct RightColumn: View {
     let bundleDir: URL
 
     var body: some View {
-        // Description in Markdown
         PanelSection(title: "Project Description in Markdown") {
             FileContentCopyRow(
                 icon: "doc.text",
@@ -220,7 +212,6 @@ struct RightColumn: View {
             )
         }
 
-        // Description in HTML
         PanelSection(title: "Project Description in HTML") {
             FileContentCopyRow(
                 icon: "globe",
@@ -229,12 +220,10 @@ struct RightColumn: View {
             )
         }
 
-        // Version Folders
         PanelSection(title: "Version Folders  (\(index.versions.count))") {
             VersionsExpandableSection(versions: index.versions, bundleDir: bundleDir)
         }
 
-        // Gallery Images
         PanelSection(title: "Gallery Images  (\(index.gallery.count))") {
             FolderRevealRow(
                 icon: "photo.on.rectangle",
@@ -263,121 +252,163 @@ struct PanelSection<Content: View>: View {
     }
 }
 
-// MARK: - Copy-only row (single value, copy button)
+// MARK: - Tick button (reusable)
+
+struct TickButton: View {
+    @Binding var ticked: Bool
+    var tintWhenTicked: Color = .green
+
+    var body: some View {
+        Button { ticked.toggle() } label: {
+            Image(systemName: ticked ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(ticked ? tintWhenTicked : Color.secondary)
+                .frame(width: 20)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Row tint modifier (green bg + outline when ticked)
+
+struct TickedRowStyle: ViewModifier {
+    let ticked: Bool
+    func body(content: Content) -> some View {
+        content
+            .background(ticked ? Color.green : Color(.quaternaryLabelColor).opacity(0.35))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(ticked ? Color.green : Color.clear, lineWidth: 1.5)
+            )
+            .animation(.easeInOut(duration: 0.12), value: ticked)
+    }
+}
+
+extension View {
+    func tickedRowStyle(_ ticked: Bool) -> some View {
+        modifier(TickedRowStyle(ticked: ticked))
+    }
+}
+
+// MARK: - Copy-only row
 
 struct CopyOnlyRow: View {
     let value: String
-    @State private var copied = false
+    @State private var ticked = false
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 6) {
+            TickButton(ticked: $ticked, tintWhenTicked: ticked ? .white : .green)
+
             Text(value.isEmpty ? "—" : value)
                 .font(.callout)
                 .textSelection(.enabled)
                 .lineLimit(4)
+                .foregroundStyle(ticked ? .white : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 10)
                 .padding(.vertical, 8)
 
             if !value.isEmpty {
                 Button {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(value, forType: .string)
-                    copied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+                    ticked = true
                 } label: {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        .foregroundStyle(copied ? .green : .secondary)
+                    Image(systemName: "doc.on.doc")
+                        .foregroundStyle(ticked ? Color.white.opacity(0.8) : Color.secondary)
                         .frame(width: 32)
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 4)
             }
         }
-        .background(.quaternary.opacity(0.35))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.leading, 8)
+        .tickedRowStyle(ticked)
     }
 }
 
-// MARK: - Link copy row (label + URL, copy button)
+// MARK: - Link copy row
 
 struct LinkCopyRow: View {
     let label: String
     let value: String
-    @State private var copied = false
+    @State private var ticked = false
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 6) {
+            TickButton(ticked: $ticked, tintWhenTicked: ticked ? .white : .green)
+
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 60, alignment: .leading)
-                .padding(.leading, 10)
+                .foregroundStyle(ticked ? Color.white.opacity(0.75) : Color.secondary)
+                .frame(width: 54, alignment: .leading)
 
             Text(value)
                 .font(.callout.monospaced())
                 .textSelection(.enabled)
                 .lineLimit(1)
                 .truncationMode(.middle)
+                .foregroundStyle(ticked ? .white : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 4)
 
             Button {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(value, forType: .string)
-                copied = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+                ticked = true
             } label: {
-                Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                    .foregroundStyle(copied ? .green : .secondary)
+                Image(systemName: "doc.on.doc")
+                    .foregroundStyle(ticked ? Color.white.opacity(0.8) : Color.secondary)
                     .frame(width: 32)
             }
             .buttonStyle(.plain)
             .padding(.trailing, 4)
         }
+        .padding(.leading, 8)
         .padding(.vertical, 6)
     }
 }
 
-// MARK: - File content copy row (reads file, copies contents)
+// MARK: - File content copy row
 
 struct FileContentCopyRow: View {
     let icon: String
     let label: String
     let fileURL: URL
-    @State private var copied = false
+    @State private var ticked = false
 
     private var exists: Bool { FileManager.default.fileExists(atPath: fileURL.path) }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
+            TickButton(ticked: $ticked, tintWhenTicked: ticked ? .white : .green)
+
             Image(systemName: icon)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ticked ? Color.white.opacity(0.75) : Color.secondary)
                 .frame(width: 18)
 
             Text(label)
                 .font(.callout)
-                .foregroundStyle(exists ? .primary : .tertiary)
+                .foregroundStyle(ticked ? .white : (exists ? Color.primary : Color.secondary))
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Button {
                 guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { return }
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(content, forType: .string)
-                copied = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+                ticked = true
             } label: {
-                Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                    .foregroundStyle(copied ? .green : .secondary)
+                Image(systemName: "doc.on.doc")
+                    .foregroundStyle(ticked ? Color.white.opacity(0.8) : Color.secondary)
                     .frame(width: 32)
             }
             .buttonStyle(.plain)
             .disabled(!exists)
+            .padding(.trailing, 4)
         }
-        .padding(.horizontal, 10)
+        .padding(.leading, 8)
         .padding(.vertical, 8)
-        .background(.quaternary.opacity(0.35))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .tickedRowStyle(ticked)
     }
 }
 
@@ -388,7 +419,6 @@ struct VersionsExpandableSection: View {
     let bundleDir: URL
 
     @State private var expanded = false
-    // Persisted ticked state keyed by version folder name
     @State private var ticked: Set<String> = []
 
     private var versionsDir: URL { bundleDir.appendingPathComponent("versions") }
@@ -396,7 +426,7 @@ struct VersionsExpandableSection: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // ── Header row (always visible) ───────────────────────────────
+            // Header
             Button {
                 withAnimation(.easeInOut(duration: 0.15)) { expanded.toggle() }
             } label: {
@@ -404,12 +434,10 @@ struct VersionsExpandableSection: View {
                     Image(systemName: "folder")
                         .foregroundStyle(.secondary)
                         .frame(width: 18)
-
                     Text("versions/")
                         .font(.callout)
                         .foregroundStyle(exists ? .primary : .tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-
                     Image(systemName: expanded ? "chevron.down" : "chevron.right")
                         .font(.caption.bold())
                         .foregroundStyle(.secondary)
@@ -421,7 +449,6 @@ struct VersionsExpandableSection: View {
             .buttonStyle(.plain)
             .disabled(!exists)
 
-            // ── Expanded list ─────────────────────────────────────────────
             if expanded && exists {
                 Divider()
                 ScrollView {
@@ -466,7 +493,6 @@ struct VersionItemRow: View {
     }
     private var exists: Bool { FileManager.default.fileExists(atPath: vDir.path) }
 
-    // "1.21.1 · forge" from the folder name / version data
     private var mcLoaderLabel: String {
         let mc  = v.gameVersions.first ?? "?"
         let ldr = v.loaders.first ?? "?"
@@ -475,27 +501,35 @@ struct VersionItemRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // MC version + loader
+            // Tick — front
+            Button { ticked.toggle() } label: {
+                Image(systemName: ticked ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(ticked ? Color.white : Color.secondary)
+                    .frame(width: 20)
+            }
+            .buttonStyle(.plain)
+
+            // MC + loader
             Text(mcLoaderLabel)
                 .font(.caption.monospacedDigit())
-                .foregroundStyle(ticked ? .white.opacity(0.85) : .secondary)
+                .foregroundStyle(ticked ? Color.white.opacity(0.85) : Color.secondary)
                 .lineLimit(1)
                 .frame(width: 110, alignment: .leading)
 
-            // Mod display name
+            // Display name
             Text(v.displayName)
                 .font(.callout)
-                .foregroundStyle(ticked ? .white : .primary)
+                .foregroundStyle(ticked ? Color.white : Color.primary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Version number
             Text(v.versionNumber)
                 .font(.caption.monospacedDigit())
-                .foregroundStyle(ticked ? .white.opacity(0.85) : .secondary)
+                .foregroundStyle(ticked ? Color.white.opacity(0.85) : Color.secondary)
                 .lineLimit(1)
 
-            // Reveal in Finder
+            // Reveal in Finder — auto-ticks
             Button {
                 let target = jarURL ?? vDir
                 if jarURL != nil {
@@ -506,22 +540,12 @@ struct VersionItemRow: View {
                 ticked = true
             } label: {
                 Image(systemName: "folder.badge.magnifyingglass")
-                    .foregroundStyle(ticked ? .white.opacity(0.9) : .secondary)
+                    .foregroundStyle(ticked ? Color.white.opacity(0.9) : Color.secondary)
                     .frame(width: 24)
             }
             .buttonStyle(.plain)
             .help("Reveal in Finder")
             .disabled(!exists)
-
-            // Tick toggle
-            Button {
-                ticked.toggle()
-            } label: {
-                Image(systemName: ticked ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(ticked ? Color.white : Color.secondary)
-                    .frame(width: 20)
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
@@ -535,7 +559,7 @@ struct VersionItemRow: View {
     }
 }
 
-// MARK: - Folder reveal row (single button, opens a folder)
+// MARK: - Folder reveal row
 
 struct FolderRevealRow: View {
     let icon: String
