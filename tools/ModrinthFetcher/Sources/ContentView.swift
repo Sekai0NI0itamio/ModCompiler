@@ -118,93 +118,199 @@ struct ErrorView: View {
     }
 }
 
-// MARK: - Result
+// MARK: - Result (two-column layout)
 
 struct ResultView: View {
     let index: BundleIndex
     let bundleDir: URL
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-
-                // Title + stats
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(index.title).font(.largeTitle.bold())
-                        Text(index.description).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 3) {
-                        Text("\(index.downloads.formatted()) downloads")
-                            .font(.callout).foregroundStyle(.secondary)
-                        Text("\(index.versionsInBundle) versions in bundle")
-                            .font(.callout).foregroundStyle(.secondary)
-                    }
+        HStack(alignment: .top, spacing: 0) {
+            // ── Left column ───────────────────────────────────────────────
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    LeftColumn(index: index, bundleDir: bundleDir)
                 }
-
-                Divider()
-
-                // Project fields
-                SectionLabel("Project Info")
-                CopyGrid(items: [
-                    ("Title",        index.title),
-                    ("Slug",         index.slug),
-                    ("Project ID",   index.projectId),
-                    ("License",      index.license),
-                    ("Client side",  index.clientSide),
-                    ("Server side",  index.serverSide),
-                    ("Categories",   index.categories.joined(separator: ", ")),
-                    ("Loaders",      index.loaders.joined(separator: ", ")),
-                    ("MC versions",  index.gameVersions.joined(separator: ", ")),
-                    ("Modrinth URL", index.modrinthUrl),
-                    ("Source URL",   index.sourceUrl),
-                    ("Issues URL",   index.issuesUrl),
-                ])
-
-                Divider()
-
-                // Files
-                SectionLabel("Description Files")
-                HStack(spacing: 10) {
-                    RevealBtn("description.md",   "doc.text",      bundleDir.appendingPathComponent("description.md"))
-                    RevealBtn("description.html", "globe",         bundleDir.appendingPathComponent("description.html"))
-                    RevealBtn("project_info.txt", "doc.plaintext", bundleDir.appendingPathComponent("project_info.txt"))
-                    RevealBtn("Open Bundle Folder", "folder",      bundleDir, isFolder: true)
-                }
-
-                Divider()
-
-                // Versions
-                SectionLabel("Versions  (\(index.versions.count))")
-                LazyVStack(spacing: 6) {
-                    ForEach(index.versions) { v in
-                        VersionRow(v: v, bundleDir: bundleDir)
-                    }
-                }
+                .padding(18)
             }
-            .padding(22)
+            .frame(minWidth: 280, maxWidth: .infinity)
+
+            Divider()
+
+            // ── Right column ──────────────────────────────────────────────
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    RightColumn(index: index, bundleDir: bundleDir)
+                }
+                .padding(18)
+            }
+            .frame(minWidth: 280, maxWidth: .infinity)
         }
     }
 }
 
-// MARK: - Helpers
+// MARK: - Left column
 
-struct SectionLabel: View {
-    let t: String
-    init(_ t: String) { self.t = t }
-    var body: some View { Text(t).font(.headline) }
+struct LeftColumn: View {
+    let index: BundleIndex
+    let bundleDir: URL
+
+    var body: some View {
+        // Project Name
+        PanelSection(title: "Project Name") {
+            CopyOnlyRow(value: index.title)
+        }
+
+        // Project Summary
+        PanelSection(title: "Project Summary") {
+            CopyOnlyRow(value: index.description)
+        }
+
+        // Project Tags
+        PanelSection(title: "Project Tags") {
+            let tags = (index.categories + index.loaders).filter { !$0.isEmpty }
+            CopyOnlyRow(value: tags.joined(separator: ", "))
+        }
+
+        // Links
+        PanelSection(title: "Links") {
+            VStack(spacing: 0) {
+                let links: [(String, String)] = [
+                    ("Modrinth",  index.modrinthUrl),
+                    ("Source",    index.sourceUrl),
+                    ("Issues",    index.issuesUrl),
+                    ("Wiki",      index.wikiUrl),
+                    ("Discord",   index.discordUrl),
+                ].filter { !$1.isEmpty }
+
+                if links.isEmpty {
+                    Text("No links available")
+                        .font(.callout)
+                        .foregroundStyle(.tertiary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                } else {
+                    ForEach(Array(links.enumerated()), id: \.offset) { i, link in
+                        LinkCopyRow(label: link.0, value: link.1)
+                        if i < links.count - 1 {
+                            Divider().padding(.leading, 70)
+                        }
+                    }
+                }
+            }
+            .background(.quaternary.opacity(0.35))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+    }
 }
 
-struct CopyGrid: View {
-    let items: [(String, String)]
+// MARK: - Right column
+
+struct RightColumn: View {
+    let index: BundleIndex
+    let bundleDir: URL
+
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
-                if !item.1.isEmpty {
-                    CopyRow(label: item.0, value: item.1)
-                    if i < items.count - 1 { Divider().padding(.leading, 110) }
+        // Description in Markdown
+        PanelSection(title: "Project Description in Markdown") {
+            FileContentCopyRow(
+                icon: "doc.text",
+                label: "description.md",
+                fileURL: bundleDir.appendingPathComponent("description.md")
+            )
+        }
+
+        // Description in HTML
+        PanelSection(title: "Project Description in HTML") {
+            FileContentCopyRow(
+                icon: "globe",
+                label: "description.html",
+                fileURL: bundleDir.appendingPathComponent("description.html")
+            )
+        }
+
+        // Version Folders
+        PanelSection(title: "Version Folders  (\(index.versions.count))") {
+            VStack(spacing: 4) {
+                ForEach(index.versions) { v in
+                    VersionRevealRow(v: v, bundleDir: bundleDir)
                 }
+            }
+        }
+
+        // Gallery Images
+        PanelSection(title: "Gallery Images  (\(index.gallery.count))") {
+            let galleryDir = bundleDir.appendingPathComponent("gallery")
+            if index.gallery.isEmpty {
+                Text("No gallery images")
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.quaternary.opacity(0.35))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                VStack(spacing: 4) {
+                    ForEach(index.gallery, id: \.self) { filename in
+                        GalleryRevealRow(
+                            filename: filename,
+                            fileURL: galleryDir.appendingPathComponent(filename)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Panel section wrapper
+
+struct PanelSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.5)
+            content()
+        }
+    }
+}
+
+// MARK: - Copy-only row (single value, copy button)
+
+struct CopyOnlyRow: View {
+    let value: String
+    @State private var copied = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(value.isEmpty ? "—" : value)
+                .font(.callout)
+                .textSelection(.enabled)
+                .lineLimit(4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+
+            if !value.isEmpty {
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(value, forType: .string)
+                    copied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+                } label: {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .foregroundStyle(copied ? .green : .secondary)
+                        .frame(width: 32)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 4)
             }
         }
         .background(.quaternary.opacity(0.35))
@@ -212,22 +318,29 @@ struct CopyGrid: View {
     }
 }
 
-struct CopyRow: View {
+// MARK: - Link copy row (label + URL, copy button)
+
+struct LinkCopyRow: View {
     let label: String
     let value: String
     @State private var copied = false
+
     var body: some View {
         HStack(spacing: 0) {
             Text(label)
-                .font(.callout).foregroundStyle(.secondary)
-                .frame(width: 110, alignment: .leading)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 60, alignment: .leading)
                 .padding(.leading, 10)
+
             Text(value)
                 .font(.callout.monospaced())
                 .textSelection(.enabled)
-                .lineLimit(2)
+                .lineLimit(1)
+                .truncationMode(.middle)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 6)
+
             Button {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(value, forType: .string)
@@ -236,117 +349,102 @@ struct CopyRow: View {
             } label: {
                 Image(systemName: copied ? "checkmark" : "doc.on.doc")
                     .foregroundStyle(copied ? .green : .secondary)
-                    .frame(width: 30)
+                    .frame(width: 32)
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 6)
+            .padding(.trailing, 4)
         }
         .padding(.vertical, 6)
     }
 }
 
-struct RevealBtn: View {
-    let label: String; let icon: String; let url: URL; var isFolder = false
-    init(_ label: String, _ icon: String, _ url: URL, isFolder: Bool = false) {
-        self.label = label; self.icon = icon; self.url = url; self.isFolder = isFolder
-    }
+// MARK: - File content copy row (reads file, copies contents)
+
+struct FileContentCopyRow: View {
+    let icon: String
+    let label: String
+    let fileURL: URL
+    @State private var copied = false
+
+    private var exists: Bool { FileManager.default.fileExists(atPath: fileURL.path) }
+
     var body: some View {
-        Button {
-            if isFolder { NSWorkspace.shared.open(url) }
-            else        { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-        } label: {
-            Label(label, systemImage: icon).font(.callout)
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+
+            Text(label)
+                .font(.callout)
+                .foregroundStyle(exists ? .primary : .tertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { return }
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(content, forType: .string)
+                copied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+            } label: {
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .foregroundStyle(copied ? .green : .secondary)
+                    .frame(width: 32)
+            }
+            .buttonStyle(.plain)
+            .disabled(!exists)
         }
-        .buttonStyle(.bordered)
-        .disabled(!FileManager.default.fileExists(atPath: url.path))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(.quaternary.opacity(0.35))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 
-struct VersionRow: View {
+// MARK: - Version reveal row
+
+struct VersionRevealRow: View {
     let v: VersionEntry
     let bundleDir: URL
-    @State private var expanded = false
 
     private var vDir: URL {
         bundleDir.appendingPathComponent("versions").appendingPathComponent(v.folder)
     }
+    private var exists: Bool { FileManager.default.fileExists(atPath: vDir.path) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                // Type badge
-                Text(v.versionType.uppercased())
-                    .font(.caption2.bold())
-                    .padding(.horizontal, 5).padding(.vertical, 2)
-                    .background(badgeColor)
-                    .foregroundStyle(.white)
-                    .clipShape(Capsule())
+        HStack(spacing: 8) {
+            // Release type badge
+            Text(v.versionType.prefix(1).uppercased())
+                .font(.caption2.bold())
+                .frame(width: 16, height: 16)
+                .background(badgeColor)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
 
-                Text(v.displayName).font(.callout.bold()).lineLimit(1)
+            Text(v.displayName)
+                .font(.callout)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(v.loaders.joined(separator: "·"))
-                    .font(.caption).foregroundStyle(.secondary)
+            Text(v.loaders.prefix(2).joined(separator: "·"))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
 
-                Text(v.gameVersions.prefix(3).joined(separator: ", ")
-                     + (v.gameVersions.count > 3 ? "…" : ""))
-                    .font(.caption).foregroundStyle(.secondary)
-
-                Spacer()
-                Text(v.published).font(.caption).foregroundStyle(.tertiary)
-
-                Button {
-                    NSWorkspace.shared.activateFileViewerSelecting([vDir])
-                } label: {
-                    Image(systemName: "folder.badge.magnifyingglass")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Reveal in Finder")
-                .disabled(!FileManager.default.fileExists(atPath: vDir.path))
-
-                Button {
-                    withAnimation(.easeInOut(duration: 0.12)) { expanded.toggle() }
-                } label: {
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                        .foregroundStyle(.secondary).frame(width: 18)
-                }
-                .buttonStyle(.plain)
+            Button {
+                NSWorkspace.shared.activateFileViewerSelecting([vDir])
+            } label: {
+                Image(systemName: "folder.badge.magnifyingglass")
+                    .foregroundStyle(exists ? .secondary : .tertiary)
+                    .frame(width: 28)
             }
-            .padding(.horizontal, 10).padding(.vertical, 7)
-
-            if expanded {
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    CopyGrid(items: [
-                        ("Version #",    v.versionNumber),
-                        ("Display name", v.displayName),
-                        ("Type",         v.versionType),
-                        ("Loaders",      v.loaders.joined(separator: ", ")),
-                        ("MC versions",  v.gameVersions.joined(separator: ", ")),
-                        ("Published",    v.published),
-                        ("Modrinth ID",  v.versionId),
-                        ("JAR file",     v.jar),
-                        ("JAR size",     v.jarSize > 0 ? "\(v.jarSize.formatted()) bytes" : "—"),
-                    ])
-                    if !v.changelog.isEmpty {
-                        Text("Changelog").font(.caption.bold()).foregroundStyle(.secondary)
-                        ScrollView {
-                            Text(v.changelog)
-                                .font(.caption.monospaced())
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .frame(maxHeight: 110)
-                        .background(.quaternary.opacity(0.35))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                }
-                .padding(10)
-            }
+            .buttonStyle(.plain)
+            .help("Reveal in Finder")
+            .disabled(!exists)
         }
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.separator, lineWidth: 0.5))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.quaternary.opacity(0.25))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
     private var badgeColor: Color {
@@ -356,5 +454,43 @@ struct VersionRow: View {
         case "alpha":   return .red
         default:        return .gray
         }
+    }
+}
+
+// MARK: - Gallery reveal row
+
+struct GalleryRevealRow: View {
+    let filename: String
+    let fileURL: URL
+    private var exists: Bool { FileManager.default.fileExists(atPath: fileURL.path) }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "photo")
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+
+            Text(filename)
+                .font(.callout)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .foregroundStyle(exists ? .primary : .tertiary)
+
+            Button {
+                NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+            } label: {
+                Image(systemName: "folder.badge.magnifyingglass")
+                    .foregroundStyle(exists ? .secondary : .tertiary)
+                    .frame(width: 28)
+            }
+            .buttonStyle(.plain)
+            .help("Reveal in Finder")
+            .disabled(!exists)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.quaternary.opacity(0.25))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }
