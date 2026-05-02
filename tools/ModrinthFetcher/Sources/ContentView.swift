@@ -128,6 +128,15 @@ struct ResultView: View {
                 // ── Icon + Name header ────────────────────────────────────
                 IconNameHeader(index: index, bundleDir: bundleDir)
 
+                // ── Title copy rows ───────────────────────────────────────
+                PanelSection(title: "Project Name") {
+                    CopyOnlyRow(value: index.title)
+                }
+
+                PanelSection(title: "Project Name (slug format)") {
+                    CopyOnlyRow(value: index.title.replacingOccurrences(of: " ", with: "-"))
+                }
+
                 Divider()
 
                 // ── Small fields ──────────────────────────────────────────
