@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build ModrinthFetcher.app for Apple Silicon macOS
+# Build ModrinthFetcher.app — supports both Apple Silicon and Intel Mac
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -7,11 +7,22 @@ SRC="$SCRIPT_DIR/Sources"
 OUT="$SCRIPT_DIR/build"
 APP="$OUT/ModrinthFetcher.app"
 SDK=$(xcrun --sdk macosx --show-sdk-path)
-TARGET="arm64-apple-macosx14.0"
+
+# Auto-detect architecture
+ARCH=$(uname -m)
+if [ "$ARCH" = "arm64" ]; then
+    TARGET="arm64-apple-macosx14.0"
+    MIN_OS="14.0"
+else
+    # Intel Mac
+    TARGET="x86_64-apple-macosx10.15"
+    MIN_OS="10.15"
+fi
 
 echo "==> Building ModrinthFetcher..."
 echo "    SDK: $SDK"
 echo "    Target: $TARGET"
+echo "    Arch: $ARCH"
 
 mkdir -p "$OUT"
 rm -rf "$APP"
@@ -41,7 +52,7 @@ mkdir -p "$APP/Contents/Resources"
 
 cp "$OUT/ModrinthFetcher" "$APP/Contents/MacOS/ModrinthFetcher"
 
-cat > "$APP/Contents/Info.plist" << 'PLIST'
+cat > "$APP/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -62,7 +73,7 @@ cat > "$APP/Contents/Info.plist" << 'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
-    <string>14.0</string>
+    <string>$MIN_OS</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>

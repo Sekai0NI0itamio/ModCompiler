@@ -25,7 +25,10 @@ final class FetchViewModel: ObservableObject {
         currentTask = Task {
             do {
                 let repo   = try GitHubService.discoverRepo()
-                let branch = try GitHubService.defaultBranch(repo: repo)
+                let branch = try GitHubService.branchWithWorkflow(
+                    repo: repo,
+                    workflowFile: "fetch-modrinth-curseforge-bundle.yml"
+                )
                 let svc    = GitHubService(repo: repo)
 
                 await update("Dispatching to \(repo) (\(branch))…")
