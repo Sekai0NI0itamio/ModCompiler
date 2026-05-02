@@ -231,11 +231,7 @@ struct RightColumn: View {
 
         // Version Folders
         PanelSection(title: "Version Folders  (\(index.versions.count))") {
-            FolderRevealRow(
-                icon: "folder",
-                label: "versions/",
-                folderURL: bundleDir.appendingPathComponent("versions")
-            )
+            VersionsExpandableSection(versions: index.versions, bundleDir: bundleDir)
         }
 
         // Gallery Images
@@ -382,6 +378,160 @@ struct FileContentCopyRow: View {
         .padding(.vertical, 8)
         .background(.quaternary.opacity(0.35))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - Versions expandable section
+
+struct VersionsExpandableSection: View {
+    let versions: [VersionEntry]
+    let bundleDir: URL
+
+    @State private var expanded = false
+    // Persisted ticked state keyed by version folder name
+    @State private var ticked: Set<String> = []
+
+    private var versionsDir: URL { bundleDir.appendingPathComponent("versions") }
+    private var exists: Bool { FileManager.default.fileExists(atPath: versionsDir.path) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // ── Header row (always visible) ───────────────────────────────
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { expanded.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "folder")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18)
+
+                    Text("versions/")
+                        .font(.callout)
+                        .foregroundStyle(exists ? .primary : .tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 16)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+            .disabled(!exists)
+
+            // ── Expanded list ─────────────────────────────────────────────
+            if expanded && exists {
+                Divider()
+                ScrollView {
+                    VStack(spacing: 3) {
+                        ForEach(versions) { v in
+                            VersionItemRow(
+                                v: v,
+                                bundleDir: bundleDir,
+                                ticked: Binding(
+                                    get: { ticked.contains(v.folder) },
+                                    set: { on in
+                                        if on { ticked.insert(v.folder) }
+                                        else  { ticked.remove(v.folder) }
+                                    }
+                                )
+                            )
+                        }
+                    }
+                    .padding(6)
+                }
+                .frame(height: min(CGFloat(versions.count) * 38, 7 * 38))
+            }
+        }
+        .background(.quaternary.opacity(0.35))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - Version item row
+
+struct VersionItemRow: View {
+    let v: VersionEntry
+    let bundleDir: URL
+    @Binding var ticked: Bool
+
+    private var vDir: URL {
+        bundleDir.appendingPathComponent("versions").appendingPathComponent(v.folder)
+    }
+    private var jarURL: URL? {
+        guard !v.jar.isEmpty else { return nil }
+        return vDir.appendingPathComponent(v.jar)
+    }
+    private var exists: Bool { FileManager.default.fileExists(atPath: vDir.path) }
+
+    // "1.21.1 · forge" from the folder name / version data
+    private var mcLoaderLabel: String {
+        let mc  = v.gameVersions.first ?? "?"
+        let ldr = v.loaders.first ?? "?"
+        return "\(mc) · \(ldr)"
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // MC version + loader
+            Text(mcLoaderLabel)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(ticked ? .white.opacity(0.85) : .secondary)
+                .lineLimit(1)
+                .frame(width: 110, alignment: .leading)
+
+            // Mod display name
+            Text(v.displayName)
+                .font(.callout)
+                .foregroundStyle(ticked ? .white : .primary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Version number
+            Text(v.versionNumber)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(ticked ? .white.opacity(0.85) : .secondary)
+                .lineLimit(1)
+
+            // Reveal in Finder
+            Button {
+                let target = jarURL ?? vDir
+                if jarURL != nil {
+                    NSWorkspace.shared.activateFileViewerSelecting([target])
+                } else {
+                    NSWorkspace.shared.open(target)
+                }
+                ticked = true
+            } label: {
+                Image(systemName: "folder.badge.magnifyingglass")
+                    .foregroundStyle(ticked ? .white.opacity(0.9) : .secondary)
+                    .frame(width: 24)
+            }
+            .buttonStyle(.plain)
+            .help("Reveal in Finder")
+            .disabled(!exists)
+
+            // Tick toggle
+            Button {
+                ticked.toggle()
+            } label: {
+                Image(systemName: ticked ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(ticked ? Color.white : Color.secondary)
+                    .frame(width: 20)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(ticked ? Color.green : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(ticked ? Color.green : Color.clear, lineWidth: 1.5)
+        )
+        .animation(.easeInOut(duration: 0.12), value: ticked)
     }
 }
 
