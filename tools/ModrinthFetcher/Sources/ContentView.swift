@@ -231,35 +231,20 @@ struct RightColumn: View {
 
         // Version Folders
         PanelSection(title: "Version Folders  (\(index.versions.count))") {
-            VStack(spacing: 4) {
-                ForEach(index.versions) { v in
-                    VersionRevealRow(v: v, bundleDir: bundleDir)
-                }
-            }
+            FolderRevealRow(
+                icon: "folder",
+                label: "versions/",
+                folderURL: bundleDir.appendingPathComponent("versions")
+            )
         }
 
         // Gallery Images
         PanelSection(title: "Gallery Images  (\(index.gallery.count))") {
-            let galleryDir = bundleDir.appendingPathComponent("gallery")
-            if index.gallery.isEmpty {
-                Text("No gallery images")
-                    .font(.callout)
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.quaternary.opacity(0.35))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            } else {
-                VStack(spacing: 4) {
-                    ForEach(index.gallery, id: \.self) { filename in
-                        GalleryRevealRow(
-                            filename: filename,
-                            fileURL: galleryDir.appendingPathComponent(filename)
-                        )
-                    }
-                }
-            }
+            FolderRevealRow(
+                icon: "photo.on.rectangle",
+                label: "gallery/",
+                folderURL: bundleDir.appendingPathComponent("gallery")
+            )
         }
     }
 }
@@ -400,97 +385,37 @@ struct FileContentCopyRow: View {
     }
 }
 
-// MARK: - Version reveal row
+// MARK: - Folder reveal row (single button, opens a folder)
 
-struct VersionRevealRow: View {
-    let v: VersionEntry
-    let bundleDir: URL
-
-    private var vDir: URL {
-        bundleDir.appendingPathComponent("versions").appendingPathComponent(v.folder)
-    }
-    private var exists: Bool { FileManager.default.fileExists(atPath: vDir.path) }
+struct FolderRevealRow: View {
+    let icon: String
+    let label: String
+    let folderURL: URL
+    private var exists: Bool { FileManager.default.fileExists(atPath: folderURL.path) }
 
     var body: some View {
         HStack(spacing: 8) {
-            // Release type badge
-            Text(v.versionType.prefix(1).uppercased())
-                .font(.caption2.bold())
-                .frame(width: 16, height: 16)
-                .background(badgeColor)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
-
-            Text(v.displayName)
-                .font(.callout)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text(v.loaders.prefix(2).joined(separator: "·"))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-
-            Button {
-                NSWorkspace.shared.activateFileViewerSelecting([vDir])
-            } label: {
-                Image(systemName: "folder.badge.magnifyingglass")
-                    .foregroundStyle(exists ? .secondary : .tertiary)
-                    .frame(width: 28)
-            }
-            .buttonStyle(.plain)
-            .help("Reveal in Finder")
-            .disabled(!exists)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.quaternary.opacity(0.25))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-    }
-
-    private var badgeColor: Color {
-        switch v.versionType.lowercased() {
-        case "release": return .green
-        case "beta":    return .orange
-        case "alpha":   return .red
-        default:        return .gray
-        }
-    }
-}
-
-// MARK: - Gallery reveal row
-
-struct GalleryRevealRow: View {
-    let filename: String
-    let fileURL: URL
-    private var exists: Bool { FileManager.default.fileExists(atPath: fileURL.path) }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "photo")
+            Image(systemName: icon)
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
 
-            Text(filename)
+            Text(label)
                 .font(.callout)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(exists ? .primary : .tertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Button {
-                NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+                NSWorkspace.shared.open(folderURL)
             } label: {
-                Image(systemName: "folder.badge.magnifyingglass")
-                    .foregroundStyle(exists ? .secondary : .tertiary)
-                    .frame(width: 28)
+                Label("Reveal in Finder", systemImage: "folder.badge.magnifyingglass")
+                    .font(.callout)
             }
-            .buttonStyle(.plain)
-            .help("Reveal in Finder")
+            .buttonStyle(.bordered)
             .disabled(!exists)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.quaternary.opacity(0.25))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.vertical, 8)
+        .background(.quaternary.opacity(0.35))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
