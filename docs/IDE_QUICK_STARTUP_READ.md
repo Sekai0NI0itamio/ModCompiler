@@ -465,8 +465,78 @@ See DIF entry `ZIP-PATH-MUST-BE-RELATIVE-TO-BUNDLE-FOLDER`.
 
 ---
 
-```
-User: "Update this mod to all versions: https://modrinth.com/mod/my-mod"
+### Mistake 17: Used wrong TickEvent package for Forge 1.16.5+ (Keep Inventory port)
+
+**What happened**: Used `net.minecraftforge.fml.common.gameevent.TickEvent` for all
+Forge versions. This package only exists in 1.8.9–1.12.2. Forge 1.16.5+ moved
+`TickEvent` to `net.minecraftforge.event.TickEvent`.
+
+**Rule**: Always use the correct TickEvent package per era:
+- 1.8.9–1.12.2: `net.minecraftforge.fml.common.gameevent.TickEvent`
+- 1.16.5+: `net.minecraftforge.event.TickEvent`
+
+See DIF entry `FORGE-TICKEVENT-PACKAGE-HISTORY`.
+
+---
+
+### Mistake 18: Assumed WorldEvent → LevelEvent rename happened in 1.18 (Keep Inventory port)
+
+**What happened**: Used `LevelEvent.Load` and `TickEvent.LevelTickEvent` for Forge 1.18.x.
+The rename actually happened in **1.19**, not 1.18. Forge 1.18.x still uses
+`net.minecraftforge.event.world.WorldEvent` and `TickEvent.WorldTickEvent`.
+
+**Rule**: The boundary is 1.19:
+- 1.12.2–1.18.2: `WorldEvent.Load` + `TickEvent.WorldTickEvent`
+- 1.19+: `LevelEvent.Load` + `TickEvent.LevelTickEvent`
+
+See DIF entry `FORGE-WORLDEVENT-VS-LEVELEVENT-BOUNDARY`.
+
+---
+
+### Mistake 19: Called Level.getGameRules() in Forge 1.21.3+ (Keep Inventory port)
+
+**What happened**: `getGameRules()` was removed from `Level` in Forge 1.21.3. The
+method only exists on `ServerLevel`. Calling it on a `Level` variable causes a
+compile error.
+
+**Rule**: In Forge 1.21.3+, always cast to `ServerLevel` before calling `getGameRules()`.
+Use `instanceof ServerLevel` check on the `LevelAccessor` from `LevelEvent.getLevel()`.
+
+See DIF entry `FORGE-LEVEL-GETGAMERULES-REMOVED-1213`.
+
+---
+
+### Mistake 20: Used net.minecraft.world.level.GameRules in 1.21.9+ (Keep Inventory port)
+
+**What happened**: `GameRules` moved to `net.minecraft.world.level.gamerules.GameRules`
+in Minecraft 1.21.9. The old package no longer exists. The API also changed from
+`BooleanValue` with `getRule(key).set(value, server)` to `GameRule<Boolean>` with
+`set(key, value, server)` and `get(key)`.
+
+This affects Forge 1.21.9+, NeoForge 1.21.9+, and Fabric 26.1+.
+
+**Rule**: Check the GameRules package boundary:
+- 1.19–1.21.8: `net.minecraft.world.level.GameRules` with `RULE_KEEPINVENTORY`
+- 1.21.9+: `net.minecraft.world.level.gamerules.GameRules` with `KEEP_INVENTORY`
+
+See DIF entry `FORGE-GAMERULES-PACKAGE-MOVED-1219`.
+
+---
+
+### Mistake 21: Trusted decompiled sources for NeoForge 1.20.x tick events (Keep Inventory port)
+
+**What happened**: The decompiled sources in `DecompiledMinecraftSourceCode/1.20.2-neoforge/`
+show `net.neoforged.neoforge.event.tick.ServerTickEvent` — but those sources were
+generated with a newer NeoForge build than what the template actually resolves to
+(NeoForge 20.2.93). The package doesn't exist in 20.2.93.
+
+**Rule**: For NeoForge 1.20.2–1.20.6, avoid `ServerTickEvent`. Use `ServerStartingEvent`
+only. The decompiled sources for NeoForge 1.20.x may reflect a newer build than the
+template uses. Always test with a minimal build first.
+
+See DIF entry `NEOFORGE-SERVERTICK-NOT-IN-EARLY-20X`.
+
+---
 
 Agent:
   1. Run fetch_modrinth_project.py → see what's already published
@@ -655,6 +725,14 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | Fabric 1.17 or 1.21 missing after publishing 1.17.1 / 1.21.1 | `FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION` |
 | `cannot find symbol.*DrawScreenEvent` or `Render.Post` or `getPoseStack` | `FORGE-SCREEN-EVENT-RENDER-SUBCLASS-HISTORY` |
 | Fabric TitleScreen mixin fails to inject or wrong render signature | `FABRIC-TITLESCREEN-MIXIN-RENDER-SIGNATURE-HISTORY` |
+| `package net.minecraftforge.fml.common.gameevent does not exist` (1.16.5+) | `FORGE-TICKEVENT-PACKAGE-HISTORY` |
+| `package net.minecraftforge.event.level does not exist` (1.18.x) | `FORGE-WORLDEVENT-VS-LEVELEVENT-BOUNDARY` |
+| `package net.minecraftforge.event.world does not exist` (1.19+) | `FORGE-WORLDEVENT-VS-LEVELEVENT-BOUNDARY` |
+| `incompatible types.*IWorld cannot be converted to.*World` | `FORGE-WORLDEVENT-GETWORLD-RETURNS-IWORLD` |
+| `cannot find symbol.*getGameRules.*location.*Level` (1.21.3+) | `FORGE-LEVEL-GETGAMERULES-REMOVED-1213` |
+| `cannot find symbol.*class GameRules.*net.minecraft.world.level` (1.21.9+) | `FORGE-GAMERULES-PACKAGE-MOVED-1219` |
+| `package net.neoforged.neoforge.event.tick.ServerTickEvent does not exist` (1.20.x) | `NEOFORGE-SERVERTICK-NOT-IN-EARLY-20X` |
+| `cannot find symbol.*class GameRules.*net.minecraft.world.level` (Fabric 26.1) | `FABRIC-26-GAMERULES-NEW-API` |
 | Fabric 26.1.x server-side mod — is `ServerLifecycleEvents` still available? | `FABRIC-26-SERVER-LIFECYCLE-EVENTS-UNCHANGED` |
 | `package net.neoforged.fml.javafmlmod does not exist` (NeoForge 26.1+) | `NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED` |
 | `cannot find symbol.*FMLJavaModLoadingContext` (NeoForge 26.1+) | `NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED` |
@@ -673,9 +751,10 @@ For deeper reading (in order of usefulness):
 5. `docs/examples/TPA_TELEPORT_ALL_VERSIONS.md` — server-side command mod, 7 runs, 68 versions
 6. `docs/examples/SEED_PROTECT_ALL_VERSIONS.md` — mixin-based mod, yarn mapping pitfalls
 7. `docs/examples/ALLOW_OFFLINE_LAN_JOIN_ALL_VERSIONS.md` — server-side reflection mod, 26.x patterns, 1-run success
-8. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
-9. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
+8. `docs/examples/KEEP_INVENTORY_ALL_VERSIONS.md` — server-side gamerule mod, TickEvent/WorldEvent/GameRules API history across all eras
+9. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
+10. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
 
 ---
 
-*Last updated: May 2026 — based on Allow Offline LAN Join 26.x port session*
+*Last updated: May 2026 — based on Keep Inventory all-versions port session*

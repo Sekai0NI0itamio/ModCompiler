@@ -719,6 +719,23 @@ documented:
      Do NOT trust DecompiledMinecraftSourceCode for anchor_only templates
    - Fabric 1.16.5–1.18.x: command.v1 with 2-arg callback (dispatcher, dedicated)
 
+8. Keep Inventory mod (docs/examples/KEEP_INVENTORY_ALL_VERSIONS.md)
+   - Server-side gamerule enforcement mod (WorldEvent/LevelEvent + TickEvent)
+   - 69 versions published: 1.8.9 through 26.1.2, all three loaders
+   - 4 build runs to reach full coverage
+   - CRITICAL: TickEvent package changed from fml.common.gameevent to event.TickEvent in 1.16.5
+     (fml.common.gameevent is ONLY for 1.8.9–1.12.2)
+   - CRITICAL: WorldEvent → LevelEvent rename happened in 1.19, NOT 1.18
+     (Forge 1.18.x still uses net.minecraftforge.event.world.WorldEvent)
+   - CRITICAL: Level.getGameRules() removed in 1.21.3 — must cast to ServerLevel
+   - CRITICAL: GameRules moved to net.minecraft.world.level.gamerules.GameRules in 1.21.9+
+     with new GameRule<Boolean> API (set/get instead of getRule().set/getBoolean)
+   - NeoForge 1.20.2–1.20.6: ServerTickEvent doesn't exist in early 20.2.93 build
+     (decompiled sources may reflect a newer NeoForge build than the template uses)
+   - WorldEvent.getWorld() returns IWorld in 1.12.2–1.16.5 — cast required
+   - Fabric 26.1 also uses the new gamerules subpackage (same as Forge/NeoForge 1.21.9+)
+   - NeoForge 1.21–1.21.8: ServerTickEvent.Post available; 1.20.x: use ServerStartingEvent only
+
 8. Account Switcher mod (docs/examples/ACCOUNT_SWITCHER_ALL_VERSIONS.md)
    - Client-side only mod (title screen overlay + session switching via reflection)
    - 43 new versions added: Forge 1.12+26.1.2, NeoForge 1.20.2-26.1.2, Fabric 1.16.5-26.1.2
@@ -1399,6 +1416,13 @@ Key DIF entries for common issues:
   ALWAYS-DIAGNOSE-BEFORE-BUILDING           — run diagnosis first workflow
   NEVER-REBUILD-GREEN-TARGETS               — --failed-only best practice
   GRADLE-TRANSIENT-NETWORK-FAILURE          — retry on HTTP 502/503
+  FORGE-TICKEVENT-PACKAGE-HISTORY           — TickEvent package per era (1.8.9–26.1.2)
+  FORGE-WORLDEVENT-VS-LEVELEVENT-BOUNDARY   — WorldEvent→LevelEvent rename in 1.19 (NOT 1.18)
+  FORGE-LEVEL-GETGAMERULES-REMOVED-1213     — Level.getGameRules() removed in 1.21.3+
+  FORGE-GAMERULES-PACKAGE-MOVED-1219        — GameRules moved to gamerules pkg in 1.21.9+
+  FORGE-WORLDEVENT-GETWORLD-RETURNS-IWORLD  — WorldEvent.getWorld() returns IWorld in 1.12.2–1.16.5
+  NEOFORGE-SERVERTICK-NOT-IN-EARLY-20X      — ServerTickEvent missing in NeoForge 20.2.93
+  FABRIC-26-GAMERULES-NEW-API               — Fabric 26.1 GameRules new API
 
 Mandatory pre-build workflow for updating a mod to all versions
 ---------------------------------------------------------------
