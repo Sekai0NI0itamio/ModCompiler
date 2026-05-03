@@ -114,6 +114,13 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 | FABRIC-26-SERVER-LIFECYCLE-EVENTS-UNCHANGED | Fabric 26.1.x server lifecycle events unchanged — only client HUD APIs removed | fabric | 26.1.x |
 | NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED | NeoForge 26.1+ FMLJavaModLoadingContext removed, use constructor injection | neoforge | 26.1.x |
 | ZIP-PATH-MUST-BE-RELATIVE-TO-BUNDLE-FOLDER | Zip bundle must have mod folders at top level — run zip from inside bundle folder | all | — |
+| FORGE-TICKEVENT-PACKAGE-HISTORY | Forge TickEvent package: fml.common.gameevent (1.8.9–1.12.2) vs event.TickEvent (1.16.5+) | forge | 1.8.9–26.1.2 |
+| FORGE-WORLDEVENT-VS-LEVELEVENT-BOUNDARY | WorldEvent → LevelEvent rename happened in 1.19, NOT 1.18 | forge | 1.18–1.19.4 |
+| FORGE-LEVEL-GETGAMERULES-REMOVED-1213 | Forge 1.21.3+ Level.getGameRules() removed — must cast to ServerLevel | forge | 1.21.3–26.1.2 |
+| FORGE-GAMERULES-PACKAGE-MOVED-1219 | GameRules moved to gamerules subpackage in 1.21.9+ with new GameRule<Boolean> API | forge, neoforge, fabric | 1.21.9–26.1.2 |
+| FORGE-WORLDEVENT-GETWORLD-RETURNS-IWORLD | WorldEvent.getWorld() returns IWorld in 1.12.2–1.16.5, cast required | forge | 1.12.2–1.16.5 |
+| NEOFORGE-SERVERTICK-NOT-IN-EARLY-20X | NeoForge 1.20.2–1.20.6 ServerTickEvent doesn't exist in early 20.2.93 build | neoforge | 1.20.2–1.20.6 |
+| FABRIC-26-GAMERULES-NEW-API | Fabric 26.1+ GameRules moved to gamerules subpackage with GameRule<Boolean> API | fabric | 26.1.x |
 | FORGE-FSTRING-ESCAPING-IN-GENERATOR | Generator script — Python f-string not applied, leaving {MOD_ID} and {{ literal braces in Java output | all | — |
 | FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION | Fabric supported_versions differs from Forge for same range (1.17 not 1.17.1, 1.21 not 1.21.1) | fabric | 1.17, 1.21 |
 | FORGE-SCREEN-EVENT-RENDER-SUBCLASS-HISTORY | Full history of Forge ScreenEvent subclass names and graphics accessors (DrawScreenEvent.Post → Render.Post, getPoseStack → getGuiGraphics) | forge | 1.16.5–26.1.2 |
