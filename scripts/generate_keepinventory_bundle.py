@@ -55,9 +55,9 @@ def version_txt(mc: str, loader: str) -> str:
 # ===========================================================================
 # 1.8.9 FORGE
 # Java 6: no underscores in literals, no diamond <>, no lambdas
-# GameRules.setOrCreateGameRule(String, String)
+# TickEvent is in net.minecraftforge.fml.common.gameevent (1.8.9 only)
 # WorldEvent.Load from net.minecraftforge.event.world
-# TickEvent.WorldTickEvent from net.minecraftforge.fml.common.gameevent
+# event.world is accessible in 1.8.9 (public field)
 # ===========================================================================
 SRC_189_FORGE = """\
 package asd.itamio.keepinventory;
@@ -85,9 +85,8 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onWorldLoad(WorldEvent.Load event) {
-        World world = event.world;
-        if (world != null && !world.isRemote) {
-            GameRules rules = world.getGameRules();
+        if (event.world != null && !event.world.isRemote) {
+            GameRules rules = event.world.getGameRules();
             if (rules != null) {
                 rules.setOrCreateGameRule("keepInventory", "true");
             }
@@ -112,7 +111,8 @@ public class KeepInventoryMod {
 
 # ===========================================================================
 # 1.12.2 FORGE — already published, included for reference only
-# Same API as 1.8.9 but with Java 8 features allowed
+# TickEvent is in net.minecraftforge.fml.common.gameevent
+# WorldEvent.getWorld() returns IWorld — cast to World
 # ===========================================================================
 SRC_1122_FORGE = """\
 package asd.itamio.keepinventory;
@@ -140,8 +140,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onWorldLoad(WorldEvent.Load event) {
-        World world = event.world;
-        if (world != null && !world.isRemote) {
+        if (!(event.getWorld() instanceof World)) return;
+        World world = (World) event.getWorld();
+        if (!world.isRemote) {
             GameRules rules = world.getGameRules();
             if (rules != null) {
                 rules.setOrCreateGameRule("keepInventory", "true");
@@ -168,12 +169,10 @@ public class KeepInventoryMod {
 
 # ===========================================================================
 # 1.16.5 FORGE
-# net.minecraft.world.GameRules (pre-1.17 package)
+# TickEvent is in net.minecraftforge.event.TickEvent (NOT fml.common.gameevent)
+# WorldEvent.getWorld() returns IWorld — cast to World
+# World.isClientSide() in 1.16.5
 # GameRules.RULE_KEEPINVENTORY (Key<BooleanValue>)
-# rules.getRule(key).set(true, server) — but we don't have server here
-# Simpler: rules.setOrCreateGameRule("keepInventory", "true") still works in 1.16.5
-# WorldEvent.Load from net.minecraftforge.event.world
-# TickEvent.WorldTickEvent from net.minecraftforge.fml.common.gameevent
 # ===========================================================================
 SRC_1165_FORGE = """\
 package asd.itamio.keepinventory;
@@ -181,10 +180,10 @@ package asd.itamio.keepinventory;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 @Mod(KeepInventoryMod.MODID)
 public class KeepInventoryMod {
@@ -198,8 +197,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onWorldLoad(WorldEvent.Load event) {
-        World world = event.getWorld();
-        if (world != null && !world.isClientSide()) {
+        if (!(event.getWorld() instanceof World)) return;
+        World world = (World) event.getWorld();
+        if (!world.isClientSide()) {
             GameRules rules = world.getGameRules();
             if (rules != null) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
@@ -225,9 +225,10 @@ public class KeepInventoryMod {
 
 # ===========================================================================
 # 1.17.1 FORGE
-# net.minecraft.world.level.GameRules (1.17+ package)
-# net.minecraftforge.event.world.WorldEvent (still "world" package in 1.17)
+# TickEvent is in net.minecraftforge.event.TickEvent
+# WorldEvent is still in net.minecraftforge.event.world (1.17 uses "world" pkg)
 # Level.isClientSide() — same as 1.16.5
+# net.minecraft.world.level.GameRules (1.17+ package)
 # ===========================================================================
 SRC_1171_FORGE = """\
 package asd.itamio.keepinventory;
@@ -235,10 +236,10 @@ package asd.itamio.keepinventory;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 @Mod(KeepInventoryMod.MODID)
 public class KeepInventoryMod {
@@ -252,8 +253,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onWorldLoad(WorldEvent.Load event) {
+        if (!(event.getWorld() instanceof Level)) return;
         Level level = (Level) event.getWorld();
-        if (level != null && !level.isClientSide()) {
+        if (!level.isClientSide()) {
             GameRules rules = level.getGameRules();
             if (rules != null) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
@@ -279,9 +281,10 @@ public class KeepInventoryMod {
 
 # ===========================================================================
 # 1.18–1.19.4 FORGE
-# net.minecraft.world.level.GameRules (same as 1.17+)
-# net.minecraftforge.event.level.LevelEvent (renamed from WorldEvent in 1.18)
+# TickEvent is in net.minecraftforge.event.TickEvent
+# LevelEvent.Load (renamed from WorldEvent in 1.18)
 # TickEvent.LevelTickEvent (renamed from WorldTickEvent in 1.18)
+# event.level field (public)
 # ===========================================================================
 SRC_118_FORGE = """\
 package asd.itamio.keepinventory;
@@ -289,10 +292,10 @@ package asd.itamio.keepinventory;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 @Mod(KeepInventoryMod.MODID)
 public class KeepInventoryMod {
@@ -306,8 +309,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onLevelLoad(LevelEvent.Load event) {
+        if (!(event.getLevel() instanceof Level)) return;
         Level level = (Level) event.getLevel();
-        if (level != null && !level.isClientSide()) {
+        if (!level.isClientSide()) {
             GameRules rules = level.getGameRules();
             if (rules != null) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
@@ -330,76 +334,29 @@ public class KeepInventoryMod {
     }
 }
 """
-
 
 # ===========================================================================
 # 1.20.1–1.21.5 FORGE (EventBus 6)
-# Same as 1.18+ but uses FMLJavaModLoadingContext for mod bus
-# LevelEvent.Load + TickEvent.LevelTickEvent
+# Same as 1.18+ — LevelEvent.Load + TickEvent.LevelTickEvent
+# FMLJavaModLoadingContext not needed (no mod bus events)
 # ===========================================================================
-SRC_120_FORGE = """\
-package asd.itamio.keepinventory;
+SRC_120_FORGE = SRC_118_FORGE
 
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-
-@Mod(KeepInventoryMod.MODID)
-public class KeepInventoryMod {
-    public static final String MODID = "keepinventory";
-    private int tickCounter = 0;
-    private static final int CHECK_INTERVAL = 20;
-
-    public KeepInventoryMod() {
-        MinecraftForge.EVENT_BUS.register(this);
-    }
-
-    @SubscribeEvent
-    public void onLevelLoad(LevelEvent.Load event) {
-        Level level = (Level) event.getLevel();
-        if (level != null && !level.isClientSide()) {
-            GameRules rules = level.getGameRules();
-            if (rules != null) {
-                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public void onLevelTick(TickEvent.LevelTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (event.level.isClientSide()) return;
-        tickCounter++;
-        if (tickCounter >= CHECK_INTERVAL) {
-            tickCounter = 0;
-            GameRules rules = event.level.getGameRules();
-            if (rules != null && !rules.getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
-            }
-        }
-    }
-}
-"""
 
 # ===========================================================================
 # 1.21.6–1.21.8 FORGE (EventBus 7)
-# FMLJavaModLoadingContext still exists but uses getModBusGroup()
-# LevelEvent.Load.BUS.addListener() — no @SubscribeEvent
 # TickEvent.LevelTickEvent.Post.BUS.addListener()
+# LevelEvent.Load.BUS.addListener()
+# event.level field (public) on LevelTickEvent.Post
 # ===========================================================================
 SRC_1216_FORGE = """\
 package asd.itamio.keepinventory;
 
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod(KeepInventoryMod.MODID)
@@ -414,8 +371,9 @@ public class KeepInventoryMod {
     }
 
     private void onLevelLoad(LevelEvent.Load event) {
+        if (!(event.getLevel() instanceof Level)) return;
         Level level = (Level) event.getLevel();
-        if (level != null && !level.isClientSide()) {
+        if (!level.isClientSide()) {
             GameRules rules = level.getGameRules();
             if (rules != null) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
@@ -424,11 +382,11 @@ public class KeepInventoryMod {
     }
 
     private void onLevelTick(TickEvent.LevelTickEvent.Post event) {
-        if (event.getLevel().isClientSide()) return;
+        if (event.level.isClientSide()) return;
         tickCounter++;
         if (tickCounter >= CHECK_INTERVAL) {
             tickCounter = 0;
-            GameRules rules = event.getLevel().getGameRules();
+            GameRules rules = event.level.getGameRules();
             if (rules != null && !rules.getBoolean(GameRules.RULE_KEEPINVENTORY)) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
             }
@@ -439,17 +397,63 @@ public class KeepInventoryMod {
 
 # ===========================================================================
 # 1.21.9–26.1.2 FORGE (EventBus 7, record-based TickEvent)
-# Same pattern as 1.21.6-1.21.8 — BUS.addListener() on each event
+# TickEvent.LevelTickEvent is now a sealed interface with record Pre/Post
+# record Post has field: Level level
+# Same BUS.addListener() pattern as 1.21.6-1.21.8
 # ===========================================================================
-SRC_1219_FORGE = SRC_1216_FORGE
+SRC_1219_FORGE = """\
+package asd.itamio.keepinventory;
+
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+
+@Mod(KeepInventoryMod.MODID)
+public class KeepInventoryMod {
+    public static final String MODID = "keepinventory";
+    private int tickCounter = 0;
+    private static final int CHECK_INTERVAL = 20;
+
+    public KeepInventoryMod(FMLJavaModLoadingContext context) {
+        LevelEvent.Load.BUS.addListener(this::onLevelLoad);
+        TickEvent.LevelTickEvent.Post.BUS.addListener(this::onLevelTick);
+    }
+
+    private void onLevelLoad(LevelEvent.Load event) {
+        if (!(event.getLevel() instanceof Level)) return;
+        Level level = (Level) event.getLevel();
+        if (!level.isClientSide()) {
+            GameRules rules = level.getGameRules();
+            if (rules != null) {
+                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
+            }
+        }
+    }
+
+    private void onLevelTick(TickEvent.LevelTickEvent.Post event) {
+        if (event.level().isClientSide()) return;
+        tickCounter++;
+        if (tickCounter >= CHECK_INTERVAL) {
+            tickCounter = 0;
+            GameRules rules = event.level().getGameRules();
+            if (rules != null && !rules.getBoolean(GameRules.RULE_KEEPINVENTORY)) {
+                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
+            }
+        }
+    }
+}
+"""
 
 
 # ===========================================================================
 # FABRIC 1.16.5 (presplit, yarn mappings)
 # net.minecraft.world.GameRules (pre-1.17 package)
 # GameRules.KEEP_INVENTORY (Key<BooleanRule>)
-# ServerLifecycleEvents.SERVER_STARTING for initial set
-# ServerTickEvents.END_SERVER_TICK for periodic enforcement
+# ServerLifecycleEvents + ServerTickEvents
+# server.getWorlds() returns Iterable<ServerWorld>
 # ===========================================================================
 SRC_1165_FABRIC = """\
 package asd.itamio.keepinventory;
@@ -492,24 +496,19 @@ public class KeepInventoryMod implements ModInitializer {
 """
 
 # ===========================================================================
-# FABRIC 1.17–1.19.4 (presplit, yarn mappings)
-# net.minecraft.world.GameRules still uses KEEP_INVENTORY key
+# FABRIC 1.17–1.20.6 (presplit/split, yarn mappings)
 # Same API as 1.16.5 — ServerLifecycleEvents + ServerTickEvents
+# GameRules.KEEP_INVENTORY still works in yarn mappings
 # ===========================================================================
 SRC_117_FABRIC = SRC_1165_FABRIC
-
-# ===========================================================================
-# FABRIC 1.20.1–1.20.6 (split src/client/java, yarn mappings)
-# Same API as 1.17+ — ServerLifecycleEvents + ServerTickEvents
-# ===========================================================================
 SRC_120_FABRIC = SRC_1165_FABRIC
 
 # ===========================================================================
 # FABRIC 1.21–1.21.8 (split, Mojang mappings)
 # net.minecraft.world.level.GameRules (Mojang package)
 # GameRules.RULE_KEEPINVENTORY (Key<BooleanValue>)
-# ServerWorld → ServerLevel
-# server.getWorlds() → server.getAllLevels()
+# ServerLevel (not ServerWorld)
+# server.getAllLevels() (not getWorlds())
 # ===========================================================================
 SRC_121_FABRIC = """\
 package asd.itamio.keepinventory;
@@ -559,9 +558,10 @@ SRC_1219_FABRIC = SRC_121_FABRIC
 
 
 # ===========================================================================
-# NEOFORGE 1.20.2–1.21.8 (IEventBus constructor, FMLJavaModLoadingContext)
-# net.minecraft.world.level.GameRules
-# LevelEvent.Load + TickEvent.LevelTickEvent via NeoForge.EVENT_BUS
+# NEOFORGE 1.20.2–1.21.8 (IEventBus constructor)
+# TickEvent is in net.neoforged.neoforge.event.tick.LevelTickEvent
+# LevelEvent.Load from net.neoforged.neoforge.event.level
+# NeoForge.EVENT_BUS.register(this) for game events
 # ===========================================================================
 SRC_120_NEO = """\
 package asd.itamio.keepinventory;
@@ -571,9 +571,9 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.gameevent.TickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 @Mod(KeepInventoryMod.MODID)
 public class KeepInventoryMod {
@@ -587,8 +587,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onLevelLoad(LevelEvent.Load event) {
+        if (!(event.getLevel() instanceof Level)) return;
         Level level = (Level) event.getLevel();
-        if (level != null && !level.isClientSide()) {
+        if (!level.isClientSide()) {
             GameRules rules = level.getGameRules();
             if (rules != null) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
@@ -597,13 +598,12 @@ public class KeepInventoryMod {
     }
 
     @SubscribeEvent
-    public void onLevelTick(TickEvent.LevelTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (event.level.isClientSide()) return;
+    public void onLevelTick(LevelTickEvent.Post event) {
+        if (event.getLevel().isClientSide()) return;
         tickCounter++;
         if (tickCounter >= CHECK_INTERVAL) {
             tickCounter = 0;
-            GameRules rules = event.level.getGameRules();
+            GameRules rules = event.getLevel().getGameRules();
             if (rules != null && !rules.getBoolean(GameRules.RULE_KEEPINVENTORY)) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
             }
@@ -617,62 +617,6 @@ public class KeepInventoryMod {
 # Same as 1.20.2-1.21.8 but constructor takes (IEventBus, ModContainer)
 # ===========================================================================
 SRC_1219_NEO = """\
-package asd.itamio.keepinventory;
-
-import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.common.gameevent.TickEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.LevelEvent;
-
-@Mod(KeepInventoryMod.MODID)
-public class KeepInventoryMod {
-    public static final String MODID = "keepinventory";
-    private int tickCounter = 0;
-    private static final int CHECK_INTERVAL = 20;
-
-    public KeepInventoryMod(IEventBus modBus, ModContainer modContainer) {
-        NeoForge.EVENT_BUS.register(this);
-    }
-
-    @SubscribeEvent
-    public void onLevelLoad(LevelEvent.Load event) {
-        Level level = (Level) event.getLevel();
-        if (level != null && !level.isClientSide()) {
-            GameRules rules = level.getGameRules();
-            if (rules != null) {
-                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public void onLevelTick(TickEvent.LevelTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (event.level.isClientSide()) return;
-        tickCounter++;
-        if (tickCounter >= CHECK_INTERVAL) {
-            tickCounter = 0;
-            GameRules rules = event.level.getGameRules();
-            if (rules != null && !rules.getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
-            }
-        }
-    }
-}
-"""
-
-# ===========================================================================
-# NEOFORGE 26.1–26.1.2
-# FMLJavaModLoadingContext removed — constructor injection (IEventBus, ModContainer)
-# @EventBusSubscriber is standalone (not nested in @Mod)
-# NeoForge.EVENT_BUS still used for game events
-# ===========================================================================
-SRC_261_NEO = """\
 package asd.itamio.keepinventory;
 
 import net.minecraft.world.level.GameRules;
@@ -697,8 +641,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onLevelLoad(LevelEvent.Load event) {
+        if (!(event.getLevel() instanceof Level)) return;
         Level level = (Level) event.getLevel();
-        if (level != null && !level.isClientSide()) {
+        if (!level.isClientSide()) {
             GameRules rules = level.getGameRules();
             if (rules != null) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
@@ -721,6 +666,15 @@ public class KeepInventoryMod {
 }
 """
 
+# ===========================================================================
+# NEOFORGE 26.1–26.1.2
+# FMLJavaModLoadingContext removed — constructor injection (IEventBus, ModContainer)
+# @EventBusSubscriber is standalone (not nested in @Mod)
+# NeoForge.EVENT_BUS still used for game events
+# LevelTickEvent from net.neoforged.neoforge.event.tick (same as 1.21.9+)
+# ===========================================================================
+SRC_261_NEO = SRC_1219_NEO
+
 
 # ===========================================================================
 # TARGETS — all 68 missing versions
@@ -729,7 +683,7 @@ public class KeepInventoryMod {
 TARGETS = [
     # ---- FORGE 1.8.9 ----
     ("KeepInventory-1.8.9-forge",    "1.8.9",   "forge",    SRC_189_FORGE,   GROUP, ENTRYPOINT),
-    # ---- FORGE 1.12 (1.12 is also supported per manifest) ----
+    # ---- FORGE 1.12 ----
     ("KeepInventory-1.12-forge",     "1.12",    "forge",    SRC_1122_FORGE,  GROUP, ENTRYPOINT),
     # ---- FORGE 1.16.5 ----
     ("KeepInventory-1.16.5-forge",   "1.16.5",  "forge",    SRC_1165_FORGE,  GROUP, ENTRYPOINT),
@@ -745,13 +699,12 @@ TARGETS = [
     ("KeepInventory-1.19.2-forge",   "1.19.2",  "forge",    SRC_118_FORGE,   GROUP, ENTRYPOINT),
     ("KeepInventory-1.19.3-forge",   "1.19.3",  "forge",    SRC_118_FORGE,   GROUP, ENTRYPOINT),
     ("KeepInventory-1.19.4-forge",   "1.19.4",  "forge",    SRC_118_FORGE,   GROUP, ENTRYPOINT),
-    # ---- FORGE 1.20.1–1.20.6 ----
+    # ---- FORGE 1.20.1–1.21.5 (EventBus 6) ----
     ("KeepInventory-1.20.1-forge",   "1.20.1",  "forge",    SRC_120_FORGE,   GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.2-forge",   "1.20.2",  "forge",    SRC_120_FORGE,   GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.3-forge",   "1.20.3",  "forge",    SRC_120_FORGE,   GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.4-forge",   "1.20.4",  "forge",    SRC_120_FORGE,   GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.6-forge",   "1.20.6",  "forge",    SRC_120_FORGE,   GROUP, ENTRYPOINT),
-    # ---- FORGE 1.21–1.21.5 (EventBus 6) ----
     ("KeepInventory-1.21-forge",     "1.21",    "forge",    SRC_120_FORGE,   GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.1-forge",   "1.21.1",  "forge",    SRC_120_FORGE,   GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.3-forge",   "1.21.3",  "forge",    SRC_120_FORGE,   GROUP, ENTRYPOINT),
@@ -761,11 +714,11 @@ TARGETS = [
     ("KeepInventory-1.21.6-forge",   "1.21.6",  "forge",    SRC_1216_FORGE,  GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.7-forge",   "1.21.7",  "forge",    SRC_1216_FORGE,  GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.8-forge",   "1.21.8",  "forge",    SRC_1216_FORGE,  GROUP, ENTRYPOINT),
-    # ---- FORGE 1.21.9–1.21.11 (EventBus 7) ----
+    # ---- FORGE 1.21.9–1.21.11 (EventBus 7, record-based) ----
     ("KeepInventory-1.21.9-forge",   "1.21.9",  "forge",    SRC_1219_FORGE,  GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.10-forge",  "1.21.10", "forge",    SRC_1219_FORGE,  GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.11-forge",  "1.21.11", "forge",    SRC_1219_FORGE,  GROUP, ENTRYPOINT),
-    # ---- FORGE 26.1.2 (EventBus 7) ----
+    # ---- FORGE 26.1.2 (EventBus 7, record-based) ----
     ("KeepInventory-26.1.2-forge",   "26.1.2",  "forge",    SRC_1219_FORGE,  GROUP, ENTRYPOINT),
     # ---- FABRIC 1.16.5 ----
     ("KeepInventory-1.16.5-fabric",  "1.16.5",  "fabric",   SRC_1165_FABRIC, GROUP, ENTRYPOINT),
@@ -795,12 +748,11 @@ TARGETS = [
     ("KeepInventory-26.1-fabric",    "26.1",    "fabric",   SRC_1219_FABRIC, GROUP, ENTRYPOINT),
     ("KeepInventory-26.1.1-fabric",  "26.1.1",  "fabric",   SRC_1219_FABRIC, GROUP, ENTRYPOINT),
     ("KeepInventory-26.1.2-fabric",  "26.1.2",  "fabric",   SRC_1219_FABRIC, GROUP, ENTRYPOINT),
-    # ---- NEOFORGE 1.20.2–1.20.6 ----
+    # ---- NEOFORGE 1.20.2–1.21.8 ----
     ("KeepInventory-1.20.2-neoforge","1.20.2",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.4-neoforge","1.20.4",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.5-neoforge","1.20.5",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.6-neoforge","1.20.6",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    # ---- NEOFORGE 1.21–1.21.8 ----
     ("KeepInventory-1.21-neoforge",  "1.21",    "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.1-neoforge","1.21.1",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.2-neoforge","1.21.2",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
@@ -862,7 +814,6 @@ def get_failed_slugs() -> set:
 
 
 def slug_for_target(folder_name: str, mc: str, loader: str) -> str:
-    """Derive the build slug the workflow will use for this target."""
     ver = mc.replace(".", "-")
     return f"{MOD_ID}-{loader}-{ver}"
 
@@ -872,14 +823,8 @@ def generate_target(folder_name: str, mc: str, loader: str, src: str,
     pkg_path = group.replace(".", "/")
     class_name = entrypoint.split(".")[-1]
     base = BUNDLE_DIR / folder_name
-
-    # mod.txt
     write(base / "mod.txt", mod_txt())
-
-    # version.txt
     write(base / "version.txt", version_txt(mc, loader))
-
-    # Java source
     write(base / "src" / "main" / "java" / pkg_path / f"{class_name}.java", src)
 
 
@@ -905,7 +850,6 @@ def main() -> None:
                         help="Only include targets that failed in the latest run")
     args = parser.parse_args()
 
-    # Clean and recreate bundle dir
     if BUNDLE_DIR.exists():
         shutil.rmtree(BUNDLE_DIR)
     BUNDLE_DIR.mkdir(parents=True)
@@ -933,8 +877,6 @@ def main() -> None:
     out_path = ZIP_PATH
     print(f"\nBuilding zip -> {out_path}")
     build_zip(selected, out_path)
-
-    # Verify syntax of the generated Python file itself
     print("\nDone.")
 
 

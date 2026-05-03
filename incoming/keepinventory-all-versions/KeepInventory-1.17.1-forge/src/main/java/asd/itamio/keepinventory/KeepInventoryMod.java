@@ -3,10 +3,10 @@ package asd.itamio.keepinventory;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 @Mod(KeepInventoryMod.MODID)
 public class KeepInventoryMod {
@@ -20,8 +20,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onWorldLoad(WorldEvent.Load event) {
+        if (!(event.getWorld() instanceof Level)) return;
         Level level = (Level) event.getWorld();
-        if (level != null && !level.isClientSide()) {
+        if (!level.isClientSide()) {
             GameRules rules = level.getGameRules();
             if (rules != null) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
