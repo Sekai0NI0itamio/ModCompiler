@@ -1,7 +1,8 @@
 package asd.itamio.keepinventory;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.LevelEvent;
@@ -20,26 +21,23 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onLevelLoad(LevelEvent.Load event) {
-        if (!(event.getLevel() instanceof Level)) return;
-        Level level = (Level) event.getLevel();
-        if (!level.isClientSide()) {
-            GameRules rules = level.getGameRules();
-            if (rules != null) {
-                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
-            }
+        LevelAccessor la = event.getLevel();
+        if (la instanceof ServerLevel) {
+            ServerLevel sl = (ServerLevel) la;
+            sl.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, sl.getServer());
         }
     }
 
     @SubscribeEvent
     public void onLevelTick(TickEvent.LevelTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (event.level.isClientSide()) return;
+        if (!(event.level instanceof ServerLevel)) return;
         tickCounter++;
         if (tickCounter >= CHECK_INTERVAL) {
             tickCounter = 0;
-            GameRules rules = event.level.getGameRules();
-            if (rules != null && !rules.getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
+            ServerLevel sl = (ServerLevel) event.level;
+            if (!sl.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
+                sl.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, sl.getServer());
             }
         }
     }

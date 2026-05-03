@@ -5,7 +5,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 
 public class KeepInventoryMod implements ModInitializer {
     private int tickCounter = 0;
@@ -19,7 +19,7 @@ public class KeepInventoryMod implements ModInitializer {
 
     private void onServerStarting(MinecraftServer server) {
         for (ServerLevel level : server.getAllLevels()) {
-            level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
+            level.getGameRules().set(GameRules.KEEP_INVENTORY, true, server);
         }
     }
 
@@ -28,8 +28,8 @@ public class KeepInventoryMod implements ModInitializer {
         if (tickCounter >= CHECK_INTERVAL) {
             tickCounter = 0;
             for (ServerLevel level : server.getAllLevels()) {
-                if (!level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                    level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
+                if (!level.getGameRules().get(GameRules.KEEP_INVENTORY)) {
+                    level.getGameRules().set(GameRules.KEEP_INVENTORY, true, server);
                 }
             }
         }
