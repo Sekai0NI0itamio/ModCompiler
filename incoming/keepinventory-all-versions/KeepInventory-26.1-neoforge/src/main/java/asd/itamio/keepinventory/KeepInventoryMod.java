@@ -22,8 +22,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onLevelLoad(LevelEvent.Load event) {
+        if (!(event.getLevel() instanceof Level)) return;
         Level level = (Level) event.getLevel();
-        if (level != null && !level.isClientSide()) {
+        if (!level.isClientSide()) {
             GameRules rules = level.getGameRules();
             if (rules != null) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);

@@ -23,8 +23,9 @@ public class KeepInventoryMod {
 
     @SubscribeEvent
     public void onWorldLoad(WorldEvent.Load event) {
-        World world = event.world;
-        if (world != null && !world.isRemote) {
+        if (!(event.getWorld() instanceof World)) return;
+        World world = (World) event.getWorld();
+        if (!world.isRemote) {
             GameRules rules = world.getGameRules();
             if (rules != null) {
                 rules.setOrCreateGameRule("keepInventory", "true");
