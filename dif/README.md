@@ -111,6 +111,9 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 
 | ID | Title | Loaders | Versions |
 |----|-------|---------|----------|
+| FABRIC-26-SERVER-LIFECYCLE-EVENTS-UNCHANGED | Fabric 26.1.x server lifecycle events unchanged — only client HUD APIs removed | fabric | 26.1.x |
+| NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED | NeoForge 26.1+ FMLJavaModLoadingContext removed, use constructor injection | neoforge | 26.1.x |
+| ZIP-PATH-MUST-BE-RELATIVE-TO-BUNDLE-FOLDER | Zip bundle must have mod folders at top level — run zip from inside bundle folder | all | — |
 | FORGE-FSTRING-ESCAPING-IN-GENERATOR | Generator script — Python f-string not applied, leaving {MOD_ID} and {{ literal braces in Java output | all | — |
 | FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION | Fabric supported_versions differs from Forge for same range (1.17 not 1.17.1, 1.21 not 1.21.1) | fabric | 1.17, 1.21 |
 | FORGE-SCREEN-EVENT-RENDER-SUBCLASS-HISTORY | Full history of Forge ScreenEvent subclass names and graphics accessors (DrawScreenEvent.Post → Render.Post, getPoseStack → getGuiGraphics) | forge | 1.16.5–26.1.2 |
@@ -141,3 +144,6 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 | VERSION-STRING-26X-ANCHOR | 26.1-26.x version string must be anchor version 26.1.2 | all | 26.1.2 |
 | NEOFORGE-120-SUPPORTED-VERSIONS | NeoForge 1.20 only supports 1.20.2, 1.20.4, 1.20.5, 1.20.6 | neoforge | 1.20.2–1.20.6 |
 | FORGE-117-TEMPLATE-SUPPORTS-1171-ONLY | Forge/Fabric 1.17 template only supports 1.17.1, not 1.17 | forge, fabric | 1.17.1 |
+| FABRIC-26-SERVER-LIFECYCLE-EVENTS-UNCHANGED | Fabric 26.1.x server lifecycle events (ServerLifecycleEvents) are unchanged — only client HUD APIs were removed | fabric | 26.1.x |
+| NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED | NeoForge 26.1+ — FMLJavaModLoadingContext removed, use constructor injection (IEventBus, ModContainer) | neoforge | 26.1.x |
+| ZIP-PATH-MUST-BE-RELATIVE-TO-BUNDLE-FOLDER | Zip bundle must have mod folders at top level — run zip from inside the bundle folder, not workspace root | all | — |

@@ -431,6 +431,40 @@ See DIF entry `FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION`.
 
 ---
 
+### Mistake 17: Created zip from workspace root, including `incoming/` prefix in all paths (Allow Offline LAN Join port)
+
+**What happened**: Ran `zip -r incoming/bundle.zip incoming/bundle-dir/` from the
+workspace root. The zip stored all paths as `incoming/bundle-dir/ModFolder/...`,
+putting `incoming/bundle-dir/` as the top-level entry instead of the mod folders.
+The prepare step would have rejected it with a bad zip layout error.
+
+**Rule**: Always run the `zip` command from **inside** the bundle folder using the
+`cwd` parameter, so mod folders appear at the top level of the zip:
+
+```bash
+# WRONG — run from workspace root
+zip -r incoming/bundle.zip incoming/bundle-dir/
+
+# CORRECT — cwd into the bundle folder first
+# cwd: incoming/bundle-dir
+zip -r ../bundle.zip ModFolder1/ ModFolder2/ ModFolder3/
+```
+
+Verify the zip structure before committing:
+```bash
+python3 -c "
+import zipfile
+with zipfile.ZipFile('incoming/bundle.zip') as z:
+    tops = {n.split('/')[0] for n in z.namelist()}
+    print('Top-level entries:', sorted(tops))
+# Must NOT show 'incoming' as a top-level entry
+"
+```
+
+See DIF entry `ZIP-PATH-MUST-BE-RELATIVE-TO-BUNDLE-FOLDER`.
+
+---
+
 ```
 User: "Update this mod to all versions: https://modrinth.com/mod/my-mod"
 
@@ -621,6 +655,10 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | Fabric 1.17 or 1.21 missing after publishing 1.17.1 / 1.21.1 | `FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION` |
 | `cannot find symbol.*DrawScreenEvent` or `Render.Post` or `getPoseStack` | `FORGE-SCREEN-EVENT-RENDER-SUBCLASS-HISTORY` |
 | Fabric TitleScreen mixin fails to inject or wrong render signature | `FABRIC-TITLESCREEN-MIXIN-RENDER-SIGNATURE-HISTORY` |
+| Fabric 26.1.x server-side mod — is `ServerLifecycleEvents` still available? | `FABRIC-26-SERVER-LIFECYCLE-EVENTS-UNCHANGED` |
+| `package net.neoforged.fml.javafmlmod does not exist` (NeoForge 26.1+) | `NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED` |
+| `cannot find symbol.*FMLJavaModLoadingContext` (NeoForge 26.1+) | `NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED` |
+| Prepare step fails with bad zip layout or 0 mod folders found | `ZIP-PATH-MUST-BE-RELATIVE-TO-BUNDLE-FOLDER` |
 
 ---
 
@@ -634,9 +672,10 @@ For deeper reading (in order of usefulness):
 4. `docs/examples/OPTIMIZED_VEIN_MINER_ALL_VERSIONS.md` — event-based client+server mod, all issues documented
 5. `docs/examples/TPA_TELEPORT_ALL_VERSIONS.md` — server-side command mod, 7 runs, 68 versions
 6. `docs/examples/SEED_PROTECT_ALL_VERSIONS.md` — mixin-based mod, yarn mapping pitfalls
-7. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
-8. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
+7. `docs/examples/ALLOW_OFFLINE_LAN_JOIN_ALL_VERSIONS.md` — server-side reflection mod, 26.x patterns, 1-run success
+8. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
+9. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
 
 ---
 
-*Last updated: April 2026 — based on Account Switcher all-versions port session*
+*Last updated: May 2026 — based on Allow Offline LAN Join 26.x port session*
