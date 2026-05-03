@@ -1,13 +1,13 @@
 package asd.itamio.keepinventory;
 
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
 @Mod(KeepInventoryMod.MODID)
 public class KeepInventoryMod {
@@ -20,26 +20,23 @@ public class KeepInventoryMod {
     }
 
     @SubscribeEvent
-    public void onLevelLoad(LevelEvent.Load event) {
-        if (!(event.getLevel() instanceof Level)) return;
-        Level level = (Level) event.getLevel();
-        if (!level.isClientSide()) {
-            GameRules rules = level.getGameRules();
-            if (rules != null) {
-                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
-            }
+    public void onServerStarting(ServerStartingEvent event) {
+        MinecraftServer server = event.getServer();
+        for (ServerLevel level : server.getAllLevels()) {
+            level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
         }
     }
 
     @SubscribeEvent
-    public void onLevelTick(LevelTickEvent.Post event) {
-        if (event.getLevel().isClientSide()) return;
+    public void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
         tickCounter++;
         if (tickCounter >= CHECK_INTERVAL) {
             tickCounter = 0;
-            GameRules rules = event.getLevel().getGameRules();
-            if (rules != null && !rules.getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
+            MinecraftServer server = event.getServer();
+            for (ServerLevel level : server.getAllLevels()) {
+                if (!level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
+                    level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
+                }
             }
         }
     }

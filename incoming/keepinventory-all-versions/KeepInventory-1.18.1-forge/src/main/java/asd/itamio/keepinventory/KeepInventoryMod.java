@@ -4,7 +4,7 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -19,9 +19,9 @@ public class KeepInventoryMod {
     }
 
     @SubscribeEvent
-    public void onLevelLoad(LevelEvent.Load event) {
-        if (!(event.getLevel() instanceof Level)) return;
-        Level level = (Level) event.getLevel();
+    public void onWorldLoad(WorldEvent.Load event) {
+        if (!(event.getWorld() instanceof Level)) return;
+        Level level = (Level) event.getWorld();
         if (!level.isClientSide()) {
             GameRules rules = level.getGameRules();
             if (rules != null) {
@@ -31,13 +31,13 @@ public class KeepInventoryMod {
     }
 
     @SubscribeEvent
-    public void onLevelTick(TickEvent.LevelTickEvent event) {
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (event.level.isClientSide()) return;
+        if (event.world.isClientSide()) return;
         tickCounter++;
         if (tickCounter >= CHECK_INTERVAL) {
             tickCounter = 0;
-            GameRules rules = event.level.getGameRules();
+            GameRules rules = event.world.getGameRules();
             if (rules != null && !rules.getBoolean(GameRules.RULE_KEEPINVENTORY)) {
                 rules.getRule(GameRules.RULE_KEEPINVENTORY).set(true, null);
             }
