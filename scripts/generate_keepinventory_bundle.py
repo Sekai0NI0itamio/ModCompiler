@@ -505,14 +505,15 @@ public class KeepInventoryMod {
 # 1.21.9–26.1.2 FORGE (EventBus 7, record-based TickEvent)
 # TickEvent.LevelTickEvent is now a sealed interface with record Pre/Post
 # record Post has accessor: level() — NOT a field
-# Level.getGameRules() removed — cast to ServerLevel
+# GameRules moved to net.minecraft.world.level.gamerules.GameRules (1.21.9+)
+# GameRule<Boolean> with get()/set() API
 # ===========================================================================
 SRC_1219_FORGE = """\
 package asd.itamio.keepinventory;
 
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -533,7 +534,7 @@ public class KeepInventoryMod {
         LevelAccessor la = event.getLevel();
         if (la instanceof ServerLevel) {
             ServerLevel sl = (ServerLevel) la;
-            sl.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, sl.getServer());
+            sl.getGameRules().set(GameRules.KEEP_INVENTORY, true, sl.getServer());
         }
     }
 
@@ -543,8 +544,8 @@ public class KeepInventoryMod {
         if (tickCounter >= CHECK_INTERVAL) {
             tickCounter = 0;
             ServerLevel sl = (ServerLevel) event.level();
-            if (!sl.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                sl.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, sl.getServer());
+            if (!sl.getGameRules().get(GameRules.KEEP_INVENTORY)) {
+                sl.getGameRules().set(GameRules.KEEP_INVENTORY, true, sl.getServer());
             }
         }
     }
@@ -708,11 +709,9 @@ public class KeepInventoryMod implements ModInitializer {
 
 
 # ===========================================================================
-# NEOFORGE 1.20.2–1.21.8 (IEventBus constructor)
-# Use ServerStartingEvent for initial set + ServerTickEvent.Post for periodic
-# Avoids LevelTickEvent which may not exist in early NeoForge 1.20.2 (20.2.93)
-# ServerStartingEvent from net.neoforged.neoforge.event.server
-# ServerTickEvent from net.neoforged.neoforge.event.tick (exists in all versions)
+# NEOFORGE 1.20.2–1.20.6 (IEventBus constructor)
+# ServerTickEvent does NOT exist in early NeoForge 20.2.x/20.4.x/20.6.x
+# Use ServerStartingEvent only — sets gamerule once on server start
 # ===========================================================================
 SRC_120_NEO = """\
 package asd.itamio.keepinventory;
@@ -725,6 +724,41 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+
+@Mod(KeepInventoryMod.MODID)
+public class KeepInventoryMod {
+    public static final String MODID = "keepinventory";
+
+    public KeepInventoryMod(IEventBus modBus) {
+        NeoForge.EVENT_BUS.register(this);
+    }
+
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        MinecraftServer server = event.getServer();
+        for (ServerLevel level : server.getAllLevels()) {
+            level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
+        }
+    }
+}
+"""
+
+# ===========================================================================
+# NEOFORGE 1.21–1.21.8 (IEventBus constructor)
+# ServerTickEvent.Post exists in NeoForge 21.x+
+# ===========================================================================
+SRC_121_NEO = """\
+package asd.itamio.keepinventory;
+
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.GameRules;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 @Mod(KeepInventoryMod.MODID)
 public class KeepInventoryMod {
@@ -745,7 +779,7 @@ public class KeepInventoryMod {
     }
 
     @SubscribeEvent
-    public void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+    public void onServerTick(ServerTickEvent.Post event) {
         tickCounter++;
         if (tickCounter >= CHECK_INTERVAL) {
             tickCounter = 0;
@@ -761,15 +795,16 @@ public class KeepInventoryMod {
 """
 
 # ===========================================================================
-# NEOFORGE 1.21.9–1.21.11 (ModContainer required in constructor)
-# Same as 1.20.2-1.21.8 but constructor takes (IEventBus, ModContainer)
+# NEOFORGE 1.21.9–1.21.11 (ModContainer required, GameRules moved to gamerules pkg)
+# net.minecraft.world.level.gamerules.GameRules (new package from 1.21.9)
+# GameRule<Boolean> with get()/set() API
 # ===========================================================================
 SRC_1219_NEO = """\
 package asd.itamio.keepinventory;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -792,7 +827,7 @@ public class KeepInventoryMod {
     public void onServerStarting(ServerStartingEvent event) {
         MinecraftServer server = event.getServer();
         for (ServerLevel level : server.getAllLevels()) {
-            level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
+            level.getGameRules().set(GameRules.KEEP_INVENTORY, true, server);
         }
     }
 
@@ -803,8 +838,8 @@ public class KeepInventoryMod {
             tickCounter = 0;
             MinecraftServer server = event.getServer();
             for (ServerLevel level : server.getAllLevels()) {
-                if (!level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                    level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
+                if (!level.getGameRules().get(GameRules.KEEP_INVENTORY)) {
+                    level.getGameRules().set(GameRules.KEEP_INVENTORY, true, server);
                 }
             }
         }
@@ -936,21 +971,22 @@ TARGETS = [
     ("KeepInventory-26.1-fabric",    "26.1",    "fabric",   SRC_261_FABRIC,  GROUP, ENTRYPOINT),
     ("KeepInventory-26.1.1-fabric",  "26.1.1",  "fabric",   SRC_261_FABRIC,  GROUP, ENTRYPOINT),
     ("KeepInventory-26.1.2-fabric",  "26.1.2",  "fabric",   SRC_261_FABRIC,  GROUP, ENTRYPOINT),
-    # ---- NEOFORGE 1.20.2–1.21.8 (ServerStartingEvent + ServerTickEvent) ----
+    # ---- NEOFORGE 1.20.2–1.20.6 (ServerStartingEvent only, no ServerTickEvent) ----
     ("KeepInventory-1.20.2-neoforge","1.20.2",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.4-neoforge","1.20.4",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.5-neoforge","1.20.5",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
     ("KeepInventory-1.20.6-neoforge","1.20.6",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21-neoforge",  "1.21",    "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21.1-neoforge","1.21.1",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21.2-neoforge","1.21.2",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21.3-neoforge","1.21.3",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21.4-neoforge","1.21.4",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21.5-neoforge","1.21.5",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21.6-neoforge","1.21.6",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21.7-neoforge","1.21.7",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    ("KeepInventory-1.21.8-neoforge","1.21.8",  "neoforge", SRC_120_NEO,     GROUP, ENTRYPOINT),
-    # ---- NEOFORGE 1.21.9–1.21.11 (ModContainer required) ----
+    # ---- NEOFORGE 1.21–1.21.8 (ServerStartingEvent + ServerTickEvent.Post) ----
+    ("KeepInventory-1.21-neoforge",  "1.21",    "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    ("KeepInventory-1.21.1-neoforge","1.21.1",  "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    ("KeepInventory-1.21.2-neoforge","1.21.2",  "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    ("KeepInventory-1.21.3-neoforge","1.21.3",  "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    ("KeepInventory-1.21.4-neoforge","1.21.4",  "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    ("KeepInventory-1.21.5-neoforge","1.21.5",  "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    ("KeepInventory-1.21.6-neoforge","1.21.6",  "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    ("KeepInventory-1.21.7-neoforge","1.21.7",  "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    ("KeepInventory-1.21.8-neoforge","1.21.8",  "neoforge", SRC_121_NEO,     GROUP, ENTRYPOINT),
+    # ---- NEOFORGE 1.21.9–1.21.11 (ModContainer required, new GameRules API) ----
     ("KeepInventory-1.21.9-neoforge","1.21.9",  "neoforge", SRC_1219_NEO,    GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.10-neoforge","1.21.10","neoforge", SRC_1219_NEO,    GROUP, ENTRYPOINT),
     ("KeepInventory-1.21.11-neoforge","1.21.11","neoforge", SRC_1219_NEO,    GROUP, ENTRYPOINT),

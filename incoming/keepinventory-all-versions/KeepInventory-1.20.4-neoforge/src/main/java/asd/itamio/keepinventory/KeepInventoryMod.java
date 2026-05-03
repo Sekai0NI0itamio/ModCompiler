@@ -12,8 +12,6 @@ import net.neoforged.neoforge.event.server.ServerStartingEvent;
 @Mod(KeepInventoryMod.MODID)
 public class KeepInventoryMod {
     public static final String MODID = "keepinventory";
-    private int tickCounter = 0;
-    private static final int CHECK_INTERVAL = 20;
 
     public KeepInventoryMod(IEventBus modBus) {
         NeoForge.EVENT_BUS.register(this);
@@ -24,20 +22,6 @@ public class KeepInventoryMod {
         MinecraftServer server = event.getServer();
         for (ServerLevel level : server.getAllLevels()) {
             level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
-        }
-    }
-
-    @SubscribeEvent
-    public void onServerTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
-        tickCounter++;
-        if (tickCounter >= CHECK_INTERVAL) {
-            tickCounter = 0;
-            MinecraftServer server = event.getServer();
-            for (ServerLevel level : server.getAllLevels()) {
-                if (!level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                    level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
-                }
-            }
         }
     }
 }

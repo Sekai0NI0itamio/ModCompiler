@@ -2,7 +2,7 @@ package asd.itamio.keepinventory;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -25,7 +25,7 @@ public class KeepInventoryMod {
     public void onServerStarting(ServerStartingEvent event) {
         MinecraftServer server = event.getServer();
         for (ServerLevel level : server.getAllLevels()) {
-            level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
+            level.getGameRules().set(GameRules.KEEP_INVENTORY, true, server);
         }
     }
 
@@ -36,8 +36,8 @@ public class KeepInventoryMod {
             tickCounter = 0;
             MinecraftServer server = event.getServer();
             for (ServerLevel level : server.getAllLevels()) {
-                if (!level.getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-                    level.getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, server);
+                if (!level.getGameRules().get(GameRules.KEEP_INVENTORY)) {
+                    level.getGameRules().set(GameRules.KEEP_INVENTORY, true, server);
                 }
             }
         }
