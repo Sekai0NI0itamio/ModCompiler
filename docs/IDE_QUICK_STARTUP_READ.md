@@ -538,6 +538,104 @@ See DIF entry `NEOFORGE-SERVERTICK-NOT-IN-EARLY-20X`.
 
 ---
 
+### Mistake 22: Used direct field access for `Options.gamma` on 1.19+ (Working Full Bright port)
+
+**What happened**: Wrote `mc.options.gamma = 15.0` for Forge 1.19+ and NeoForge.
+The field is private in 1.19+ — it became a `private SimpleOption<Double>` instead
+of a public `double`. All 1.19+ Forge, all NeoForge, and all Fabric 1.21+ targets
+failed with `gamma has private access in Options`.
+
+**User correction**: Build logs showed the error on 49 targets in run 1.
+
+**Root cause**: The `gamma` field changed from `public double` (1.16.5–1.18.2) to
+`private SimpleOption<Double>` (1.19+). Additionally, `SimpleOption.setValue(15.0)`
+silently clamps to 1.0 because `DoubleSliderCallbacks.validate()` rejects values
+outside [0.0, 1.0].
+
+**Rule**: For any mod that sets gamma/brightness on 1.19+, use double reflection:
+1. `getDeclaredField("gamma")` on `Options` + `setAccessible(true)`
+2. `getDeclaredField("value")` on the `SimpleOption` + `setAccessible(true)`
+3. Set the value directly — bypasses clamping
+
+```java
+private static Field optionsGammaField = null;
+private static Field simpleOptionValueField = null;
+
+private static void setGamma(Minecraft mc, double value) {
+    try {
+        if (optionsGammaField == null) {
+            optionsGammaField = mc.options.getClass().getDeclaredField("gamma");
+            optionsGammaField.setAccessible(true);
+        }
+        Object gammaOption = optionsGammaField.get(mc.options);
+        if (gammaOption == null) return;
+        if (simpleOptionValueField == null) {
+            simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+            simpleOptionValueField.setAccessible(true);
+        }
+        simpleOptionValueField.set(gammaOption, value);
+    } catch (Exception e) { /* ignore */ }
+}
+```
+
+See DIF entry `OPTIONS-GAMMA-PRIVATE-FIELD`.
+
+---
+
+### Mistake 23: Trusted decompiled sources for NeoForge 1.20.2/1.20.4 client events (Working Full Bright port)
+
+**What happened**: After fixing the gamma reflection issue, NeoForge 1.20.2 and 1.20.4
+still failed. The decompiled sources show `ClientTickEvent` in
+`net.neoforged.neoforge.client.event` — but that class doesn't exist in NeoForge
+20.2.93 (the actual build the template resolves to). Switched to `RenderFrameEvent.Pre`
+as a fallback — also missing in 20.2.93.
+
+**User correction**: Build logs showed `cannot find symbol: class ClientTickEvent`
+and then `cannot find symbol: class RenderFrameEvent` on the second attempt.
+
+**Root cause**: Same as Mistake 21 — the decompiled sources for NeoForge 1.20.x were
+generated with a newer build than what the template uses. **Both** `ClientTickEvent`
+and `RenderFrameEvent` are absent from NeoForge 20.2.93.
+
+**Rule**: For NeoForge 1.20.2 and 1.20.4, avoid ALL client tick and render frame events.
+Use `FMLClientSetupEvent.enqueueWork()` for one-time client setup instead:
+
+```java
+private void clientSetup(FMLClientSetupEvent event) {
+    event.enqueueWork(() -> {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.options == null) return;
+        // do client-side setup here (e.g. set gamma via reflection)
+    });
+}
+```
+
+For mods that need per-tick behavior on NeoForge 1.20.2/1.20.4, use a Mixin.
+
+See DIF entry `NEOFORGE-120-CLIENT-EVENTS-NOT-IN-EARLY-BUILD`.
+
+---
+
+### Mistake 24: Modrinth publish failed with `version_title length` on shell replacement (Working Full Bright port)
+
+**What happened**: NeoForge 1.20.2 and 1.20.4 had shell versions on Modrinth. The
+publisher tried to upload the real jars as `v1.0.1` to replace them, but the
+auto-generated version title was too long for Modrinth's validation (HTTP 400).
+
+**Root cause**: The shell replacement path generates a longer title than a fresh
+upload. Modrinth enforces a maximum title length.
+
+**Rule**: When publish fails with `version_title failed validation with error: length`:
+1. Use `Publish Modrinth Bundle` with a different run's artifacts — if the shells
+   were already replaced by the failed attempt, the second attempt uploads fresh
+   as `v1.0.0` with a shorter title
+2. Or delete the shells first with `Delete Modrinth Shell Versions` workflow, then
+   re-publish
+
+See DIF entry `MODRINTH-VERSION-TITLE-TOO-LONG`.
+
+---
+
 Agent:
   1. Run fetch_modrinth_project.py → see what's already published
   2. Run manifest comparison → find ALL missing targets across ALL loaders
@@ -737,6 +835,10 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | `package net.neoforged.fml.javafmlmod does not exist` (NeoForge 26.1+) | `NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED` |
 | `cannot find symbol.*FMLJavaModLoadingContext` (NeoForge 26.1+) | `NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED` |
 | Prepare step fails with bad zip layout or 0 mod folders found | `ZIP-PATH-MUST-BE-RELATIVE-TO-BUNDLE-FOLDER` |
+| `gamma has private access in Options` (Forge 1.19+, NeoForge, Fabric 1.21+) | `OPTIONS-GAMMA-PRIVATE-FIELD` |
+| `cannot find symbol.*ClientTickEvent` (NeoForge 1.20.2, 1.20.4) | `NEOFORGE-120-CLIENT-EVENTS-NOT-IN-EARLY-BUILD` |
+| `cannot find symbol.*RenderFrameEvent` (NeoForge 1.20.2, 1.20.4) | `NEOFORGE-120-CLIENT-EVENTS-NOT-IN-EARLY-BUILD` |
+| `version_title failed validation with error: length` (Modrinth publish) | `MODRINTH-VERSION-TITLE-TOO-LONG` |
 
 ---
 
@@ -752,9 +854,10 @@ For deeper reading (in order of usefulness):
 6. `docs/examples/SEED_PROTECT_ALL_VERSIONS.md` — mixin-based mod, yarn mapping pitfalls
 7. `docs/examples/ALLOW_OFFLINE_LAN_JOIN_ALL_VERSIONS.md` — server-side reflection mod, 26.x patterns, 1-run success
 8. `docs/examples/KEEP_INVENTORY_ALL_VERSIONS.md` — server-side gamerule mod, TickEvent/WorldEvent/GameRules API history across all eras
-9. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
-10. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
+9. `docs/examples/WORKING_FULL_BRIGHT_ALL_VERSIONS.md` — client-side gamma mod, private SimpleOption reflection, NeoForge 1.20.x early build pitfalls
+10. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
+11. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
 
 ---
 
-*Last updated: May 2026 — based on Keep Inventory all-versions port session*
+*Last updated: May 2026 — based on Working Full Bright all-versions port session*
