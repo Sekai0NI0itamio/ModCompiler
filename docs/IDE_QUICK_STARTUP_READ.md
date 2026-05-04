@@ -754,6 +754,72 @@ See DIF entry `NEOFORGE-FINALIZESPAWNEVENT-NOT-IN-EARLY-20X`.
 
 ---
 
+### Mistake 30: Called `clearParticles()` directly on Fabric 1.21–1.21.8 (No Particles port)
+
+**What happened**: Called `client.particleEngine.clearParticles()` directly in Fabric
+1.21–1.21.8 targets. All 8 targets in the 1.21–1.21.8 range failed with a private
+access error.
+
+**User correction**: Build logs showed `clearParticles() has private access in ParticleEngine`
+on all Fabric 1.21–1.21.8 targets in run 1.
+
+**Root cause**: In Fabric 1.21–1.21.8, `ParticleEngine.clearParticles()` is a **private**
+method. The Forge 1.21.9+ decompiled sources show it as `public`, which created a false
+assumption that it was public across all 1.21.x versions.
+
+**Rule**: Always use reflection to call `clearParticles()` on Fabric 1.21–1.21.8:
+
+```java
+private static Method clearParticlesMethod = null;
+
+private static void clearParticles(Minecraft client) {
+    try {
+        if (client.particleEngine == null) return;
+        if (clearParticlesMethod == null) {
+            clearParticlesMethod = client.particleEngine.getClass()
+                .getDeclaredMethod("clearParticles");
+            clearParticlesMethod.setAccessible(true);
+        }
+        clearParticlesMethod.invoke(client.particleEngine);
+    } catch (Exception e) { /* ignore */ }
+}
+```
+
+See DIF entry `FABRIC-PARTICLEENGINE-CLEARPARTICLES-PRIVATE`.
+
+---
+
+### Mistake 31: Used `LevelTickEvent` for NeoForge 1.20.2/1.20.4 where the `event.tick` package doesn't exist (No Particles port)
+
+**What happened**: Used `net.neoforged.neoforge.event.tick.LevelTickEvent` for NeoForge
+1.20.2 and 1.20.4. Both targets failed with "package does not exist".
+
+**User correction**: Build logs showed `package net.neoforged.neoforge.event.tick does not exist`
+on NeoForge 1.20.2 and 1.20.4 in run 1.
+
+**Root cause**: Same pattern as Mistakes 21 and 23 — the decompiled sources for NeoForge
+1.20.x were generated with a newer build than what the template uses (NeoForge 20.2.93).
+The entire `event.tick` package doesn't exist in 20.2.93.
+
+**Rule**: For NeoForge 1.20.2/1.20.4, use `RenderLevelStageEvent` from
+`net.neoforged.neoforge.client.event` for per-frame client work:
+
+```java
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+
+@SubscribeEvent
+public void onRenderLevel(RenderLevelStageEvent event) {
+    Minecraft mc = Minecraft.getInstance();
+    if (mc == null || mc.player == null) return;
+    // per-frame client work here
+}
+```
+
+See DIF entry `NEOFORGE-120-LEVELTICK-NOT-IN-EARLY-20X`.
+
+---
+
 Agent:
   1. Run fetch_modrinth_project.py → see what's already published
   2. Run manifest comparison → find ALL missing targets across ALL loaders
@@ -981,6 +1047,8 @@ or `entity.getType().getSpawnGroup() == SpawnGroup.MONSTER` (Fabric yarn 1.16.5�
 | `cannot find symbol.*class MobEntity` + `Mixin has no targets` (Fabric 1.16.5) | `FABRIC-165-MOB-ENTITY-PACKAGE` |
 | `cannot find symbol.*class MobSpawnType` (Fabric/NeoForge 1.21.2+) | `FABRIC-MOBSPAWNTYPE-RENAMED-ENTITYSPAWNREASON-1212` |
 | `cannot find symbol.*class FinalizeSpawnEvent` (NeoForge 1.20.2–1.20.6) | `NEOFORGE-FINALIZESPAWNEVENT-NOT-IN-EARLY-20X` |
+| `clearParticles() has private access in ParticleEngine` (Fabric 1.21–1.21.8) | `FABRIC-PARTICLEENGINE-CLEARPARTICLES-PRIVATE` |
+| `package net.neoforged.neoforge.event.tick does not exist` (NeoForge 1.20.2–1.20.4) | `NEOFORGE-120-LEVELTICK-NOT-IN-EARLY-20X` |
 
 ---
 
@@ -998,9 +1066,10 @@ For deeper reading (in order of usefulness):
 8. `docs/examples/KEEP_INVENTORY_ALL_VERSIONS.md` — server-side gamerule mod, TickEvent/WorldEvent/GameRules API history across all eras
 9. `docs/examples/WORKING_FULL_BRIGHT_ALL_VERSIONS.md` — client-side gamma mod, private SimpleOption reflection, NeoForge 1.20.x early build pitfalls
 10. `docs/examples/NO_HOSTILE_MOBS_ALL_VERSIONS.md` — server-side spawn-blocking mod, Fabric Mixin pattern, MobSpawnEvent/FinalizeSpawnEvent API jar pitfalls, EntitySpawnReason rename
-11. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
+11. `docs/examples/NO_PARTICLES_ALL_VERSIONS.md` — client-side particle-disabling mod, ASM (1.8.9/1.12.x), reflection for clearParticles(), NeoForge 1.20.x event.tick pitfall
+12. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
 12. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
 
 ---
 
-*Last updated: May 2026 — based on No Hostile Mobs all-versions port session*
+*Last updated: May 2026 — based on World No Particles all-versions port session*
