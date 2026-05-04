@@ -1,7 +1,7 @@
 package asd.itamio.noparticles;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -25,7 +25,7 @@ public class NoParticlesHandler {
     }
 
     @SubscribeEvent
-    public void onLevelTick(LevelTickEvent.Post event) {
+    public void onRenderLevel(RenderLevelStageEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null) return;
         clearParticles(mc);

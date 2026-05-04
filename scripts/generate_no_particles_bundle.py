@@ -384,8 +384,8 @@ SRC_119_FABRIC = SRC_1165_FABRIC
 SRC_120_FABRIC = SRC_1165_FABRIC
 
 # ===========================================================================
-# FABRIC 1.21+ — Mojang mappings: Minecraft, particleEngine
-# clearParticles() is public in 1.21+ — call directly
+# FABRIC 1.21-1.21.8 — Mojang mappings: Minecraft, particleEngine
+# clearParticles() is PRIVATE in 1.21-1.21.8 — use reflection
 # ===========================================================================
 SRC_121_FABRIC = """\
 package asd.itamio.noparticles;
@@ -395,17 +395,30 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
+import java.lang.reflect.Method;
 
 @Environment(EnvType.CLIENT)
 public class NoParticlesMod implements ClientModInitializer {
+    private static Method clearParticlesMethod = null;
+
+    private static void clearParticles(Minecraft client) {
+        try {
+            if (client.particleEngine == null) return;
+            if (clearParticlesMethod == null) {
+                clearParticlesMethod = client.particleEngine.getClass().getDeclaredMethod("clearParticles");
+                clearParticlesMethod.setAccessible(true);
+            }
+            clearParticlesMethod.invoke(client.particleEngine);
+        } catch (Exception e) {
+            // ignore
+        }
+    }
 
     @Override
     public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null) return;
-            if (client.particleEngine != null) {
-                client.particleEngine.clearParticles();
-            }
+            clearParticles(client);
         });
     }
 }
@@ -447,7 +460,7 @@ SRC_120_NEO_HANDLER = """\
 package asd.itamio.noparticles;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -471,7 +484,7 @@ public class NoParticlesHandler {
     }
 
     @SubscribeEvent
-    public void onLevelTick(LevelTickEvent.Post event) {
+    public void onRenderLevel(RenderLevelStageEvent event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null) return;
         clearParticles(mc);
