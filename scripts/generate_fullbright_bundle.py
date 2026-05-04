@@ -490,9 +490,11 @@ SRC_261_FABRIC = SRC_121_FABRIC
 
 
 # ===========================================================================
-# NEOFORGE 1.20.2-1.20.6 — ClientTickEvent does NOT exist in early build (20.2.93)
-# Use RenderFrameEvent.Pre instead (fires every frame, confirmed to exist)
-# gamma is private SimpleOption<Double> — use double reflection
+# NEOFORGE 1.20.2-1.20.6 — NEITHER ClientTickEvent NOR RenderFrameEvent exist
+# in the early build (NeoForge 20.2.93) that the template resolves to.
+# The decompiled sources were generated with a newer build — do NOT trust them.
+# Fix: set gamma once in FMLClientSetupEvent (runs on client thread after init).
+# Gamma persists in options.txt so setting it once is sufficient.
 # ===========================================================================
 SRC_120_NEO_MOD = """\
 package asd.itamio.fullbright;
@@ -500,9 +502,10 @@ package asd.itamio.fullbright;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.minecraft.client.Minecraft;
+import java.lang.reflect.Field;
 
 @Mod("fullbright")
 public class FullBrightMod {
@@ -513,52 +516,28 @@ public class FullBrightMod {
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
-        NeoForge.EVENT_BUS.register(new FullBrightHandler());
+        // Set gamma once at startup — persists in options.txt
+        event.enqueueWork(() -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.options == null) return;
+            try {
+                Field gammaField = mc.options.getClass().getDeclaredField("gamma");
+                gammaField.setAccessible(true);
+                Object gammaOption = gammaField.get(mc.options);
+                if (gammaOption == null) return;
+                Field valueField = gammaOption.getClass().getDeclaredField("value");
+                valueField.setAccessible(true);
+                valueField.set(gammaOption, 15.0);
+            } catch (Exception e) {
+                // ignore
+            }
+        });
     }
 }
 """
 
-SRC_120_NEO_HANDLER = """\
-package asd.itamio.fullbright;
-
-import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.client.event.RenderFrameEvent;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import java.lang.reflect.Field;
-
-@OnlyIn(Dist.CLIENT)
-public class FullBrightHandler {
-    private static Field optionsGammaField = null;
-    private static Field simpleOptionValueField = null;
-
-    private static void setGamma(Minecraft mc, double value) {
-        try {
-            if (optionsGammaField == null) {
-                optionsGammaField = mc.options.getClass().getDeclaredField("gamma");
-                optionsGammaField.setAccessible(true);
-            }
-            Object gammaOption = optionsGammaField.get(mc.options);
-            if (gammaOption == null) return;
-            if (simpleOptionValueField == null) {
-                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
-                simpleOptionValueField.setAccessible(true);
-            }
-            simpleOptionValueField.set(gammaOption, value);
-        } catch (Exception e) {
-            // ignore
-        }
-    }
-
-    @SubscribeEvent
-    public void onRenderFrame(RenderFrameEvent.Pre event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        setGamma(mc, 15.0);
-    }
-}
-"""
+# No handler needed — single-file mod
+SRC_120_NEO_HANDLER = None
 
 # ===========================================================================
 # NEOFORGE 1.21-1.21.8 — ClientTickEvent exists in net.neoforged.neoforge.client.event
@@ -722,10 +701,10 @@ TARGETS = [
     ("FB-26.1.2-fabric",        "26.1.2",        "fabric", SRC_261_FABRIC,  None, EP, True),
 
     # ---- NEOFORGE ----
-    ("FB-1.20.2-neoforge",  "1.20.2",  "neoforge", SRC_120_NEO_MOD,  SRC_120_NEO_HANDLER,  EP, False),
-    ("FB-1.20.4-neoforge",  "1.20.4",  "neoforge", SRC_120_NEO_MOD,  SRC_120_NEO_HANDLER,  EP, False),
-    ("FB-1.20.5-neoforge",  "1.20.5",  "neoforge", SRC_120_NEO_MOD,  SRC_120_NEO_HANDLER,  EP, False),
-    ("FB-1.20.6-neoforge",  "1.20.6",  "neoforge", SRC_120_NEO_MOD,  SRC_120_NEO_HANDLER,  EP, False),
+    ("FB-1.20.2-neoforge",  "1.20.2",  "neoforge", SRC_120_NEO_MOD,  None,                 EP, False),
+    ("FB-1.20.4-neoforge",  "1.20.4",  "neoforge", SRC_120_NEO_MOD,  None,                 EP, False),
+    ("FB-1.20.5-neoforge",  "1.20.5",  "neoforge", SRC_120_NEO_MOD,  None,                 EP, False),
+    ("FB-1.20.6-neoforge",  "1.20.6",  "neoforge", SRC_120_NEO_MOD,  None,                 EP, False),
     ("FB-1.21-neoforge",    "1.21",    "neoforge", SRC_121_NEO_MOD,  SRC_121_NEO_HANDLER,  EP, False),
     ("FB-1.21.1-neoforge",  "1.21.1",  "neoforge", SRC_121_NEO_MOD,  SRC_121_NEO_HANDLER,  EP, False),
     ("FB-1.21.2-neoforge",  "1.21.2",  "neoforge", SRC_121_NEO_MOD,  SRC_121_NEO_HANDLER,  EP, False),

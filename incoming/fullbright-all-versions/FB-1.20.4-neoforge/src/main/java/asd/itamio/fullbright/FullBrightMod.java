@@ -3,9 +3,10 @@ package asd.itamio.fullbright;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.minecraft.client.Minecraft;
+import java.lang.reflect.Field;
 
 @Mod("fullbright")
 public class FullBrightMod {
@@ -16,6 +17,21 @@ public class FullBrightMod {
     }
 
     private void clientSetup(FMLClientSetupEvent event) {
-        NeoForge.EVENT_BUS.register(new FullBrightHandler());
+        // Set gamma once at startup — persists in options.txt
+        event.enqueueWork(() -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.options == null) return;
+            try {
+                Field gammaField = mc.options.getClass().getDeclaredField("gamma");
+                gammaField.setAccessible(true);
+                Object gammaOption = gammaField.get(mc.options);
+                if (gammaOption == null) return;
+                Field valueField = gammaOption.getClass().getDeclaredField("value");
+                valueField.setAccessible(true);
+                valueField.set(gammaOption, 15.0);
+            } catch (Exception e) {
+                // ignore
+            }
+        });
     }
 }
