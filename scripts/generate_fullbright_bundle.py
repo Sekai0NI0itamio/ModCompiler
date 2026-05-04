@@ -10,6 +10,18 @@ Already published (skip these):
 Run:
     python3 scripts/generate_fullbright_bundle.py
     python3 scripts/generate_fullbright_bundle.py --failed-only
+
+Key API notes:
+  - 1.8.9/1.12.2 Forge: mc.gameSettings.gammaSetting (public float field)
+  - 1.16.5-1.18.2 Forge/Fabric: mc.options.gamma (public double field)
+  - 1.19+ Forge/NeoForge/Fabric 1.21+: gamma is a PRIVATE SimpleOption<Double>
+    on Options — must use double reflection:
+      1. Field optGamma = Options.class.getDeclaredField("gamma"); setAccessible
+      2. SimpleOption<?> opt = (SimpleOption<?>) optGamma.get(mc.options);
+      3. Field valField = opt.getClass().getDeclaredField("value"); setAccessible
+      4. valField.set(opt, 15.0);
+  - NeoForge 1.20.x: ClientTickEvent doesn't exist in early build (20.2.93),
+    use RenderFrameEvent.Pre instead.
 """
 
 import argparse
@@ -61,8 +73,7 @@ PKG = "asd/itamio/fullbright"
 PKG_DOT = "asd.itamio.fullbright"
 
 # ===========================================================================
-# FORGE 1.8.9 — Java 6, mc.gameSettings.gammaSetting (float), Minecraft.getMinecraft()
-# TickEvent in net.minecraftforge.fml.common.gameevent.TickEvent
+# FORGE 1.8.9 — Java 6, mc.gameSettings.gammaSetting (public float field)
 # ===========================================================================
 SRC_189_MOD = """\
 package asd.itamio.fullbright;
@@ -159,9 +170,7 @@ public class FullBrightHandler {
 
 
 # ===========================================================================
-# FORGE 1.16.5 — mc.options.gamma (public double field), Minecraft.getInstance()
-# TickEvent in net.minecraftforge.event.TickEvent
-# FMLEnvironment.dist for client-side guard
+# FORGE 1.16.5-1.18.2 — mc.options.gamma is a PUBLIC double field
 # ===========================================================================
 SRC_1165_FORGE_MOD = """\
 package asd.itamio.fullbright;
@@ -210,15 +219,18 @@ public class FullBrightHandler {
 }
 """
 
-# 1.17.1 and 1.18.x Forge — same API as 1.16.5 for gamma (still public double field)
+# 1.17.1 and 1.18.x Forge — same (gamma still public double field)
 SRC_171_FORGE_MOD = SRC_1165_FORGE_MOD
 SRC_171_FORGE_HANDLER = SRC_1165_FORGE_HANDLER
 SRC_118_FORGE_MOD = SRC_1165_FORGE_MOD
 SRC_118_FORGE_HANDLER = SRC_1165_FORGE_HANDLER
 
 # ===========================================================================
-# FORGE 1.19-1.21.5 — gamma is now SimpleOption<Double>, need reflection
-# TickEvent in net.minecraftforge.event.TickEvent
+# FORGE 1.19-1.21.5 — gamma is a PRIVATE SimpleOption<Double> on Options
+# Must use double reflection:
+#   1. Get "gamma" field from Options class (private)
+#   2. Get "value" field from SimpleOption class (private)
+#   3. Set value directly, bypassing DoubleSliderCallbacks clamping
 # ===========================================================================
 SRC_119_FORGE_MOD = SRC_1165_FORGE_MOD
 
@@ -234,19 +246,25 @@ import java.lang.reflect.Field;
 
 @OnlyIn(Dist.CLIENT)
 public class FullBrightHandler {
-    private static Field gammaValueField = null;
+    private static Field optionsGammaField = null;
+    private static Field simpleOptionValueField = null;
 
     private static void setGamma(Minecraft mc, double value) {
         try {
-            if (gammaValueField == null) {
-                // SimpleOption<Double> stores its value in a field named "value"
-                gammaValueField = mc.options.gamma.getClass().getDeclaredField("value");
-                gammaValueField.setAccessible(true);
+            if (optionsGammaField == null) {
+                // gamma is a private field on Options (net.minecraft.client.Options)
+                optionsGammaField = mc.options.getClass().getDeclaredField("gamma");
+                optionsGammaField.setAccessible(true);
             }
-            gammaValueField.set(mc.options.gamma, value);
+            Object gammaOption = optionsGammaField.get(mc.options);
+            if (gammaOption == null) return;
+            if (simpleOptionValueField == null) {
+                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+                simpleOptionValueField.setAccessible(true);
+            }
+            simpleOptionValueField.set(gammaOption, value);
         } catch (Exception e) {
-            // fallback: try setValue (will be clamped to 1.0 but better than nothing)
-            try { mc.options.gamma.setValue(value); } catch (Exception ignored) {}
+            // ignore — gamma stays at whatever it was
         }
     }
 
@@ -260,11 +278,9 @@ public class FullBrightHandler {
 }
 """
 
-# 1.20.x Forge — same as 1.19 (SimpleOption, reflection)
+# 1.20.x and 1.21-1.21.5 Forge — same reflection approach
 SRC_120_FORGE_MOD = SRC_1165_FORGE_MOD
 SRC_120_FORGE_HANDLER = SRC_119_FORGE_HANDLER
-
-# 1.21-1.21.5 Forge — same as 1.19 (SimpleOption, reflection)
 SRC_121_FORGE_MOD = SRC_1165_FORGE_MOD
 SRC_121_FORGE_HANDLER = SRC_119_FORGE_HANDLER
 
@@ -272,6 +288,7 @@ SRC_121_FORGE_HANDLER = SRC_119_FORGE_HANDLER
 # ===========================================================================
 # FORGE 1.21.6-1.21.8 — EventBus 7, TickEvent.ClientTickEvent.Post.BUS
 # Constructor takes FMLJavaModLoadingContext
+# gamma still private SimpleOption<Double> — use reflection
 # ===========================================================================
 SRC_1216_FORGE_MOD = """\
 package asd.itamio.fullbright;
@@ -303,17 +320,24 @@ import java.lang.reflect.Field;
 
 @OnlyIn(Dist.CLIENT)
 public class FullBrightHandler {
-    private static Field gammaValueField = null;
+    private static Field optionsGammaField = null;
+    private static Field simpleOptionValueField = null;
 
     private static void setGamma(Minecraft mc, double value) {
         try {
-            if (gammaValueField == null) {
-                gammaValueField = mc.options.gamma.getClass().getDeclaredField("value");
-                gammaValueField.setAccessible(true);
+            if (optionsGammaField == null) {
+                optionsGammaField = mc.options.getClass().getDeclaredField("gamma");
+                optionsGammaField.setAccessible(true);
             }
-            gammaValueField.set(mc.options.gamma, value);
+            Object gammaOption = optionsGammaField.get(mc.options);
+            if (gammaOption == null) return;
+            if (simpleOptionValueField == null) {
+                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+                simpleOptionValueField.setAccessible(true);
+            }
+            simpleOptionValueField.set(gammaOption, value);
         } catch (Exception e) {
-            try { mc.options.gamma.setValue(value); } catch (Exception ignored) {}
+            // ignore
         }
     }
 
@@ -325,21 +349,15 @@ public class FullBrightHandler {
 }
 """
 
-# ===========================================================================
-# FORGE 1.21.9-1.21.11 — same EventBus 7 pattern as 1.21.6-1.21.8
-# ===========================================================================
+# 1.21.9-1.21.11 and 26.1.2 Forge — same EventBus 7 pattern
 SRC_1219_FORGE_MOD = SRC_1216_FORGE_MOD
 SRC_1219_FORGE_HANDLER = SRC_1216_FORGE_HANDLER
-
-# ===========================================================================
-# FORGE 26.1.2 — same EventBus 7 pattern
-# ===========================================================================
 SRC_261_FORGE_MOD = SRC_1216_FORGE_MOD
 SRC_261_FORGE_HANDLER = SRC_1216_FORGE_HANDLER
 
 
 # ===========================================================================
-# FABRIC 1.16.5 — presplit (src/main/java), MinecraftClient, options.gamma (double field)
+# FABRIC 1.16.5-1.18.2 — presplit, options.gamma is a PUBLIC double field
 # ===========================================================================
 SRC_1165_FABRIC = """\
 package asd.itamio.fullbright;
@@ -348,7 +366,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.MinecraftClient;
 
 @Environment(EnvType.CLIENT)
 public class FullBrightMod implements ClientModInitializer {
@@ -364,18 +381,14 @@ public class FullBrightMod implements ClientModInitializer {
 }
 """
 
-# 1.17 Fabric — same as 1.16.5 (presplit, gamma is public double field)
 SRC_117_FABRIC = SRC_1165_FABRIC
-
-# ===========================================================================
-# FABRIC 1.18.x — presplit, gamma still public double field
-# ===========================================================================
 SRC_118_FABRIC = SRC_1165_FABRIC
 
 # ===========================================================================
-# FABRIC 1.19-1.20.x — presplit (1.19.x) / split (1.20.x), gamma is SimpleOption<Double>
-# Use reflection to bypass DoubleSliderCallbacks clamping to [0.0, 1.0]
-# Yarn mappings: MinecraftClient, options.getGamma()
+# FABRIC 1.19-1.20.x — presplit (1.19.x) / split (1.20.x)
+# gamma is a PRIVATE SimpleOption<Double> — use double reflection
+# Yarn mappings: MinecraftClient, options.getGamma() is a getter but
+# the field itself is private — access via getDeclaredField("gamma")
 # ===========================================================================
 SRC_119_FABRIC = """\
 package asd.itamio.fullbright;
@@ -389,17 +402,24 @@ import java.lang.reflect.Field;
 
 @Environment(EnvType.CLIENT)
 public class FullBrightMod implements ClientModInitializer {
-    private static Field gammaValueField = null;
+    private static Field optionsGammaField = null;
+    private static Field simpleOptionValueField = null;
 
     private static void setGamma(MinecraftClient client, double value) {
         try {
-            if (gammaValueField == null) {
-                gammaValueField = client.options.getGamma().getClass().getDeclaredField("value");
-                gammaValueField.setAccessible(true);
+            if (optionsGammaField == null) {
+                optionsGammaField = client.options.getClass().getDeclaredField("gamma");
+                optionsGammaField.setAccessible(true);
             }
-            gammaValueField.set(client.options.getGamma(), value);
+            Object gammaOption = optionsGammaField.get(client.options);
+            if (gammaOption == null) return;
+            if (simpleOptionValueField == null) {
+                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+                simpleOptionValueField.setAccessible(true);
+            }
+            simpleOptionValueField.set(gammaOption, value);
         } catch (Exception e) {
-            try { client.options.getGamma().setValue(value); } catch (Exception ignored) {}
+            // ignore
         }
     }
 
@@ -413,13 +433,13 @@ public class FullBrightMod implements ClientModInitializer {
 }
 """
 
-# 1.20.x Fabric — same as 1.19 (split adapter, but same Yarn API for gamma)
+# 1.20.x Fabric — same reflection approach (still Yarn mappings, MinecraftClient)
 SRC_120_FABRIC = SRC_119_FABRIC
 
 # ===========================================================================
 # FABRIC 1.21+ — split adapter, Mojang mappings: Minecraft (not MinecraftClient)
-# options.gamma() returns SimpleOption<Double> — use reflection
-# client.level (not client.world), client.screen (not client.currentScreen)
+# gamma is still a PRIVATE SimpleOption<Double> — same double reflection
+# client.player (not client.player), client.level (not client.world)
 # ===========================================================================
 SRC_121_FABRIC = """\
 package asd.itamio.fullbright;
@@ -433,17 +453,24 @@ import java.lang.reflect.Field;
 
 @Environment(EnvType.CLIENT)
 public class FullBrightMod implements ClientModInitializer {
-    private static Field gammaValueField = null;
+    private static Field optionsGammaField = null;
+    private static Field simpleOptionValueField = null;
 
     private static void setGamma(Minecraft client, double value) {
         try {
-            if (gammaValueField == null) {
-                gammaValueField = client.options.gamma.getClass().getDeclaredField("value");
-                gammaValueField.setAccessible(true);
+            if (optionsGammaField == null) {
+                optionsGammaField = client.options.getClass().getDeclaredField("gamma");
+                optionsGammaField.setAccessible(true);
             }
-            gammaValueField.set(client.options.gamma, value);
+            Object gammaOption = optionsGammaField.get(client.options);
+            if (gammaOption == null) return;
+            if (simpleOptionValueField == null) {
+                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+                simpleOptionValueField.setAccessible(true);
+            }
+            simpleOptionValueField.set(gammaOption, value);
         } catch (Exception e) {
-            try { client.options.gamma.setValue(value); } catch (Exception ignored) {}
+            // ignore
         }
     }
 
@@ -463,8 +490,9 @@ SRC_261_FABRIC = SRC_121_FABRIC
 
 
 # ===========================================================================
-# NEOFORGE 1.20.2-1.21.8 — net.neoforged.neoforge.client.event.ClientTickEvent
-# gamma is SimpleOption<Double>, use reflection
+# NEOFORGE 1.20.2-1.20.6 — ClientTickEvent does NOT exist in early build (20.2.93)
+# Use RenderFrameEvent.Pre instead (fires every frame, confirmed to exist)
+# gamma is private SimpleOption<Double> — use double reflection
 # ===========================================================================
 SRC_120_NEO_MOD = """\
 package asd.itamio.fullbright;
@@ -494,6 +522,76 @@ SRC_120_NEO_HANDLER = """\
 package asd.itamio.fullbright;
 
 import net.minecraft.client.Minecraft;
+import net.neoforged.neoforge.client.event.RenderFrameEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import java.lang.reflect.Field;
+
+@OnlyIn(Dist.CLIENT)
+public class FullBrightHandler {
+    private static Field optionsGammaField = null;
+    private static Field simpleOptionValueField = null;
+
+    private static void setGamma(Minecraft mc, double value) {
+        try {
+            if (optionsGammaField == null) {
+                optionsGammaField = mc.options.getClass().getDeclaredField("gamma");
+                optionsGammaField.setAccessible(true);
+            }
+            Object gammaOption = optionsGammaField.get(mc.options);
+            if (gammaOption == null) return;
+            if (simpleOptionValueField == null) {
+                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+                simpleOptionValueField.setAccessible(true);
+            }
+            simpleOptionValueField.set(gammaOption, value);
+        } catch (Exception e) {
+            // ignore
+        }
+    }
+
+    @SubscribeEvent
+    public void onRenderFrame(RenderFrameEvent.Pre event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        setGamma(mc, 15.0);
+    }
+}
+"""
+
+# ===========================================================================
+# NEOFORGE 1.21-1.21.8 — ClientTickEvent exists in net.neoforged.neoforge.client.event
+# gamma is private SimpleOption<Double> — use double reflection
+# ===========================================================================
+SRC_121_NEO_MOD = """\
+package asd.itamio.fullbright;
+
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+
+@Mod("fullbright")
+public class FullBrightMod {
+    public FullBrightMod(IEventBus modBus) {
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            modBus.addListener(this::clientSetup);
+        }
+    }
+
+    private void clientSetup(FMLClientSetupEvent event) {
+        NeoForge.EVENT_BUS.register(new FullBrightHandler());
+    }
+}
+"""
+
+SRC_121_NEO_HANDLER = """\
+package asd.itamio.fullbright;
+
+import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.api.distmarker.Dist;
@@ -502,17 +600,24 @@ import java.lang.reflect.Field;
 
 @OnlyIn(Dist.CLIENT)
 public class FullBrightHandler {
-    private static Field gammaValueField = null;
+    private static Field optionsGammaField = null;
+    private static Field simpleOptionValueField = null;
 
     private static void setGamma(Minecraft mc, double value) {
         try {
-            if (gammaValueField == null) {
-                gammaValueField = mc.options.gamma.getClass().getDeclaredField("value");
-                gammaValueField.setAccessible(true);
+            if (optionsGammaField == null) {
+                optionsGammaField = mc.options.getClass().getDeclaredField("gamma");
+                optionsGammaField.setAccessible(true);
             }
-            gammaValueField.set(mc.options.gamma, value);
+            Object gammaOption = optionsGammaField.get(mc.options);
+            if (gammaOption == null) return;
+            if (simpleOptionValueField == null) {
+                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+                simpleOptionValueField.setAccessible(true);
+            }
+            simpleOptionValueField.set(gammaOption, value);
         } catch (Exception e) {
-            try { mc.options.gamma.setValue(value); } catch (Exception ignored) {}
+            // ignore
         }
     }
 
@@ -525,13 +630,9 @@ public class FullBrightHandler {
 }
 """
 
-# 1.21-1.21.8 NeoForge — same as 1.20.x
-SRC_121_NEO_MOD = SRC_120_NEO_MOD
-SRC_121_NEO_HANDLER = SRC_120_NEO_HANDLER
-
 # ===========================================================================
 # NEOFORGE 1.21.9-1.21.11 — ModContainer required in constructor
-# FMLEnvironment.getDist() (method call, not field access)
+# FMLEnvironment.getDist() (method call)
 # ===========================================================================
 SRC_1219_NEO_MOD = """\
 package asd.itamio.fullbright;
@@ -558,29 +659,24 @@ public class FullBrightMod {
 }
 """
 
-SRC_1219_NEO_HANDLER = SRC_120_NEO_HANDLER
+SRC_1219_NEO_HANDLER = SRC_121_NEO_HANDLER
 
 # ===========================================================================
-# NEOFORGE 26.1-26.1.2 — same as 1.21.9+ (ModContainer required)
+# NEOFORGE 26.1-26.1.2 — FMLJavaModLoadingContext removed, constructor injection
+# Same as 1.21.9+ pattern
 # ===========================================================================
 SRC_261_NEO_MOD = SRC_1219_NEO_MOD
-SRC_261_NEO_HANDLER = SRC_120_NEO_HANDLER
+SRC_261_NEO_HANDLER = SRC_121_NEO_HANDLER
 
 
 # ===========================================================================
 # TARGET MATRIX
-# (folder_name, mc_version, loader, mod_src, handler_src, entrypoint, client_srcset)
-# client_srcset=True  -> src/client/java/ (fabric_split 1.20+)
-# client_srcset=False -> src/main/java/   (fabric_presplit, forge, neoforge)
-# handler_src=None    -> single-file mod (Fabric)
 # ===========================================================================
 EP = f"{PKG_DOT}.FullBrightMod"
 
 TARGETS = [
     # ---- FORGE ----
-    # 1.8.9 — already published: 1.12.2 forge (skip that one)
     ("FB-1.8.9-forge",    "1.8.9",   "forge",    SRC_189_MOD,        SRC_189_HANDLER,        EP, False),
-    # 1.12 forge (1.12 is also in the range, separate from 1.12.2)
     ("FB-1.12-forge",     "1.12",    "forge",    SRC_1122_MOD,       SRC_1122_HANDLER,       EP, False),
     ("FB-1.16.5-forge",   "1.16.5",  "forge",    SRC_1165_FORGE_MOD, SRC_1165_FORGE_HANDLER, EP, False),
     ("FB-1.17.1-forge",   "1.17.1",  "forge",    SRC_171_FORGE_MOD,  SRC_171_FORGE_HANDLER,  EP, False),
@@ -648,7 +744,6 @@ TARGETS = [
 ]
 
 
-
 def get_failed_targets():
     runs_dir = ROOT / "ModCompileRuns"
     if not runs_dir.exists():
@@ -674,18 +769,15 @@ def get_failed_targets():
 
 def write_target(folder_name, mc_version, loader, mod_src, handler_src, entrypoint, client_srcset):
     base = BUNDLE_DIR / folder_name
-
     write(base / "mod.txt", mod_txt(entrypoint))
     write(base / "version.txt", version_txt(mc_version, loader))
 
-    # For fabric_split (1.20+), client entrypoint goes in src/client/java/
     if client_srcset:
         java_dir = base / "src" / "client" / "java"
     else:
         java_dir = base / "src" / "main" / "java"
 
     write(java_dir / PKG / "FullBrightMod.java", mod_src)
-
     if handler_src is not None:
         write(java_dir / PKG / "FullBrightHandler.java", handler_src)
 
@@ -718,7 +810,7 @@ def main():
         else:
             targets = [t for t in TARGETS if t[0] in failed]
             if not targets:
-                print(f"Warning: failed set did not match any TARGETS — generating all")
+                print("Warning: failed set did not match any TARGETS — generating all")
                 targets = TARGETS
     else:
         targets = TARGETS
@@ -737,7 +829,7 @@ def main():
 
     print("\nNext steps:")
     print("  git add incoming/fullbright-all-versions/ incoming/fullbright-all-versions.zip")
-    print("  git commit -m 'Add fullbright all-versions bundle'")
+    print("  git commit -m 'Fix fullbright failing targets'")
     print("  git push")
     print("  python3 scripts/run_build.py incoming/fullbright-all-versions.zip --modrinth https://modrinth.com/mod/working-full-bright --max-parallel all")
 
