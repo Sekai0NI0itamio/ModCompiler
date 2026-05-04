@@ -9,17 +9,24 @@ import java.lang.reflect.Field;
 
 @Environment(EnvType.CLIENT)
 public class FullBrightMod implements ClientModInitializer {
-    private static Field gammaValueField = null;
+    private static Field optionsGammaField = null;
+    private static Field simpleOptionValueField = null;
 
     private static void setGamma(MinecraftClient client, double value) {
         try {
-            if (gammaValueField == null) {
-                gammaValueField = client.options.getGamma().getClass().getDeclaredField("value");
-                gammaValueField.setAccessible(true);
+            if (optionsGammaField == null) {
+                optionsGammaField = client.options.getClass().getDeclaredField("gamma");
+                optionsGammaField.setAccessible(true);
             }
-            gammaValueField.set(client.options.getGamma(), value);
+            Object gammaOption = optionsGammaField.get(client.options);
+            if (gammaOption == null) return;
+            if (simpleOptionValueField == null) {
+                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+                simpleOptionValueField.setAccessible(true);
+            }
+            simpleOptionValueField.set(gammaOption, value);
         } catch (Exception e) {
-            try { client.options.getGamma().setValue(value); } catch (Exception ignored) {}
+            // ignore
         }
     }
 

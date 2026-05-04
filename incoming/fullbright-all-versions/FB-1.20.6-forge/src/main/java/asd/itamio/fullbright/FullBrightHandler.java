@@ -9,19 +9,25 @@ import java.lang.reflect.Field;
 
 @OnlyIn(Dist.CLIENT)
 public class FullBrightHandler {
-    private static Field gammaValueField = null;
+    private static Field optionsGammaField = null;
+    private static Field simpleOptionValueField = null;
 
     private static void setGamma(Minecraft mc, double value) {
         try {
-            if (gammaValueField == null) {
-                // SimpleOption<Double> stores its value in a field named "value"
-                gammaValueField = mc.options.gamma.getClass().getDeclaredField("value");
-                gammaValueField.setAccessible(true);
+            if (optionsGammaField == null) {
+                // gamma is a private field on Options (net.minecraft.client.Options)
+                optionsGammaField = mc.options.getClass().getDeclaredField("gamma");
+                optionsGammaField.setAccessible(true);
             }
-            gammaValueField.set(mc.options.gamma, value);
+            Object gammaOption = optionsGammaField.get(mc.options);
+            if (gammaOption == null) return;
+            if (simpleOptionValueField == null) {
+                simpleOptionValueField = gammaOption.getClass().getDeclaredField("value");
+                simpleOptionValueField.setAccessible(true);
+            }
+            simpleOptionValueField.set(gammaOption, value);
         } catch (Exception e) {
-            // fallback: try setValue (will be clamped to 1.0 but better than nothing)
-            try { mc.options.gamma.setValue(value); } catch (Exception ignored) {}
+            // ignore — gamma stays at whatever it was
         }
     }
 
