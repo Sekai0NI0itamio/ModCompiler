@@ -57,12 +57,13 @@ def version_txt(mc: str, loader: str) -> str:
 # Java 6: no underscores, no diamond <>, no lambdas
 # LivingSpawnEvent.CheckSpawn with HasResult
 # IMob interface identifies hostile mobs
+# event.entityLiving is EntityLivingBase (not EntityLiving) in 1.8.9
 # SubscribeEvent in net.minecraftforge.fml.common.eventhandler
 # ===========================================================================
 SRC_189_FORGE = """\
 package asd.itamio.nohostilemobs;
 
-import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.monster.IMob;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -83,7 +84,7 @@ public class NoHostileMobsMod {
 
     @SubscribeEvent
     public void onCheckSpawn(LivingSpawnEvent.CheckSpawn event) {
-        EntityLiving entity = event.entityLiving;
+        EntityLivingBase entity = event.entityLiving;
         if (entity instanceof IMob) {
             event.setResult(Result.DENY);
         }
@@ -164,9 +165,40 @@ SRC_118_FORGE = SRC_1171_FORGE
 
 
 # ===========================================================================
-# 1.19–1.21.5 FORGE (EventBus 6)
-# LivingSpawnEvent.CheckSpawn REMOVED in 1.19
-# Use MobSpawnEvent.FinalizeSpawn with setSpawnCancelled(true)
+# 1.19–1.19.3 FORGE (Forge 41.x–44.x)
+# MobSpawnEvent.FinalizeSpawn NOT accessible in Forge 41.x–44.x API jar
+# Use EntityJoinLevelEvent (cancelable) to block hostile mobs joining the level
+# MobCategory.MONSTER identifies hostile mobs
+# ===========================================================================
+SRC_119_FORGE_EARLY = """\
+package asd.itamio.nohostilemobs;
+
+import net.minecraft.world.entity.MobCategory;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+@Mod(NoHostileMobsMod.MODID)
+public class NoHostileMobsMod {
+    public static final String MODID = "nohostilemobs";
+
+    public NoHostileMobsMod() {
+        MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    @SubscribeEvent
+    public void onEntityJoinLevel(EntityJoinLevelEvent event) {
+        if (event.getEntity().getType().getCategory() == MobCategory.MONSTER) {
+            event.setCanceled(true);
+        }
+    }
+}
+"""
+
+# ===========================================================================
+# 1.19.4–1.21.5 FORGE (EventBus 6)
+# MobSpawnEvent.FinalizeSpawn accessible from Forge 45.x (1.19.4+)
 # Check MobCategory.MONSTER via entity.getType().getCategory()
 # ===========================================================================
 SRC_119_FORGE = """\
@@ -195,7 +227,7 @@ public class NoHostileMobsMod {
 }
 """
 
-# 1.21–1.21.5 same as 1.19
+# 1.21–1.21.5 same as 1.19.4
 SRC_121_FORGE = SRC_119_FORGE
 
 # ===========================================================================
@@ -237,13 +269,13 @@ SRC_1219_FORGE = SRC_1216_FORGE
 # FABRIC 1.16.5 (presplit, yarn mappings)
 # Use Mixin on MobEntity.canSpawn to block MONSTER spawn group
 # net.minecraft.entity.SpawnGroup.MONSTER
-# net.minecraft.entity.MobEntity
+# In 1.16.5 yarn: net.minecraft.entity.mob.MobEntity (NOT net.minecraft.entity.MobEntity)
 # ===========================================================================
 SRC_1165_FABRIC_MIXIN = """\
 package asd.itamio.nohostilemobs.mixin;
 
-import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.SpawnGroup;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.world.WorldAccess;
 import net.minecraft.entity.SpawnReason;
 import org.spongepowered.asm.mixin.Mixin;
@@ -312,10 +344,10 @@ SRC_117_FABRIC_MOD = SRC_1165_FABRIC_MOD
 
 
 # ===========================================================================
-# FABRIC 1.21–1.21.8 (split, Mojang mappings)
+# FABRIC 1.21–1.21.1 (split, Mojang mappings)
 # net.minecraft.world.entity.Mob (Mojang class name)
 # net.minecraft.world.entity.MobCategory.MONSTER
-# checkSpawnRules method signature changed
+# checkSpawnRules(LevelAccessor, MobSpawnType) — MobSpawnType still exists here
 # ===========================================================================
 SRC_121_FABRIC_MIXIN = """\
 package asd.itamio.nohostilemobs.mixin;
@@ -354,16 +386,50 @@ public class NoHostileMobsMod implements ModInitializer {
 }
 """
 
-# 1.21.9–26.1.2 same as 1.21 (Mojang mappings, same API)
-SRC_1219_FABRIC_MIXIN = SRC_121_FABRIC_MIXIN
+# ===========================================================================
+# FABRIC 1.21.2–1.21.8 (split, Mojang mappings)
+# MobSpawnType renamed to EntitySpawnReason in 1.21.2
+# checkSpawnRules(LevelAccessor, EntitySpawnReason)
+# ===========================================================================
+SRC_1212_FABRIC_MIXIN = """\
+package asd.itamio.nohostilemobs.mixin;
+
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.level.LevelAccessor;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+@Mixin(Mob.class)
+public class MobSpawnMixin {
+    @Inject(method = "checkSpawnRules", at = @At("HEAD"), cancellable = true)
+    private void blockHostileSpawn(LevelAccessor level, EntitySpawnReason spawnReason, CallbackInfoReturnable<Boolean> cir) {
+        Mob self = (Mob)(Object)this;
+        if (self.getType().getCategory() == MobCategory.MONSTER) {
+            cir.setReturnValue(false);
+        }
+    }
+}
+"""
+
+SRC_1212_FABRIC_MOD = SRC_121_FABRIC_MOD
+
+# ===========================================================================
+# FABRIC 1.21.9–26.1.2 (split, Mojang mappings)
+# Same as 1.21.2+ — EntitySpawnReason
+# ===========================================================================
+SRC_1219_FABRIC_MIXIN = SRC_1212_FABRIC_MIXIN
 SRC_1219_FABRIC_MOD = SRC_121_FABRIC_MOD
 
 
 # ===========================================================================
 # NEOFORGE 1.20.2–1.20.6
-# FinalizeSpawnEvent with setSpawnCancelled(true)
-# net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent
-# IEventBus constructor injection
+# FinalizeSpawnEvent NOT accessible in NeoForge 20.2.x/20.4.x/20.6.x API jar
+# Use EntityJoinLevelEvent (cancelable) to block hostile mobs
+# net.neoforged.neoforge.event.entity.EntityJoinLevelEvent
 # ===========================================================================
 SRC_120_NEO = """\
 package asd.itamio.nohostilemobs;
@@ -373,7 +439,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 
 @Mod(NoHostileMobsMod.MODID)
 public class NoHostileMobsMod {
@@ -384,9 +450,9 @@ public class NoHostileMobsMod {
     }
 
     @SubscribeEvent
-    public void onFinalizeSpawn(FinalizeSpawnEvent event) {
+    public void onEntityJoinLevel(EntityJoinLevelEvent event) {
         if (event.getEntity().getType().getCategory() == MobCategory.MONSTER) {
-            event.setSpawnCancelled(true);
+            event.setCanceled(true);
         }
     }
 }
@@ -454,11 +520,12 @@ TARGETS = [
     ("NoHostileMobs-1.18-forge",       "1.18",    "forge",    SRC_118_FORGE,    GROUP, ENTRYPOINT),
     ("NoHostileMobs-1.18.1-forge",     "1.18.1",  "forge",    SRC_118_FORGE,    GROUP, ENTRYPOINT),
     ("NoHostileMobs-1.18.2-forge",     "1.18.2",  "forge",    SRC_118_FORGE,    GROUP, ENTRYPOINT),
-    # ---- FORGE 1.19–1.20.6 (MobSpawnEvent.FinalizeSpawn) ----
-    ("NoHostileMobs-1.19-forge",       "1.19",    "forge",    SRC_119_FORGE,    GROUP, ENTRYPOINT),
-    ("NoHostileMobs-1.19.1-forge",     "1.19.1",  "forge",    SRC_119_FORGE,    GROUP, ENTRYPOINT),
-    ("NoHostileMobs-1.19.2-forge",     "1.19.2",  "forge",    SRC_119_FORGE,    GROUP, ENTRYPOINT),
-    ("NoHostileMobs-1.19.3-forge",     "1.19.3",  "forge",    SRC_119_FORGE,    GROUP, ENTRYPOINT),
+    # ---- FORGE 1.19–1.19.3 (EntityJoinLevelEvent — MobSpawnEvent not in Forge 41.x–44.x) ----
+    ("NoHostileMobs-1.19-forge",       "1.19",    "forge",    SRC_119_FORGE_EARLY, GROUP, ENTRYPOINT),
+    ("NoHostileMobs-1.19.1-forge",     "1.19.1",  "forge",    SRC_119_FORGE_EARLY, GROUP, ENTRYPOINT),
+    ("NoHostileMobs-1.19.2-forge",     "1.19.2",  "forge",    SRC_119_FORGE_EARLY, GROUP, ENTRYPOINT),
+    ("NoHostileMobs-1.19.3-forge",     "1.19.3",  "forge",    SRC_119_FORGE_EARLY, GROUP, ENTRYPOINT),
+    # ---- FORGE 1.19.4–1.20.6 (MobSpawnEvent.FinalizeSpawn accessible from Forge 45.x) ----
     ("NoHostileMobs-1.19.4-forge",     "1.19.4",  "forge",    SRC_119_FORGE,    GROUP, ENTRYPOINT),
     ("NoHostileMobs-1.20.1-forge",     "1.20.1",  "forge",    SRC_119_FORGE,    GROUP, ENTRYPOINT),
     ("NoHostileMobs-1.20.2-forge",     "1.20.2",  "forge",    SRC_119_FORGE,    GROUP, ENTRYPOINT),
@@ -497,12 +564,13 @@ TARGETS = [
     ("NoHostileMobs-1.20.4-fabric",    "1.20.4",  "fabric",   (SRC_117_FABRIC_MOD, SRC_117_FABRIC_MIXIN),   GROUP, ENTRYPOINT),
     ("NoHostileMobs-1.20.5-fabric",    "1.20.5",  "fabric",   (SRC_117_FABRIC_MOD, SRC_117_FABRIC_MIXIN),   GROUP, ENTRYPOINT),
     ("NoHostileMobs-1.20.6-fabric",    "1.20.6",  "fabric",   (SRC_117_FABRIC_MOD, SRC_117_FABRIC_MIXIN),   GROUP, ENTRYPOINT),
-    # ---- FABRIC 1.21–1.21.8 (Mojang mappings) ----
+    # ---- FABRIC 1.21–1.21.1 (Mojang mappings, MobSpawnType) ----
     ("NoHostileMobs-1.21-fabric",      "1.21",    "fabric",   (SRC_121_FABRIC_MOD, SRC_121_FABRIC_MIXIN),   GROUP, ENTRYPOINT),
-    ("NoHostileMobs-1.21.2-fabric",    "1.21.2",  "fabric",   (SRC_121_FABRIC_MOD, SRC_121_FABRIC_MIXIN),   GROUP, ENTRYPOINT),
-    # ---- FABRIC 1.21.9–1.21.11 ----
+    # ---- FABRIC 1.21.2–1.21.8 (Mojang mappings, EntitySpawnReason) ----
+    ("NoHostileMobs-1.21.2-fabric",    "1.21.2",  "fabric",   (SRC_1212_FABRIC_MOD, SRC_1212_FABRIC_MIXIN), GROUP, ENTRYPOINT),
+    # ---- FABRIC 1.21.9–1.21.11 (EntitySpawnReason) ----
     ("NoHostileMobs-1.21.9-fabric",    "1.21.9",  "fabric",   (SRC_1219_FABRIC_MOD, SRC_1219_FABRIC_MIXIN), GROUP, ENTRYPOINT),
-    # ---- FABRIC 26.1–26.1.2 ----
+    # ---- FABRIC 26.1–26.1.2 (EntitySpawnReason) ----
     ("NoHostileMobs-26.1-fabric",      "26.1",    "fabric",   (SRC_1219_FABRIC_MOD, SRC_1219_FABRIC_MIXIN), GROUP, ENTRYPOINT),
     ("NoHostileMobs-26.1.1-fabric",    "26.1.1",  "fabric",   (SRC_1219_FABRIC_MOD, SRC_1219_FABRIC_MIXIN), GROUP, ENTRYPOINT),
     ("NoHostileMobs-26.1.2-fabric",    "26.1.2",  "fabric",   (SRC_1219_FABRIC_MOD, SRC_1219_FABRIC_MIXIN), GROUP, ENTRYPOINT),
