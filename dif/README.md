@@ -106,6 +106,8 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 | FABRIC-MANIFEST-VERSION-VS-PUBLISHED-VERSION | Fabric supported_versions differs from Forge for same range (1.17 not 1.17.1, 1.21 not 1.21.1) | fabric | 1.17, 1.21 |
 | FORGE-SCREEN-EVENT-RENDER-SUBCLASS-HISTORY | Full history of Forge ScreenEvent subclass names and graphics accessors across all versions | forge | 1.16.5–26.1.2 |
 | FABRIC-TITLESCREEN-MIXIN-RENDER-SIGNATURE-HISTORY | Full history of Fabric TitleScreen mixin render() signature across all versions | fabric | 1.16.5–26.1.2 |
+| FABRIC-PARTICLEENGINE-CLEARPARTICLES-PRIVATE | Fabric 1.21–1.21.8 ParticleEngine.clearParticles() has private access — use reflection | fabric | 1.21–1.21.8 |
+| NEOFORGE-120-LEVELTICK-NOT-IN-EARLY-20X | NeoForge 1.20.2–1.20.4 event.tick package doesn't exist — use RenderLevelStageEvent | neoforge | 1.20.2–1.20.4 |
 
 ## Recently Added
 
@@ -154,3 +156,5 @@ All search logic lives in **`scripts/dif_core.py`** — the single source of tru
 | FABRIC-26-SERVER-LIFECYCLE-EVENTS-UNCHANGED | Fabric 26.1.x server lifecycle events (ServerLifecycleEvents) are unchanged — only client HUD APIs were removed | fabric | 26.1.x |
 | NEOFORGE-26-FMLJAVAMODLOADINGCONTEXT-REMOVED | NeoForge 26.1+ — FMLJavaModLoadingContext removed, use constructor injection (IEventBus, ModContainer) | neoforge | 26.1.x |
 | ZIP-PATH-MUST-BE-RELATIVE-TO-BUNDLE-FOLDER | Zip bundle must have mod folders at top level — run zip from inside the bundle folder, not workspace root | all | — |
+| FABRIC-PARTICLEENGINE-CLEARPARTICLES-PRIVATE | Fabric 1.21–1.21.8 ParticleEngine.clearParticles() has private access — use reflection | fabric | 1.21–1.21.8 |
+| NEOFORGE-120-LEVELTICK-NOT-IN-EARLY-20X | NeoForge 1.20.2–1.20.4 net.neoforged.neoforge.event.tick package doesn't exist in early build — use RenderLevelStageEvent | neoforge | 1.20.2–1.20.4 |
