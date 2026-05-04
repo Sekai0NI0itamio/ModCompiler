@@ -636,6 +636,124 @@ See DIF entry `MODRINTH-VERSION-TITLE-TOO-LONG`.
 
 ---
 
+### Mistake 25: Used EntityLiving instead of EntityLivingBase in Forge 1.8.9 spawn event (No Hostile Mobs port)
+
+**What happened**: The 1.8.9 Forge handler for `LivingSpawnEvent.CheckSpawn` referenced
+`event.entityLiving` as `EntityLiving`. The build failed immediately.
+
+**User correction**: Build log showed `incompatible types: EntityLivingBase cannot be converted to EntityLiving`.
+
+**Root cause**: In Forge 1.8.9, `LivingSpawnEvent` stores the entity as `EntityLivingBase`
+(the base class), not `EntityLiving`. The field type is `public EntityLivingBase entityLiving`.
+In 1.12.2+, the field type changed to `EntityLiving`.
+
+**Rule**: For Forge 1.8.9 spawn event handlers, always use `EntityLivingBase`:
+
+```java
+// CORRECT — 1.8.9
+import net.minecraft.entity.EntityLivingBase;
+EntityLivingBase entity = event.entityLiving;
+if (entity instanceof IMob) { event.setResult(Result.DENY); }
+```
+
+See DIF entry `FORGE-189-ENTITYLIVINGBASE-NOT-ENTITYLIVING`.
+
+---
+
+### Mistake 26: Used MobSpawnEvent for Forge 1.19–1.19.3 where it's not in the API jar (No Hostile Mobs port)
+
+**What happened**: Used `MobSpawnEvent.FinalizeSpawn` for all Forge 1.19+ targets.
+Forge 1.19–1.19.3 (41.x–44.x) failed with "cannot find symbol: class MobSpawnEvent"
+even though the class appears in the decompiled sources.
+
+**Root cause**: The decompiled sources for 1.19 were generated from a newer Forge
+version. `MobSpawnEvent` exists in the source tree but is NOT exported to the public
+API jar in Forge 41.x–44.x. This is the `SOURCE-SEARCH-CLASS-EXISTS-BUT-NOT-ACCESSIBLE`
+pitfall again — same pattern as `LivingUseTotemEvent` in 41.x.
+
+`MobSpawnEvent.FinalizeSpawn` only becomes accessible from Forge 45.x (1.19.4+).
+
+**Rule**: For Forge 1.19–1.19.3, use `EntityJoinLevelEvent` to block spawns:
+
+```java
+// CORRECT for Forge 1.19–1.19.3
+@SubscribeEvent
+public void onEntityJoinLevel(EntityJoinLevelEvent event) {
+    if (event.getEntity().getType().getCategory() == MobCategory.MONSTER) {
+        event.setCanceled(true);
+    }
+}
+```
+
+For Forge 1.19.4+, `MobSpawnEvent.FinalizeSpawn` is accessible and preferred.
+
+See DIF entry `FORGE-MOBSPAWNEVENT-NOT-IN-41X-44X`.
+
+---
+
+### Mistake 27: Used net.minecraft.entity.MobEntity (wrong package) in Fabric 1.16.5 Mixin (No Hostile Mobs port)
+
+**What happened**: Fabric 1.16.5 Mixin targeting `MobEntity` failed with
+"Mixin has no targets" because the import used `net.minecraft.entity.MobEntity`.
+
+**Root cause**: In Fabric 1.16.5 (yarn), `MobEntity` is in the `mob` subpackage:
+`net.minecraft.entity.mob.MobEntity`. The top-level `net.minecraft.entity.MobEntity`
+does not exist.
+
+**Rule**: Always use `net.minecraft.entity.mob.MobEntity` for Fabric 1.16.5–1.20.6.
+For Fabric 1.21+ (Mojang mappings), the class is `net.minecraft.world.entity.Mob`.
+
+See DIF entry `FABRIC-165-MOB-ENTITY-PACKAGE`.
+
+---
+
+### Mistake 28: Used MobSpawnType in Fabric 1.21.2+ where it was renamed to EntitySpawnReason (No Hostile Mobs port)
+
+**What happened**: Fabric 1.21.2, 1.21.9, and 26.x Mixin targets failed with
+"cannot find symbol: class MobSpawnType" because `MobSpawnType` was renamed in 1.21.2.
+
+**Root cause**: In Minecraft 1.21.2, `MobSpawnType` was renamed to `EntitySpawnReason`.
+The `checkSpawnRules` method signature on `Mob` changed accordingly. This affects
+both Fabric and NeoForge for 1.21.2+.
+
+**Rule**: Split Fabric Mixin sources at the 1.21.2 boundary:
+- 1.21–1.21.1: `checkSpawnRules(LevelAccessor, MobSpawnType)`
+- 1.21.2+: `checkSpawnRules(LevelAccessor, EntitySpawnReason)`
+
+See DIF entry `FABRIC-MOBSPAWNTYPE-RENAMED-ENTITYSPAWNREASON-1212`.
+
+---
+
+### Mistake 29: Used FinalizeSpawnEvent for NeoForge 1.20.x where it's not in the API jar (No Hostile Mobs port)
+
+**What happened**: NeoForge 1.20.2, 1.20.4, 1.20.5 failed with "cannot find symbol:
+class FinalizeSpawnEvent" even though the class appears in the decompiled sources.
+
+**Root cause**: Same pattern as Mistake 26 — `FinalizeSpawnEvent` exists in the
+decompiled sources (generated from a newer NeoForge) but is NOT accessible in the
+actual NeoForge 20.x API jar. `FinalizeSpawnEvent` only becomes accessible from
+NeoForge 21.x (1.21+).
+
+**Rule**: For NeoForge 1.20.2–1.20.6, use `EntityJoinLevelEvent` to block spawns:
+
+```java
+// CORRECT for NeoForge 1.20.2–1.20.6
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+
+@SubscribeEvent
+public void onEntityJoinLevel(EntityJoinLevelEvent event) {
+    if (event.getEntity().getType().getCategory() == MobCategory.MONSTER) {
+        event.setCanceled(true);
+    }
+}
+```
+
+For NeoForge 1.21+, `FinalizeSpawnEvent` is accessible and preferred.
+
+See DIF entry `NEOFORGE-FINALIZESPAWNEVENT-NOT-IN-EARLY-20X`.
+
+---
+
 Agent:
   1. Run fetch_modrinth_project.py → see what's already published
   2. Run manifest comparison → find ALL missing targets across ALL loaders
@@ -777,6 +895,24 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | 1.17+ | Forge/NeoForge | `src.getPlayerOrException()` |
 | All | Fabric | `src.getPlayer()` |
 
+### Blocking hostile mob spawns
+
+| Version range | Loader | Event / Approach | Key call |
+|---------------|--------|-----------------|----------|
+| 1.8.9 | Forge | `LivingSpawnEvent.CheckSpawn` | `event.setResult(Result.DENY)` — entity is `EntityLivingBase`, check `instanceof IMob` |
+| 1.12.2–1.18.2 | Forge | `LivingSpawnEvent.CheckSpawn` | `event.setResult(Result.DENY)` — check `instanceof Monster` (1.17+) or `IMob` (1.12.2) |
+| 1.19–1.19.3 | Forge | `EntityJoinLevelEvent` | `event.setCanceled(true)` — `MobSpawnEvent` NOT in API jar for Forge 41.x–44.x |
+| 1.19.4–1.21.5 | Forge | `MobSpawnEvent.FinalizeSpawn` | `event.setSpawnCancelled(true)` |
+| 1.21.6–26.x | Forge | `MobSpawnEvent.FinalizeSpawn.BUS.addListener()` | `event.setSpawnCancelled(true)` |
+| 1.16.5–1.20.6 | Fabric | Mixin on `MobEntity.canSpawn` | `cir.setReturnValue(false)` — class is `entity.mob.MobEntity` |
+| 1.21–1.21.1 | Fabric | Mixin on `Mob.checkSpawnRules` | `cir.setReturnValue(false)` — arg is `MobSpawnType` |
+| 1.21.2–26.x | Fabric | Mixin on `Mob.checkSpawnRules` | `cir.setReturnValue(false)` — arg is `EntitySpawnReason` |
+| 1.20.2–1.20.6 | NeoForge | `EntityJoinLevelEvent` | `event.setCanceled(true)` — `FinalizeSpawnEvent` NOT in API jar |
+| 1.21–26.x | NeoForge | `FinalizeSpawnEvent` | `event.setSpawnCancelled(true)` |
+
+Check `entity.getType().getCategory() == MobCategory.MONSTER` (Forge/NeoForge/Fabric 1.21+ Mojang)
+or `entity.getType().getSpawnGroup() == SpawnGroup.MONSTER` (Fabric yarn 1.16.5–1.20.6).
+
 ---
 
 ## DIF Quick Search for Common Errors
@@ -839,6 +975,12 @@ This is a condensed cheat sheet. For full details, see the DIF entries.
 | `cannot find symbol.*ClientTickEvent` (NeoForge 1.20.2, 1.20.4) | `NEOFORGE-120-CLIENT-EVENTS-NOT-IN-EARLY-BUILD` |
 | `cannot find symbol.*RenderFrameEvent` (NeoForge 1.20.2, 1.20.4) | `NEOFORGE-120-CLIENT-EVENTS-NOT-IN-EARLY-BUILD` |
 | `version_title failed validation with error: length` (Modrinth publish) | `MODRINTH-VERSION-TITLE-TOO-LONG` |
+| `incompatible types: EntityLivingBase cannot be converted to EntityLiving` (1.8.9) | `FORGE-189-ENTITYLIVINGBASE-NOT-ENTITYLIVING` |
+| `cannot find symbol.*class MobSpawnEvent` (Forge 1.19–1.19.3) | `FORGE-MOBSPAWNEVENT-NOT-IN-41X-44X` |
+| `package MobSpawnEvent does not exist` (Forge 1.19–1.19.3) | `FORGE-MOBSPAWNEVENT-NOT-IN-41X-44X` |
+| `cannot find symbol.*class MobEntity` + `Mixin has no targets` (Fabric 1.16.5) | `FABRIC-165-MOB-ENTITY-PACKAGE` |
+| `cannot find symbol.*class MobSpawnType` (Fabric/NeoForge 1.21.2+) | `FABRIC-MOBSPAWNTYPE-RENAMED-ENTITYSPAWNREASON-1212` |
+| `cannot find symbol.*class FinalizeSpawnEvent` (NeoForge 1.20.2–1.20.6) | `NEOFORGE-FINALIZESPAWNEVENT-NOT-IN-EARLY-20X` |
 
 ---
 
@@ -855,9 +997,10 @@ For deeper reading (in order of usefulness):
 7. `docs/examples/ALLOW_OFFLINE_LAN_JOIN_ALL_VERSIONS.md` — server-side reflection mod, 26.x patterns, 1-run success
 8. `docs/examples/KEEP_INVENTORY_ALL_VERSIONS.md` — server-side gamerule mod, TickEvent/WorldEvent/GameRules API history across all eras
 9. `docs/examples/WORKING_FULL_BRIGHT_ALL_VERSIONS.md` — client-side gamma mod, private SimpleOption reflection, NeoForge 1.20.x early build pitfalls
-10. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
-11. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
+10. `docs/examples/NO_HOSTILE_MOBS_ALL_VERSIONS.md` — server-side spawn-blocking mod, Fabric Mixin pattern, MobSpawnEvent/FinalizeSpawnEvent API jar pitfalls, EntitySpawnReason rename
+11. `docs/SYSTEM_MANUAL.md` — how the build pipeline works
+12. `docs/MODRINTH_PUBLISHING_GUIDE.md` — publishing workflow
 
 ---
 
-*Last updated: May 2026 — based on Working Full Bright all-versions port session*
+*Last updated: May 2026 — based on No Hostile Mobs all-versions port session*
