@@ -699,7 +699,11 @@ def command_publish(args: argparse.Namespace) -> int:
     if not bundle_dirs:
         raise ModCompilerError(f"No bundle directories were found under {output_dir}")
 
-    token = str(args.modrinth_token).strip() or os.environ.get("MODRINTH_TOKEN", "").strip()
+    token = (
+        str(args.modrinth_token).strip()
+        or os.environ.get("MODRINTH_TOKEN", "").strip()
+        or discover_secrets_file_token(line_index=0)
+    )
     publish_via = normalize_publish_via(args.publish_via)
     if args.dry_run:
         publish_via = "local"
@@ -876,6 +880,25 @@ def require_pillow_for_generate() -> None:
         "Pillow is required for the `generate` command because it renders the draft art assets. "
         "Install it with `python3 -m pip install Pillow`."
     )
+
+
+def discover_secrets_file_token(line_index: int = 0) -> str:
+    """Read a token from ../secrets.txt (one token per line, 0-indexed).
+
+    The file lives one directory above the repo root so it is never
+    accidentally committed.  Returns an empty string if the file does
+    not exist or the requested line is blank / missing.
+    """
+    secrets_path = Path.cwd().parent / "secrets.txt"
+    if not secrets_path.exists():
+        return ""
+    try:
+        lines = secrets_path.read_text(encoding="utf-8").splitlines()
+        if line_index < len(lines):
+            return lines[line_index].strip()
+    except OSError:
+        pass
+    return ""
 
 
 def discover_github_token() -> str:
