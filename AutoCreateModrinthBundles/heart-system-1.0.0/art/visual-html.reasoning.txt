@@ -1,0 +1,100 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items), each stats has value, label, note.
+
+We must adapt to mod "Heart System". Provide concise polished strings. Must match style modern premium non-Minecraft-themed. Use approved example composition language but adapt words.
+
+We need to choose background_image filename from options that best fits mod. The mod is about hearts, permadeath, PvP. Perhaps "winter forest with sunset.jpg" or "purple flowers and sun set or sun rise.png". The recommended options: mountain breeze with spring forest, purple flowers..., winter forest with sunset. Which matches heart system? Maybe "winter forest with sunset.jpg" evokes cold, death. Or "purple flowers and sun set or sun rise.png" maybe not. I'd choose "winter forest with sunset.jpg" as it's dark, final. Provide exact filename: "winter forest with sunset.jpg". Ensure matches case? The options list filenames exactly as given, including spaces. So we must use that exact string.
+
+Accent color: choose a hex color, maybe #ff7f2f (orange) as example, but can choose any. Must be a single hex color like "#ff7f2f". Use maybe "#c0392b" (deep red). Provide as string.
+
+Logo: eyebrow: short phrase maybe "Permadeath". mark: short monogram maybe "HS". title: "Heart System". subtitle: a short description similar to example: "A stark survival mechanic where death drains hearts and only PvP can restore them, culminating in permanent exile." Must be concise.
+
+rail_left: "Heart Decay". rail_right: "PvP Restoration". These describe actual behavior.
+
+description: kicker: maybe "Permadeath". title: "Heart System". tagline: short tagline describing core behavior. chips: 2-4 short labels, e.g., ["Heart Loss", "PvP Gain", "Permaban", "Health Sync"] but must be 2-4 items. Provide maybe 3 items: "Heart Loss", "PvP Gain", "Permaban". stats: exactly 2 items. Each stats has value (string), label, note (short sentence). Provide values maybe "∞" or "0"? In example they used "0" and "24/7". We can use "∞" maybe not allowed? They used "0" and "24/7". Use "∞"? Might be okay but better use numeric or word. Use "∞"? Might be considered not a string? It's a string. Could use "∞". But maybe better use "∞" as value. Or "∞"? Provide "∞". But maybe they want a short string like "∞". Provide "∞". Or "∞"? Let's use "∞". Provide label "Heart Decay". note: "Players lose one heart on any death, regardless of cause." Second stat: label "Heart Gain". note: "Killing a player restores one heart, enabling continued play." Provide value maybe "1"? Actually value is the current heart count? In example they used "0" for Blocks Lost and "24/7" for Automation. So value could be something like "0" for "Heart Decay"? But we need to reflect behavior. Could use "∞" for "Heart Gain"? Hmm.
+
+Better: Provide stats describing features: maybe "Permadeath" with value "Enabled". But they used numeric values. Could use "1" for "Heart Loss". But maybe we can use "1" as value representing hearts lost per death. And second stat "Hearts Remaining" with value "Variable". But note must be short sentence.
+
+Let's follow example: stats array items each have "value": "0", "24/7". So value is a short string representing some metric. We can use "1" for "Heart Loss" and "∞" for "Heart Gain"? But "∞" maybe not appropriate. Could use "∞" as value for "Heart Gain"? Or "∞" for "Permadeath"? Let's think.
+
+We need exactly 2 stats. Each stat has value, label, note. The label should be something like "Heart Loss" and "Heart Gain". Value could be "1" for both? Or maybe "1" for loss, "∞" for gain? But note must be one short sentence.
+
+Let's produce:
+
+stats: [
+ {
+    "value": "1",
+    "label": "Heart Loss",
+    "note": "Any death removes exactly one heart."
+  },
+  {
+    "value": "1",
+   "label": "Heart Gain",
+    "note": "Killing a player restores one heart."
+  }
+]
+
+But value "1" for both maybe okay. Or we could use "0" for loss? Actually loss is -1 heart, but value maybe "0"? Not sure. Could use "0" for "Heart Loss"? But they used "0" for Blocks Lost. That seems like a count of something lost. For Heart Loss maybe "1"? Let's just use "1". It's concise.
+
+Now ensure chips array 2-4 items. Provide maybe 3 items: "Heart Decay", "PvP Gain", "Permaband"? Actually "Permaband" not correct. Use "Permaban". Provide "Permaban". That's 3 items.
+
+Now ensure description.title is "Heart System". description.kicker maybe "Permadeath". description.tagline: short tagline: "Lose hearts on death, regain them only by killing, and face permanent exile at zero." Must be concise.
+
+Now ensure logo fields: eyebrow: maybe "Permadeath". mark: "HS". title: "Heart System". subtitle: "A stark survival mechanic where death drains hearts and only PvP can restore them, culminating in permanent exile." Must be concise but okay.
+
+rail_left: "Heart Decay". rail_right: "PvP Restoration". These describe actual behavior.
+
+Now ensure accent_color: choose "#c0392b". Provide as string.
+
+background_image: "winter forest with sunset.jpg". Must match exactly including spaces and case. The option listed is "winter forest with sunset.jpg". Yes.
+
+Now produce JSON with exactly that shape.
+
+Check required fields: "accent_color", "background_image", "logo": { "eyebrow": "...", "mark": "...", "title": "...", "subtitle": "...", "rail_left": "...", "rail_right": "..." }, "description": { "kicker": "...", "title": "...", "tagline": "...", "chips": [...], "stats": [ {...}, {...} ] }.
+
+Make sure no extra fields. Ensure JSON is valid, no trailing commas.
+
+Now craft strings:
+
+accent_color: "#c0392b"
+
+background_image: "winter forest with sunset.jpg"
+
+logo:
+- eyebrow: "Permadeath"
+- mark: "HS"
+- title: "Heart System"
+- subtitle: "A stark survival mechanic where death drains hearts and only PvP can restore them, culminating in permanent exile."
+- rail_left: "Heart Decay"
+- rail_right: "PvP Restoration"
+
+description:
+- kicker: "Permadeath"
+- title: "Heart System"
+- tagline: "Lose hearts on death, regain them only by killing, and face permanent exile at zero."
+- chips: ["Heart Loss", "PvP Gain", "Permaban"]
+- stats: [
+    {
+      "value": "1",
+      "label": "Heart Loss",
+      "note": "Any death removes exactly one heart."
+    },
+    {
+     "value": "1",
+      "label": "Heart Gain",
+      "note": "Killing a player restores one heart."
+    }
+  ]
+
+Check chips length: 3, okay.
+
+Check stats length: 2, okay.
+
+Check each note is one short sentence. They are short.
+
+Now ensure all strings concise and polished. The subtitle maybe a bit long but okay. Could be shorter: "Death drains hearts; only PvP restores them, leading to permanent exile." That's shorter. Let's use that.
+
+Subtitle: "Death drains hearts; only PvP restores them, leading to permanent exile."
+
+Now ensure no mention of draft status etc. Good.
+
+Now produce JSON.
