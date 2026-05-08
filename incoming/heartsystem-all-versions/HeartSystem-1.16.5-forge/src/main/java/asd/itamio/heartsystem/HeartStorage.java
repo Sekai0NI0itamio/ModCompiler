@@ -20,10 +20,11 @@ public class HeartStorage {
         if (playerFile.exists()) {
             try {
                 CompoundNBT tag = CompressedStreamTools.read(playerFile);
-                HeartData data = HeartData.fromNBT(tag);
-                int h = data.getHearts();
-                cache.put(uuid, h);
-                return h;
+                if (tag != null && tag.contains("hearts")) {
+                    int h = tag.getInt("hearts");
+                    cache.put(uuid, h);
+                    return h;
+                }
             } catch (IOException e) {
                 HeartSystemMod.logger.error("[HeartSystem] Failed to load: {}", e.getMessage());
             }
@@ -34,9 +35,10 @@ public class HeartStorage {
     public void save(String playerUUID, File playerFile, int hearts) {
         UUID uuid = UUID.fromString(playerUUID);
         cache.put(uuid, hearts);
-        HeartData data = new HeartData(hearts);
+        CompoundNBT tag = new CompoundNBT();
+        tag.putInt("hearts", hearts);
         try {
-            CompressedStreamTools.write(data.toNBT(), playerFile);
+            CompressedStreamTools.write(tag, playerFile);
         } catch (IOException e) {
             HeartSystemMod.logger.error("[HeartSystem] Failed to save: {}", e.getMessage());
         }

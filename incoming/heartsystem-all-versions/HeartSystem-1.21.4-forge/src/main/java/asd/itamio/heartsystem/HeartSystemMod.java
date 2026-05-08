@@ -20,6 +20,5 @@ public class HeartSystemMod {
     private void setup(FMLCommonSetupEvent event) {
         config = new HeartConfig();
         MinecraftForge.EVENT_BUS.register(new HeartEventHandler());
-        logger.info("[HeartSystem] Heart-based permadeath system active.");
     }
 }

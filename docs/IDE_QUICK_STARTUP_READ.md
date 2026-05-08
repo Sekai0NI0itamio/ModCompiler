@@ -1072,4 +1072,75 @@ For deeper reading (in order of usefulness):
 
 ---
 
-*Last updated: May 2026 — based on World No Particles all-versions port session*
+---
+
+### Mistake 32: Issued multiple commands in one terminal call (general rule)
+
+**What happened**: The agent chained multiple commands using `&&`, `;`, or by pasting
+several commands into a single `executeBash` call. This causes the IDE to hang, time out,
+or produce garbled output that is impossible to parse correctly.
+
+**User correction**: "Please run ONE command at a TIME."
+
+**Rule**: Every `executeBash` call MUST contain exactly ONE command. No `&&`, no `;`,
+no command lists of any kind. If you need results from multiple commands, run them in
+separate turns and read each result before proceeding.
+
+**Bad request (PROHIBITED)**:
+```bash
+find DecompiledMinecraftSourceCode/1.16.5-fabric -name "DamageSource.java" | head -3
+find DecompiledMinecraftSourceCode/1.16.5-fabric -name "NbtCompound.java" | head -3
+find DecompiledMinecraftSourceCode/1.16.5-fabric -name "ServerPlayerEntity.java" | head -3
+echo "---check ServerLivingEntityEvents in fabric API---"
+find DecompiledMinecraftSourceCode/1.16.5-fabric -name "ServerLivingEntityEvents.java" | head -3
+```
+
+**Good request (REQUIRED)**:
+```bash
+find DecompiledMinecraftSourceCode/1.16.5-fabric -name "DamageSource.java" | head -3
+```
+Then wait for the result. Then run the next command in the next turn.
+
+---
+
+### Mistake 33: Left the user to manually check build results
+
+**What happened**: After triggering `run_build.py`, the agent said "the build is running,
+check the results" and stopped. The user had to manually open GitHub Actions, download
+artifacts, and read logs themselves.
+
+**User correction**: "You need to run the command yourself and wait for the output yourself."
+
+**Rule**: AI agents are **PROHIBITED** from asking the user to manually check build results.
+The agent MUST:
+1. Run `python3 scripts/run_build.py` as a **background process** using `controlBashProcess`
+2. Poll `getProcessOutput` until the run completes (the script blocks and prints the final
+   summary when done)
+3. Read `ModCompileRuns/run-<timestamp>/SUMMARY.md` itself
+4. Read the per-mod `build.log` files for every failed target itself
+5. Fix the failures and re-run — all autonomously, without user involvement
+
+The user should never need to open GitHub Actions, download artifacts, or read logs.
+The agent owns the entire build-fix-rerun loop from start to finish.
+
+**Correct autonomous workflow**:
+```python
+# Step 1: start the build (blocking background process)
+controlBashProcess(action="start",
+    command="python3 scripts/run_build.py incoming/bundle.zip --modrinth <url>")
+
+# Step 2: poll until done
+getProcessOutput(terminalId=..., lines=100)  # repeat until "conclusion:" appears
+
+# Step 3: read results yourself
+readFile("ModCompileRuns/run-.../SUMMARY.md")
+
+# Step 4: for each failed target, read its build.log
+readFile("ModCompileRuns/run-.../artifacts/all-mod-builds/mods/<slug>/build.log")
+
+# Step 5: fix the generator, regenerate --failed-only, commit, push, re-run
+```
+
+---
+
+*Last updated: May 2026 — based on Heart System (lifesteal-parrot-mod) all-versions port session*

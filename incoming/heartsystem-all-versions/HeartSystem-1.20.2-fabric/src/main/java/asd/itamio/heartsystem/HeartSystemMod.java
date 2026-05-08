@@ -1,12 +1,9 @@
 package asd.itamio.heartsystem;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,12 +31,6 @@ public class HeartSystemMod implements ModInitializer {
                 HeartStorage.get().copyHearts(oldPlayer.getUuid(), newPlayer.getUuid());
             }
             HeartData.applyMaxHealth(newPlayer, HeartStorage.get().getHearts(newPlayer.getUuid()));
-        });
-
-        ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
-            if (!(entity instanceof ServerPlayerEntity)) return ActionResult.PASS;
-            HeartEventHandler.handleDeath((ServerPlayerEntity) entity, damageSource, config);
-            return ActionResult.PASS;
         });
     }
 }
