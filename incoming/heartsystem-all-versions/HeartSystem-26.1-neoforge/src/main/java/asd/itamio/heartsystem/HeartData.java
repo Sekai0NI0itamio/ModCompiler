@@ -1,14 +1,14 @@
 package asd.itamio.heartsystem;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
 public class HeartData {
-    private static final ResourceLocation MODIFIER_ID =
-        ResourceLocation.fromNamespaceAndPath("heartsystem", "maxhealth");
+    private static final Identifier MODIFIER_ID =
+        Identifier.fromNamespaceAndPath("heartsystem", "maxhealth");
 
     public static void applyMaxHealth(ServerPlayer player, int hearts) {
         AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);

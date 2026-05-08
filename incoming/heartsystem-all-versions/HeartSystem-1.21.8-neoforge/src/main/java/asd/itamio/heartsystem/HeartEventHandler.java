@@ -70,8 +70,8 @@ public class HeartEventHandler {
             HeartStorage.get().setHearts(deadUUID, hearts);
             MinecraftServer server = deadPlayer.getServer();
             if (server != null) {
-                server.getPlayerList().broadcastSystemMessage(
-                    Component.literal("\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), false);
+                Component msg = Component.literal("\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
+                server.getPlayerList().getPlayers().forEach(p -> p.sendSystemMessage(msg));
                 UserBanList banList = server.getPlayerList().getBans();
                 banList.add(new UserBanListEntry(
                     new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),

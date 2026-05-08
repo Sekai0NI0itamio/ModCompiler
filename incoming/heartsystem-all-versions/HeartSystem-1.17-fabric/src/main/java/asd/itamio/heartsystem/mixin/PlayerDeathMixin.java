@@ -54,7 +54,7 @@ public class PlayerDeathMixin {
         } else {
             HeartStorage.get().setHearts(deadUUID, hearts);
             deadPlayer.sendMessage(new LiteralText(
-                "\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts), deadPlayer.getUuid());
+                "\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts), false);
         }
 
         net.minecraft.entity.Entity killer = source.getAttacker();
@@ -69,10 +69,10 @@ public class PlayerDeathMixin {
                 HeartStorage.get().setHearts(killerUUID, killerHearts);
                 HeartData.applyMaxHealth(killerPlayer, killerHearts);
                 killerPlayer.sendMessage(new LiteralText(
-                    "\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts), killerPlayer.getUuid());
+                    "\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts), false);
             } else {
                 killerPlayer.sendMessage(new LiteralText(
-                    "\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."), killerPlayer.getUuid());
+                    "\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."), false);
             }
         }
     }

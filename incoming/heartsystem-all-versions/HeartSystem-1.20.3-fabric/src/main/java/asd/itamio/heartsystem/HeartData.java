@@ -17,7 +17,7 @@ public class HeartData {
         if (attr.getModifier(MODIFIER_UUID) != null) attr.removeModifier(MODIFIER_UUID);
         double delta = (hearts * 2.0) - 20.0;
         EntityAttributeModifier mod = new EntityAttributeModifier(MODIFIER_UUID, MODIFIER_NAME, delta, EntityAttributeModifier.Operation.ADDITION);
-        attr.addPermanentModifier(mod);
+        attr.addModifier(mod);
         float newMax = (float)(hearts * 2);
         if (player.getHealth() > newMax) player.setHealth(newMax);
     }

@@ -21,9 +21,8 @@ public class HeartStorage {
             try {
                 CompoundTag tag = NbtIo.read(playerFile.toPath());
                 if (tag != null && tag.contains("hearts")) {
-                    int h = tag.getInt("hearts");
-                    cache.put(uuid, h);
-                    return h;
+                    int h = tag.getInt("hearts").orElse(-1);
+                    if (h >= 0) { cache.put(uuid, h); return h; }
                 }
             } catch (IOException e) {
                 HeartSystemMod.logger.error("[HeartSystem] Failed to load: {}", e.getMessage());

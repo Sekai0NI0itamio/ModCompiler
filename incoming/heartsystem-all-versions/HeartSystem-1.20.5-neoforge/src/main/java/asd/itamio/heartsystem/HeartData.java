@@ -1,6 +1,5 @@
 package asd.itamio.heartsystem;
 
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -19,7 +18,7 @@ public class HeartData {
             attr.removeModifier(MODIFIER_UUID);
         }
         double delta = (hearts * 2.0) - 20.0;
-        AttributeModifier mod = new AttributeModifier(MODIFIER_UUID, MODIFIER_NAME, delta, AttributeModifier.Operation.ADDITION);
+        AttributeModifier mod = new AttributeModifier(MODIFIER_UUID, MODIFIER_NAME, delta, AttributeModifier.Operation.ADD_VALUE);
         attr.addPermanentModifier(mod);
         float newMax = (float)(hearts * 2);
         if (player.getHealth() > newMax) player.setHealth(newMax);
