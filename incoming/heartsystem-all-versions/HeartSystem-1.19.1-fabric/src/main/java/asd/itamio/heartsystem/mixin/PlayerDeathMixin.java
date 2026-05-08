@@ -41,9 +41,8 @@ public class PlayerDeathMixin {
             HeartStorage.get().setHearts(deadUUID, hearts);
             MinecraftServer server = deadPlayer.getServer();
             if (server != null) {
-                server.getPlayerManager().broadcastChatMessage(
-                    Text.literal("\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."),
-                    net.minecraft.network.MessageType.SYSTEM, net.minecraft.util.Util.NIL_UUID);
+                server.getPlayerManager().getPlayerList().forEach(p ->
+                    p.sendMessage(Text.literal("\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), false));
                 server.getPlayerManager().getUserBanList().add(
                     new BannedPlayerEntry(
                         new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
@@ -54,7 +53,7 @@ public class PlayerDeathMixin {
         } else {
             HeartStorage.get().setHearts(deadUUID, hearts);
             deadPlayer.sendMessage(Text.literal(
-                "\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts), deadPlayer.getUuid());
+                "\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts), false);
         }
 
         net.minecraft.entity.Entity killer = source.getAttacker();
@@ -69,10 +68,10 @@ public class PlayerDeathMixin {
                 HeartStorage.get().setHearts(killerUUID, killerHearts);
                 HeartData.applyMaxHealth(killerPlayer, killerHearts);
                 killerPlayer.sendMessage(Text.literal(
-                    "\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts), killerPlayer.getUuid());
+                    "\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts), false);
             } else {
                 killerPlayer.sendMessage(Text.literal(
-                    "\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."), killerPlayer.getUuid());
+                    "\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."), false);
             }
         }
     }

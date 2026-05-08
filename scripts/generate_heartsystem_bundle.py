@@ -563,6 +563,7 @@ public class HeartConfig {
 # ===========================================================================
 
 # Shared HeartStorage for Forge 1.17–1.20.2 (NbtIo with File overload)
+# NbtIo.read(File) returns CompoundTag (nullable), getInt returns int
 _FORGE_STORAGE_NBTIO_FILE = """\
 package asd.itamio.heartsystem;
 
@@ -617,7 +618,7 @@ public class HeartStorage {
 }
 """
 
-# Shared HeartStorage for Forge/NeoForge 1.20.3+ (NbtIo requires Path, not File)
+# Shared HeartStorage for Forge/NeoForge 1.20.3–1.21.8 (NbtIo requires Path, getInt returns int)
 _FORGE_STORAGE_NBTIO_PATH = """\
 package asd.itamio.heartsystem;
 
@@ -672,7 +673,61 @@ public class HeartStorage {
 }
 """
 
-# HeartData for Forge 1.16.5–1.20.6 (AttributeModifier with UUID, Operation.ADDITION)
+# HeartStorage for 1.21.9+ (NbtIo Path, getInt returns Optional<Integer>)
+_FORGE_STORAGE_NBTIO_PATH_OPT = """\
+package asd.itamio.heartsystem;
+
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class HeartStorage {
+    private static final HeartStorage INSTANCE = new HeartStorage();
+    public static HeartStorage get() { return INSTANCE; }
+    private final Map<UUID, Integer> cache = new HashMap<>();
+    private HeartStorage() {}
+
+    public int load(String playerUUID, File playerFile) {
+        UUID uuid = UUID.fromString(playerUUID);
+        if (playerFile.exists()) {
+            try {
+                CompoundTag tag = NbtIo.read(playerFile.toPath());
+                if (tag != null && tag.contains("hearts")) {
+                    int h = tag.getInt("hearts").orElse(-1);
+                    if (h >= 0) { cache.put(uuid, h); return h; }
+                }
+            } catch (IOException e) {
+                HeartSystemMod.logger.error("[HeartSystem] Failed to load: {}", e.getMessage());
+            }
+        }
+        return -1;
+    }
+
+    public void save(String playerUUID, File playerFile, int hearts) {
+        UUID uuid = UUID.fromString(playerUUID);
+        cache.put(uuid, hearts);
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("hearts", hearts);
+        try {
+            NbtIo.write(tag, playerFile.toPath());
+        } catch (IOException e) {
+            HeartSystemMod.logger.error("[HeartSystem] Failed to save: {}", e.getMessage());
+        }
+    }
+
+    public boolean has(UUID uuid) { return cache.containsKey(uuid); }
+    public int getHearts(UUID uuid) { Integer h = cache.get(uuid); return h != null ? h : -1; }
+    public void setHearts(UUID uuid, int hearts) { cache.put(uuid, hearts); }
+    public void remove(UUID uuid) { cache.remove(uuid); }
+}
+"""
+
+# HeartData for Forge 1.16.5–1.20.4 (AttributeModifier with UUID, Operation.ADDITION)
 _FORGE_DATA_UUID_ADDITION = """\
 package asd.itamio.heartsystem;
 
@@ -703,7 +758,37 @@ public class HeartData {
 }
 """
 
-# HeartData for Forge/NeoForge 1.21+ (AttributeModifier is a record with ResourceLocation id)
+# HeartData for Forge 1.20.5–1.20.6 (Operation.ADD_VALUE, still UUID-based constructor)
+_FORGE_DATA_UUID_ADDVALUE = """\
+package asd.itamio.heartsystem;
+
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+
+import java.util.UUID;
+
+public class HeartData {
+    private static final UUID MODIFIER_UUID = UUID.fromString("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+    private static final String MODIFIER_NAME = "heartsystem.maxhealth";
+
+    public static void applyMaxHealth(ServerPlayer player, int hearts) {
+        AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
+        if (attr == null) return;
+        if (attr.getModifier(MODIFIER_UUID) != null) {
+            attr.removeModifier(MODIFIER_UUID);
+        }
+        double delta = (hearts * 2.0) - 20.0;
+        AttributeModifier mod = new AttributeModifier(MODIFIER_UUID, MODIFIER_NAME, delta, AttributeModifier.Operation.ADD_VALUE);
+        attr.addPermanentModifier(mod);
+        float newMax = (float)(hearts * 2);
+        if (player.getHealth() > newMax) player.setHealth(newMax);
+    }
+}
+"""
+
+# HeartData for Forge/NeoForge 1.21–1.21.8 (AttributeModifier record with ResourceLocation id, ADD_VALUE)
 _FORGE_DATA_RL_ADDVALUE = """\
 package asd.itamio.heartsystem;
 
@@ -716,6 +801,36 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 public class HeartData {
     private static final ResourceLocation MODIFIER_ID =
         ResourceLocation.fromNamespaceAndPath("heartsystem", "maxhealth");
+
+    public static void applyMaxHealth(ServerPlayer player, int hearts) {
+        AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
+        if (attr == null) return;
+        attr.removeModifier(MODIFIER_ID);
+        double delta = (hearts * 2.0) - 20.0;
+        AttributeModifier mod = new AttributeModifier(MODIFIER_ID, delta, AttributeModifier.Operation.ADD_VALUE);
+        attr.addPermanentModifier(mod);
+        float newMax = (float)(hearts * 2);
+        if (player.getHealth() > newMax) player.setHealth(newMax);
+    }
+}
+"""
+
+# HeartData for 1.21.9–1.21.11 (same as above — ResourceLocation still exists)
+_FORGE_DATA_RL_ADDVALUE_1219 = _FORGE_DATA_RL_ADDVALUE
+
+# HeartData for 26.x (ResourceLocation renamed to Identifier)
+_FORGE_DATA_IDENTIFIER_ADDVALUE = """\
+package asd.itamio.heartsystem;
+
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+
+public class HeartData {
+    private static final Identifier MODIFIER_ID =
+        Identifier.fromNamespaceAndPath("heartsystem", "maxhealth");
 
     public static void applyMaxHealth(ServerPlayer player, int hearts) {
         AttributeInstance attr = player.getAttribute(Attributes.MAX_HEALTH);
@@ -831,11 +946,10 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.management.BannedPlayerList;
-import net.minecraft.server.management.BannedPlayerEntry;
+import net.minecraft.server.players.UserBanList;
+import net.minecraft.server.players.UserBanListEntry;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.ChatType;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -898,11 +1012,11 @@ public class HeartEventHandler {
             HeartStorage.get().setHearts(deadUUID, hearts);
             MinecraftServer server = deadPlayer.getServer();
             if (server != null) {
-                server.getPlayerList().broadcastMessage(
-                    new StringTextComponent("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."),
-                    ChatType.SYSTEM, net.minecraft.util.Util.NIL_UUID);
-                BannedPlayerList banList = server.getPlayerList().getBans();
-                banList.add(new BannedPlayerEntry(
+                StringTextComponent msg = new StringTextComponent(
+                    "\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
+                server.getPlayerList().getPlayers().forEach(p -> p.sendMessage(msg, p.getUUID()));
+                UserBanList banList = server.getPlayerList().getBans();
+                banList.add(new UserBanListEntry(
                     new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
                     null, null, null, "Permadeath: ran out of hearts"));
             }
@@ -1097,8 +1211,9 @@ public class HeartEventHandler {
             HeartStorage.get().setHearts(deadUUID, hearts);
             MinecraftServer server = deadPlayer.getServer();
             if (server != null) {
-                server.getPlayerList().broadcastMessage(
-                    new TextComponent("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), true);
+                TextComponent msg = new TextComponent(
+                    "\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
+                server.getPlayerList().getPlayers().forEach(p -> p.sendMessage(msg, p.getUUID()));
                 UserBanList banList = server.getPlayerList().getBans();
                 banList.add(new UserBanListEntry(
                     new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
@@ -1250,8 +1365,8 @@ public class HeartEventHandler {
             HeartStorage.get().setHearts(deadUUID, hearts);
             MinecraftServer server = deadPlayer.getServer();
             if (server != null) {
-                server.getPlayerList().broadcastSystemMessage(
-                    Component.literal("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), false);
+                Component msg = Component.literal("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
+                server.getPlayerList().getPlayers().forEach(p -> p.sendSystemMessage(msg));
                 UserBanList banList = server.getPlayerList().getBans();
                 banList.add(new UserBanListEntry(
                     new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
@@ -1470,8 +1585,120 @@ SRC_1216_FORGE = {
     "HeartConfig.java":      _FORGE_CONFIG_FMLJAVAMOD,
 }
 
-# 1.21.9–26.1.2: same EventBus 7 pattern, same APIs
-SRC_1219_FORGE = SRC_1216_FORGE
+# 1.21.9–26.1.2: getServer() removed from ServerPlayer — use level().getServer()
+# UserBanListEntry takes NameAndId(UUID, String) not GameProfile
+_FORGE_1219_HANDLER = """\
+package asd.itamio.heartsystem;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.server.players.UserBanList;
+import net.minecraft.server.players.UserBanListEntry;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+
+import java.io.File;
+import java.util.UUID;
+
+public class HeartEventHandler {
+
+    public void onPlayerLoad(PlayerEvent.LoadFromFile event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) return;
+        String uuidStr = event.getPlayerUUID();
+        File file = event.getPlayerFile("heartsystem");
+        int loaded = HeartStorage.get().load(uuidStr, file);
+        if (loaded < 0) {
+            HeartStorage.get().setHearts(UUID.fromString(uuidStr), HeartSystemMod.config.getStartHearts());
+        }
+    }
+
+    public void onPlayerSave(PlayerEvent.SaveToFile event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) return;
+        String uuidStr = event.getPlayerUUID();
+        UUID uuid = UUID.fromString(uuidStr);
+        File file = event.getPlayerFile("heartsystem");
+        int hearts = HeartStorage.get().getHearts(uuid);
+        if (hearts < 0) hearts = HeartSystemMod.config.getStartHearts();
+        HeartStorage.get().save(uuidStr, file, hearts);
+    }
+
+    public void onPlayerClone(PlayerEvent.Clone event) {
+        Player newPlayer = event.getEntity();
+        if (newPlayer.level().isClientSide()) return;
+        if (!event.isWasDeath()) return;
+        UUID uuid = newPlayer.getUUID();
+        if (!HeartStorage.get().has(uuid)) return;
+        if (newPlayer instanceof ServerPlayer) {
+            int hearts = HeartStorage.get().getHearts(uuid);
+            HeartData.applyMaxHealth((ServerPlayer) newPlayer, hearts);
+        }
+    }
+
+    public void onLivingDeath(LivingDeathEvent event) {
+        if (event.getEntity().level().isClientSide()) return;
+        if (!(event.getEntity() instanceof ServerPlayer)) return;
+        ServerPlayer deadPlayer = (ServerPlayer) event.getEntity();
+        UUID deadUUID = deadPlayer.getUUID();
+        int hearts = HeartStorage.get().getHearts(deadUUID);
+        if (hearts < 0) hearts = HeartSystemMod.config.getStartHearts();
+        hearts -= 1;
+        int min = HeartSystemMod.config.getMinHearts();
+        if (hearts <= min) {
+            hearts = min;
+            HeartStorage.get().setHearts(deadUUID, hearts);
+            MinecraftServer server = deadPlayer.level().getServer();
+            if (server != null) {
+                Component msg = Component.literal("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
+                server.getPlayerList().getPlayers().forEach(p -> p.sendSystemMessage(msg));
+                UserBanList banList = server.getPlayerList().getBans();
+                banList.add(new UserBanListEntry(
+                    new NameAndId(deadUUID, deadPlayer.getName().getString()),
+                    null, null, null, "Permadeath: ran out of hearts"));
+            }
+            deadPlayer.connection.disconnect(Component.literal(
+                "\\u00a7cYou have been permanently banned.\\nYou ran out of hearts."));
+        } else {
+            HeartStorage.get().setHearts(deadUUID, hearts);
+            deadPlayer.sendSystemMessage(Component.literal(
+                "\\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts));
+        }
+        DamageSource source = event.getSource();
+        Entity killer = source.getEntity();
+        if (killer instanceof ServerPlayer) {
+            ServerPlayer killerPlayer = (ServerPlayer) killer;
+            UUID killerUUID = killerPlayer.getUUID();
+            int killerHearts = HeartStorage.get().getHearts(killerUUID);
+            if (killerHearts < 0) killerHearts = HeartSystemMod.config.getStartHearts();
+            int max = HeartSystemMod.config.getMaxHearts();
+            if (killerHearts < max) {
+                killerHearts += 1;
+                HeartStorage.get().setHearts(killerUUID, killerHearts);
+                HeartData.applyMaxHealth(killerPlayer, killerHearts);
+                killerPlayer.sendSystemMessage(Component.literal(
+                    "\\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts));
+            } else {
+                killerPlayer.sendSystemMessage(Component.literal(
+                    "\\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."));
+            }
+        }
+    }
+}
+"""
+
+SRC_1219_FORGE = {
+    "HeartSystemMod.java":   _FORGE_1216_MOD,
+    "HeartEventHandler.java": _FORGE_1219_HANDLER,
+    "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH_OPT,
+    "HeartData.java":        _FORGE_DATA_RL_ADDVALUE_1219,
+    "HeartConfig.java":      _FORGE_CONFIG_FMLJAVAMOD,
+}
 
 
 # ===========================================================================
@@ -1581,7 +1808,7 @@ public class PlayerDeathMixin {
         } else {
             HeartStorage.get().setHearts(deadUUID, hearts);
             deadPlayer.sendMessage(new LiteralText(
-                "\\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts), deadPlayer.getUuid());
+                "\\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts), false);
         }
 
         net.minecraft.entity.Entity killer = source.getAttacker();
@@ -1596,10 +1823,10 @@ public class PlayerDeathMixin {
                 HeartStorage.get().setHearts(killerUUID, killerHearts);
                 HeartData.applyMaxHealth(killerPlayer, killerHearts);
                 killerPlayer.sendMessage(new LiteralText(
-                    "\\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts), killerPlayer.getUuid());
+                    "\\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts), false);
             } else {
                 killerPlayer.sendMessage(new LiteralText(
-                    "\\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."), killerPlayer.getUuid());
+                    "\\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."), false);
             }
         }
     }
@@ -1690,7 +1917,7 @@ public class HeartData {
         if (attr.getModifier(MODIFIER_UUID) != null) attr.removeModifier(MODIFIER_UUID);
         double delta = (hearts * 2.0) - 20.0;
         EntityAttributeModifier mod = new EntityAttributeModifier(MODIFIER_UUID, MODIFIER_NAME, delta, EntityAttributeModifier.Operation.ADDITION);
-        attr.addPermanentModifier(mod);
+        attr.addModifier(mod);
         float newMax = (float)(hearts * 2);
         if (player.getHealth() > newMax) player.setHealth(newMax);
     }
@@ -1739,22 +1966,86 @@ SRC_118_FABRIC  = SRC_1165_FABRIC
 # broadcastSystemMessage (1.19+)
 # BannedPlayerList / BannedPlayerEntry still in net.minecraft.server
 # ===========================================================================
-_FABRIC_119_MIXIN = _FABRIC_165_MIXIN.replace(
-    "import net.minecraft.text.LiteralText;",
-    "import net.minecraft.text.Text;"
-).replace(
-    "new LiteralText(",
-    "Text.literal("
-).replace(
-    "server.getPlayerManager().broadcastChatMessage(\n                    new LiteralText(\"\\u00a7c[HeartSystem] \" + deadPlayer.getName().getString() + \" has been permanently banned (0 hearts).\"),\n                    net.minecraft.network.MessageType.SYSTEM, net.minecraft.util.Util.NIL_UUID);",
-    "server.getPlayerManager().broadcastSystemMessage(\n                    Text.literal(\"\\u00a7c[HeartSystem] \" + deadPlayer.getName().getString() + \" has been permanently banned (0 hearts).\"), false);"
-).replace(
-    "deadPlayer.sendMessage(new LiteralText(",
-    "deadPlayer.sendMessage(Text.literal("
-).replace(
-    "killerPlayer.sendMessage(new LiteralText(",
-    "killerPlayer.sendMessage(Text.literal("
-)
+_FABRIC_119_MIXIN = """\
+package asd.itamio.heartsystem.mixin;
+
+import asd.itamio.heartsystem.HeartConfig;
+import asd.itamio.heartsystem.HeartData;
+import asd.itamio.heartsystem.HeartStorage;
+import asd.itamio.heartsystem.HeartSystemMod;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.BannedPlayerList;
+import net.minecraft.server.BannedPlayerEntry;
+import net.minecraft.text.Text;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.UUID;
+
+@Mixin(PlayerEntity.class)
+public class PlayerDeathMixin {
+
+    @Inject(method = "onDeath", at = @At("HEAD"))
+    private void onPlayerDeath(DamageSource source, CallbackInfo ci) {
+        PlayerEntity self = (PlayerEntity)(Object)this;
+        if (self.world.isClient) return;
+        if (!(self instanceof ServerPlayerEntity)) return;
+        ServerPlayerEntity deadPlayer = (ServerPlayerEntity) self;
+        HeartConfig config = HeartSystemMod.config;
+        if (config == null) return;
+
+        UUID deadUUID = deadPlayer.getUuid();
+        int hearts = HeartStorage.get().getHearts(deadUUID);
+        if (hearts < 0) hearts = config.getStartHearts();
+        hearts -= 1;
+        int min = config.getMinHearts();
+
+        if (hearts <= min) {
+            hearts = min;
+            HeartStorage.get().setHearts(deadUUID, hearts);
+            MinecraftServer server = deadPlayer.getServer();
+            if (server != null) {
+                server.getPlayerManager().getPlayerList().forEach(p ->
+                    p.sendMessage(Text.literal("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), false));
+                server.getPlayerManager().getUserBanList().add(
+                    new BannedPlayerEntry(
+                        new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
+                        null, null, null, "Permadeath: ran out of hearts"));
+            }
+            deadPlayer.networkHandler.disconnect(Text.literal(
+                "\\u00a7cYou have been permanently banned.\\nYou ran out of hearts."));
+        } else {
+            HeartStorage.get().setHearts(deadUUID, hearts);
+            deadPlayer.sendMessage(Text.literal(
+                "\\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts), false);
+        }
+
+        net.minecraft.entity.Entity killer = source.getAttacker();
+        if (killer instanceof ServerPlayerEntity) {
+            ServerPlayerEntity killerPlayer = (ServerPlayerEntity) killer;
+            UUID killerUUID = killerPlayer.getUuid();
+            int killerHearts = HeartStorage.get().getHearts(killerUUID);
+            if (killerHearts < 0) killerHearts = config.getStartHearts();
+            int max = config.getMaxHearts();
+            if (killerHearts < max) {
+                killerHearts += 1;
+                HeartStorage.get().setHearts(killerUUID, killerHearts);
+                HeartData.applyMaxHealth(killerPlayer, killerHearts);
+                killerPlayer.sendMessage(Text.literal(
+                    "\\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts), false);
+            } else {
+                killerPlayer.sendMessage(Text.literal(
+                    "\\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."), false);
+            }
+        }
+    }
+}
+"""
 
 _FABRIC_119_MOD = _FABRIC_165_MOD
 
@@ -1862,10 +2153,10 @@ public class PlayerDeathMixin {
         if (hearts <= min) {
             hearts = min;
             HeartStorage.get().setHearts(deadUUID, hearts);
-            MinecraftServer server = deadPlayer.getServer();
+            MinecraftServer server = deadPlayer.level().getServer();
             if (server != null) {
-                server.getPlayerList().broadcastSystemMessage(
-                    Component.literal("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), false);
+                Component msg = Component.literal("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
+                server.getPlayerList().getPlayers().forEach(p -> p.sendSystemMessage(msg));
                 UserBanList banList = server.getPlayerList().getBans();
                 banList.add(new UserBanListEntry(
                     new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
@@ -1984,7 +2275,20 @@ SRC_121_FABRIC = {
     "../resources/heartsystem.mixins.json": _FABRIC_121_MIXINJSON,
 }
 
-SRC_1219_FABRIC = SRC_121_FABRIC
+# 1.21.9+: getInt() returns Optional<Integer>, getServer() removed from ServerPlayer
+_FABRIC_121_STORAGE_OPT = _FABRIC_121_STORAGE.replace(
+    "CompoundTag tag = NbtIo.read(file.toPath());\n                if (tag != null && tag.contains(\"hearts\")) {\n                    cache.put(uuid, tag.getInt(\"hearts\"));\n                    return;",
+    "CompoundTag tag = NbtIo.read(file.toPath());\n                if (tag != null && tag.contains(\"hearts\")) {\n                    int h = tag.getInt(\"hearts\").orElse(-1);\n                    if (h >= 0) { cache.put(uuid, h); return; }"
+)
+
+SRC_1219_FABRIC = {
+    "HeartSystemMod.java":                  _FABRIC_121_MOD,
+    "mixin/PlayerDeathMixin.java":          _FABRIC_121_MIXIN,
+    "HeartStorage.java":                    _FABRIC_121_STORAGE_OPT,
+    "HeartData.java":                       _FORGE_DATA_RL_ADDVALUE_1219,
+    "HeartConfig.java":                     _FABRIC_165_CONFIG,
+    "../resources/heartsystem.mixins.json": _FABRIC_121_MIXINJSON,
+}
 
 
 # ===========================================================================
@@ -2089,8 +2393,8 @@ public class HeartEventHandler {
             HeartStorage.get().setHearts(deadUUID, hearts);
             MinecraftServer server = deadPlayer.getServer();
             if (server != null) {
-                server.getPlayerList().broadcastSystemMessage(
-                    Component.literal("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), false);
+                Component msg = Component.literal("\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
+                server.getPlayerList().getPlayers().forEach(p -> p.sendSystemMessage(msg));
                 UserBanList banList = server.getPlayerList().getBans();
                 banList.add(new UserBanListEntry(
                     new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
@@ -2161,13 +2465,21 @@ SRC_120_NEO = {
     "HeartConfig.java":      _NEO_120_CONFIG,
 }
 
-# NeoForge 1.21–1.21.8: same as 1.20 but NbtIo needs Path for 1.21.3+
-# Use Path version to be safe across all 1.21.x
+# NeoForge 1.20.5–1.20.6: Operation.ADD_VALUE, NbtIo needs Path
+_SRC_1205_NEO = {
+    "HeartSystemMod.java":   _NEO_120_MOD,
+    "HeartEventHandler.java": _NEO_120_HANDLER,
+    "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH,
+    "HeartData.java":        _FORGE_DATA_UUID_ADDVALUE,
+    "HeartConfig.java":      _NEO_120_CONFIG,
+}
+
+# NeoForge 1.21–1.21.8: same as 1.20.5 but ResourceLocation AttributeModifier
 SRC_121_NEO = {
     "HeartSystemMod.java":   _NEO_120_MOD,
     "HeartEventHandler.java": _NEO_120_HANDLER,
     "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH,
-    "HeartData.java":        _FORGE_DATA_UUID_ADDITION,
+    "HeartData.java":        _FORGE_DATA_RL_ADDVALUE,
     "HeartConfig.java":      _NEO_120_CONFIG,
 }
 
@@ -2225,9 +2537,9 @@ public class HeartConfig {
 
 SRC_1219_NEO = {
     "HeartSystemMod.java":   _NEO_1219_MOD,
-    "HeartEventHandler.java": _NEO_120_HANDLER,
-    "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH,
-    "HeartData.java":        _FORGE_DATA_RL_ADDVALUE,
+    "HeartEventHandler.java": _FORGE_1219_HANDLER,
+    "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH_OPT,
+    "HeartData.java":        _FORGE_DATA_RL_ADDVALUE_1219,
     "HeartConfig.java":      _NEO_1219_CONFIG,
 }
 
@@ -2283,10 +2595,10 @@ TARGETS = [
     ("HeartSystem-1.20.4-fabric",  "1.20.4",  "fabric",   SRC_119_FABRIC),
     ("HeartSystem-1.20.4-neoforge","1.20.4",  "neoforge", SRC_120_NEO),
     ("HeartSystem-1.20.5-fabric",  "1.20.5",  "fabric",   SRC_119_FABRIC),
-    ("HeartSystem-1.20.5-neoforge","1.20.5",  "neoforge", SRC_120_NEO),
+    ("HeartSystem-1.20.5-neoforge","1.20.5",  "neoforge", _SRC_1205_NEO),
     ("HeartSystem-1.20.6-forge",   "1.20.6",  "forge",    SRC_1203_FORGE),
     ("HeartSystem-1.20.6-fabric",  "1.20.6",  "fabric",   SRC_119_FABRIC),
-    ("HeartSystem-1.20.6-neoforge","1.20.6",  "neoforge", SRC_120_NEO),
+    ("HeartSystem-1.20.6-neoforge","1.20.6",  "neoforge", _SRC_1205_NEO),
     ("HeartSystem-1.21-forge",     "1.21",    "forge",    SRC_1203_FORGE),
     ("HeartSystem-1.21-fabric",    "1.21",    "fabric",   SRC_121_FABRIC),
     ("HeartSystem-1.21-neoforge",  "1.21",    "neoforge", SRC_121_NEO),
@@ -2314,12 +2626,36 @@ TARGETS = [
     ("HeartSystem-1.21.11-forge",  "1.21.11", "forge",    SRC_1219_FORGE),
     ("HeartSystem-1.21.11-neoforge","1.21.11","neoforge", SRC_1219_NEO),
     ("HeartSystem-26.1-fabric",    "26.1",    "fabric",   SRC_1219_FABRIC),
-    ("HeartSystem-26.1-neoforge",  "26.1",    "neoforge", SRC_1219_NEO),
+    ("HeartSystem-26.1-neoforge",  "26.1",    "neoforge", {
+        "HeartSystemMod.java":   _NEO_1219_MOD,
+        "HeartEventHandler.java": _FORGE_1219_HANDLER,
+        "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH_OPT,
+        "HeartData.java":        _FORGE_DATA_IDENTIFIER_ADDVALUE,
+        "HeartConfig.java":      _NEO_1219_CONFIG,
+    }),
     ("HeartSystem-26.1.1-fabric",  "26.1.1",  "fabric",   SRC_1219_FABRIC),
-    ("HeartSystem-26.1.1-neoforge","26.1.1",  "neoforge", SRC_1219_NEO),
-    ("HeartSystem-26.1.2-forge",   "26.1.2",  "forge",    SRC_1219_FORGE),
+    ("HeartSystem-26.1.1-neoforge","26.1.1",  "neoforge", {
+        "HeartSystemMod.java":   _NEO_1219_MOD,
+        "HeartEventHandler.java": _FORGE_1219_HANDLER,
+        "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH_OPT,
+        "HeartData.java":        _FORGE_DATA_IDENTIFIER_ADDVALUE,
+        "HeartConfig.java":      _NEO_1219_CONFIG,
+    }),
+    ("HeartSystem-26.1.2-forge",   "26.1.2",  "forge",    {
+        "HeartSystemMod.java":   _FORGE_1216_MOD,
+        "HeartEventHandler.java": _FORGE_1219_HANDLER,
+        "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH_OPT,
+        "HeartData.java":        _FORGE_DATA_IDENTIFIER_ADDVALUE,
+        "HeartConfig.java":      _FORGE_CONFIG_FMLJAVAMOD,
+    }),
     ("HeartSystem-26.1.2-fabric",  "26.1.2",  "fabric",   SRC_1219_FABRIC),
-    ("HeartSystem-26.1.2-neoforge","26.1.2",  "neoforge", SRC_1219_NEO),
+    ("HeartSystem-26.1.2-neoforge","26.1.2",  "neoforge", {
+        "HeartSystemMod.java":   _NEO_1219_MOD,
+        "HeartEventHandler.java": _FORGE_1219_HANDLER,
+        "HeartStorage.java":     _FORGE_STORAGE_NBTIO_PATH_OPT,
+        "HeartData.java":        _FORGE_DATA_IDENTIFIER_ADDVALUE,
+        "HeartConfig.java":      _NEO_1219_CONFIG,
+    }),
 ]
 
 

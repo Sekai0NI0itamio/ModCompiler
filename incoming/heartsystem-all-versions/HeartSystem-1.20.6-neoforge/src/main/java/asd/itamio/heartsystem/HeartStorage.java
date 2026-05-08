@@ -19,7 +19,7 @@ public class HeartStorage {
         UUID uuid = UUID.fromString(playerUUID);
         if (playerFile.exists()) {
             try {
-                CompoundTag tag = NbtIo.read(playerFile);
+                CompoundTag tag = NbtIo.read(playerFile.toPath());
                 if (tag != null && tag.contains("hearts")) {
                     int h = tag.getInt("hearts");
                     cache.put(uuid, h);
@@ -38,7 +38,7 @@ public class HeartStorage {
         CompoundTag tag = new CompoundTag();
         tag.putInt("hearts", hearts);
         try {
-            NbtIo.write(tag, playerFile);
+            NbtIo.write(tag, playerFile.toPath());
         } catch (IOException e) {
             HeartSystemMod.logger.error("[HeartSystem] Failed to save: {}", e.getMessage());
         }
