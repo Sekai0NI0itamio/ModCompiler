@@ -1103,43 +1103,61 @@ Then wait for the result. Then run the next command in the next turn.
 
 ---
 
-### Mistake 33: Left the user to manually check build results
+### Mistake 33: Used background process for run_build.py instead of a normal blocking command
 
-**What happened**: After triggering `run_build.py`, the agent said "the build is running,
-check the results" and stopped. The user had to manually open GitHub Actions, download
-artifacts, and read logs themselves.
+**What happened**: The agent ran `run_build.py` using `controlBashProcess` (background),
+then had to manually poll `getProcessOutput` in a loop to check if it finished. This is
+fragile, wastes turns, and is completely unnecessary.
 
-**User correction**: "You need to run the command yourself and wait for the output yourself."
+**User correction**: "Stop running background processes, run it as a normal terminal command,
+so you don't have to manually check if it's finished or not. A normal command finishes when
+it finishes, so you don't need to wait."
 
-**Rule**: AI agents are **PROHIBITED** from asking the user to manually check build results.
-The agent MUST:
-1. Run `python3 scripts/run_build.py` as a **background process** using `controlBashProcess`
-2. Poll `getProcessOutput` until the run completes (the script blocks and prints the final
-   summary when done)
-3. Read `ModCompileRuns/run-<timestamp>/SUMMARY.md` itself
-4. Read the per-mod `build.log` files for every failed target itself
-5. Fix the failures and re-run — all autonomously, without user involvement
+**Root cause**: `run_build.py` is a **blocking** script — it waits for the GitHub Actions
+workflow to complete, downloads all artifacts, and exits. It does not need to be backgrounded.
+Running it with `executeBash` is correct: the tool waits for the command to finish and returns
+all output at once.
 
-The user should never need to open GitHub Actions, download artifacts, or read logs.
-The agent owns the entire build-fix-rerun loop from start to finish.
+**Rule**: ALWAYS run `run_build.py` with `executeBash`, NOT `controlBashProcess`.
+`executeBash` blocks until the command exits and returns the full output in one shot.
+No polling, no background process, no manual checking.
 
-**Correct autonomous workflow**:
+**PROHIBITED (wrong)**:
 ```python
-# Step 1: start the build (blocking background process)
-controlBashProcess(action="start",
-    command="python3 scripts/run_build.py incoming/bundle.zip --modrinth <url>")
-
-# Step 2: poll until done
-getProcessOutput(terminalId=..., lines=100)  # repeat until "conclusion:" appears
-
-# Step 3: read results yourself
-readFile("ModCompileRuns/run-.../SUMMARY.md")
-
-# Step 4: for each failed target, read its build.log
-readFile("ModCompileRuns/run-.../artifacts/all-mod-builds/mods/<slug>/build.log")
-
-# Step 5: fix the generator, regenerate --failed-only, commit, push, re-run
+# NEVER do this
+controlBashProcess(action="start", command="python3 scripts/run_build.py ...")
+# then polling getProcessOutput in a loop — wasteful and fragile
 ```
+
+**CORRECT**:
+```python
+# Always do this — executeBash blocks until run_build.py finishes
+executeBash(command="python3 scripts/run_build.py incoming/bundle.zip --modrinth <url>")
+# When this returns, the build is done and artifacts are downloaded.
+# Read the results immediately:
+readFile("ModCompileRuns/run-.../SUMMARY.md")
+```
+
+The full autonomous workflow is:
+1. `executeBash`: `python3 scripts/run_build.py incoming/bundle.zip --modrinth <url>`
+   — blocks until done, downloads all artifacts automatically
+2. `readFile`: `ModCompileRuns/run-<timestamp>/SUMMARY.md` — read results
+3. For each failed target: `readFile` its `build.log`
+4. Fix the generator, `python3 scripts/generate_<mod>_bundle.py --failed-only`
+5. `executeBash`: `git add incoming/ && git commit -m "..." && git push`
+   — wait, this is TWO commands chained with &&. Split into separate calls per Mistake 32.
+   Actually: `git add incoming/` then `git commit -m "..."` then `git push` — three separate `executeBash` calls.
+6. `executeBash`: `python3 scripts/run_build.py ...` again — blocks until done
+7. Repeat until all targets pass
+
+AI agents are **PROHIBITED** from:
+- Asking the user to check GitHub Actions
+- Asking the user to download artifacts
+- Asking the user to read build logs
+- Using `controlBashProcess` for `run_build.py`
+- Polling `getProcessOutput` for `run_build.py`
+
+The agent owns the entire build-fix-rerun loop from start to finish.
 
 ---
 
