@@ -6,23 +6,14 @@ import java.io.File;
 public class HeartConfig {
     private static final String CAT = Configuration.CATEGORY_GENERAL;
     private final Configuration config;
-    private int startHearts;
-    private int maxHearts;
-    private int minHearts;
+    private int startHearts, maxHearts, minHearts;
 
     public HeartConfig(File configFile) {
         config = new Configuration(configFile);
-        load();
-    }
-
-    private void load() {
         config.load();
-        startHearts = config.getInt("startHearts", CAT, 10, 1, 100,
-            "Number of hearts a new player starts with. (1 heart = 2 HP)");
-        maxHearts = config.getInt("maxHearts", CAT, 20, 1, 100,
-            "Maximum hearts a player can have.");
-        minHearts = config.getInt("minHearts", CAT, 0, 0, 99,
-            "Minimum hearts before permadeath triggers.");
+        startHearts = config.getInt("startHearts", CAT, 10, 1, 100, "Hearts a new player starts with.");
+        maxHearts   = config.getInt("maxHearts",   CAT, 20, 1, 100, "Maximum hearts a player can have.");
+        minHearts   = config.getInt("minHearts",   CAT,  0, 0,  99, "Minimum hearts before permadeath.");
         if (config.hasChanged()) config.save();
     }
 

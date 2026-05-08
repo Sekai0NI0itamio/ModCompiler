@@ -20,12 +20,13 @@ public class HeartStorage {
         if (playerFile.exists()) {
             try {
                 NBTTagCompound tag = CompressedStreamTools.read(playerFile);
-                HeartData data = HeartData.fromNBT(tag);
-                int h = data.getHearts();
-                cache.put(uuid, Integer.valueOf(h));
-                return h;
+                if (tag != null && tag.hasKey("hearts")) {
+                    int h = tag.getInteger("hearts");
+                    cache.put(uuid, Integer.valueOf(h));
+                    return h;
+                }
             } catch (IOException e) {
-                HeartSystemMod.logger.error("[HeartSystem] Failed to load heart data for {}: {}", playerUUID, e.getMessage());
+                HeartSystemMod.logger.error("[HeartSystem] Failed to load: {}", e.getMessage());
             }
         }
         return -1;
@@ -34,21 +35,20 @@ public class HeartStorage {
     public void save(String playerUUID, File playerFile, int hearts) {
         UUID uuid = UUID.fromString(playerUUID);
         cache.put(uuid, Integer.valueOf(hearts));
-        HeartData data = new HeartData(hearts);
+        NBTTagCompound tag = new NBTTagCompound();
+        tag.setInteger("hearts", hearts);
         try {
-            CompressedStreamTools.write(data.toNBT(), playerFile);
+            CompressedStreamTools.write(tag, playerFile);
         } catch (IOException e) {
-            HeartSystemMod.logger.error("[HeartSystem] Failed to save heart data for {}: {}", playerUUID, e.getMessage());
+            HeartSystemMod.logger.error("[HeartSystem] Failed to save: {}", e.getMessage());
         }
     }
 
     public boolean has(UUID uuid) { return cache.containsKey(uuid); }
-
     public int getHearts(UUID uuid) {
         Integer h = (Integer) cache.get(uuid);
         return h != null ? h.intValue() : -1;
     }
-
     public void setHearts(UUID uuid, int hearts) { cache.put(uuid, Integer.valueOf(hearts)); }
     public void remove(UUID uuid) { cache.remove(uuid); }
 }

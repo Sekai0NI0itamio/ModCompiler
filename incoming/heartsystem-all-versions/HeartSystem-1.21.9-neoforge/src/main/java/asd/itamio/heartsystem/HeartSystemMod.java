@@ -16,6 +16,5 @@ public class HeartSystemMod {
     public HeartSystemMod(IEventBus modBus, ModContainer container) {
         config = new HeartConfig(modBus, container);
         NeoForge.EVENT_BUS.register(new HeartEventHandler());
-        logger.info("[HeartSystem] Heart-based permadeath system active.");
     }
 }

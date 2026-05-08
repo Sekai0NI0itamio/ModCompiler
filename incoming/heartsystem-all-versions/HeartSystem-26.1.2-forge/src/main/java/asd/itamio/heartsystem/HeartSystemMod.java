@@ -20,6 +20,5 @@ public class HeartSystemMod {
         PlayerEvent.SaveToFile.BUS.addListener(handler::onPlayerSave);
         PlayerEvent.Clone.BUS.addListener(handler::onPlayerClone);
         LivingDeathEvent.BUS.addListener(handler::onLivingDeath);
-        logger.info("[HeartSystem] Heart-based permadeath system active.");
     }
 }

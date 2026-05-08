@@ -1,9 +1,8 @@
 package asd.itamio.heartsystem;
 
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
 
 public class HeartConfig {
     private final ForgeConfigSpec.IntValue startHearts;

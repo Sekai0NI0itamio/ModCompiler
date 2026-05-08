@@ -27,8 +27,7 @@ public class HeartEventHandler {
         File file = event.getPlayerFile("heartsystem");
         int loaded = HeartStorage.get().load(uuidStr, file);
         if (loaded < 0) {
-            int start = HeartSystemMod.config.getStartHearts();
-            HeartStorage.get().setHearts(UUID.fromString(uuidStr), start);
+            HeartStorage.get().setHearts(UUID.fromString(uuidStr), HeartSystemMod.config.getStartHearts());
         }
     }
 
@@ -53,8 +52,7 @@ public class HeartEventHandler {
         if (!HeartStorage.get().has(uuid)) return;
         if (newPlayer instanceof EntityPlayerMP) {
             int hearts = HeartStorage.get().getHearts(uuid);
-            HeartData data = new HeartData(hearts);
-            data.applyMaxHealth((EntityPlayerMP) newPlayer);
+            HeartData.applyMaxHealth((EntityPlayerMP) newPlayer, hearts);
         }
     }
 
@@ -68,21 +66,22 @@ public class HeartEventHandler {
         if (hearts < 0) hearts = HeartSystemMod.config.getStartHearts();
         hearts -= 1;
         int min = HeartSystemMod.config.getMinHearts();
+        String deadName = deadPlayer.getGameProfile().getName();
         if (hearts <= min) {
             hearts = min;
             HeartStorage.get().setHearts(deadUUID, hearts);
             MinecraftServer server = MinecraftServer.getServer();
             if (server != null) {
                 server.getConfigurationManager().sendChatMsg(
-                    new ChatComponentText("\u00a7c[HeartSystem] " + deadPlayer.getCommandSenderName() + " has been permanently banned (0 hearts)."));
+                    new ChatComponentText("\u00a7c[HeartSystem] " + deadName + " has been permanently banned (0 hearts)."));
                 UserListBans banList = server.getConfigurationManager().getBannedPlayers();
                 UserListBansEntry banEntry = new UserListBansEntry(
-                    new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getCommandSenderName()),
-                    null, null, null, "Permadeath: ran out of hearts"
-                );
+                    new com.mojang.authlib.GameProfile(deadUUID, deadName),
+                    null, null, null, "Permadeath: ran out of hearts");
                 banList.addEntry(banEntry);
             }
-            deadPlayer.playerNetServerHandler.kickPlayerFromServer("\u00a7cYou have been permanently banned.\nYou ran out of hearts.");
+            deadPlayer.playerNetServerHandler.kickPlayerFromServer(
+                "\u00a7cYou have been permanently banned.\nYou ran out of hearts.");
         } else {
             HeartStorage.get().setHearts(deadUUID, hearts);
             deadPlayer.addChatMessage(new ChatComponentText(
@@ -99,8 +98,7 @@ public class HeartEventHandler {
             if (killerHearts < max) {
                 killerHearts += 1;
                 HeartStorage.get().setHearts(killerUUID, killerHearts);
-                HeartData killerData = new HeartData(killerHearts);
-                killerData.applyMaxHealth(killerPlayer);
+                HeartData.applyMaxHealth(killerPlayer, killerHearts);
                 killerPlayer.addChatMessage(new ChatComponentText(
                     "\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts));
             } else {

@@ -19,12 +19,12 @@ public class HeartStorage {
         UUID uuid = UUID.fromString(playerUUID);
         if (playerFile.exists()) {
             try {
-                CompoundTag tag = NbtIo.read(playerFile);
-                if (tag == null) return -1;
-                HeartData data = HeartData.fromNBT(tag);
-                int h = data.getHearts();
-                cache.put(uuid, h);
-                return h;
+                CompoundTag tag = NbtIo.read(playerFile.toPath());
+                if (tag != null && tag.contains("hearts")) {
+                    int h = tag.getInt("hearts");
+                    cache.put(uuid, h);
+                    return h;
+                }
             } catch (IOException e) {
                 HeartSystemMod.logger.error("[HeartSystem] Failed to load: {}", e.getMessage());
             }
@@ -35,9 +35,10 @@ public class HeartStorage {
     public void save(String playerUUID, File playerFile, int hearts) {
         UUID uuid = UUID.fromString(playerUUID);
         cache.put(uuid, hearts);
-        HeartData data = new HeartData(hearts);
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("hearts", hearts);
         try {
-            NbtIo.write(data.toNBT(), playerFile);
+            NbtIo.write(tag, playerFile.toPath());
         } catch (IOException e) {
             HeartSystemMod.logger.error("[HeartSystem] Failed to save: {}", e.getMessage());
         }

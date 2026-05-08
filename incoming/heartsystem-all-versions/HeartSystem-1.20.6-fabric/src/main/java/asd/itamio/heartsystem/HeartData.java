@@ -14,15 +14,11 @@ public class HeartData {
     public static void applyMaxHealth(ServerPlayerEntity player, int hearts) {
         EntityAttributeInstance attr = player.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH);
         if (attr == null) return;
-        if (attr.getModifier(MODIFIER_UUID) != null) {
-            attr.removeModifier(MODIFIER_UUID);
-        }
+        if (attr.getModifier(MODIFIER_UUID) != null) attr.removeModifier(MODIFIER_UUID);
         double delta = (hearts * 2.0) - 20.0;
         EntityAttributeModifier mod = new EntityAttributeModifier(MODIFIER_UUID, MODIFIER_NAME, delta, EntityAttributeModifier.Operation.ADDITION);
         attr.addPermanentModifier(mod);
         float newMax = (float)(hearts * 2);
-        if (player.getHealth() > newMax) {
-            player.setHealth(newMax);
-        }
+        if (player.getHealth() > newMax) player.setHealth(newMax);
     }
 }

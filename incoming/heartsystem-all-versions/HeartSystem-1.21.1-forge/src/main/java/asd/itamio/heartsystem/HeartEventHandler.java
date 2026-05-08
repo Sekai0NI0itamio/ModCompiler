@@ -26,8 +26,7 @@ public class HeartEventHandler {
         File file = event.getPlayerFile("heartsystem");
         int loaded = HeartStorage.get().load(uuidStr, file);
         if (loaded < 0) {
-            int start = HeartSystemMod.config.getStartHearts();
-            HeartStorage.get().setHearts(UUID.fromString(uuidStr), start);
+            HeartStorage.get().setHearts(UUID.fromString(uuidStr), HeartSystemMod.config.getStartHearts());
         }
     }
 
@@ -52,8 +51,7 @@ public class HeartEventHandler {
         if (!HeartStorage.get().has(uuid)) return;
         if (newPlayer instanceof ServerPlayer) {
             int hearts = HeartStorage.get().getHearts(uuid);
-            HeartData data = new HeartData(hearts);
-            data.applyMaxHealth((ServerPlayer) newPlayer);
+            HeartData.applyMaxHealth((ServerPlayer) newPlayer, hearts);
         }
     }
 
@@ -75,11 +73,9 @@ public class HeartEventHandler {
                 server.getPlayerList().broadcastSystemMessage(
                     Component.literal("\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), false);
                 UserBanList banList = server.getPlayerList().getBans();
-                UserBanListEntry banEntry = new UserBanListEntry(
+                banList.add(new UserBanListEntry(
                     new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
-                    null, null, null, "Permadeath: ran out of hearts"
-                );
-                banList.add(banEntry);
+                    null, null, null, "Permadeath: ran out of hearts"));
             }
             deadPlayer.connection.disconnect(Component.literal(
                 "\u00a7cYou have been permanently banned.\nYou ran out of hearts."));
@@ -99,8 +95,7 @@ public class HeartEventHandler {
             if (killerHearts < max) {
                 killerHearts += 1;
                 HeartStorage.get().setHearts(killerUUID, killerHearts);
-                HeartData killerData = new HeartData(killerHearts);
-                killerData.applyMaxHealth(killerPlayer);
+                HeartData.applyMaxHealth(killerPlayer, killerHearts);
                 killerPlayer.sendSystemMessage(Component.literal(
                     "\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts));
             } else {

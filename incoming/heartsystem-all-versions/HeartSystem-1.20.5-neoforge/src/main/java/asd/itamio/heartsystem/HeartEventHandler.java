@@ -73,11 +73,9 @@ public class HeartEventHandler {
                 server.getPlayerList().broadcastSystemMessage(
                     Component.literal("\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts)."), false);
                 UserBanList banList = server.getPlayerList().getBans();
-                UserBanListEntry banEntry = new UserBanListEntry(
+                banList.add(new UserBanListEntry(
                     new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
-                    null, null, null, "Permadeath: ran out of hearts"
-                );
-                banList.add(banEntry);
+                    null, null, null, "Permadeath: ran out of hearts"));
             }
             deadPlayer.connection.disconnect(Component.literal(
                 "\u00a7cYou have been permanently banned.\nYou ran out of hearts."));
