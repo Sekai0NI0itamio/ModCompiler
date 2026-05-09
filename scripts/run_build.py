@@ -475,7 +475,7 @@ class Runner:
                 print(f"\n  ⚠️  {mod_dir.name}: skipping source search")
                 print(f"       Reason: {infra_reason}")
                 # Still run DIF matching — it may have a relevant entry
-                dif_matches = match_errors_to_dif(log_text)
+                dif_matches = match_errors_to_dif(log_text, threshold=0.35)
                 if dif_matches:
                     print(f"  💡 DIF matches for {mod_dir.name}:")
                     for score, entry in dif_matches[:3]:
@@ -485,7 +485,7 @@ class Runner:
                 continue
 
             # ── DIF matching for this failed build ────────────────────
-            dif_matches = match_errors_to_dif(log_text)
+            dif_matches = match_errors_to_dif(log_text, threshold=0.35)
             if dif_matches:
                 print(f"\n  💡 DIF matches for {mod_dir.name}:")
                 for score, entry in dif_matches[:3]:
