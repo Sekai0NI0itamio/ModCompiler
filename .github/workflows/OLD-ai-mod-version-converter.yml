@@ -1,0 +1,231 @@
+name: AI Mod Version Converter
+
+# ---------------------------------------------------------------------------
+# Purpose
+# -------
+# Fully automated AI-driven system that compiles missing or corrupt mod
+# versions for a given Modrinth project across all supported Minecraft
+# version/loader combinations.
+#
+# Phase 1 (parallel):
+#   project-info     — Fetches Modrinth metadata + decompiles first version
+#   missing-versions — Detects all missing/corrupt version+loader targets
+#
+# Phase 2 (sequential, after both Phase 1 jobs succeed):
+#   ai-compile       — AI agent loop that builds every missing target
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      modrinth_project_url:
+        description: >
+          Modrinth project URL, slug, or project ID.
+          Examples: https://modrinth.com/mod/sort-chest  |  sort-chest  |  XXXXXXXX
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# ---------------------------------------------------------------------------
+# Phase 1a — Gather Project Info
+# ---------------------------------------------------------------------------
+jobs:
+  project-info:
+    name: "Phase 1a: Gather Project Info"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate input
+        shell: bash
+        run: |
+          if [ -z "${{ inputs.modrinth_project_url }}" ]; then
+            echo "::error::modrinth_project_url is required"
+            exit 1
+          fi
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch project info
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          python3 aibasedversionupgrader/phase1_project_info.py \
+            "${{ inputs.modrinth_project_url }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: project-info
+        path: project_info/
+          if-no-files-found: warn
+
+# ---------------------------------------------------------------------------
+# Phase 1b — Detect Missing Versions
+# ---------------------------------------------------------------------------
+  missing-versions:
+    name: "Phase 1b: Detect Missing Versions"
+    runs-on: ubuntu-latest
+    outputs:
+      has_targets: ${{ steps.check.outputs.has_targets }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - name: Detect missing versions
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          python3 aibasedversionupgrader/phase1_missing_versions.py \
+            "${{ inputs.modrinth_project_url }}"
+
+      - id: check
+        name: Check if there are targets
+        shell: bash
+        run: |
+          count=$(python3 -c "import json; data=json.load(open('target_list.json')); print(len(data))")
+          echo "has_targets=$([ $count -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "Found $count missing targets"
+          if [ "$count" -eq 0 ]; then
+            echo "## ✅ All Versions Present" >> "$GITHUB_STEP_SUMMARY"
+            echo "All version/loader combinations are already published on Modrinth." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: target-list
+          path: target_list.json
+
+# ---------------------------------------------------------------------------
+# Phase 2 — AI Compilation Loop
+# ---------------------------------------------------------------------------
+  ai-compile:
+    name: "Phase 2: AI Compilation Loop"
+    needs: [project-info, missing-versions]
+    if: needs.missing-versions.outputs.has_targets == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Mask secrets
+        shell: bash
+        env:
+          NVIDIA_API_KEYS: ${{ secrets.NVIDIA_API_KEYS }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+          if [ -n "$NVIDIA_API_KEYS" ]; then
+            while IFS= read -r key; do
+              key="${key#"${key%%[![:space:]]*}"}"
+              key="${key%"${key##*[![:space:]]}"}"
+              if [ -n "$key" ] && [[ "$key" != \#* ]]; then
+                echo "::add-mask::$key"
+              fi
+            done <<< "$NVIDIA_API_KEYS"
+          fi
+
+      - name: Validate NVIDIA keys
+        shell: bash
+        env:
+          NVIDIA_API_KEYS: ${{ secrets.NVIDIA_API_KEYS }}
+        run: |
+          if [ -z "$NVIDIA_API_KEYS" ]; then
+            echo "::error::NVIDIA_API_KEYS secret is not set. Add your NVIDIA API keys (one per line) as a repository secret."
+            exit 1
+          fi
+          count=$(echo "$NVIDIA_API_KEYS" | grep -v '^#' | grep -v '^[[:space:]]*$' | wc -l)
+          echo "Found $count NVIDIA API key(s)"
+
+      - name: Install Python dependencies
+        run: |
+          pip install requests packaging
+
+      - name: Download project-info artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: project-info
+          path: project_info/
+
+      - name: Download target-list artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: target-list
+          path: .
+
+      - name: Set up Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Run AI compilation loop
+        env:
+          NVIDIA_API_KEYS: ${{ secrets.NVIDIA_API_KEYS }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          python3 aibasedversionupgrader/run_agent.py \
+            "${{ inputs.modrinth_project_url }}" \
+            --artifact-dir ai-built-versions/ \
+            --max-iterations 200 \
+            --skip-phase1
+
+      - name: Upload built versions
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-built-versions
+          path: ai-built-versions/
+          if-no-files-found: warn
+
+      - name: Upload session state
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-session-state
+          path: |
+            session_state.json
+            session_memory.json
+            session_todos.json
+          if-no-files-found: ignore
