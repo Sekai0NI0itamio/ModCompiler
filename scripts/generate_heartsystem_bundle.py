@@ -1934,6 +1934,74 @@ _FABRIC_165_MIXINJSON = """\
 }
 """
 
+_FABRIC_118_MIXIN = """\
+package asd.itamio.heartsystem.mixin;
+
+import asd.itamio.heartsystem.HeartConfig;
+import asd.itamio.heartsystem.HeartData;
+import asd.itamio.heartsystem.HeartStorage;
+import asd.itamio.heartsystem.HeartSystemMod;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.BannedPlayerList;
+import net.minecraft.server.BannedPlayerEntry;
+import net.minecraft.text.LiteralText;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.UUID;
+
+@Mixin(PlayerEntity.class)
+public class PlayerDeathMixin {
+
+    @Inject(method = "onDeath", at = @At("HEAD"))
+    private void onPlayerDeath(DamageSource source, CallbackInfo ci) {
+        PlayerEntity self = (PlayerEntity)(Object)this;
+        if (self.world.isClient) return;
+        if (!(self instanceof ServerPlayerEntity)) return;
+        ServerPlayerEntity deadPlayer = (ServerPlayerEntity) self;
+        HeartConfig config = HeartSystemMod.config;
+        UUID deadUUID = deadPlayer.getUuid();
+        int hearts = HeartStorage.get().getHearts(deadUUID);
+        if (hearts < 0) hearts = config.getStartHearts();
+        hearts -= 1;
+        int min = config.getMinHearts();
+        if (hearts <= min) {
+            hearts = min;
+            HeartStorage.get().setHearts(deadUUID, hearts);
+            deadPlayer.networkHandler.disconnect(new LiteralText(
+                "\\u00a7c[HeartSystem] PERMADEATH!\\nYou ran out of hearts and have been permanently banned from this server."));
+        } else {
+            HeartStorage.get().setHearts(deadUUID, hearts);
+            deadPlayer.sendMessage(new LiteralText(
+                "\\u00a7c[HeartSystem] You lost a heart! Hearts remaining: " + hearts));
+        }
+        DamageSource src = event.getSource();
+        Entity killer = src.getEntity();
+        if (killer instanceof ServerPlayerEntity) {
+            ServerPlayerEntity killerPlayer = (ServerPlayerEntity) killer;
+            UUID killerUUID = killerPlayer.getUuid();
+            int killerHearts = HeartStorage.get().getHearts(killerUUID);
+            if (killerHearts < 0) killerHearts = config.getStartHearts();
+            int max = config.getMaxHearts();
+            if (killerHearts < max) {
+                killerHearts += 1;
+                HeartStorage.get().setHearts(killerUUID, killerHearts);
+                HeartData.applyMaxHealth(killerPlayer, killerHearts);
+                killerPlayer.sendMessage(new LiteralText(
+                    "\\u00a7a[HeartSystem] You gained a heart! Hearts: " + killerHearts));
+            } else {
+                killerPlayer.sendMessage(new LiteralText(
+                    "\\u00a7e[HeartSystem] You killed a player but are already at max hearts (" + max + ")."));
+            }
+        }
+    }
+}
+"""
+
 _FABRIC_165_DATA_117 = """\
 package asd.itamio.heartsystem;
 
@@ -2599,7 +2667,9 @@ ALREADY_PUBLISHED = {
     "HeartSystem-1.17.1-forge",
     "HeartSystem-1.18-fabric",
     "HeartSystem-1.18-forge",
+    "HeartSystem-1.18.1-fabric",
     "HeartSystem-1.18.1-forge",
+    "HeartSystem-1.18.2-fabric",
     "HeartSystem-1.18.2-forge",
     "HeartSystem-1.19-fabric",
     "HeartSystem-1.19-forge",
@@ -2621,7 +2691,9 @@ ALREADY_PUBLISHED = {
     "HeartSystem-1.20.4-fabric",
     "HeartSystem-1.20.4-forge",
     "HeartSystem-1.20.4-neoforge",
+    "HeartSystem-1.20.5-fabric",
     "HeartSystem-1.20.5-neoforge",
+    "HeartSystem-1.20.6-fabric",
     "HeartSystem-1.20.6-forge",
     "HeartSystem-1.20.6-neoforge",
     "HeartSystem-1.21-fabric",
@@ -2645,8 +2717,10 @@ ALREADY_PUBLISHED = {
     "HeartSystem-1.21.9-fabric",
     "HeartSystem-1.21.9-forge",
     "HeartSystem-1.21.9-neoforge",
+    "HeartSystem-1.21.10-fabric",
     "HeartSystem-1.21.10-forge",
     "HeartSystem-1.21.10-neoforge",
+    "HeartSystem-1.21.11-fabric",
     "HeartSystem-1.21.11-forge",
     "HeartSystem-1.21.11-neoforge",
     "HeartSystem-1.8.9-forge",
