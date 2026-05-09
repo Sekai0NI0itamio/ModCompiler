@@ -1,0 +1,87 @@
+Query: class Minecraft
+Patterns: *.java
+---
+
+=== /tmp/extracted-sources/net/minecraft/util/monitoring/jmx/MinecraftServerStatistics.java ===
+26-import org.slf4j.Logger;
+27-
+28:public final class MinecraftServerStatistics implements DynamicMBean {
+29-	private static final Logger LOGGER = LogUtils.getLogger();
+30-	private final MinecraftServer server;
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftServerStateServiceImpl.java ===
+10-import net.minecraft.world.entity.player.Player;
+11-
+12:public class MinecraftServerStateServiceImpl implements MinecraftServerStateService {
+13-	private final DedicatedServer server;
+14-	private final JsonRpcLogger jsonrpcLogger;
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftOperatorListServiceImpl.java ===
+11-import net.minecraft.server.players.ServerOpListEntry;
+12-
+13:public class MinecraftOperatorListServiceImpl implements MinecraftOperatorListService {
+14-	private final MinecraftServer minecraftServer;
+15-	private final JsonRpcLogger jsonrpcLogger;
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftApi.java ===
+7-import net.minecraft.server.notifications.NotificationManager;
+8-
+9:public class MinecraftApi {
+10-	private final NotificationManager notificationManager;
+11-	private final MinecraftAllowListService allowListService;
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftPlayerListServiceImpl.java ===
+11-import org.jspecify.annotations.Nullable;
+12-
+13:public class MinecraftPlayerListServiceImpl implements MinecraftPlayerListService {
+14-	private final JsonRpcLogger jsonRpcLogger;
+15-	private final DedicatedServer server;
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftAllowListServiceImpl.java ===
+8-import net.minecraft.server.players.UserWhiteListEntry;
+9-
+10:public class MinecraftAllowListServiceImpl implements MinecraftAllowListService {
+11-	private final DedicatedServer server;
+12-	private final JsonRpcLogger jsonrpcLogger;
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftGameRuleServiceImpl.java ===
+9-import net.minecraft.world.level.gamerules.GameRules;
+10-
+11:public class MinecraftGameRuleServiceImpl implements MinecraftGameRuleService {
+12-	private final DedicatedServer server;
+13-	private final GameRules gameRules;
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftExecutorServiceImpl.java ===
+5-import net.minecraft.server.dedicated.DedicatedServer;
+6-
+7:public class MinecraftExecutorServiceImpl implements MinecraftExecutorService {
+8-	private final DedicatedServer server;
+9-
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftBanListServiceImpl.java ===
+9-import net.minecraft.server.players.UserBanListEntry;
+10-
+11:public class MinecraftBanListServiceImpl implements MinecraftBanListService {
+12-	private final MinecraftServer server;
+13-	private final JsonRpcLogger jsonrpcLogger;
+
+=== /tmp/extracted-sources/net/minecraft/server/jsonrpc/internalapi/MinecraftServerSettingsServiceImpl.java ===
+8-import net.minecraft.world.level.GameType;
+9-
+10:public class MinecraftServerSettingsServiceImpl implements MinecraftServerSettingsService {
+11-	private final DedicatedServer server;
+12-	private final JsonRpcLogger jsonrpcLogger;
+
+=== /tmp/extracted-sources/net/minecraft/server/MinecraftServer.java ===
+198-import org.slf4j.Logger;
+199-
+200:public abstract class MinecraftServer
+201-	extends ReentrantBlockableEventLoop<TickTask>
+202-	implements CommandSource,
+
+=== /tmp/extracted-sources/net/minecraft/server/gui/MinecraftServerGui.java ===
+32-import org.slf4j.Logger;
+33-
+34:public class MinecraftServerGui extends JComponent {
+35-	private static final Font MONOSPACED = new Font("Monospaced", 0, 12);
+36-	private static final Logger LOGGER = LogUtils.getLogger();

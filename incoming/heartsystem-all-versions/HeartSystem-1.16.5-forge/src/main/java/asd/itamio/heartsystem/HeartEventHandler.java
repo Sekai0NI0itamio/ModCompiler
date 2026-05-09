@@ -3,9 +3,6 @@ package asd.itamio.heartsystem;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.players.UserBanList;
-import net.minecraft.server.players.UserBanListEntry;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -68,18 +65,8 @@ public class HeartEventHandler {
         if (hearts <= min) {
             hearts = min;
             HeartStorage.get().setHearts(deadUUID, hearts);
-            MinecraftServer server = deadPlayer.getServer();
-            if (server != null) {
-                StringTextComponent msg = new StringTextComponent(
-                    "\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
-                server.getPlayerList().getPlayers().forEach(p -> p.sendMessage(msg, p.getUUID()));
-                UserBanList banList = server.getPlayerList().getBans();
-                banList.add(new UserBanListEntry(
-                    new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
-                    null, null, null, "Permadeath: ran out of hearts"));
-            }
             deadPlayer.connection.disconnect(new StringTextComponent(
-                "\u00a7cYou have been permanently banned.\nYou ran out of hearts."));
+                "\u00a7c[HeartSystem] PERMADEATH!\nYou ran out of hearts and have been permanently banned from this server."));
         } else {
             HeartStorage.get().setHearts(deadUUID, hearts);
             deadPlayer.sendMessage(new StringTextComponent(

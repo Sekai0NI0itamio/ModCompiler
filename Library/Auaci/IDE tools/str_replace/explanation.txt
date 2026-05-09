@@ -1,0 +1,123 @@
+# String Replace Tool - Detailed Explanation
+
+## Overview
+The String Replace tool performs surgical edits by replacing a specific string in a file with new content. It requires an exact match of the old string (including whitespace and indentation) to ensure precise, safe modifications.
+
+## Purpose
+To make targeted, low-risk changes to files by replacing exact string matches. This tool is safer than rewriting entire files because it fails if the search string is not found or matches multiple locations, preventing unintended modifications.
+
+## Configuration
+- **Tool Name**: `str_replace`
+- **Version**: 1.0.0
+- **Execution Mode**: optional
+- **Parameters** (all required):
+  - `path` (string): Path to the file to modify
+  - `oldStr` (string): The exact string to find and replace (must match exactly one location)
+  - `newStr` (string): The new string to replace oldStr with
+
+## Logic Flow
+1. Read the target file content
+2. Search for exact match of `oldStr` (including all whitespace, indentation, and line endings)
+3. Validate that exactly one match exists:
+   - If 0 matches: Fail with "not found" error
+   - If >1 matches: Fail with "ambiguous match" error
+   - If exactly 1 match: Proceed to replacement
+4. Replace the matched string with `newStr`
+5. Write the modified content back to the file
+
+## Key Features
+- **Surgical Edits**: Only changes the exact specified string
+- **Safety First**: Fails on ambiguity to prevent unintended changes
+- **Parallel Execution**: Multiple independent replacements can be run in parallel
+- **Context Required**: Users must provide sufficient context (2-3 lines) to ensure uniqueness
+- **Whitespace Sensitive**: Matches exact whitespace and indentation
+
+## Error Handling
+- **Retryable**: No (fail-fast on errors)
+- **Common Errors**:
+  - not found/no matches: Search string doesn't exist in file → Use `view` to examine file
+  - matches multiple/ambiguous: Search string matches multiple locations → Add more context or use `grep` first
+  - file not found/no such file: Target file doesn't exist → Use `find_files` to locate file
+
+## Usage Examples
+
+### Simple Variable Rename
+```json
+{
+  "path": "/project/src/utils.js",
+  "oldStr": "const MAX_USERS = 100;",
+  "newStr": "const MAX_USERS = 150;"
+}
+```
+
+### Function Signature Change
+```json
+{
+  "path": "/project/src/api.js",
+  "oldStr": "function fetchData(url, callback) {\n  return makeRequest(url, callback);\n}",
+  "newStr": "async function fetchData(url) {\n  const response = await makeRequest(url);\n  return response;\n}"
+}
+```
+
+### Adding Import Statement
+```json
+{
+  "path": "/project/src/main.js",
+  "oldStr": "import React from 'react';\n",
+  "newStr": "import React from 'react';\nimport { useState, useEffect } from 'react';\n"
+}
+```
+
+### Removing Debug Console Log
+```json
+{
+  "path": "/project/src/component.js",
+  "oldStr": "console.log('Debug:', props);\n",
+  "newStr": ""
+}
+```
+
+## Integration with IDE
+- Loaded automatically by ToolInvocationService
+- Validated against JSON schema (required fields and basic types)
+- Non-retryable execution (errors are returned immediately)
+- Results formatted for AI model consumption
+- Respects excluded folders configuration
+
+## Best Practices
+1. **Include Sufficient Context**: Provide 2-3 lines before and after the target text to ensure uniqueness
+2. **Match Exact Whitespace**: Include spaces, tabs, and line endings exactly as they appear
+3. **Use for Small Changes**: Ideal for single-line or small block modifications
+4. **Verify First**: Use `view` tool to examine the exact content before attempting replacement
+5. **Consider Alternatives**: 
+   - Use `batch_str_replace` for multiple related changes
+   - Use `apply_patch` for complex multi-file edits
+   - Use `edit_function` for function-level modifications
+6. **Test in Isolation**: When making multiple changes, verify each replacement works independently
+
+## Technical Implementation
+The tool performs:
+1. Exact string matching (no regex, no wildcards)
+2. Full whitespace and indentation sensitivity
+3. Single-match validation (0 or >1 matches = failure)
+4. Atomic replacement operation
+5. Immediate error reporting with specific guidance
+
+## When to Use This Tool
+- Renaming variables or functions with unique context
+- Adding/removing specific lines of code
+- Modifying configuration values
+- Fixing typos or small errors
+- Making precise, surgical edits where context guarantees uniqueness
+
+## Limitations
+- Cannot handle multiple matches (by design - prevents accidental bulk changes)
+- Requires exact string match (no fuzzy matching)
+- Not suitable for large-scale refactoring across many files
+- No support for regex patterns or wildcards
+
+## Comparison with Similar Tools
+- **vs batch_str_replace**: Single replacement vs multiple replacements in one call
+- **vs apply_patch**: Line-based exact match vs context-based fuzzy matching
+- **vs edit_lines**: Content-based replacement vs line-number-based replacement
+- **vs edit_function**: Arbitrary string replacement vs semantic function replacement

@@ -1,0 +1,69 @@
+{
+  "type": "function",
+  "function": {
+    "name": "view",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "View file contents with line numbers. This tool is for FILES ONLY - do NOT use it on folders/directories (use 'ls' for directories instead). Supports single file or multiple files. Max 600 lines per file - use ranges for large files. For multiple files, use 'paths' parameter instead of 'path'.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to a single file to view"
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "ranges": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "path"
+                ]
+              }
+            ]
+          },
+          "description": "Array of file paths (strings) or objects with path and optional ranges. Use this to read multiple files in one call."
+        },
+        "ranges": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Line ranges for single file mode, e.g. ['1-50', '100-150']. Use to read specific sections of large files."
+        }
+      }
+    }
+  },
+  "errorHandling": {
+    "retryable": false,
+    "maxRetries": 0,
+    "commonErrors": [
+      {
+        "pattern": "not found",
+        "solution": "File does not exist",
+        "suggestedTool": "find_files"
+      },
+      {
+        "pattern": "permission denied",
+        "solution": "No read permission",
+        "suggestedTool": null
+      }
+    ]
+  }
+}

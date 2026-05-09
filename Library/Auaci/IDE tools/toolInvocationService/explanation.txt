@@ -1,0 +1,282 @@
+# Tool Invocation Service - Detailed Explanation
+
+## Overview
+The Tool Invocation Service is the core component responsible for loading, validating, executing, and managing tools in the Auaci IDE. It provides a robust framework for tool execution with features like input validation, error recovery, retry logic, token estimation, and metadata management.
+
+## Purpose
+To serve as the central hub for all tool operations in the IDE, ensuring reliable tool execution with proper error handling, validation, and integration with the AI agent's reasoning loop.
+
+## Configuration
+This is a JavaScript class that is instantiated as a singleton (`toolService`). It loads all tool definitions from JSON files in its directory and manages:
+- Tool definitions and metadata
+- Parameter validation
+- Tool execution with retry logic
+- Error recovery mechanisms
+- Token usage estimation
+- Executor registration
+
+## Core Components
+
+### Classes
+1. **ValidatedToolInput**: Represents successful tool input validation
+   - Property: inputObj (the validated input object)
+
+2. **ToolValidationError**: Represents validation failure
+   - Property: error (validation error message)
+
+3. **ToolExecutionResult**: Represents the result of tool execution
+   - Properties: success, output, toolName, error, retriedCount, estimatedTokens, metadata, timestamp
+
+4. **ErrorRecoveryResult**: Represents the result of error recovery attempt
+   - Properties: recovered, toolName, correctedInput, originalError, recoveryAction, timestamp
+
+5. **RetryConfig**: Configuration for retry behavior
+   - Properties: maxRetries, backoffMs
+   - Static method: fromErrorHandling(errorHandling)
+
+### Singleton Instance
+- `toolService`: Pre-instantiated ToolInvocationService for global access
+
+## Logic Flow
+
+### Constructor & Tool Loading
+1. Initializes internal maps for tools, validators, executors, and metadata
+2. Sets recoveryEnabled to true by default
+3. Calls loadTools() to initialize the tool set
+
+### loadTools() Method
+1. Reads all JSON files from the tool-instructions directory
+2. For each valid tool definition:
+   - Stores the complete tool definition
+   - Stores the JSON schema for validation reference
+   - Stores metadata (version, executionMode, errorHandling, tokenEstimate)
+3. Logs the number of tools loaded
+
+### estimateToolTokens(toolName, params) Method
+1. Retrieves token estimate metadata for the tool
+2. Calculates: invocationCost + (parameterStringLength × parameterPerChar)
+3. Returns rounded token estimate
+
+### validateAgainstSchema(input, schema) Method
+1. Returns {valid: true} if no schema or no properties
+2. Checks required properties: adds error for each missing required property
+3. Performs basic type checking if specified in schema
+4. Returns validation result with errors array
+
+### validateToolInput(toolName, input) Method
+1. Finds tool definition by name
+2. Parses input string to object if needed
+3. Validates against tool's JSON schema
+4. Returns ValidatedToolInput on success or ToolValidationError on failure
+
+### getTool(name) & getToolMetadata(name) Methods
+- Simple lookup in internal maps
+
+### getTools() Method
+- Returns array of all loaded tool definitions
+
+### registerExecutor(toolName, executor) Method
+- Stores executor function in internal map for tool execution
+
+### static sleep(ms) Method
+- Returns promise that resolves after ms milliseconds
+
+### attemptErrorRecovery(failedToolName, failedInput, error, recoveryData) Method
+1. Attempts to fix common error types:
+   - Missing required parameters
+   - Validation errors
+   - Path/file not found errors
+2. For each error type, calls specific fix method
+3. Returns ErrorRecoveryResult indicating success/failure and recovery action
+
+### fixMissingParameters(toolName, input, error, recoveryData) Method
+1. Gets tool definition and schema
+2. Applies corrections from recoveryData
+3. Validates corrected input against schema
+4. If valid, attempts to re-execute tool with corrected input
+5. Returns ErrorRecoveryResult
+
+### fixValidationErrors & fixPathErrors Methods
+- Similar to fixMissingParameters but specialized for error types
+
+### executeErrorRecoverer(input) Method
+- Special handler for the error_recoverer tool
+- Attempts recovery based on action parameter (fix_missing_params, modify_content, retry_with_fix)
+- Returns recovery result object
+
+### executeTool(toolName, input, options) Method
+Main execution flow:
+1. Special handling for error_recoverer tool
+2. Validate input using validateToolInput
+3. If validation fails: return ToolExecutionResult with error
+4. Get tool metadata and create retry configuration
+5. Estimate token cost
+6. Check for custom executor; return error if none found
+7. Execute with retry logic:
+   - Try execution up to maxRetries + 1 attempts
+   - On retryable error: wait with exponential backoff and retry
+   - On non-retryable error or max retries exceeded: return failure
+8. On success: return ToolExecutionResult with output and metadata
+9. On failure: return ToolExecutionResult with error and retry count
+
+### isRetryableError(err, errorHandling) Method
+1. Returns false if errorHandling not retryable
+2. Checks error string for common retryable patterns (timeout, connection)
+3. Checks for HTTP status codes in retriableCodes list
+4. Returns true if error should be retried
+
+### getEnabledTools(availableTools) Method
+- Filters loaded tools based on provided available tool set
+
+### setRecoveryEnabled(enabled) Method
+- Enables/disables error recovery system
+
+### getLastFailedTool() Method
+- Returns information about the last tool that failed execution
+
+## Integration with IDE
+- Loaded automatically by index.js in tool-instructions directory
+- Provides getTools(), getTool(), validateToolInput(), executeTool() functions
+- Used by ToolCallingLoop for actual tool execution
+- Supports custom executor registration for IDE-specific tools
+- Integrates with error recovery system for self-correction
+- Provides token estimation for cost management
+- Respects excluded folders configuration through individual tool implementations
+
+## Best Practices
+1. **Use the Singleton**: Always use the exported `toolService` instance
+2. **Register Executors**: For custom tools, register executors before use
+3. **Handle Validation Errors**: Check validateToolInput results before execution
+4. **Leverage Error Recovery**: Design tools to work with the error recovery system
+5. **Monitor Token Usage**: Use estimateToolTokens for cost tracking
+6. **Configure Retry Appropriately**: Set errorHandling in tool JSON for retryable operations
+7. **Provide Clear Error Messages**: Make errors actionable for the recovery system
+8. **Use Metadata**: Leverage version, executionMode, and errorHandling in tool definitions
+
+## Technical Implementation
+The service implements:
+1. **Lazy Loading**: Tools loaded on first instantiation
+2. **Schema Validation**: Lightweight JSON schema validation (required fields and types)
+3. **Retry Logic**: Exponential backoff with configurable limits
+4. **Error Recovery**: Automatic correction attempts for common errors
+5. **Token Estimation**: Configurable token cost calculation
+6. **Metadata Management**: Version tracking and execution mode handling
+7. **Executor Pattern**: Decouples tool definition from execution logic
+
+## Usage Examples
+
+### Basic Tool Execution
+```javascript
+const { toolService } = require('./toolInvocationService');
+
+async function example() {
+  // Validate input first
+  const validation = toolService.validateToolInput('str_replace', {
+    path: '/src/file.js',
+    oldStr: 'oldText',
+    newStr: 'newText'
+  });
+  
+  if (validation instanceof ToolValidationError) {
+    console.error('Validation failed:', validation.error);
+    return;
+  }
+  
+  // Execute tool
+  const result = await toolService.executeTool('str_replace', {
+    path: '/src/file.js',
+    oldStr: 'oldText',
+    newStr: 'newText'
+  });
+  
+  if (result.success) {
+    console.log('Tool executed successfully:', result.output);
+  } else {
+    console.error('Tool execution failed:', result.error);
+  }
+}
+```
+
+### With Custom Executor
+```javascript
+const { toolService } = require('./toolInvocationService');
+
+// Register custom executor
+toolService.registerExecutor('my_custom_tool', async (toolName, input) => {
+  // Custom implementation
+  return { result: 'custom result' };
+});
+
+// Use the tool
+const result = await toolService.executeTool('my_custom_tool', { /* params */ });
+```
+
+### Error Recovery Usage
+```javascript
+const { toolService } = require('./toolInvocationService');
+
+// After a tool failure, attempt recovery
+const recoveryResult = await toolService.attemptErrorRecovery(
+  'str_replace',                           // failed tool name
+  { path: '/src/file.js', oldStr: 'text' }, // failed input
+  new Error('Missing required property: newStr'), // error
+  { corrections: { newStr: 'replacement text' } } // recovery data
+);
+
+if (recoveryResult.recovered) {
+  console.log('Recovery successful!');
+  // Re-execute with corrected input
+}
+```
+
+### Token Estimation
+```javascript
+const { toolService } = require('./toolInvocationService');
+
+const tokens = toolService.estimateToolTokens('str_replace', {
+  path: '/src/project/main.js',
+  oldStr: 'const oldValue = 42;',
+  newStr: 'const newValue = 100;'
+});
+
+console.log(`Estimated tokens: ${tokens}`);
+```
+
+## Error Handling
+- **Validation Errors**: Returned immediately as ToolValidationError
+- **Execution Errors**: Retried based on errorHandling configuration
+- **Recovery Attempts**: Automatic for common error patterns
+- **Final Failure**: Returned as ToolExecutionResult with success=false
+- **Special Handling**: error_recoverer tool has dedicated execution path
+
+## Benefits
+1. **Reliability**: Robust error handling and recovery mechanisms
+2. **Flexibility**: Supports custom tools and executors
+3. **Observability**: Token estimation and execution metrics
+4. **Safety**: Input validation prevents malformed tool calls
+5. **Intelligence**: Error recovery enables self-correction
+6. **Performance**: Retry logic with exponential backoff
+7. **Standards Compliance**: Consistent tool interface and metadata
+
+## Integration Points
+- Used by index.js for tool loading and execution
+- Used by ToolCallingLoop for actual tool execution in loops
+- Referenced by AI agent reasoning loop for tool invocation
+- Integrates with error_recoverer tool for self-healing
+- Works with toolCapabilities for validation and context building
+
+## When to Use This Service
+- Executing any tool in the Auaci IDE toolset
+- Validating tool parameters before execution
+- Estimating token costs for tool usage
+- Implementing custom tools with executors
+- Building error recovery workflows
+- Monitoring tool execution metrics
+- Creating resilient AI agent tool usage patterns
+
+## Limitations
+- Validation is basic (does not support full JSON Schema features)
+- Retry logic is generic (may not suit all error types)
+- Error recovery depends on specific error patterns
+- Token estimation is approximate (actual usage may vary)
+- Executor registration must happen before tool use

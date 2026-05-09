@@ -1,0 +1,41 @@
+{
+  "type": "function",
+  "function": {
+    "name": "write_to_file",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Create or overwrite a file with complete content.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the file to create/overwrite"
+        },
+        "the_content": {
+          "type": "string",
+          "description": "Complete content to write to the file"
+        }
+      },
+      "required": [
+        "path",
+        "the_content"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": false,
+    "commonErrors": [
+      {
+        "pattern": "permission denied",
+        "solution": "No write permission on file",
+        "suggestedTool": null
+      },
+      {
+        "pattern": "directory not found",
+        "solution": "Parent directory does not exist",
+        "suggestedTool": null
+      }
+    ]
+  }
+}

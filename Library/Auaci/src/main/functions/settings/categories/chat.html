@@ -1,0 +1,212 @@
+<!-- src/main/functions/settings/categories/chat.html -->
+<section aria-labelledby="chat-settings-title">
+  <h1 id="chat-settings-title">Chat settings</h1>
+  <p style="color:#6b7280; max-width:760px;">
+    Configure chat-related settings used by the application. These are global (app-level) settings:
+    the list of available models, which model should be the default for new requests, and the local
+    API listen port used by the built-in/proxied GPT service.
+  </p>
+
+  <style>
+    /* Action button visuals + click animation */
+    .action-row { display:flex; gap:10px; align-items:center; margin-top:12px; }
+    .action-btn {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:8px 12px;
+      border-radius:8px;
+      border:1px solid #e6e9ef;
+      background: #fff;
+      color: #111;
+      cursor:pointer;
+      font-weight:600;
+      transition: transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms ease, opacity 120ms;
+      will-change: transform, box-shadow;
+      user-select: none;
+    }
+    .action-btn:active { transform: translateY(1px) scale(0.99); }
+    .action-btn.save {
+      background: linear-gradient(180deg,#2563eb,#1e4fd6);
+      color: white;
+      border: none;
+      box-shadow: 0 6px 18px rgba(37,99,235,0.18);
+    }
+    .action-btn.reset {
+      background: #fff;
+      color: #111;
+      border:1px solid #e6e9ef;
+      box-shadow: none;
+    }
+    /* visual pressed state applied briefly by JS */
+    .action-btn.pressed {
+      transform: translateY(2px) scale(0.985);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08) !important;
+      transition: transform 140ms cubic-bezier(.2,.8,.2,1), box-shadow 140ms ease;
+    }
+
+    /* Unsaved-field highlight */
+    .unsaved-input {
+      background: linear-gradient(180deg, #fffbe6, #fff7d6);
+      border-color: #f6d365 !important;
+      box-shadow: 0 2px 6px rgba(246,211,105,0.18);
+      transition: background 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+    }
+
+    /* Banner feedback at bottom center */
+    .settings-banner {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(12px);
+      min-width: 220px;
+      max-width: 86%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+      font-weight: 600;
+      color: #042a16;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 260ms ease, transform 260ms cubic-bezier(.2,.8,.2,1);
+      z-index: 2000;
+    }
+    .settings-banner.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    .settings-banner.success {
+      background: linear-gradient(180deg, #dff6e6, #c9f0da);
+      border: 1px solid #b7e6c4;
+      color: #064927;
+    }
+    .settings-banner.info {
+      background: linear-gradient(180deg, #eef2ff, #e3e9ff);
+      border: 1px solid #c9d3ff;
+      color: #0f1b66;
+    }
+    .settings-banner.error {
+      background: linear-gradient(180deg, #ffecec, #ffdede);
+      border: 1px solid #ffbdbd;
+      color: #5a0b0b;
+    }
+
+    /* Small icon spacing */
+    .banner-icon { width: 16px; height: 16px; display:inline-block; }
+  </style>
+
+  <div style="margin-top:18px; display:flex; gap:20px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:300px; max-width:760px;">
+      <label for="models-list" style="display:block; font-weight:600; margin-bottom:6px;">Available models</label>
+<textarea id="models-list" placeholder="Enter one model identifier per line, e.g.&#10;GPT-5.1-codex&#10;GPT-5-nano"
+                style="width:100%; min-height:100px; padding:10px; box-sizing:border-box; border-radius:8px; border:1px solid #e6e9ef; font-family:monospace;"></textarea>
+      <div style="color:#6b7280; font-size:13px; margin-top:8px;">
+        One model per line. The default model selector below will be populated from this list.
+      </div>
+    </div>
+
+    <div style="width:320px; min-width:260px;">
+      <label for="default-model" style="display:block; font-weight:600; margin-bottom:6px;">Default model</label>
+      <select id="default-model" aria-label="Default model" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e6e9ef; background:white;">
+        <!-- options populated dynamically -->
+      </select>
+
+      <label for="default-prompt" style="display:block; font-weight:600; margin-top:18px; margin-bottom:6px;">Default prompt</label>
+      <select id="default-prompt" aria-label="Default prompt" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e6e9ef; background:white;">
+        <option value="Auaci">Auaci</option>
+        <option value="Chat">Chat</option>
+      </select>
+
+      <div style="margin-top:18px; padding:10px; border-radius:8px; border:1px solid #e6e9ef; background:#f9fafb;">
+        <div style="font-weight:600; margin-bottom:6px;">Default AI behavior</div>
+
+        <label for="default-verbosity" style="display:block; font-weight:500; margin-bottom:4px;">Default verbosity</label>
+        <select id="default-verbosity" aria-label="Default verbosity" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e6e9ef; background:white; margin-bottom:8px;">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+
+        <label for="default-temperature" style="display:block; font-weight:500; margin-bottom:4px;">Default temperature</label>
+        <input id="default-temperature" type="number" min="0" max="2" step="0.1" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e6e9ef; margin-bottom:8px;" />
+
+        <label for="default-reasoning-effort" style="display:block; font-weight:500; margin-bottom:4px;">Default reasoning effort</label>
+        <select id="default-reasoning-effort" aria-label="Default reasoning effort" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e6e9ef; background:white;">
+          <option value="none">None</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        <div style="color:#6b7280; font-size:13px; margin-top:4px;">
+          These values become the defaults for new chat requests. You can still override them per-request in the chat toolbar or by editing settings later.
+        </div>
+      </div>
+
+      <label for="gpt-system-logic" style="display:block; font-weight:600; margin-top:18px; margin-bottom:6px;">GPT system logic</label>
+      <select id="gpt-system-logic" aria-label="GPT system logic" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e6e9ef; background:white;">
+        <option value="tool-openai">tool-openai (OpenAI extra_body)</option>
+        <option value="tool-message-self">tool-message-self (legacy inline tools)</option>
+      </select>
+      <div style="color:#6b7280; font-size:13px; margin-top:4px;">
+        "tool-openai" sends reasoning and other options via OpenAI/Poe extra_body; "tool-message-self" keeps the legacy inline &lt;tool_use&gt; parsing only.
+      </div>
+
+      <label for="api-port" style="display:block; font-weight:600; margin-top:18px; margin-bottom:6px;">API listen port</label>
+      <input id="api-port" type="number" min="1" max="65535" step="1" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e6e9ef;" />
+
+      <div style="margin-top:18px; display:flex; gap:10px; align-items:center;">
+        <button id="save-chat-settings" class="action-btn save" title="Save chat settings">Save Settings</button>
+        <button id="reset-chat-settings" class="action-btn reset" title="Reset chat settings">Reset</button>
+        <span id="save-status" style="color:#2d7a2d; font-weight:600; display:none;">Saved</span>
+        <span id="save-error" style="color:#b91c1c; display:none;"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excluded Folders Section -->
+  <div style="margin-top:28px; max-width:760px;">
+    <h2 style="font-size:18px; font-weight:600; margin-bottom:8px;">Tool Search Exclusions</h2>
+    <p style="color:#6b7280; margin-bottom:14px;">
+      Folders listed here are ignored by AI tools like <code>ls</code>, <code>grep</code>, and <code>find_files</code>.
+      This prevents the AI from searching through dependency folders, build outputs, and other non-essential directories.
+    </p>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:280px;">
+        <label for="excluded-folders-list" style="display:block; font-weight:600; margin-bottom:6px;">Excluded folders</label>
+        <textarea id="excluded-folders-list" placeholder="Enter one folder name per line, e.g.&#10;node_modules&#10;venv&#10;.git"
+                  style="width:100%; min-height:180px; padding:10px; box-sizing:border-box; border-radius:8px; border:1px solid #e6e9ef; font-family:monospace; font-size:13px;"></textarea>
+        <div style="color:#6b7280; font-size:13px; margin-top:6px;">
+          One folder name per line. These are matched by name, not path.
+        </div>
+      </div>
+
+      <div style="width:200px; min-width:160px;">
+        <div style="font-weight:600; margin-bottom:6px;">Actions</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button id="save-excluded-folders" class="action-btn save" style="width:100%;">Save Exclusions</button>
+          <button id="reset-excluded-folders" class="action-btn reset" style="width:100%;">Reset to Defaults</button>
+        </div>
+        <div style="margin-top:12px; padding:10px; border-radius:8px; background:#f9fafb; border:1px solid #e6e9ef;">
+          <div style="font-weight:500; font-size:13px; margin-bottom:4px;">Current count</div>
+          <div id="excluded-folders-count" style="font-size:24px; font-weight:700; color:#2563eb;">0</div>
+          <div style="color:#6b7280; font-size:12px;">folders excluded</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Banner feedback element (hidden initially). Use aria-live so screen readers announce changes. -->
+  <div id="settings-banner" class="settings-banner" role="status" aria-live="polite" hidden>
+    <span class="banner-icon" aria-hidden="true"></span>
+    <span id="settings-banner-text">Saved</span>
+  </div>
+</section>

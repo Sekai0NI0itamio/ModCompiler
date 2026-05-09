@@ -945,9 +945,6 @@ package asd.itamio.heartsystem;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.players.UserBanList;
-import net.minecraft.server.players.UserBanListEntry;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -1010,18 +1007,8 @@ public class HeartEventHandler {
         if (hearts <= min) {
             hearts = min;
             HeartStorage.get().setHearts(deadUUID, hearts);
-            MinecraftServer server = deadPlayer.getServer();
-            if (server != null) {
-                StringTextComponent msg = new StringTextComponent(
-                    "\\u00a7c[HeartSystem] " + deadPlayer.getName().getString() + " has been permanently banned (0 hearts).");
-                server.getPlayerList().getPlayers().forEach(p -> p.sendMessage(msg, p.getUUID()));
-                UserBanList banList = server.getPlayerList().getBans();
-                banList.add(new UserBanListEntry(
-                    new com.mojang.authlib.GameProfile(deadUUID, deadPlayer.getName().getString()),
-                    null, null, null, "Permadeath: ran out of hearts"));
-            }
             deadPlayer.connection.disconnect(new StringTextComponent(
-                "\\u00a7cYou have been permanently banned.\\nYou ran out of hearts."));
+                "\\u00a7c[HeartSystem] PERMADEATH!\\nYou ran out of hearts and have been permanently banned from this server."));
         } else {
             HeartStorage.get().setHearts(deadUUID, hearts);
             deadPlayer.sendMessage(new StringTextComponent(
@@ -2275,6 +2262,21 @@ SRC_121_FABRIC = {
     "../resources/heartsystem.mixins.json": _FABRIC_121_MIXINJSON,
 }
 
+# Fabric 1.21.5-1.21.8: getInt() returns Optional<Integer> in these versions
+_FABRIC_121_STORAGE_215 = _FABRIC_121_STORAGE.replace(
+    "CompoundTag tag = NbtIo.read(file.toPath());\n                if (tag != null && tag.contains(\"hearts\")) {\n                    cache.put(uuid, tag.getInt(\"hearts\"));\n                    return;",
+    "CompoundTag tag = NbtIo.read(file.toPath());\n                if (tag != null && tag.contains(\"hearts\")) {\n                    int h = tag.getInt(\"hearts\").orElse(-1);\n                    if (h >= 0) { cache.put(uuid, h); return; }"
+)
+
+SRC_1215_FABRIC = {
+    "HeartSystemMod.java":                  _FABRIC_121_MOD,
+    "mixin/PlayerDeathMixin.java":          _FABRIC_121_MIXIN,
+    "HeartStorage.java":                    _FABRIC_121_STORAGE_215,
+    "HeartData.java":                       _FORGE_DATA_RL_ADDVALUE,
+    "HeartConfig.java":                     _FABRIC_165_CONFIG,
+    "../resources/heartsystem.mixins.json": _FABRIC_121_MIXINJSON,
+}
+
 # 1.21.9+: getInt() returns Optional<Integer>, getServer() removed from ServerPlayer
 _FABRIC_121_STORAGE_OPT = _FABRIC_121_STORAGE.replace(
     "CompoundTag tag = NbtIo.read(file.toPath());\n                if (tag != null && tag.contains(\"hearts\")) {\n                    cache.put(uuid, tag.getInt(\"hearts\"));\n                    return;",
@@ -2585,20 +2587,28 @@ ALREADY_PUBLISHED = {
     "HeartSystem-1.21-fabric",
     "HeartSystem-1.21-forge",
     "HeartSystem-1.21.1-forge",
+    "HeartSystem-1.21.1-neoforge",
+    "HeartSystem-1.21.2-fabric",
+    "HeartSystem-1.21.2-neoforge",
+    "HeartSystem-1.21.3-forge",
+    "HeartSystem-1.21.3-neoforge",
+    "HeartSystem-1.21.4-forge",
+    "HeartSystem-1.21.4-neoforge",
+    "HeartSystem-1.21.5-forge",
+    "HeartSystem-1.21.5-neoforge",
+    "HeartSystem-1.21.6-forge",
+    "HeartSystem-1.21.6-neoforge",
+    "HeartSystem-1.21.7-forge",
+    "HeartSystem-1.21.7-neoforge",
+    "HeartSystem-1.21.8-forge",
+    "HeartSystem-1.21.8-neoforge",
+    "HeartSystem-1.21.9-fabric",
+    "HeartSystem-1.21.9-forge",
+    "HeartSystem-1.21.9-neoforge",
     "HeartSystem-1.21.10-forge",
     "HeartSystem-1.21.10-neoforge",
     "HeartSystem-1.21.11-forge",
     "HeartSystem-1.21.11-neoforge",
-    "HeartSystem-1.21.2-fabric",
-    "HeartSystem-1.21.3-forge",
-    "HeartSystem-1.21.4-forge",
-    "HeartSystem-1.21.5-forge",
-    "HeartSystem-1.21.6-forge",
-    "HeartSystem-1.21.7-forge",
-    "HeartSystem-1.21.8-forge",
-    "HeartSystem-1.21.9-fabric",
-    "HeartSystem-1.21.9-forge",
-    "HeartSystem-1.21.9-neoforge",
     "HeartSystem-1.8.9-forge",
     "HeartSystem-26.1-fabric",
     "HeartSystem-26.1-neoforge",
@@ -2662,30 +2672,21 @@ TARGETS = [
     ("HeartSystem-1.20.6-neoforge","1.20.6",  "neoforge", _SRC_1205_NEO),
     ("HeartSystem-1.21-forge",     "1.21",    "forge",    SRC_1203_FORGE),
     ("HeartSystem-1.21-fabric",    "1.21",    "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21-neoforge",  "1.21",    "neoforge", SRC_121_NEO),
     ("HeartSystem-1.21.1-forge",   "1.21.1",  "forge",    SRC_1203_FORGE),
     ("HeartSystem-1.21.1-fabric",  "1.21.1",  "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21.1-neoforge","1.21.1",  "neoforge", SRC_121_NEO),
     ("HeartSystem-1.21.2-fabric",  "1.21.2",  "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21.2-neoforge","1.21.2",  "neoforge", SRC_121_NEO),
     ("HeartSystem-1.21.3-forge",   "1.21.3",  "forge",    SRC_1203_FORGE),
     ("HeartSystem-1.21.3-fabric",  "1.21.3",  "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21.3-neoforge","1.21.3",  "neoforge", SRC_121_NEO),
     ("HeartSystem-1.21.4-forge",   "1.21.4",  "forge",    SRC_1203_FORGE),
     ("HeartSystem-1.21.4-fabric",  "1.21.4",  "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21.4-neoforge","1.21.4",  "neoforge", SRC_121_NEO),
     ("HeartSystem-1.21.5-forge",   "1.21.5",  "forge",    SRC_1203_FORGE),
-    ("HeartSystem-1.21.5-fabric",  "1.21.5",  "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21.5-neoforge","1.21.5",  "neoforge", SRC_121_NEO),
+    ("HeartSystem-1.21.5-fabric",  "1.21.5",  "fabric",   SRC_1215_FABRIC),
     ("HeartSystem-1.21.6-forge",   "1.21.6",  "forge",    SRC_1216_FORGE),
-    ("HeartSystem-1.21.6-fabric",  "1.21.6",  "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21.6-neoforge","1.21.6",  "neoforge", SRC_121_NEO),
+    ("HeartSystem-1.21.6-fabric",  "1.21.6",  "fabric",   SRC_1215_FABRIC),
     ("HeartSystem-1.21.7-forge",   "1.21.7",  "forge",    SRC_1216_FORGE),
-    ("HeartSystem-1.21.7-fabric",  "1.21.7",  "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21.7-neoforge","1.21.7",  "neoforge", SRC_121_NEO),
+    ("HeartSystem-1.21.7-fabric",  "1.21.7",  "fabric",   SRC_1215_FABRIC),
     ("HeartSystem-1.21.8-forge",   "1.21.8",  "forge",    SRC_1216_FORGE),
-    ("HeartSystem-1.21.8-fabric",  "1.21.8",  "fabric",   SRC_121_FABRIC),
-    ("HeartSystem-1.21.8-neoforge","1.21.8",  "neoforge", SRC_121_NEO),
+    ("HeartSystem-1.21.8-fabric",  "1.21.8",  "fabric",   SRC_1215_FABRIC),
     ("HeartSystem-1.21.9-forge",   "1.21.9",  "forge",    SRC_1219_FORGE),
     ("HeartSystem-1.21.9-fabric",  "1.21.9",  "fabric",   SRC_1219_FABRIC),
     ("HeartSystem-1.21.9-neoforge","1.21.9",  "neoforge", SRC_1219_NEO),

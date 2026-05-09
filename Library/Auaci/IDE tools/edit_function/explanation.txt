@@ -1,0 +1,156 @@
+# Edit Function Tool - Detailed Explanation
+
+## Overview
+The Edit Function tool enables semantic code modifications by allowing users to edit or delete functions, methods, or classes by name without needing to specify line numbers. It automatically locates the target symbol in the file and performs the requested action.
+
+## Purpose
+To make high-level, structural changes to code elements (functions, methods, classes) by name, eliminating the need for manual line number tracking and reducing errors associated with manual editing.
+
+## Configuration
+- **Tool Name**: `edit_function`
+- **Version**: 1.0.0
+- **Execution Mode**: optional
+- **Parameters**:
+  - `path` (required, string): Path to the code file
+  - `name` (required, string): Name of the function/method/class to edit
+  - `action` (optional, string): Action to perform - enum: ["replace", "delete", "insert_before", "insert_after"]
+    - Default: "replace" if new_content provided, "delete" otherwise
+  - `new_content` (optional, string): New content for the function. Omit or leave empty to delete the function.
+
+## Logic Flow
+1. Locate the target file at the specified path
+2. Parse the file to find the function/method/class by exact name match
+3. Based on the action parameter:
+   - `replace`: Replace the entire function/method/class with new_content
+   - `delete`: Remove the function/method/class entirely from the file
+   - `insert_before`: Insert new_content immediately before the function/method/class
+   - `insert_after`: Insert new_content immediately after the function/method/class
+4. If action is not explicitly provided:
+   - If new_content is provided/non-empty: default to "replace"
+   - If new_content is empty/omitted: default to "delete"
+5. Write the modified file back to disk
+
+## Key Features
+- **Name-Based Operations**: No line numbers required - finds symbols automatically
+- **Multiple Actions**: Supports replace, delete, insert before/after
+- **Semantic Awareness**: Understands function/method/class boundaries
+- **Default Behavior**: Intelligent defaults based on parameter presence
+- **Cross-Language**: Works with any language that has recognizable function/method/class syntax
+
+## Error Handling
+- **Retryable**: No (fail-fast on errors)
+- **Common Errors**:
+  - not found/no such symbol: Function/method/class does not exist → Use `get_function` to verify
+  - file not found: File does not exist → Use `find_files` to locate file
+
+## Usage Examples
+
+### Replace a Function
+```json
+{
+  "path": "/project/src/math.js",
+  "name": "calculateArea",
+  "action": "replace",
+  "new_content": "function calculateArea(radius) {\n  return Math.PI * radius * radius;\n}"
+}
+```
+
+### Delete a Function
+```json
+{
+  "path": "/project/src/legacy.js",
+  "name": "oldUtilityFunction",
+  "action": "delete"
+}
+// or equivalently (omitting action and new_content):
+{
+  "path": "/project/src/legacy.js",
+  "name": "oldUtilityFunction"
+}
+```
+
+### Insert Helper Function Before Main Function
+```json
+{
+  "path": "/project/src/main.js",
+  "name": "main",
+  "action": "insert_before",
+  "new_content": "function validateInput(input) {\n  return input !== null && input !== undefined;\n}\n\n"
+}
+```
+
+### Add Method to Class
+```json
+{
+  "path": "/project/src/models/User.js",
+  "name": "User",
+  "action": "insert_after",
+  "new_content": "\n  getFullName() {\n    return `${this.firstName} ${this.lastName}`;\n  }\n"
+}
+```
+
+### Convert Function to Async
+```json
+{
+  "path": "/project/src/api.js",
+  "name": "fetchUserData",
+  "action": "replace",
+  "new_content": "async function fetchUserData(userId) {\n  const response = await fetch(`/api/users/${userId}`);\n  return await response.json();\n}"
+}
+```
+
+## Integration with IDE
+- Loaded automatically by ToolInvocationService
+- Validated against JSON schema (required fields and enum validation)
+- Non-retryable execution (errors returned immediately)
+- Results formatted for AI model consumption
+- Respects excluded folders configuration
+
+## Best Practices
+1. **Use Exact Names**: Provide the exact function/method/class name as it appears in the code
+2. **Consider Scope**: Be aware of naming conflicts in larger files or namespaces
+3. **Leverage Defaults**: Omit action when you want to replace (with new_content) or delete (without new_content)
+4. **Preserve Formatting**: Include proper indentation and line breaks in new_content
+5. **Check Existence First**: Use `get_function` or `view` to confirm the symbol exists before editing
+6. **Test Changes**: Consider running tests after function modifications
+7. **Use for Major Refactoring**: Ideal for function renaming, signature changes, or logic replacement
+
+## Technical Implementation
+The tool typically:
+1. Uses regex or AST parsing to locate function boundaries
+2. Identifies the start and end of the target function/method/class
+3. Performs the requested operation (replace/delete/insert) at the identified boundaries
+4. Preserves surrounding code formatting and structure
+5. Handles edge cases like nested functions, overloaded methods, etc.
+
+## When to Use This Tool
+- Renaming functions across a codebase
+- Changing function signatures or return types
+- Replacing entire function implementations
+- Removing dead or unused functions
+- Adding helper functions near related functions
+- Adding methods to classes
+- Converting synchronous functions to asynchronous
+- Major logic replacements within functions
+
+## Limitations
+- Requires recognizable function/method/class syntax (may not work with all language constructs)
+- May struggle with complex formatting or minified code
+- Limited to top-level symbols in some implementations (may not find nested functions)
+- Depends on the implementation's parsing capabilities
+
+## Comparison with Similar Tools
+- **vs str_replace**: Semantic function replacement vs arbitrary string replacement
+- **vs edit_lines**: Name-based vs line-number-based operations
+- **vs apply_patch**: Structured code edits vs text-based patching
+- **vs batch_str_replace**: Single semantic operation vs multiple string replacements
+
+## Language Support
+The tool's effectiveness depends on the underlying implementation's ability to parse:
+- JavaScript/TypeScript functions and classes
+- Python functions and methods
+- Java methods and classes
+- C/C++ functions
+- Other languages with function-like constructs
+
+For languages without clear function boundaries, the tool may fall back to line-number or string-based approaches.

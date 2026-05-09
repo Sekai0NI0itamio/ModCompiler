@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Backup — Auaci</title>
+  <link rel="stylesheet" href="./backup-styles.css">
+</head>
+<body>
+  <div class="backup-root">
+    <header class="backup-header">
+      <nav class="tabs" role="tablist" aria-label="Backup tabs">
+        <button id="tab-create" class="tab active" role="tab" aria-selected="true" aria-controls="page-create">Create Backup</button>
+        <button id="tab-restore" class="tab" role="tab" aria-selected="false" aria-controls="page-restore">Restore Backup</button>
+      </nav>
+      <div class="header-right">
+        <button id="close-btn" class="small-btn">Close</button>
+      </div>
+    </header>
+
+    <main class="backup-main">
+      <section id="page-create" class="page active" role="tabpanel" aria-hidden="false">
+        <div class="create-layout">
+          <div class="left-panel">
+            <div class="root-title">
+              <span id="root-title">Project</span>
+              <span id="tree-count" class="muted small">0 0 selected</span>
+            </div>
+            <div id="tree-loading-indicator" class="muted small" style="display:none; margin-top:4px;">
+              Loading project tree...
+            </div>
+
+            <!-- Tree container: fixed area (scrollable both axes) -->
+            <div id="tree-container" class="tree-container" role="region" aria-label="Project tree"></div>
+          </div>
+
+          <div class="right-panel">
+            <!-- Mode buttons -->
+            <div class="mode-switch">
+              <button id="btn-blacklist" class="mode-btn" type="button">Blacklist</button>
+              <button id="btn-whitelist" class="mode-btn" type="button">Whitelist</button>
+            </div>
+
+            <div class="lists">
+              <div class="list-box">
+                <div class="list-header" id="list-type">Blacklist</div>
+                <div id="list-items" class="list-items" aria-live="polite"></div>
+                <div class="list-controls">
+                  <input id="list-input" placeholder="Add relative path (e.g. node_modules)" />
+                  <button id="add-list-item" class="small-btn">Add</button>
+                </div>
+              </div>
+
+              <div class="backup-options">
+                <label>Backup folder path</label>
+                <input id="backup-folder" class="wide-input" />
+                <label>Backup name</label>
+                <input id="backup-name" class="wide-input" placeholder="Leave blank for auto Version name" />
+                <div class="action-row">
+                  <button id="create-backup-btn" class="primary-btn">Create Backup</button>
+                </div>
+
+                <!-- Progress row is hidden by default and shown only during creation -->
+                <div id="progress-row" class="progress-row" aria-hidden="true">
+                  <div id="progress-bar" class="progress">
+                    <div id="progress-fill" class="progress-fill" style="width:0%"></div>
+                  </div>
+                  <div id="progress-text" class="progress-text"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-restore" class="page" role="tabpanel" aria-hidden="true">
+        <div class="restore-layout">
+          <div class="restore-top">
+            <label>Backup folder path</label>
+            <input id="restore-folder" class="wide-input" />
+            <div class="row">
+              <button id="refresh-list" class="small-btn">Refresh</button>
+            </div>
+          </div>
+
+          <div class="restore-mid">
+            <div class="backup-list" id="backup-list" role="listbox" aria-label="Available backups"></div>
+            <div class="restore-options">
+              <div>
+                <div class="list-header">Preserve when restoring (top-level names)</div>
+                <div id="preserve-list" class="list-items"></div>
+                <div class="list-controls">
+                  <input id="preserve-input" placeholder=".auaci, node_modules, etc" />
+                  <button id="add-preserve" class="small-btn">Add</button>
+                </div>
+              </div>
+              <div style="margin-top: 12px;">
+                <button id="restore-btn" class="primary-btn">Restore Selected Backup</button>
+                <div id="restore-progress-row" class="progress-row" aria-hidden="true">
+                  <div class="progress">
+                    <div id="restore-progress-fill" class="progress-fill" style="width:0%"></div>
+                  </div>
+                  <div id="restore-progress-text" class="progress-text"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Restore Options Modal -->
+    <div id="restore-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Restore Options</h3>
+          <button id="modal-close" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Choose how to restore the backup:</p>
+          <div class="restore-option">
+            <input type="radio" id="restore-full" name="restore-mode" value="full" checked>
+            <label for="restore-full">
+              <strong>Replace all files</strong><br>
+              <small>Deletes all current files except preserved folders (like node_modules), then extracts the backup.</small>
+            </label>
+          </div>
+          <div class="restore-option">
+            <input type="radio" id="restore-merge" name="restore-mode" value="merge">
+            <label for="restore-merge">
+              <strong>Replace only relevant files</strong><br>
+              <small>Overwrites existing files and adds new ones from backup, but preserves files not in the backup.</small>
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button id="modal-cancel" class="small-btn">Cancel</button>
+            <button id="modal-proceed" class="primary-btn">Proceed with Restore</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="backup-footer">
+      <small class="muted">Backup files created as .zip. Default format is .zip. Text color is black for clarity.</small>
+    </footer>
+  </div>
+
+  <script>
+    // Expose ipcRenderer on window.__electron (no top-level ipcRenderer const here).
+    window.__electron = { ipcRenderer: require('electron').ipcRenderer };
+  </script>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>

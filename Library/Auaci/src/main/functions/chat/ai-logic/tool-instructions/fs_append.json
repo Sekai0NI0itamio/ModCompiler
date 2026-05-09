@@ -1,0 +1,41 @@
+{
+  "type": "function",
+  "function": {
+    "name": "fs_append",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Append text content to the end of an existing file. Automatically handles newline formatting. Use this to add new functions, imports, config entries, or any content to the end of a file without rewriting it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the existing file to append to"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text content to append to the end of the file"
+        }
+      },
+      "required": [
+        "path",
+        "text"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": false,
+    "commonErrors": [
+      {
+        "pattern": "file not found|no such file",
+        "solution": "File does not exist",
+        "suggestedTool": "create_file"
+      },
+      {
+        "pattern": "permission denied",
+        "solution": "No write permission on file",
+        "suggestedTool": null
+      }
+    ]
+  }
+}

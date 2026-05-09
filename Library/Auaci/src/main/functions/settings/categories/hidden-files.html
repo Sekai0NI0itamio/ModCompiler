@@ -1,0 +1,140 @@
+<section aria-labelledby="directory-viewer-title">
+  <h1 id="directory-viewer-title">Directory Viewer</h1>
+  <p style="color:#6b7280; max-width:760px;">
+    Specify file names (one per line) that should be excluded from the project browser.
+    These are global (app-level) settings. By default <code>.DS_Store</code> is hidden.
+    Enter exact file names (not full paths). Example entries:
+  </p>
+
+  <ul style="color:#6b7280; margin-top:8px;">
+    <li><code>.DS_Store</code></li>
+    <li><code>thumbs.db</code></li>
+    <li><code>.secret-config</code></li>
+  </ul>
+
+  <style>
+    /* Re-use the action/button styles similar to other settings pages */
+    .action-row { display:flex; gap:10px; align-items:center; margin-top:12px; }
+    .action-btn {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:8px 12px;
+      border-radius:8px;
+      border:1px solid #e6e9ef;
+      background: #fff;
+      color: #111;
+      cursor:pointer;
+      font-weight:600;
+      transition: transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms ease, opacity 120ms;
+      will-change: transform, box-shadow;
+      user-select: none;
+    }
+    .action-btn:active { transform: translateY(1px) scale(0.99); }
+    .action-btn.save {
+      background: linear-gradient(180deg,#2563eb,#1e4fd6);
+      color: white;
+      border: none;
+      box-shadow: 0 6px 18px rgba(37,99,235,0.18);
+    }
+    .action-btn.reset {
+      background: #fff;
+      color: #111;
+      border:1px solid #e6e9ef;
+      box-shadow: none;
+    }
+    .action-btn.pressed {
+      transform: translateY(2px) scale(0.985);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08) !important;
+      transition: transform 140ms cubic-bezier(.2,.8,.2,1), box-shadow 140ms ease;
+    }
+    .unsaved-input {
+      background: linear-gradient(180deg, #fffbe6, #fff7d6);
+      border-color: #f6d365 !important;
+      box-shadow: 0 2px 6px rgba(246,211,105,0.18);
+      transition: background 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+    }
+    .settings-banner {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(12px);
+      min-width: 220px;
+      max-width: 86%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+      font-weight: 600;
+      color: #042a16;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 260ms ease, transform 260ms cubic-bezier(.2,.8,.2,1);
+      z-index: 2000;
+    }
+    .settings-banner.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    .settings-banner.info {
+      background: linear-gradient(180deg, #eef2ff, #e3e9ff);
+      border: 1px solid #c9d3ff;
+      color: #0f1b66;
+    }
+    .settings-banner.success {
+      background: linear-gradient(180deg, #dff6e6, #c9f0da);
+      border: 1px solid #b7e6c4;
+      color: #064927;
+    }
+    .settings-banner.error {
+      background: linear-gradient(180deg, #ffecec, #ffdede);
+      border: 1px solid #ffbdbd;
+      color: #5a0b0b;
+    }
+
+    textarea {
+      width:100%;
+      min-height:120px;
+      padding:10px;
+      box-sizing:border-box;
+      border-radius:8px;
+      border:1px solid #e6e9ef;
+      font-family: monospace;
+      resize: vertical;
+    }
+  </style>
+
+  <div style="margin-top:18px; display:flex; gap:20px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:300px; max-width:760px;">
+      <label for="hidden-files-list" style="display:block; font-weight:600; margin-bottom:6px;">Files to hide</label>
+      <textarea id="hidden-files-list" placeholder="Enter one filename per line, e.g.&#10;.DS_Store&#10;thumbs.db"></textarea>
+      <div style="color:#6b7280; font-size:13px; margin-top:8px;">
+        Enter exact file names (not full paths). Changes apply globally to the project browser.
+      </div>
+    </div>
+  </div>
+
+  <!-- Action buttons moved to bottom of the page -->
+  <div style="margin-top:28px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div class="action-row" style="margin:0;">
+      <button id="save-hidden-files" class="action-btn save" title="Save hidden files">Save</button>
+      <button id="reset-hidden-files" class="action-btn reset" title="Reset hidden files">Reset</button>
+    </div>
+
+    <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+      <span id="save-status" style="color:#2d7a2d; font-weight:600; display:none;">Saved</span>
+      <span id="save-error" style="color:#b91c1c; display:none;"></span>
+    </div>
+  </div>
+
+  <!-- Banner feedback element (hidden initially). Use aria-live so screen readers announce changes. -->
+  <div id="settings-banner" class="settings-banner" role="status" aria-live="polite" hidden>
+    <span class="banner-icon" aria-hidden="true"></span>
+    <span id="settings-banner-text">Saved</span>
+  </div>
+</section>

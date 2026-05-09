@@ -1,0 +1,82 @@
+Compiled from "SnowAccumulationMod.java"
+public class com.itamio.snowaccumulation.SnowAccumulationMod {
+  public static final java.lang.String MODID;
+
+  public static final java.lang.String NAME;
+
+  public static final java.lang.String VERSION;
+
+  public static final java.lang.String AUTHOR;
+
+  private static final org.apache.logging.log4j.Logger LOGGER;
+
+  private static final java.lang.String ANSI_RESET;
+
+  private static final java.lang.String ANSI_CYAN;
+
+  public com.itamio.snowaccumulation.SnowAccumulationMod();
+    Code:
+       0: aload_0
+       1: invokespecial #41                 // Method java/lang/Object."<init>":()V
+       4: return
+
+  public void preInit(net.minecraftforge.fml.common.event.FMLPreInitializationEvent);
+    Code:
+       0: invokestatic  #51                 // Method com/itamio/snowaccumulation/ConfigManager.loadConfig:()V
+       3: aload_0
+       4: invokespecial #54                 // Method printModInfo:()V
+       7: return
+
+  public void init(net.minecraftforge.fml.common.event.FMLInitializationEvent);
+    Code:
+       0: getstatic     #64                 // Field net/minecraftforge/common/MinecraftForge.EVENT_BUS:Lnet/minecraftforge/fml/common/eventhandler/EventBus;
+       3: new           #66                 // class com/itamio/snowaccumulation/SnowAccumulationHandler
+       6: dup
+       7: invokespecial #67                 // Method com/itamio/snowaccumulation/SnowAccumulationHandler."<init>":()V
+      10: invokevirtual #73                 // Method net/minecraftforge/fml/common/eventhandler/EventBus.register:(Ljava/lang/Object;)V
+      13: return
+
+  private void printModInfo();
+    Code:
+       0: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+       3: ldc           #78                 // String [36m╔═══════════════════════════════════════════════════════╗[0m
+       5: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      10: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      13: ldc           #86                 // String [36m║                   Snow Accumulation                       ║[0m
+      15: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      20: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      23: ldc           #88                 // String [36m║                       v1.0.0                            ║[0m
+      25: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      30: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      33: ldc           #90                 // String [36m╚═══════════════════════════════════════════════════════╝[0m
+      35: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      40: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      43: ldc           #92                 // String [36m✨ Initializing Snow Accumulation Mod ✨[0m
+      45: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      50: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      53: ldc           #94                 // String [36m-------------------------------------------------------[0m
+      55: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      60: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      63: ldc           #96                 // String [36mMod Name: [0mSnow Accumulation
+      65: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      70: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      73: ldc           #98                 // String [36mVersion: [0m1.0.0
+      75: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      80: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      83: ldc           #100                // String [36mMod ID: [0msnowaccumulation
+      85: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+      90: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+      93: ldc           #102                // String [36mAuthor: [0mitamio
+      95: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+     100: getstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+     103: ldc           #94                 // String [36m-------------------------------------------------------[0m
+     105: invokeinterface #84,  2           // InterfaceMethod org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+     110: return
+
+  static {};
+    Code:
+       0: ldc           #22                 // String snowaccumulation
+       2: invokestatic  #109                // Method org/apache/logging/log4j/LogManager.getLogger:(Ljava/lang/String;)Lorg/apache/logging/log4j/Logger;
+       5: putstatic     #76                 // Field LOGGER:Lorg/apache/logging/log4j/Logger;
+       8: return
+}

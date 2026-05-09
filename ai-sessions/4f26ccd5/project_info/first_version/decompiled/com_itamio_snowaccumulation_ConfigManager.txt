@@ -1,0 +1,328 @@
+Compiled from "ConfigManager.java"
+public class com.itamio.snowaccumulation.ConfigManager {
+  private static final java.lang.String CONFIG_DIR;
+
+  private static final java.lang.String CONFIG_FILE;
+
+  private static int maxSnowHeight;
+
+  private static int chunkRadius;
+
+  private static int accumulationSpeed;
+
+  public com.itamio.snowaccumulation.ConfigManager();
+    Code:
+       0: aload_0
+       1: invokespecial #20                 // Method java/lang/Object."<init>":()V
+       4: return
+
+  public static void loadConfig();
+    Code:
+       0: ldc           #9                  // String config/snowaccumulation
+       2: iconst_0
+       3: anewarray     #31                 // class java/lang/String
+       6: invokestatic  #37                 // Method java/nio/file/Paths.get:(Ljava/lang/String;[Ljava/lang/String;)Ljava/nio/file/Path;
+       9: astore_0
+      10: aload_0
+      11: ldc           #12                 // String config.txt
+      13: invokeinterface #43,  2           // InterfaceMethod java/nio/file/Path.resolve:(Ljava/lang/String;)Ljava/nio/file/Path;
+      18: astore_1
+      19: aload_0
+      20: iconst_0
+      21: anewarray     #45                 // class java/nio/file/LinkOption
+      24: invokestatic  #51                 // Method java/nio/file/Files.exists:(Ljava/nio/file/Path;[Ljava/nio/file/LinkOption;)Z
+      27: ifne          39
+      30: aload_0
+      31: iconst_0
+      32: anewarray     #53                 // class java/nio/file/attribute/FileAttribute
+      35: invokestatic  #57                 // Method java/nio/file/Files.createDirectories:(Ljava/nio/file/Path;[Ljava/nio/file/attribute/FileAttribute;)Ljava/nio/file/Path;
+      38: pop
+      39: aload_1
+      40: iconst_0
+      41: anewarray     #45                 // class java/nio/file/LinkOption
+      44: invokestatic  #51                 // Method java/nio/file/Files.exists:(Ljava/nio/file/Path;[Ljava/nio/file/LinkOption;)Z
+      47: ifne          54
+      50: aload_1
+      51: invokestatic  #61                 // Method createDefaultConfig:(Ljava/nio/file/Path;)V
+      54: aload_1
+      55: invokestatic  #65                 // Method java/nio/file/Files.newBufferedReader:(Ljava/nio/file/Path;)Ljava/io/BufferedReader;
+      58: astore_2
+      59: aconst_null
+      60: astore_3
+      61: aload_2
+      62: invokevirtual #71                 // Method java/io/BufferedReader.readLine:()Ljava/lang/String;
+      65: dup
+      66: astore        4
+      68: ifnull        343
+      71: aload         4
+      73: invokevirtual #74                 // Method java/lang/String.trim:()Ljava/lang/String;
+      76: astore        4
+      78: aload         4
+      80: ldc           #76                 // String maxSnowHeight=
+      82: invokevirtual #80                 // Method java/lang/String.startsWith:(Ljava/lang/String;)Z
+      85: ifeq          167
+      88: aload         4
+      90: ldc           #82                 // String =
+      92: invokevirtual #86                 // Method java/lang/String.split:(Ljava/lang/String;)[Ljava/lang/String;
+      95: iconst_1
+      96: aaload
+      97: invokevirtual #74                 // Method java/lang/String.trim:()Ljava/lang/String;
+     100: invokestatic  #92                 // Method java/lang/Integer.parseInt:(Ljava/lang/String;)I
+     103: putstatic     #94                 // Field maxSnowHeight:I
+     106: getstatic     #94                 // Field maxSnowHeight:I
+     109: iconst_1
+     110: if_icmpge     117
+     113: iconst_1
+     114: putstatic     #94                 // Field maxSnowHeight:I
+     117: getstatic     #94                 // Field maxSnowHeight:I
+     120: sipush        256
+     123: if_icmple     132
+     126: sipush        256
+     129: putstatic     #94                 // Field maxSnowHeight:I
+     132: goto          61
+     135: astore        5
+     137: getstatic     #100                // Field java/lang/System.err:Ljava/io/PrintStream;
+     140: new           #102                // class java/lang/StringBuilder
+     143: dup
+     144: invokespecial #103                // Method java/lang/StringBuilder."<init>":()V
+     147: ldc           #105                // String Invalid maxSnowHeight value in config, using default:
+     149: invokevirtual #109                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     152: getstatic     #94                 // Field maxSnowHeight:I
+     155: invokevirtual #112                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     158: invokevirtual #115                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     161: invokevirtual #121                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     164: goto          61
+     167: aload         4
+     169: ldc           #123                // String chunkRadius=
+     171: invokevirtual #80                 // Method java/lang/String.startsWith:(Ljava/lang/String;)Z
+     174: ifeq          254
+     177: aload         4
+     179: ldc           #82                 // String =
+     181: invokevirtual #86                 // Method java/lang/String.split:(Ljava/lang/String;)[Ljava/lang/String;
+     184: iconst_1
+     185: aaload
+     186: invokevirtual #74                 // Method java/lang/String.trim:()Ljava/lang/String;
+     189: invokestatic  #92                 // Method java/lang/Integer.parseInt:(Ljava/lang/String;)I
+     192: putstatic     #125                // Field chunkRadius:I
+     195: getstatic     #125                // Field chunkRadius:I
+     198: iconst_1
+     199: if_icmpge     206
+     202: iconst_1
+     203: putstatic     #125                // Field chunkRadius:I
+     206: getstatic     #125                // Field chunkRadius:I
+     209: bipush        32
+     211: if_icmple     219
+     214: bipush        32
+     216: putstatic     #125                // Field chunkRadius:I
+     219: goto          61
+     222: astore        5
+     224: getstatic     #100                // Field java/lang/System.err:Ljava/io/PrintStream;
+     227: new           #102                // class java/lang/StringBuilder
+     230: dup
+     231: invokespecial #103                // Method java/lang/StringBuilder."<init>":()V
+     234: ldc           #127                // String Invalid chunkRadius value in config, using default:
+     236: invokevirtual #109                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     239: getstatic     #125                // Field chunkRadius:I
+     242: invokevirtual #112                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     245: invokevirtual #115                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     248: invokevirtual #121                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     251: goto          61
+     254: aload         4
+     256: ldc           #129                // String accumulationSpeed=
+     258: invokevirtual #80                 // Method java/lang/String.startsWith:(Ljava/lang/String;)Z
+     261: ifeq          61
+     264: aload         4
+     266: ldc           #82                 // String =
+     268: invokevirtual #86                 // Method java/lang/String.split:(Ljava/lang/String;)[Ljava/lang/String;
+     271: iconst_1
+     272: aaload
+     273: invokevirtual #74                 // Method java/lang/String.trim:()Ljava/lang/String;
+     276: invokestatic  #92                 // Method java/lang/Integer.parseInt:(Ljava/lang/String;)I
+     279: putstatic     #131                // Field accumulationSpeed:I
+     282: getstatic     #131                // Field accumulationSpeed:I
+     285: iconst_1
+     286: if_icmpge     293
+     289: iconst_1
+     290: putstatic     #131                // Field accumulationSpeed:I
+     293: getstatic     #131                // Field accumulationSpeed:I
+     296: sipush        1200
+     299: if_icmple     308
+     302: sipush        1200
+     305: putstatic     #131                // Field accumulationSpeed:I
+     308: goto          61
+     311: astore        5
+     313: getstatic     #100                // Field java/lang/System.err:Ljava/io/PrintStream;
+     316: new           #102                // class java/lang/StringBuilder
+     319: dup
+     320: invokespecial #103                // Method java/lang/StringBuilder."<init>":()V
+     323: ldc           #133                // String Invalid accumulationSpeed value in config, using default:
+     325: invokevirtual #109                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     328: getstatic     #131                // Field accumulationSpeed:I
+     331: invokevirtual #112                // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     334: invokevirtual #115                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     337: invokevirtual #121                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     340: goto          61
+     343: aload_2
+     344: ifnull        419
+     347: aload_3
+     348: ifnull        369
+     351: aload_2
+     352: invokevirtual #136                // Method java/io/BufferedReader.close:()V
+     355: goto          419
+     358: astore        4
+     360: aload_3
+     361: aload         4
+     363: invokevirtual #140                // Method java/lang/Throwable.addSuppressed:(Ljava/lang/Throwable;)V
+     366: goto          419
+     369: aload_2
+     370: invokevirtual #136                // Method java/io/BufferedReader.close:()V
+     373: goto          419
+     376: astore        4
+     378: aload         4
+     380: astore_3
+     381: aload         4
+     383: athrow
+     384: astore        6
+     386: aload_2
+     387: ifnull        416
+     390: aload_3
+     391: ifnull        412
+     394: aload_2
+     395: invokevirtual #136                // Method java/io/BufferedReader.close:()V
+     398: goto          416
+     401: astore        7
+     403: aload_3
+     404: aload         7
+     406: invokevirtual #140                // Method java/lang/Throwable.addSuppressed:(Ljava/lang/Throwable;)V
+     409: goto          416
+     412: aload_2
+     413: invokevirtual #136                // Method java/io/BufferedReader.close:()V
+     416: aload         6
+     418: athrow
+     419: goto          451
+     422: astore_0
+     423: getstatic     #100                // Field java/lang/System.err:Ljava/io/PrintStream;
+     426: new           #102                // class java/lang/StringBuilder
+     429: dup
+     430: invokespecial #103                // Method java/lang/StringBuilder."<init>":()V
+     433: ldc           #142                // String Error loading snow accumulation config:
+     435: invokevirtual #109                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     438: aload_0
+     439: invokevirtual #145                // Method java/io/IOException.getMessage:()Ljava/lang/String;
+     442: invokevirtual #109                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     445: invokevirtual #115                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     448: invokevirtual #121                // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+     451: return
+    Exception table:
+       from    to  target type
+          88   132   135   Class java/lang/NumberFormatException
+         177   219   222   Class java/lang/NumberFormatException
+         264   308   311   Class java/lang/NumberFormatException
+         351   355   358   Class java/lang/Throwable
+          61   343   376   Class java/lang/Throwable
+          61   343   384   any
+         394   398   401   Class java/lang/Throwable
+         376   386   384   any
+           0   419   422   Class java/io/IOException
+
+  private static void createDefaultConfig(java.nio.file.Path) throws java.io.IOException;
+    Code:
+       0: aload_0
+       1: iconst_0
+       2: anewarray     #156                // class java/nio/file/OpenOption
+       5: invokestatic  #160                // Method java/nio/file/Files.newBufferedWriter:(Ljava/nio/file/Path;[Ljava/nio/file/OpenOption;)Ljava/io/BufferedWriter;
+       8: astore_1
+       9: aconst_null
+      10: astore_2
+      11: aload_1
+      12: ldc           #162                // String # Snow Accumulation Configuration\n
+      14: invokevirtual #167                // Method java/io/BufferedWriter.write:(Ljava/lang/String;)V
+      17: aload_1
+      18: ldc           #169                // String # Maximum height for snow accumulation (1-256)\n
+      20: invokevirtual #167                // Method java/io/BufferedWriter.write:(Ljava/lang/String;)V
+      23: aload_1
+      24: ldc           #171                // String maxSnowHeight=16\n
+      26: invokevirtual #167                // Method java/io/BufferedWriter.write:(Ljava/lang/String;)V
+      29: aload_1
+      30: ldc           #173                // String # Radius in chunks around the player to check for snow accumulation (1-32)\n
+      32: invokevirtual #167                // Method java/io/BufferedWriter.write:(Ljava/lang/String;)V
+      35: aload_1
+      36: ldc           #175                // String chunkRadius=8\n
+      38: invokevirtual #167                // Method java/io/BufferedWriter.write:(Ljava/lang/String;)V
+      41: aload_1
+      42: ldc           #177                // String # Speed of snow accumulation in ticks (1-1200, lower is faster)\n
+      44: invokevirtual #167                // Method java/io/BufferedWriter.write:(Ljava/lang/String;)V
+      47: aload_1
+      48: ldc           #179                // String accumulationSpeed=20\n
+      50: invokevirtual #167                // Method java/io/BufferedWriter.write:(Ljava/lang/String;)V
+      53: aload_1
+      54: ifnull        124
+      57: aload_2
+      58: ifnull        77
+      61: aload_1
+      62: invokevirtual #180                // Method java/io/BufferedWriter.close:()V
+      65: goto          124
+      68: astore_3
+      69: aload_2
+      70: aload_3
+      71: invokevirtual #140                // Method java/lang/Throwable.addSuppressed:(Ljava/lang/Throwable;)V
+      74: goto          124
+      77: aload_1
+      78: invokevirtual #180                // Method java/io/BufferedWriter.close:()V
+      81: goto          124
+      84: astore_3
+      85: aload_3
+      86: astore_2
+      87: aload_3
+      88: athrow
+      89: astore        4
+      91: aload_1
+      92: ifnull        121
+      95: aload_2
+      96: ifnull        117
+      99: aload_1
+     100: invokevirtual #180                // Method java/io/BufferedWriter.close:()V
+     103: goto          121
+     106: astore        5
+     108: aload_2
+     109: aload         5
+     111: invokevirtual #140                // Method java/lang/Throwable.addSuppressed:(Ljava/lang/Throwable;)V
+     114: goto          121
+     117: aload_1
+     118: invokevirtual #180                // Method java/io/BufferedWriter.close:()V
+     121: aload         4
+     123: athrow
+     124: return
+    Exception table:
+       from    to  target type
+          61    65    68   Class java/lang/Throwable
+          11    53    84   Class java/lang/Throwable
+          11    53    89   any
+          99   103   106   Class java/lang/Throwable
+          84    91    89   any
+
+  public static int getMaxSnowHeight();
+    Code:
+       0: getstatic     #94                 // Field maxSnowHeight:I
+       3: ireturn
+
+  public static int getChunkRadius();
+    Code:
+       0: getstatic     #125                // Field chunkRadius:I
+       3: ireturn
+
+  public static int getAccumulationSpeed();
+    Code:
+       0: getstatic     #131                // Field accumulationSpeed:I
+       3: ireturn
+
+  static {};
+    Code:
+       0: bipush        16
+       2: putstatic     #94                 // Field maxSnowHeight:I
+       5: bipush        8
+       7: putstatic     #125                // Field chunkRadius:I
+      10: bipush        20
+      12: putstatic     #131                // Field accumulationSpeed:I
+      15: return
+}

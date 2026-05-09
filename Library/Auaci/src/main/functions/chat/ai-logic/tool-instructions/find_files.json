@@ -1,0 +1,120 @@
+{
+  "type": "function",
+  "function": {
+    "name": "find_files",
+    "version": "2.0.0",
+    "executionMode": "optional",
+    "description": "Find files matching glob patterns with intelligent pattern enhancement and workspace-aware searching. Automatically optimizes patterns for better matching and provides ranked results.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "search_dir": {
+          "type": "string",
+          "description": "Directory to search in (defaults to workspace root). Supports workspace-relative paths."
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns to match. Patterns are automatically enhanced (e.g., 'file.js' becomes '**/file.js')",
+          "minItems": 1
+        },
+        "max_matches": {
+          "type": "number",
+          "description": "Maximum number of matches to return (default: 50)",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 200
+        },
+        "max_depth": {
+          "type": "number",
+          "description": "Maximum directory depth (default: 10)",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "min_depth": {
+          "type": "number",
+          "description": "Minimum directory depth (default: 0)",
+          "default": 0,
+          "minimum": 0
+        },
+        "include_hidden": {
+          "type": "boolean",
+          "description": "Include hidden files and directories (default: false)",
+          "default": false
+        },
+        "sort_by": {
+          "type": "string",
+          "enum": ["relevance", "name", "modified", "size"],
+          "description": "Sort results by relevance, name, modification time, or size (default: relevance)",
+          "default": "relevance"
+        },
+        "file_types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Filter by file extensions (e.g., ['js', 'ts', 'json'])"
+        },
+        "content_filter": {
+          "type": "string",
+          "description": "Search for files containing this text (case-insensitive). Enables content-based filtering."
+        },
+        "exclude_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns to exclude from search (e.g., ['node_modules/**', '*.log'])"
+        }
+      },
+      "required": [
+        "patterns"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": true,
+    "maxRetries": 2,
+    "retryBackoff": {
+      "type": "exponential",
+      "initial": 500,
+      "multiplier": 2,
+      "max": 5000
+    },
+    "commonErrors": [
+      {
+        "pattern": "not found|directory does not exist",
+        "solution": "Search directory does not exist",
+        "suggestedAction": "Use ls to explore directory structure",
+        "suggestedTool": "ls"
+      },
+      {
+        "pattern": "invalid pattern|syntax error",
+        "solution": "Glob pattern has syntax error",
+        "suggestedAction": "Simplify pattern or use glob tool for single patterns",
+        "suggestedTool": "glob"
+      },
+      {
+        "pattern": "timeout|search took too long",
+        "solution": "Search timed out after 20 seconds",
+        "suggestedAction": "Use more specific patterns or reduce search scope",
+        "suggestedTool": "glob"
+      }
+    ]
+  },
+  "modelSpecific": {
+    "gpt-4.1": {
+      "patternEnhancement": true,
+      "autoAppendRecursive": true,
+      "description": "Patterns are automatically enhanced for GPT-4.1 compatibility"
+    }
+  },
+  "performance": {
+    "timeout": 20000,
+    "streamResults": true,
+    "cacheResults": true
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "function": {
+    "name": "edit_lines",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Precise line-based editing. Edit, insert, or delete specific lines by line number. Use for targeted changes by line number.",
+    "parameters": {
+      "type": "object",
+
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the file"
+        },
+        "start_line": {
+          "type": "number",
+          "description": "1-indexed starting line number"
+        },
+        "end_line": {
+          "type": "number",
+          "description": "1-indexed ending line number (inclusive). Default: same as start_line"
+        },
+        "new_content": {
+          "type": "string",
+          "description": "New content to insert/replace. Empty or omit for delete action."
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "replace",
+            "insert_before",
+            "insert_after",
+            "delete"
+          ],
+          "description": "Action: replace (default), insert_before, insert_after, or delete"
+        }
+      },
+      "required": [
+        "path",
+        "start_line"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": false,
+    "commonErrors": [
+      {
+        "pattern": "out of range",
+        "solution": "Line numbers exceed file length",
+        "suggestedTool": "view"
+      },
+      {
+        "pattern": "file not found",
+        "solution": "File does not exist",
+        "suggestedTool": "find_files"
+      }
+    ]
+  }
+}

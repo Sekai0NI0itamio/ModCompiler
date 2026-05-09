@@ -1,0 +1,56 @@
+{
+  "type": "function",
+  "function": {
+    "name": "error_recoverer",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Correct errors in previous tool calls by applying missing parameters or modifying tool content. Use when a tool call fails due to missing parameters or incorrect input. Automatically re-executes the corrected tool.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "previous_tool_name": {
+          "type": "string",
+          "description": "Name of the tool that failed"
+        },
+        "previous_tool_input": {
+          "type": "object",
+          "description": "Original input parameters that were used"
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Error message from the failed tool execution"
+        },
+        "corrections": {
+          "type": "object",
+          "description": "Corrections to apply to the tool call"
+        },
+        "action": {
+          "type": "string",
+          "enum": ["fix_missing_params", "modify_content", "retry_with_fix"],
+          "description": "Action to perform: fix missing parameters, modify tool content, or retry with fix"
+        }
+      },
+      "required": [
+        "previous_tool_name",
+        "error_message",
+        "corrections",
+        "action"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": false,
+    "commonErrors": [
+      {
+        "pattern": "tool not found",
+        "solution": "Specify a valid tool name",
+        "suggestedTool": null
+      },
+      {
+        "pattern": "invalid corrections",
+        "solution": "Provide valid corrections that match the tool schema",
+        "suggestedTool": null
+      }
+    ]
+  }
+}

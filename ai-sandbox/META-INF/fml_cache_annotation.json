@@ -1,0 +1,51 @@
+{
+  "com/itamio/snowaccumulation/SnowAccumulationHandler": {
+    "name": "com/itamio/snowaccumulation/SnowAccumulationHandler",
+    "annotations": [
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onWorldTick(Lnet/minecraftforge/fml/common/gameevent/TickEvent$WorldTickEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onBlockPlace(Lnet/minecraftforge/event/world/BlockEvent$PlaceEvent;)V"
+      }
+    ]
+  },
+  "com/itamio/snowaccumulation/SnowAccumulationMod": {
+    "name": "com/itamio/snowaccumulation/SnowAccumulationMod",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "com/itamio/snowaccumulation/SnowAccumulationMod",
+        "values": {
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "modid": {
+            "value": "snowaccumulation"
+          },
+          "name": {
+            "value": "Snow Accumulation"
+          },
+          "version": {
+            "value": "1.0.0"
+          }
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "preInit(Lnet/minecraftforge/fml/common/event/FMLPreInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "init(Lnet/minecraftforge/fml/common/event/FMLInitializationEvent;)V"
+      }
+    ]
+  }
+}

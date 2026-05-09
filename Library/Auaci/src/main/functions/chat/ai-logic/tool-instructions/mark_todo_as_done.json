@@ -1,0 +1,41 @@
+{
+  "type": "function",
+  "function": {
+    "name": "mark_todo_as_done",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Mark todos as complete.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "todo_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of todo IDs to mark as done"
+        }
+      },
+      "required": [
+        "todo_ids"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": false,
+    "commonErrors": [
+      {
+        "pattern": "not found|invalid id",
+        "solution": "One or more todo IDs do not exist",
+        "suggestedAction": "Use read_todos to view available todos and their IDs",
+        "suggestedTool": "read_todos"
+      },
+      {
+        "pattern": "already done|completed",
+        "solution": "Todo is already marked as done",
+        "suggestedAction": "Check todo status in list before marking",
+        "suggestedTool": "read_todos"
+      }
+    ]
+  }
+}
