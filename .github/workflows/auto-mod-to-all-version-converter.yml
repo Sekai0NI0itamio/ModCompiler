@@ -34,11 +34,11 @@ env:
   MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
 
 # ---------------------------------------------------------------------------
-# Job 1a — Info Gather: project metadata + first working version decompile
+# Job 1a — Info Gather: project metadata + locate original working version
 # ---------------------------------------------------------------------------
 jobs:
   info-gather:
-    name: Gather project info and decompile first working version
+    name: Gather project info with locating the original working version
     runs-on: ubuntu-latest
     outputs:
       project_slug: ${{ steps.collect.outputs.project_slug }}
