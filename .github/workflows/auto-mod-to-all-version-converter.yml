@@ -183,14 +183,23 @@ jobs:
               result = decompile_jar_internal(jar_dest, manifest, output_dir=decompile_out)
               print(f"Decompiled first version: status={result.status}")
 
-              # Copy source to a known location
+              # Copy decompiled source to a known location
               src_target = OUT / "first_version" / "src"
               if decompile_out.exists():
-                  for item in decompile_out.iterdir():
-                      if item.name == "src":
+                  # The decompiler outputs java/ dir (from src/main/java); copy it to src/
+                  java_dir = decompile_out / "java"
+                  if java_dir.is_dir():
+                      shutil.copytree(java_dir, src_target, dirs_exist_ok=True)
+                      print(f"Copied decompiled source from java/ to {src_target}")
+                  else:
+                      # Fallback: find any dir with .java files
+                      for item in decompile_out.iterdir():
                           if item.is_dir():
-                              shutil.copytree(item, src_target, dirs_exist_ok=True)
-                          break
+                              java_files = list(item.rglob("*.java"))
+                              if java_files:
+                                  shutil.copytree(item, src_target, dirs_exist_ok=True)
+                                  print(f"Found source in {item.name}, copied to {src_target}")
+                                  break
 
               # Write first_version_meta.json
               first_meta = {
@@ -231,8 +240,12 @@ jobs:
               f"Categories: {', '.join(project.get('categories', []))}",
               f"Loaders: {', '.join(project.get('loaders', []))}",
               f"MC Versions: {', '.join(project.get('game_versions', []))}",
+              # Use full body (long description) if available, fall back to short description
+              body = (project.get('body', '') or '').strip()
+              body_line = body if body else (project.get('description', '') or '')
               f"Downloads: {project.get('downloads', 0):,}",
-              f"Description: {project.get('description', '') or ''}",
+              f"Description:",
+              f"{body_line}",
               "=" * 72,
               "",
               "── SUPPORTED VERSIONS ON MODRINTH ───────────────────────────────",
@@ -260,6 +273,19 @@ jobs:
                   lines.append("  Mod Info:")
                   for line in mi_file.read_text(encoding="utf-8").splitlines():
                       lines.append(f"    {line}")
+
+              # Include decompiled source code
+              src_dir = OUT / "first_version" / "src"
+              if src_dir.exists():
+                  java_files = sorted(src_dir.rglob("*.java"))
+                  if java_files:
+                      lines += ["", "── DECOMPILED SOURCE CODE ────────────────────────────────────"]
+                      for jf in java_files:
+                          rel = jf.relative_to(src_dir)
+                          lines += ["", f"  File: {rel}", ""]
+                          code = jf.read_text(encoding="utf-8")
+                          for cline in code.splitlines():
+                              lines.append(f"    {cline}")
           else:
               lines.append("  No working version found.")
 
