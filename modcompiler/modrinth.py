@@ -223,7 +223,7 @@ def normalize_modrinth_project_ref(value: str) -> str:
 
     if parts[0] == "project" and len(parts) >= 2:
         return parts[1]
-    if parts[0] in {"mod", "plugin", "modpack", "resourcepack", "shader"} and len(parts) >= 2:
+    if parts[0] in {"mod", "plugin", "modpack", "resourcepack", "shader", "datapack"} and len(parts) >= 2:
         return parts[1]
     if parts[0] == "v2" and len(parts) >= 3 and parts[1] == "project":
         return parts[2]

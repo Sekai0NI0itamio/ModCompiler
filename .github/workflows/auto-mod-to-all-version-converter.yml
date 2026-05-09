@@ -227,6 +227,9 @@ jobs:
           # Write projectinfo.txt
           slug = project.get("slug", ref)
           title = project.get("title", slug)
+          # Use full body (long description) if available, fall back to short description
+          body = (project.get('body', '') or '').strip()
+          body_line = body if body else (project.get('description', '') or '')
           lines = [
               "=" * 72,
               f"MODRINTH PROJECT: {title}",
@@ -240,9 +243,6 @@ jobs:
               f"Categories: {', '.join(project.get('categories', []))}",
               f"Loaders: {', '.join(project.get('loaders', []))}",
               f"MC Versions: {', '.join(project.get('game_versions', []))}",
-              # Use full body (long description) if available, fall back to short description
-              body = (project.get('body', '') or '').strip()
-              body_line = body if body else (project.get('description', '') or '')
               f"Downloads: {project.get('downloads', 0):,}",
               f"Description:",
               f"{body_line}",
