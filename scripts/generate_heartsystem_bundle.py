@@ -1951,12 +1951,10 @@ public class HeartData {
     public static void applyMaxHealth(ServerPlayerEntity player, int hearts) {
         EntityAttributeInstance attr = player.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH);
         if (attr == null) return;
-        attr.removeModifier(MODIFIER_UUID);
-        double delta = (hearts * 2.0) - 20.0;
-        EntityAttributeModifier mod = new EntityAttributeModifier(MODIFIER_UUID, MODIFIER_NAME, delta, EntityAttributeModifier.Operation.ADDITION);
-        attr.applyPersistentModifier(mod);
-        float newMax = (float)(hearts * 2);
-        if (player.getHealth() > newMax) player.setHealth(newMax);
+        double newMax = hearts * 2.0;
+        attr.setBaseValue(newMax);
+        float hp = (float)(hearts * 2);
+        if (player.getHealth() > hp) player.setHealth(hp);
     }
 }
 """
