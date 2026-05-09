@@ -1,0 +1,708 @@
+name: Automated Mod to ALL Version Converter
+
+# ---------------------------------------------------------------------------
+# Purpose
+# -------
+# Scans a Modrinth project and produces a complete analysis bundle:
+#   - projectinfo.txt with project metadata, first working version's
+#     decompiled source code, and paths to all other version sources
+#   - Full diagnosis of what versions exist, are shell/malformed, or missing
+#
+# Two concurrent Phase 1 jobs:
+#   info-gather  — Fetches project info, decompiles the first working jar
+#   diagnosis    — Scans all versions, detects shells/corruption/missing
+#
+# Phase 2 (assemble): merges both outputs into the final artifact.
+#
+# Trigger: workflow_dispatch with a single Modrinth URL input.
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      modrinth_project_url:
+        description: >
+          Modrinth project URL, slug, or project ID.
+          Examples: https://modrinth.com/mod/sort-chest  |  sort-chest  |  XXXXXXXX
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
+
+# ---------------------------------------------------------------------------
+# Job 1a — Info Gather: project metadata + first working version decompile
+# ---------------------------------------------------------------------------
+jobs:
+  info-gather:
+    name: Gather project info and decompile first working version
+    runs-on: ubuntu-latest
+    outputs:
+      project_slug: ${{ steps.collect.outputs.project_slug }}
+      version_count: ${{ steps.collect.outputs.version_count }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - name: Run info gather
+        id: collect
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          mkdir -p .workflow_artifacts/info
+          python3 - <<'PY'
+          import json, os, sys, urllib.parse, urllib.request, urllib.error, zipfile, time, re, shutil
+          from pathlib import Path
+
+          sys.path.insert(0, str(Path.cwd()))
+          from modcompiler.modrinth import (
+              ModrinthClient, build_modrinth_user_agent,
+              normalize_modrinth_project_ref, select_primary_modrinth_file,
+          )
+          from modcompiler.decompile import decompile_jar_internal, inspect_mod_jar, render_mod_info
+          from modcompiler.common import load_json
+
+          TOKEN = os.environ.get("MODRINTH_TOKEN", "").strip()
+          RAW_URL = "${{ inputs.modrinth_project_url }}"
+          OUT = Path(".workflow_artifacts/info")
+
+          ref = normalize_modrinth_project_ref(RAW_URL)
+          client = ModrinthClient(token=TOKEN or None, user_agent=build_modrinth_user_agent())
+          project = client.resolve_project(ref)
+          OUT.mkdir(parents=True, exist_ok=True)
+          (OUT / "project.json").write_text(json.dumps(project, indent=2), encoding="utf-8")
+
+          all_versions = client.request_json(
+              "GET", f"/project/{urllib.parse.quote(ref, safe='')}/version",
+              params={"include_changelog": "false"},
+          )
+          if not isinstance(all_versions, list):
+              all_versions = []
+          print(f"Total versions on Modrinth: {len(all_versions)}")
+
+          # Select latest version per (loader, MC version) pair
+          def parse_vnum(s):
+              parts = []
+              for t in re.split(r"[.\-_]", str(s).strip()):
+                  if t.isdigit(): parts.append(int(t))
+                  elif t: parts.append(t)
+              return tuple(parts) if parts else (0,)
+
+          best = {}
+          for v in all_versions:
+              loaders = [str(l) for l in v.get("loaders", []) if str(l).strip()]
+              gvs = [str(g) for g in v.get("game_versions", []) if str(g).strip()]
+              if not loaders or not gvs: continue
+              vnum = str(v.get("version_number", "")).strip()
+              vkey = parse_vnum(vnum)
+              pub = v.get("date_published", "") or ""
+              for loader in loaders:
+                  for gv in gvs:
+                      key = (loader, gv)
+                      cur = best.get(key)
+                      if cur is None:
+                          best[key] = {"v": v, "key": vkey, "pub": pub}
+                      else:
+                          try: is_newer = vkey > cur["key"]
+                          except TypeError: is_newer = str(vkey) > str(cur["key"])
+                          if is_newer or (vkey == cur["key"] and pub > cur["pub"]):
+                              best[key] = {"v": v, "key": vkey, "pub": pub}
+
+          seen = set()
+          selected = []
+          for entry in best.values():
+              vid = entry["v"]["id"]
+              if vid not in seen:
+                  seen.add(vid)
+                  selected.append(entry["v"])
+          selected.sort(key=lambda v: v.get("date_published", ""), reverse=True)
+          print(f"Selected {len(selected)} versions (latest per loader+MC)")
+
+          (OUT / "all_versions.json").write_text(json.dumps(all_versions, indent=2), encoding="utf-8")
+          (OUT / "selected_versions.json").write_text(json.dumps(selected, indent=2), encoding="utf-8")
+
+          # Write per-version metadata so the assembly step has full info
+          versions_meta = []
+          for v in selected:
+              versions_meta.append({
+                  "id": v["id"],
+                  "version_number": v.get("version_number", ""),
+                  "name": v.get("name", ""),
+                  "version_type": v.get("version_type", ""),
+                  "date_published": v.get("date_published", ""),
+                  "game_versions": v.get("game_versions", []),
+                  "loaders": v.get("loaders", []),
+              })
+          (OUT / "versions_meta.json").write_text(json.dumps(versions_meta, indent=2), encoding="utf-8")
+
+          # Download the first (most recent) working version's jar and decompile it
+          first = None
+          for v in selected:
+              fi = select_primary_modrinth_file(v.get("files", []))
+              if fi:
+                  first = v
+                  break
+
+          if first:
+              fid = first["id"]
+              fi = select_primary_modrinth_file(first.get("files", []))
+              jar_url = fi["url"]
+              jar_name = fi["filename"]
+              jar_dest = OUT / "first_version" / jar_name
+              jar_dest.parent.mkdir(parents=True, exist_ok=True)
+              # Download
+              req = urllib.request.Request(jar_url, headers={"User-Agent": build_modrinth_user_agent()})
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  jar_dest.write_bytes(r.read())
+              print(f"Downloaded first version jar: {jar_name} ({jar_dest.stat().st_size:,}B)")
+
+              # Decompile
+              manifest = load_json(Path("version-manifest.json"))
+              decompile_out = OUT / "first_version" / "decompiled"
+              result = decompile_jar_internal(jar_dest, manifest, output_dir=decompile_out)
+              print(f"Decompiled first version: status={result.status}")
+
+              # Copy source to a known location
+              src_target = OUT / "first_version" / "src"
+              if decompile_out.exists():
+                  for item in decompile_out.iterdir():
+                      if item.name == "src":
+                          if item.is_dir():
+                              shutil.copytree(item, src_target, dirs_exist_ok=True)
+                          break
+
+              # Write first_version_meta.json
+              first_meta = {
+                  "id": first["id"],
+                  "version_number": first.get("version_number", ""),
+                  "name": first.get("name", ""),
+                  "version_type": first.get("version_type", ""),
+                  "date_published": first.get("date_published", ""),
+                  "game_versions": first.get("game_versions", []),
+                  "loaders": first.get("loaders", []),
+                  "jar_name": jar_name,
+                  "decompile_status": result.status,
+              }
+              (OUT / "first_version" / "meta.json").write_text(json.dumps(first_meta, indent=2), encoding="utf-8")
+
+              # Copy mod_info.txt if available
+              mi = decompile_out / "mod_info.txt"
+              if mi.exists():
+                  shutil.copy(mi, OUT / "first_version" / "mod_info.txt")
+          else:
+              print("WARNING: No downloadable file found for any version.")
+              (OUT / "first_version").mkdir(parents=True, exist_ok=True)
+              (OUT / "first_version" / "meta.json").write_text("{}", encoding="utf-8")
+
+          # Write projectinfo.txt
+          slug = project.get("slug", ref)
+          title = project.get("title", slug)
+          lines = [
+              "=" * 72,
+              f"MODRINTH PROJECT: {title}",
+              f"Slug: {slug}",
+              f"URL: https://modrinth.com/mod/{slug}",
+              f"Project ID: {project.get('id', '?')}",
+              f"Type: {project.get('project_type', 'mod')}",
+              f"License: {project.get('license', {}).get('id', '?')}",
+              f"Client Side: {project.get('client_side', '?')}",
+              f"Server Side: {project.get('server_side', '?')}",
+              f"Categories: {', '.join(project.get('categories', []))}",
+              f"Loaders: {', '.join(project.get('loaders', []))}",
+              f"MC Versions: {', '.join(project.get('game_versions', []))}",
+              f"Downloads: {project.get('downloads', 0):,}",
+              f"Description: {project.get('description', '') or ''}",
+              "=" * 72,
+              "",
+              "── SUPPORTED VERSIONS ON MODRINTH ───────────────────────────────",
+          ]
+          for vmeta in versions_meta:
+              gvs = ", ".join(vmeta["game_versions"])
+              lds = ", ".join(vmeta["loaders"])
+              lines.append(f"  {vmeta['version_number']:<20} [{vmeta['version_type']}]  MC={gvs:<20}  Loader={lds}")
+
+          lines += ["", "── FIRST WORKING VERSION (decompiled) ────────────────────────"]
+          if first:
+              lines += [
+                  f"  Version: {first.get('version_number', '')}",
+                  f"  Name: {first.get('name', '')}",
+                  f"  Published: {first.get('date_published', '')[:10]}",
+                  f"  Type: {first.get('version_type', '')}",
+                  f"  MC Versions: {', '.join(first.get('game_versions', []))}",
+                  f"  Loaders: {', '.join(first.get('loaders', []))}",
+                  f"  Jar: {jar_name}",
+                  f"  Decompile status: {result.status}",
+              ]
+              mi_file = OUT / "first_version" / "mod_info.txt"
+              if mi_file.exists():
+                  lines.append("")
+                  lines.append("  Mod Info:")
+                  for line in mi_file.read_text(encoding="utf-8").splitlines():
+                      lines.append(f"    {line}")
+          else:
+              lines.append("  No working version found.")
+
+          lines += ["", "── OTHER VERSIONS (decompiled source PATH only) ───────────────"]
+          for vmeta in versions_meta:
+              if first and vmeta["id"] == first["id"]:
+                  continue
+              gvs = ", ".join(vmeta["game_versions"])
+              lds = ", ".join(vmeta["loaders"])
+              src_path = f"DecompiledMinecraftSourceCode/{gvs.split(', ')[0] if gvs else '?'}-{lds.split(', ')[0] if lds else '?'}"
+              lines.append(f"  {vmeta['version_number']:<20} source_path={src_path}")
+
+          lines += ["", "=" * 72]
+          (OUT / "projectinfo.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print(f"Wrote projectinfo.txt ({len(lines)} lines)")
+
+          # Outputs
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          output_path.write_text(f"project_slug={slug}\nversion_count={len(all_versions)}\n", encoding="utf-8")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: info-gather-output
+          path: .workflow_artifacts/info/
+          if-no-files-found: error
+
+# ---------------------------------------------------------------------------
+# Job 1b — Diagnosis: scan all versions for shells/corruption/missing
+# ---------------------------------------------------------------------------
+  diagnosis:
+    name: Diagnose shells, corruption, and missing versions
+    runs-on: ubuntu-latest
+    outputs:
+      has_issues: ${{ steps.diagnose.outputs.has_issues }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - name: Run diagnosis
+        id: diagnose
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          mkdir -p .workflow_artifacts/diagnosis
+          python3 - <<'PY'
+          import json, os, sys, urllib.parse, urllib.request, urllib.error, zipfile, re, time
+          from pathlib import Path
+          from datetime import datetime
+
+          sys.path.insert(0, str(Path.cwd()))
+          from modcompiler.modrinth import (
+              ModrinthClient, build_modrinth_user_agent,
+              normalize_modrinth_project_ref, select_primary_modrinth_file,
+          )
+          from modcompiler.common import load_json
+
+          TOKEN = os.environ.get("MODRINTH_TOKEN", "").strip()
+          RAW_URL = "${{ inputs.modrinth_project_url }}"
+          OUT = Path(".workflow_artifacts/diagnosis")
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          ref = normalize_modrinth_project_ref(RAW_URL)
+          client = ModrinthClient(token=TOKEN or None, user_agent=build_modrinth_user_agent())
+          project = client.resolve_project(ref)
+          slug = project.get("slug", ref)
+          title = project.get("title", slug)
+
+          all_versions = client.request_json(
+              "GET", f"/project/{urllib.parse.quote(ref, safe='')}/version",
+              params={"include_changelog": "false"},
+          )
+          if not isinstance(all_versions, list):
+              all_versions = []
+          print(f"Total versions: {len(all_versions)}")
+
+          # Select latest per loader+MC pair
+          def parse_vnum(s):
+              parts = []
+              for t in re.split(r"[.\-_]", str(s).strip()):
+                  if t.isdigit(): parts.append(int(t))
+                  elif t: parts.append(t)
+              return tuple(parts) if parts else (0,)
+
+          best = {}
+          for v in all_versions:
+              loaders = [str(l) for l in v.get("loaders", []) if str(l).strip()]
+              gvs = [str(g) for g in v.get("game_versions", []) if str(g).strip()]
+              if not loaders or not gvs: continue
+              vnum = str(v.get("version_number", "")).strip()
+              vkey = parse_vnum(vnum)
+              pub = v.get("date_published", "") or ""
+              for loader in loaders:
+                  for gv in gvs:
+                      key = (loader, gv)
+                      cur = best.get(key)
+                      if cur is None:
+                          best[key] = {"v": v, "key": vkey, "pub": pub}
+                      else:
+                          try: is_newer = vkey > cur["key"]
+                          except TypeError: is_newer = str(vkey) > str(cur["key"])
+                          if is_newer or (vkey == cur["key"] and pub > cur["pub"]):
+                              best[key] = {"v": v, "key": vkey, "pub": pub}
+
+          seen = set()
+          selected = []
+          for entry in best.values():
+              vid = entry["v"]["id"]
+              if vid not in seen:
+                  seen.add(vid)
+                  selected.append(entry["v"])
+          print(f"Analysing {len(selected)} latest versions per slot")
+
+          # Build repo capability set
+          manifest = load_json(Path("version-manifest.json"))
+          repo_caps = set()
+          for rng in manifest["ranges"]:
+              for loader, lcfg in rng["loaders"].items():
+                  svs = lcfg.get("supported_versions", [])
+                  if not svs:
+                      svs = [rng["min_version"]]
+                  for sv in svs:
+                      repo_caps.add((sv, loader))
+
+          # Analyse each selected version
+          def jar_has_classes(path):
+              try:
+                  with zipfile.ZipFile(path) as z:
+                      return sum(1 for e in z.infolist() if not e.is_dir() and e.filename.endswith(".class"))
+              except Exception:
+                  return -1
+
+          records = []
+          shells = []
+          working = []
+          for v in selected:
+              vid = v["id"]
+              fi = select_primary_modrinth_file(v.get("files", []))
+              jar_name = ""
+              jar_size = 0
+              class_count = -1
+              is_shell = False
+              shell_reason = ""
+
+              if fi:
+                  jar_name = fi["filename"]
+                  jar_url = fi["url"]
+                  jar_dest = OUT / "downloads" / vid / jar_name
+                  jar_dest.parent.mkdir(parents=True, exist_ok=True)
+                  req = urllib.request.Request(jar_url, headers={"User-Agent": build_modrinth_user_agent()})
+                  try:
+                      with urllib.request.urlopen(req, timeout=60) as r:
+                          jar_dest.write_bytes(r.read())
+                      jar_size = jar_dest.stat().st_size
+                  except Exception as e:
+                      print(f"  Download failed for {vid}: {e}")
+
+                  if jar_dest.exists():
+                      class_count = jar_has_classes(jar_dest)
+
+                  if class_count == 0:
+                      is_shell = True
+                      shell_reason = "no .class files in jar"
+                  elif class_count == -1:
+                      is_shell = True
+                      shell_reason = "jar unreadable"
+                  elif jar_size < 5000:
+                      is_shell = True
+                      shell_reason = f"jar too small ({jar_size}B, < 5KB)"
+              else:
+                  is_shell = True
+                  shell_reason = "no primary file"
+
+              rec = {
+                  "id": vid,
+                  "version_number": v.get("version_number", vid),
+                  "name": v.get("name", ""),
+                  "version_type": v.get("version_type", ""),
+                  "date_published": v.get("date_published", ""),
+                  "game_versions": v.get("game_versions", []),
+                  "loaders": v.get("loaders", []),
+                  "jar_name": jar_name,
+                  "jar_size": jar_size,
+                  "class_count": class_count,
+                  "is_shell": is_shell,
+                  "shell_reason": shell_reason,
+              }
+              records.append(rec)
+              if is_shell:
+                  shells.append(rec)
+              else:
+                  working.append(rec)
+
+          # Find original (oldest working) version
+          working.sort(key=lambda r: r["date_published"])
+          shells.sort(key=lambda r: r["date_published"])
+          original = working[0] if working else None
+
+          # Latest working per loader
+          latest_per_loader = {}
+          for r in working:
+              for loader in r["loaders"]:
+                  latest_per_loader[loader] = r
+
+          # Published (mc_version, loader) pairs
+          published_pairs = set()
+          for r in working:
+              for loader in r["loaders"]:
+                  for gv in r["game_versions"]:
+                      published_pairs.add((gv, loader))
+
+          # Missing: what repo CAN build but isn't published
+          missing_pairs = repo_caps - published_pairs
+          missing_by_loader = {}
+          for gv, ldr in sorted(missing_pairs):
+              missing_by_loader.setdefault(ldr, []).append(gv)
+
+          # Write diagnosis.txt
+          SEP = "=" * 72
+          lines = [
+              SEP,
+              f"DIAGNOSIS: {title}",
+              f"Slug: {slug}",
+              f"URL: https://modrinth.com/mod/{slug}",
+              SEP,
+              "",
+              "── SUMMARY ───────────────────────────────────────────────────────",
+              f"  Total versions on Modrinth : {len(all_versions)}",
+              f"  Analysed (latest per slot) : {len(selected)}",
+              f"  Working versions           : {len(working)}",
+              f"  Shell/malformed versions   : {len(shells)}",
+              f"  Missing (repo can build)   : {len(missing_pairs)}",
+              "",
+          ]
+
+          if original:
+              lines += ["── ORIGINAL VERSION (oldest working) ────────────────────────────────"]
+              lines += [
+                  f"  Version number : {original['version_number']}",
+                  f"  Published      : {original['date_published'][:10]}",
+                  f"  Loaders        : {', '.join(original['loaders'])}",
+                  f"  MC versions    : {', '.join(original['game_versions'])}",
+                  f"  Jar            : {original['jar_name']} ({original['jar_size']:,}B, {original['class_count']} classes)",
+              ]
+              lines.append("")
+
+          lines += ["── LATEST WORKING VERSION PER LOADER ────────────────────────────────"]
+          for ldr, r in sorted(latest_per_loader.items()):
+              lines += [
+                  f"  [{ldr}]",
+                  f"    Version : {r['version_number']}",
+                  f"    MC      : {', '.join(r['game_versions'])}",
+                  f"    Jar     : {r['jar_name']} ({r['jar_size']:,}B, {r['class_count']} classes)",
+              ]
+          lines.append("")
+
+          lines += ["── ALL ANALYSED VERSIONS ───────────────────────────────────────────"]
+          lines.append(f"  {'Version':<20} {'Date':<12} {'Loaders':<20} {'MC':<18} {'Status':<10} {'Classes':>8}")
+          lines.append(f"  {'-'*20} {'-'*12} {'-'*20} {'-'*18} {'-'*10} {'-'*8}")
+          for r in records:
+              status = "SHELL" if r["is_shell"] else "working"
+              ldrs = ",".join(r["loaders"])[:18]
+              gvs = ",".join(r["game_versions"])[:16]
+              lines.append(f"  {r['version_number']:<20} {r['date_published'][:10]:<12} {ldrs:<20} {gvs:<18} {status:<10} {r['class_count']:>8}")
+          lines.append("")
+
+          lines += ["── MISSING VERSIONS (repo can build, not on Modrinth) ───────────────"]
+          if missing_pairs:
+              for ldr in sorted(missing_by_loader.keys()):
+                  lines.append(f"  [{ldr}]  {', '.join(sorted(missing_by_loader[ldr]))}")
+          else:
+              lines.append("  None — all repo-buildable versions are already published!")
+          lines.append("")
+
+          lines += ["── SHELL VERSIONS (zero .class files or tiny jars) ───────────────────"]
+          for r in shells:
+              lines.append(f"  {r['version_number']:<20} {r['date_published'][:10]}  loaders={','.join(r['loaders'])}  reason={r['shell_reason']}")
+          if not shells:
+              lines.append("  No shell versions detected.")
+          lines.append("")
+
+          lines += [f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", SEP]
+
+          (OUT / "diagnosis.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print(f"Wrote diagnosis.txt ({len(lines)} lines)")
+
+          # Write machine-readable diagnosis.json
+          diag = {
+              "slug": slug,
+              "title": title,
+              "total_versions": len(all_versions),
+              "analysed_versions": len(selected),
+              "working_count": len(working),
+              "shell_count": len(shells),
+              "missing_count": len(missing_pairs),
+              "has_issues": len(shells) > 0 or len(missing_pairs) > 0,
+              "original_version": original,
+              "latest_per_loader": {k: v for k, v in latest_per_loader.items()},
+              "missing_pairs": [{"mc_version": gv, "loader": l} for gv, l in sorted(missing_pairs)],
+              "version_records": records,
+          }
+          (OUT / "diagnosis.json").write_text(json.dumps(diag, indent=2, default=str), encoding="utf-8")
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          output_path.write_text(f"has_issues={'true' if diag['has_issues'] else 'false'}\n", encoding="utf-8")
+          print(f"Diagnosis complete: {len(shells)} shells, {len(missing_pairs)} missing")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diagnosis-output
+          path: .workflow_artifacts/diagnosis/
+          if-no-files-found: error
+
+# ---------------------------------------------------------------------------
+# Phase 2 — Assemble final bundle
+# ---------------------------------------------------------------------------
+  assemble:
+    name: Assemble final analysis bundle
+    needs: [info-gather, diagnosis]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: info-gather-output
+          path: .workflow_downloads/info
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: diagnosis-output
+          path: .workflow_downloads/diagnosis
+
+      - name: Assemble final bundle
+        shell: bash
+        run: |
+          mkdir -p .workflow_artifacts/bundle
+          # Copy projectinfo.txt
+          if [ -f .workflow_downloads/info/projectinfo.txt ]; then
+            cp .workflow_downloads/info/projectinfo.txt .workflow_artifacts/bundle/projectinfo.txt
+          fi
+          # Copy diagnosis
+          if [ -f .workflow_downloads/diagnosis/diagnosis.txt ]; then
+            cp .workflow_downloads/diagnosis/diagnosis.txt .workflow_artifacts/bundle/diagnosis.txt
+          fi
+          if [ -f .workflow_downloads/diagnosis/diagnosis.json ]; then
+            cp .workflow_downloads/diagnosis/diagnosis.json .workflow_artifacts/bundle/diagnosis.json
+          fi
+          # Copy project.json
+          if [ -f .workflow_downloads/info/project.json ]; then
+            cp .workflow_downloads/info/project.json .workflow_artifacts/bundle/project.json
+          fi
+          # Copy first version decompiled source
+          if [ -d .workflow_downloads/info/first_version ]; then
+            cp -r .workflow_downloads/info/first_version .workflow_artifacts/bundle/first_version
+          fi
+          # Copy all versions meta
+          if [ -f .workflow_downloads/info/versions_meta.json ]; then
+            cp .workflow_downloads/info/versions_meta.json .workflow_artifacts/bundle/versions_meta.json
+          fi
+          # Copy diagnosis downloads (per-version jars for inspection)
+          if [ -d .workflow_downloads/diagnosis/downloads ]; then
+            mkdir -p .workflow_artifacts/bundle/jars
+            for vdir in .workflow_downloads/diagnosis/downloads/*/; do
+              slug=$(basename "$vdir")
+              for jar in "$vdir"/*.jar; do
+                [ -f "$jar" ] && cp "$jar" ".workflow_artifacts/bundle/jars/${slug}_$(basename "$jar")"
+              done
+            done
+          fi
+          # Write README
+          cat > .workflow_artifacts/bundle/README.md << 'READMEEOF'
+          # Automated Mod to ALL Version Converter — Analysis Bundle
+
+          ## Files
+
+          - `projectinfo.txt`     — Modrinth project metadata + first version source code + paths to all version sources
+          - `diagnosis.txt`       — Human-readable diagnosis of shells, corruption, and missing versions
+          - `diagnosis.json`      — Machine-readable version of the diagnosis
+          - `project.json`        — Raw Modrinth API project object
+          - `versions_meta.json`  — All selected versions metadata
+          - `first_version/`      — Decompiled source code of the first working version
+          - `first_version/meta.json`  — Metadata about the first version
+          - `first_version/mod_info.txt` — Mod info extracted from the jar
+          - `jars/`               — Downloaded jars for each analysed version
+
+          ## How to use
+
+          1. Read `projectinfo.txt` for the full project overview.
+          2. Read `diagnosis.txt` to see which versions are shells, working, or missing.
+          3. Browse `first_version/src/` for the decompiled source code.
+          4. Use `diagnosis.json` in scripts or tools.
+          READMEEOF
+          echo "Assembled final bundle"
+
+      - name: Upload final bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-to-all-analysis-bundle
+          path: .workflow_artifacts/bundle/
+          if-no-files-found: error
+
+      - name: Write step summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Automated Mod to ALL Version Converter — Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Item | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f .workflow_downloads/info/projectinfo.txt ]; then
+            echo "| projectinfo.txt | Available |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f .workflow_downloads/diagnosis/diagnosis.txt ]; then
+            echo "| diagnosis.txt | Available |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -d .workflow_downloads/info/first_version/src ]; then
+            SRC_COUNT=$(find .workflow_downloads/info/first_version/src -name "*.java" 2>/dev/null | wc -l)
+            echo "| First version source | $SRC_COUNT .java files |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifact: \`mod-to-all-analysis-bundle\`" >> "$GITHUB_STEP_SUMMARY"
