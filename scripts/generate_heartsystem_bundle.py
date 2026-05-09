@@ -1934,6 +1934,33 @@ _FABRIC_165_MIXINJSON = """\
 }
 """
 
+_FABRIC_165_DATA_117 = """\
+package asd.itamio.heartsystem;
+
+import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.server.network.ServerPlayerEntity;
+
+import java.util.UUID;
+
+public class HeartData {
+    private static final UUID MODIFIER_UUID = UUID.fromString("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+    private static final String MODIFIER_NAME = "heartsystem.maxhealth";
+
+    public static void applyMaxHealth(ServerPlayerEntity player, int hearts) {
+        EntityAttributeInstance attr = player.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH);
+        if (attr == null) return;
+        attr.removeModifier(MODIFIER_UUID);
+        double delta = (hearts * 2.0) - 20.0;
+        EntityAttributeModifier mod = new EntityAttributeModifier(MODIFIER_UUID, MODIFIER_NAME, delta, EntityAttributeModifier.Operation.ADDITION);
+        attr.applyPersistentModifier(mod);
+        float newMax = (float)(hearts * 2);
+        if (player.getHealth() > newMax) player.setHealth(newMax);
+    }
+}
+"""
+
 SRC_1165_FABRIC = {
     "HeartSystemMod.java":                                    _FABRIC_165_MOD,
     "mixin/PlayerDeathMixin.java":                            _FABRIC_165_MIXIN,
@@ -1943,8 +1970,23 @@ SRC_1165_FABRIC = {
     "../resources/heartsystem.mixins.json":                   _FABRIC_165_MIXINJSON,
 }
 
-SRC_117_FABRIC  = SRC_1165_FABRIC
-SRC_118_FABRIC  = SRC_1165_FABRIC
+SRC_117_FABRIC = {
+    "HeartSystemMod.java":                                    _FABRIC_165_MOD,
+    "mixin/PlayerDeathMixin.java":                            _FABRIC_165_MIXIN,
+    "HeartStorage.java":                                      _FABRIC_165_STORAGE,
+    "HeartData.java":                                         _FABRIC_165_DATA_117,
+    "HeartConfig.java":                                       _FABRIC_165_CONFIG,
+    "../resources/heartsystem.mixins.json":                   _FABRIC_165_MIXINJSON,
+}
+
+SRC_118_FABRIC = {
+    "HeartSystemMod.java":                                    _FABRIC_165_MOD,
+    "mixin/PlayerDeathMixin.java":                            _FABRIC_165_MIXIN,
+    "HeartStorage.java":                                      _FABRIC_165_STORAGE,
+    "HeartData.java":                                         _FABRIC_165_DATA_117,
+    "HeartConfig.java":                                       _FABRIC_165_CONFIG,
+    "../resources/heartsystem.mixins.json":                   _FABRIC_165_MIXINJSON,
+}
 
 
 # ===========================================================================
