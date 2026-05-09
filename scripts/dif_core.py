@@ -94,30 +94,67 @@ class DifEntry:
         ).lower()
 
     def matches_error(self, log_text: str) -> float:
-        """Return a 0-1 confidence that this entry matches the given build log."""
+        """Return a 0-1 confidence that this entry matches the given build log.
+        
+        Only matches against actual error lines from the compilation output,
+        not the entire log (which includes file paths, imports, etc.)
+        """
+        # Extract only the error context - lines containing "error" from compile output
+        # This filters out file paths, imports, and other non-error content
+        error_context = self._extract_error_context(log_text)
+        if not error_context:
+            return 0.0
+        
         score = 0.0
-        log_lower = log_text.lower()
-
-        # Error pattern matches (highest weight)
+        
+        # Error pattern matches (highest weight) - must match in error context
+        error_patterns_matched = 0
         for pat in self.error_patterns:
             try:
-                if re.search(pat, log_text, re.IGNORECASE):
+                if re.search(pat, error_context, re.IGNORECASE):
                     score += 0.4
+                    error_patterns_matched += 1
             except re.error:
-                if pat.lower() in log_lower:
+                if pat.lower() in error_context.lower():
                     score += 0.4
-
-        # Symbol matches
+                    error_patterns_matched += 1
+        
+        # Symbol matches - only count if found in error context
+        # (not in file paths or imports)
         for sym in self.symbols:
-            if sym.lower() in log_lower:
-                score += 0.2
-
-        # Tag matches (e.g. "compile-error", "forge")
-        for tag in self.tags:
-            if tag.lower() in log_lower:
-                score += 0.05
-
+            if sym.lower() in error_context.lower():
+                score += 0.15
+        
+        # Version matches - if version is mentioned in error, boost confidence
+        for ver in self.versions:
+            if ver.lower() in error_context.lower():
+                score += 0.1
+        
+        # Only boost with tag matches if we have at least one error pattern match
+        # Tags are informational but shouldn't dominate the score
+        if error_patterns_matched > 0:
+            for tag in self.tags:
+                if tag.lower() in error_context.lower():
+                    score += 0.02
+        
         return min(score, 1.0)
+    
+    def _extract_error_context(self, log_text: str) -> str:
+        """Extract only the lines containing actual compilation errors."""
+        lines = log_text.splitlines()
+        error_lines = []
+        
+        for i, line in enumerate(lines):
+            line_lower = line.lower()
+            # Standard javac error format
+            if "error:" in line_lower:
+                # Include this line and next 2 lines of context
+                error_lines.extend(lines[i:min(i+3, len(lines))])
+            # Gradle/Mixin error format often uses these patterns
+            elif any(x in line_lower for x in ["> :", "compilation failed", "build failed"]):
+                error_lines.extend(lines[i:min(i+5, len(lines))])
+        
+        return "\n".join(error_lines)
 
     def nlp_score(self, query_tokens: list[str]) -> float:
         """TF-IDF-style relevance score for a natural language query."""
@@ -429,7 +466,7 @@ def search_dif(query: str, top_n: int = 10, show_all: bool = False) -> list[tupl
     return results[:max(top_n, 3)]
 
 
-def match_errors_to_dif(log_text: str, threshold: float = 0.25) -> list[tuple[float, DifEntry]]:
+def match_errors_to_dif(log_text: str, threshold: float = 0.35) -> list[tuple[float, DifEntry]]:
     """
     Match a build log against the DIF database.
     Returns (confidence, entry) pairs for likely matches.
