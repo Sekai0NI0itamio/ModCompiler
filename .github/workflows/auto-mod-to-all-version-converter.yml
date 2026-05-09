@@ -156,13 +156,44 @@ jobs:
               })
           (OUT / "versions_meta.json").write_text(json.dumps(versions_meta, indent=2), encoding="utf-8")
 
-          # Download the first (most recent) working version's jar and decompile it
-          first = None
-          for v in selected:
+          # Find the original (oldest) version, then pick the latest release
+          # matching the same loader + MC version for decompilation.
+          oldest_versions = sorted(all_versions, key=lambda v: v.get("date_published", ""))
+          oldest = None
+          for v in oldest_versions:
               fi = select_primary_modrinth_file(v.get("files", []))
-              if fi:
-                  first = v
+              if fi and v.get("loaders") and v.get("game_versions"):
+                  oldest = v
                   break
+
+          first = None
+          if oldest:
+              oldest_loaders = set(str(l) for l in oldest.get("loaders", []))
+              oldest_gvs = set(str(g) for g in oldest.get("game_versions", []))
+              print(f"Oldest version: {oldest.get('version_number', '?')} "
+                    f"(published {oldest.get('date_published', '?')[:10]}) "
+                    f"loaders={list(oldest_loaders)} mc={list(oldest_gvs)}")
+
+              # From all versions (newest first), find the latest that shares
+              # at least one loader AND one MC version with the oldest.
+              newest_versions = sorted(all_versions, key=lambda v: v.get("date_published", ""), reverse=True)
+              for v in newest_versions:
+                  v_loaders = set(str(l) for l in v.get("loaders", []))
+                  v_gvs = set(str(g) for g in v.get("game_versions", []))
+                  if v_loaders & oldest_loaders and v_gvs & oldest_gvs:
+                      fi = select_primary_modrinth_file(v.get("files", []))
+                      if fi:
+                          first = v
+                          print(f"Latest matching version: {v.get('version_number', '?')} "
+                                f"(published {v.get('date_published', '?')[:10]})")
+                          break
+
+              # Fallback: if no version matches the same loader+MC, use the oldest itself
+              if not first:
+                  fi = select_primary_modrinth_file(oldest.get("files", []))
+                  if fi:
+                      first = oldest
+                      print("No newer version matches oldest loader+MC, using oldest directly")
 
           if first:
               fid = first["id"]
@@ -255,7 +286,7 @@ jobs:
               lds = ", ".join(vmeta["loaders"])
               lines.append(f"  {vmeta['version_number']:<20} [{vmeta['version_type']}]  MC={gvs:<20}  Loader={lds}")
 
-          lines += ["", "── FIRST WORKING VERSION (decompiled) ────────────────────────"]
+          lines += ["", "── LATEST VERSION FOR ORIGINAL LOADER+MC (decompiled) ─────────"]
           if first:
               lines += [
                   f"  Version: {first.get('version_number', '')}",
