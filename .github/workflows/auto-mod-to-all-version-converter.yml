@@ -501,9 +501,6 @@ jobs:
                   elif class_count == -1:
                       is_shell = True
                       shell_reason = "jar unreadable"
-                  elif jar_size < 5000:
-                      is_shell = True
-                      shell_reason = f"jar too small ({jar_size}B, < 5KB)"
               else:
                   is_shell = True
                   shell_reason = "no primary file"
@@ -609,7 +606,7 @@ jobs:
               lines.append("  None — all repo-buildable versions are already published!")
           lines.append("")
 
-          lines += ["── SHELL VERSIONS (zero .class files or tiny jars) ───────────────────"]
+          lines += ["── SHELL VERSIONS (zero .class files in jar) ──────────────────────"]
           for r in shells:
               lines.append(f"  {r['version_number']:<20} {r['date_published'][:10]}  loaders={','.join(r['loaders'])}  reason={r['shell_reason']}")
           if not shells:
