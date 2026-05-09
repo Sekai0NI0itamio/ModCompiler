@@ -1,0 +1,98 @@
+{
+  "type": "function",
+  "function": {
+    "name": "ls",
+    "version": "2.0.0",
+    "executionMode": "optional",
+    "description": "List directory contents with intelligent filtering and workspace-aware path resolution. Automatically skips common build artifacts and provides structured metadata.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Directory path to list (defaults to current directory). Supports both absolute and workspace-relative paths."
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Multiple directory paths to list simultaneously. When provided, 'path' parameter is ignored."
+        },
+        "max_depth": {
+          "type": "number",
+          "description": "Maximum recursion depth (default: 2, max: 5)",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 5
+        },
+        "show_hidden": {
+          "type": "boolean",
+          "description": "Include hidden files and directories (default: false)",
+          "default": false
+        },
+        "include_metadata": {
+          "type": "boolean",
+          "description": "Include file metadata (size, type, modified date) (default: true)",
+          "default": true
+        },
+        "filter_artifacts": {
+          "type": "boolean",
+          "description": "Filter out common build artifacts and dependencies (default: true)",
+          "default": true
+        },
+        "max_results": {
+          "type": "number",
+          "description": "Maximum number of entries to return across all paths (default: 100)",
+          "default": 100,
+          "minimum": 10,
+          "maximum": 500
+        }
+      },
+      "required": []
+    }
+  },
+  "errorHandling": {
+    "retryable": true,
+    "maxRetries": 2,
+    "retryBackoff": {
+      "type": "exponential",
+      "initial": 500,
+      "multiplier": 2,
+      "max": 5000
+    },
+    "commonErrors": [
+      {
+        "pattern": "not found|no such file|ENOENT",
+        "solution": "Directory does not exist",
+        "suggestedAction": "Use find_files to locate the directory or check workspace structure",
+        "suggestedTool": "find_files"
+      },
+      {
+        "pattern": "permission denied|EACCES",
+        "solution": "No read permission on directory",
+        "suggestedAction": "Check directory permissions or choose different path",
+        "suggestedTool": null
+      },
+      {
+        "pattern": "too many files|result truncated",
+        "solution": "Directory contains too many files",
+        "suggestedAction": "Use more specific path or increase max_depth filtering",
+        "suggestedTool": "find_files"
+      }
+    ]
+  },
+  "workspaceIntegration": {
+    "pathResolution": "workspace-relative",
+    "intelligentFiltering": true,
+    "artifactPatterns": [
+      "node_modules/**",
+      ".git/**",
+      "dist/**",
+      "build/**",
+      "*.log",
+      ".DS_Store",
+      "Thumbs.db"
+    ]
+  }
+}

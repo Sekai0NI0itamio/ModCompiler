@@ -1,0 +1,80 @@
+{
+  "type": "function",
+  "function": {
+    "name": "batch_str_replace",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Replace multiple strings across one or more files in a single operation. More efficient than invoking str_replace multiple times. Each replacement must match exactly one location. Supports up to 50 replacements per call. All replacements are validated before any are executed. If stopOnFirstError is false (default), continues with remaining replacements even if one fails.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "replacements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Path to the file to modify"
+              },
+              "oldStr": {
+                "type": "string",
+                "description": "The exact string to find and replace. Must match exactly one location. Include context (2-3 lines) to make it unique."
+              },
+              "newStr": {
+                "type": "string",
+                "description": "The new string to replace oldStr with"
+              },
+              "description": {
+                "type": "string",
+                "description": "Optional description of what this replacement does"
+              }
+            },
+            "required": [
+              "path",
+              "oldStr",
+              "newStr"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "Array of string replacements to perform. Each item specifies a file, the exact string to find, and the replacement."
+        },
+        "stopOnFirstError": {
+          "type": "boolean",
+          "description": "If true, stop and rollback all replacements if any single replacement fails. If false (default), continue with remaining replacements.",
+          "default": false
+        },
+        "atomic": {
+          "type": "boolean",
+          "description": "If true, treat as atomic operation - all succeed or all fail. Default false allows partial success.",
+          "default": false
+        }
+      },
+      "required": [
+        "replacements"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": false,
+    "maxRetries": 0,
+    "commonErrors": [
+      {
+        "pattern": "not found in file",
+        "solution": "One or more strings don't match any location in their files",
+        "suggestedTool": "view"
+      },
+      {
+        "pattern": "matches multiple",
+        "solution": "Add more context to make strings unique",
+        "suggestedTool": null
+      },
+      {
+        "pattern": "too many replacements",
+        "solution": "Maximum 50 replacements per call, split into multiple calls",
+        "suggestedTool": null
+      }
+    ]
+  }
+}

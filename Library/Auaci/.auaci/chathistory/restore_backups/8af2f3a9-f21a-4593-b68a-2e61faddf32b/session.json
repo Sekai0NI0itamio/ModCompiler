@@ -1,0 +1,30 @@
+{
+  "creationdate": "2026-01-29T09:04:26.415Z",
+  "lastused": "2026-02-05T01:56:15.790Z",
+  "session_id": "8af2f3a9-f21a-4593-b68a-2e61faddf32b",
+  "name": "default chat",
+  "chat": [
+    {
+      "timestamp": "2026-02-05T01:55:35.816Z",
+      "user": {
+        "text": "Create a file named hello.txt with hello as its content",
+        "files": []
+      },
+      "gpt": "<tool_use>\n{\n  \"name\": \"write_to_file\",\n  \"input\": {\n    \"path\": \"/Users/solosolar/Desktop/Code Projects/aicoder/BetaR2/IDE/hello.txt\",\n    \"the_content\": \"hello\"\n  },\n  \"tool_system_response\": {\n    \"success\": true,\n    \"path\": \"/Users/solosolar/Desktop/Code Projects/aicoder/BetaR2/IDE/hello.txt\"\n  }\n}\n</tool_use>\n\nCreated `hello.txt` with \"hello\" as its content.",
+      "status": "complete"
+    },
+    {
+      "timestamp": "2026-02-05T01:55:55.313Z",
+      "user": {
+        "text": "Wonderful! Next add a joke into that file",
+        "files": []
+      },
+      "gpt": "<tool_use>\n{\n  \"name\": \"view\",\n  \"input\": {\n    \"path\": \"/Users/solosolar/Desktop/Code Projects/aicoder/BetaR2/IDE/hello.txt\"\n  },\n  \"tool_system_results\": {\n    \"success\": true,\n    \"total_line_count\": 1,\n    \"is_truncated\": false,\n    \"displayed_lines\": 1,\n    \"range_info\": \"(1 - 1)\"\n  }\n}\n</tool_use>\n\n<tool_use>\n{\n  \"name\": \"fs_append\",\n  \"input\": {\n    \"path\": \"/Users/solosolar/Desktop/Code Projects/aicoder/BetaR2/IDE/hello.txt\",\n    \"text\": \"\\nWhy do programmers prefer dark mode? Because light attracts bugs!\"\n  },\n  \"tool_system_response\": {\n    \"success\": true,\n    \"path\": \"/Users/solosolar/Desktop/Code Projects/aicoder/BetaR2/IDE/hello.txt\",\n    \"lines_added\": 2,\n    \"total_lines\": 3,\n    \"display_content\": \"Appended to /Users/solosolar/Desktop/Code Projects/aicoder/BetaR2/IDE/hello.txt\\n+2 line(s), total: 3 lines\"\n  }\n}\n</tool_use>\n\nAdded a programming joke to `hello.txt`. The file now contains:\n\n```\nhello\n\nWhy do programmers prefer dark mode? Because light attracts bugs!\n```",
+      "status": "complete"
+    }
+  ],
+  "input_draft": {
+    "text": "",
+    "files": []
+  }
+}

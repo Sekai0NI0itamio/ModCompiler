@@ -1,0 +1,43 @@
+# This is an example mods.toml file. It contains the required information for the mod to be loaded by Forge.
+
+# The mod's identifier. This is the mod's unique identifier, used to load the mod.
+# It must be unique to your mod.
+modLoader="javafml"
+# A version of the mod. This is a string, which is a maven version string.
+# It should match the version of the mod.
+loaderVersion="[36,)"
+# The license of the mod. This is a SPDX license expression.
+license="LicenseRef-All-Rights-Reserved"
+# The mod's name. This is the name of the mod.
+# It is used for display purposes in the mod list, and for sorting.
+# It may be different than the modId.
+displayName="Snow Accumulation"
+# The mod's description. This is a simple display of your mod's description.
+# It is displayed in the mod's tooltip in the mod list.
+description='''
+Tired of only 1 layer of snow? This mod fixes that, allowing snow to accumulate to world height (configurable)
+'''
+# A list of the mod's authors. This is a list of strings.
+# It is used for display purposes in the mod list.
+authors="Itamio"
+# The mod's website URL.
+# It is used for display purposes in the mod list.
+# It may be an empty string.
+# website=""
+
+# A list of dependencies of the mod.
+# It is used to determine the order of mod loading.
+# It may be an empty list.
+[[dependencies.snowaccumulation]]
+    modId="forge"
+    mandatory=true
+    # A version of the dependency. This is a string, which is a maven version string.
+    # It should match the version of the dependency.
+    versionRange="[36,)"
+    # An ordering relationship for the dependency.
+    # BEFORE - This mod must be loaded before the dependency.
+    # AFTER - This mod must be loaded after the dependency.
+    ordering="NONE"
+    # Side of the dependency. This is one of BOTH, CLIENT, or SERVER.
+    # It is used to determine if the dependency is required on the client, server, or both.
+    side="BOTH"

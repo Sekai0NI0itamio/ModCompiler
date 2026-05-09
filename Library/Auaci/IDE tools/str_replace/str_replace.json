@@ -1,0 +1,50 @@
+{
+  "type": "function",
+  "function": {
+    "name": "str_replace",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Replace a specific string in a file with new content. The oldStr must match EXACTLY one location in the file (including whitespace and indentation). Use this for surgical edits - it's safer than rewriting entire files. If the string is not found or matches multiple locations, the operation fails. PARALLEL EXECUTION: When performing multiple independent string replacements (in different files or non-overlapping sections), invoke str_replace multiple times in parallel rather than sequentially.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the file to modify"
+        },
+        "oldStr": {
+          "type": "string",
+          "description": "The exact string to find and replace. Must match exactly one location. Include enough context (2-3 lines) to make it unique."
+        },
+        "newStr": {
+          "type": "string",
+          "description": "The new string to replace oldStr with"
+        }
+      },
+      "required": ["path", "oldStr", "newStr"]
+    }
+  },
+  "errorHandling": {
+    "retryable": false,
+    "commonErrors": [
+      {
+        "pattern": "not found|no matches",
+        "solution": "Search string does not match any content in file",
+        "suggestedAction": "Use view to examine file and verify exact text to match",
+        "suggestedTool": "view"
+      },
+      {
+        "pattern": "matches multiple|ambiguous",
+        "solution": "Search string matches multiple locations",
+        "suggestedAction": "Add more context lines to make search unique, or use grep first",
+        "suggestedTool": "grep"
+      },
+      {
+        "pattern": "file not found|no such file",
+        "solution": "Target file does not exist",
+        "suggestedAction": "Use find_files to locate the file",
+        "suggestedTool": "find_files"
+      }
+    ]
+  }
+}

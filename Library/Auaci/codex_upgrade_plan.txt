@@ -1,0 +1,121 @@
+CODEX PARITY UPGRADE PLAN (AI CODING IDE CHAT SYSTEM)
+Date: 2026-02-05
+
+Goal
+Bring the IDE chat system closer to OpenAI Codex IDE behavior, focusing on tool parity, instructions/policy, tool output and error feedback, execution logic, provided information logic, and professional-grade safety/UX.
+
+Current System Snapshot (from repo)
+Tools and schemas:
+- Tools are defined as JSON in `src/main/functions/chat/ai-logic/tool-instructions/*.json` and loaded by `toolInvocationService.js`.
+- Tool list includes: view, ls, glob, find_files, grep, semantic_search, context_search, run_command, bash, apply_patch, write_to_file, create_file, fs_append, str_replace, batch_str_replace, diagnostics, edit_function, edit_lines, get_function, web_search, web_fetch, ask, delete_file_folder_with_permission, todo tools, attempt_completion, error_recoverer.
+Execution flow:
+- Main loop in `src/main/functions/chat/send/sendMessage.js` uses API tool_calls when available, otherwise parses `<tool_use>` blocks from text, executes tools, and writes results to raw history.
+- Alternate loop in `src/main/functions/chat/send/modules/gptCycle.js` has separate logic and truncation behavior.
+Context and memory:
+- Raw history stored under `.auaci/chathistory/rawhistory` with a max of 50 messages (`rawHistoryStorage.js`).
+- File context is manually attached as `<file>` tags; no auto-context retrieval is enforced.
+Tool rendering:
+- Tool results are sanitized for UI with `helpers/toolRenderSanitizer.js` and rendered via `helpers/toolRenders/*`.
+Instructions:
+- Prompts in `ai-logic/instructions/*.txt` include guidance referencing tools that are not named exactly in code (e.g., read_file vs view, replace_string_in_file vs str_replace).
+
+Codex IDE Baseline (public features to match)
+- Auto-context and file/folder mention via @, direct local file access, apply_patch, code review, web search, command output reading, image inputs, model switching and reasoning effort controls. 
+- Approval modes for commands and file writes (read-only and auto-approve modes), with transcript logging of tool calls.
+- Tool call format standards and diff rendering are emphasized (apply_patch call and output structures).
+- Sandboxed execution with network disabled by default and explicit user consent for file changes.
+- Extensibility via skills, automations, and tool integrations, including MCP in CLI.
+
+Gaps and Issues (vs Codex IDE)
+Tool differences:
+- Missing Codex-style approval modes for tool usage (read-only, safe, auto) and explicit user confirmation on file writes/commands.
+- No Codex-like auto-context feature or @-mention picker that injects relevant code or files automatically.
+- No explicit code review tool/workflow (e.g., /review style or “review only” prompts).
+- No image input handling for visual context.
+- No MCP integration or generalized tool/plugin registry.
+- Web search/fetch lacks citations and result provenance in UI.
+Instruction differences:
+- Prompt text references tool names that do not exist (`read_file`, `replace_string_in_file`, `multi_replace_string_in_file`) which can mislead the model.
+- Prompts instruct “don’t ask permission” while Codex emphasizes approval flows and safety gates.
+- Lacks Codex system-prompt conventions (commit guidance, test reporting, and tool output reliability wording).
+Tool output/feedback differences:
+- Tool results are stored in custom `tool_system_response` vs `tool_system_results` fields, requiring ad-hoc rendering logic.
+- No standardized error codes or structured error metadata for user-facing remediation.
+- Missing diff-preview or patch visualization similar to Codex before applying edits.
+Execution logic differences:
+- Two separate tool execution loops (`sendMessage.js` and `gptCycle.js`) can diverge and drift; one ignores ToolInvocationService validation.
+- Tool metadata (retryability, token estimation) exists but is not enforced in the main execution path.
+- Text-parsed `<tool_use>` blocks coexist with API tool_calls, which can produce inconsistent histories and tool IDs.
+Provided information logic:
+- No automatic relevance scoring for context; the LLM only sees raw history and optional attachments.
+- Token budgeting is simplistic (fixed 15KB tool truncation), no adaptive summarization or long-term memory.
+Security and sandboxing:
+- Tool handlers operate directly on local FS without a sandbox; network access is open by default for web tools.
+- No separation between read-only exploration and write/execute operations.
+UX and workflow gaps:
+- No slash-command workflows (/review, /status, /auto-context, /history).
+- No consistent transcript/trace UI for tool calls and approvals.
+- Limited visibility into “why” a tool was called or what risks it carries.
+
+Implementation Plan (phased)
+
+Phase 0: Alignment and cleanup (1-2 weeks)
+1. Unify tool naming in prompts to actual tool names (`view`, `str_replace`, `batch_str_replace`) in `ai-logic/instructions/*.txt`.
+2. Remove or consolidate redundant loops by choosing a single execution path (prefer `sendMessage.js`) and deprecate `gptCycle.js` or keep as a test harness only.
+3. Route all tool execution through `toolInvocationService.js` so validation, retry rules, and metadata are consistently applied.
+4. Standardize tool call records to OpenAI-style tool_calls + tool results in raw history; stop mixing text `<tool_use>` as the source of truth.
+5. Add a compatibility layer for older tool transcripts to render without breaking.
+Acceptance criteria: single execution loop, validated tool calls, consistent tool naming in prompts.
+
+Phase 1: Tool protocol and output standardization (2-3 weeks)
+1. Define a unified “tool result envelope” with `status`, `error_code`, `message`, `metrics`, and `display_hint`.
+2. Update tool handlers in `commands/handlers/*` to return structured results with consistent fields.
+3. Update `helpers/toolRenderSanitizer.js` and `helpers/toolRenders/*` to consume the standardized result envelope.
+4. Add tool-call tracing metadata (start time, end time, duration, retries, resource usage).
+5. Implement diff-preview support for file edits and apply_patch output (render pre/post hunks).
+Acceptance criteria: tool outputs look and behave consistently; errors are actionable and standardized.
+
+Phase 2: Approval modes and sandboxing (3-5 weeks)
+1. Add approval modes (read-only, prompt-for-write, auto) with a per-session toggle.
+2. Gate write tools and run_command behind approvals; provide “preview changes” before executing.
+3. Introduce sandbox mode for commands and file writes (container or restricted child process).
+4. Default network access to off for web tools unless user explicitly opts in.
+5. Add safe deletion flow with staged preview and explicit confirmations.
+Acceptance criteria: approvals are enforced; sandbox mode isolates execution; network is opt-in.
+
+Phase 3: Context and memory improvements (3-6 weeks)
+1. Implement auto-context (open files + semantic retrieval) for each prompt.
+2. Add @-mention picker for files, folders, symbols; automatically attach context.
+3. Build a lightweight indexer (file summaries + embeddings/TF-IDF) for fast retrieval.
+4. Add adaptive token budgeting and summarization for long histories.
+5. Add a “context snapshot” display so users see what was sent to the model.
+Acceptance criteria: higher relevance context, stable token usage, and transparent context payloads.
+
+Phase 4: UX parity features (2-4 weeks)
+1. Add slash commands: /review, /status, /auto-context, /history, /help, /compact.
+2. Add code review mode with explicit “review-only” prompt and diff annotations.
+3. Add image attachment support for UI and tool payloads.
+4. Provide a transcript viewer for tool calls, approvals, and outputs (exportable).
+5. Expose model switching + reasoning effort in the UI.
+Acceptance criteria: common Codex workflows are available and discoverable.
+
+Phase 5: Extensibility (2-4 weeks)
+1. Implement MCP integration and a plugin registry for tools.
+2. Add Skills/Automations framework with per-project config and versioning.
+3. Add workspace rules support (AGENTS.md or similar) to customize behavior per repo.
+4. Provide a “tool marketplace” or config UI for enabling/disabling tools per project.
+Acceptance criteria: external tools can be plugged in safely and configured per workspace.
+
+Risks and Decisions Needed
+- Sandbox architecture: containerized vs restricted child process.
+- Search provider: keep DDG or integrate a paid API for reliability and citations.
+- UX scope: whether to match Codex UI 1:1 or adapt to your IDE layout.
+- MCP and Skills scope: minimal plugin system vs full compatibility.
+
+Suggested Milestones
+M1: Phase 0 complete (alignment + single execution loop)
+M2: Phase 1 complete (standardized outputs + diff preview)
+M3: Phase 2 complete (approvals + sandbox)
+M4: Phase 3 complete (auto-context + summarization)
+M5: Phase 4 complete (slash commands + review mode + images)
+M6: Phase 5 complete (MCP + skills + rules)

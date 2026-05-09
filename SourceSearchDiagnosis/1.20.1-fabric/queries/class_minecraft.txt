@@ -1,0 +1,48 @@
+Query: class Minecraft
+Patterns: *.java
+---
+
+=== /tmp/extracted-sources/net/minecraft/server/dedicated/MinecraftDedicatedServer.java ===
+72-import org.apache.logging.log4j.Logger;
+73-import org.jetbrains.annotations.Nullable;
+74-
+75:public class MinecraftDedicatedServer
+76-extends MinecraftServer
+77-implements DedicatedServer {
+78-    static final Logger LOGGER = LogManager.getLogger();
+
+=== /tmp/extracted-sources/net/minecraft/server/MinecraftServer.java ===
+191- * @see net.minecraft.server.dedicated.MinecraftDedicatedServer
+192- * @see net.minecraft.server.integrated.IntegratedServer
+193- */
+194:public abstract class MinecraftServer
+195-extends ReentrantThreadExecutor<ServerTask>
+196-implements SnooperListener,
+197-CommandOutput,
+
+=== /tmp/extracted-sources/net/minecraft/client/MinecraftClientGame.java ===
+21-import org.jetbrains.annotations.Nullable;
+22-
+23-@Environment(value=EnvType.CLIENT)
+24:public class MinecraftClientGame
+25-implements RunningGame {
+26-    private final MinecraftClient client;
+27-    @Nullable
+
+=== /tmp/extracted-sources/net/minecraft/client/MinecraftClient.java ===
+319- * @see net.minecraft.client.render.GameRenderer
+320- */
+321-@Environment(value=EnvType.CLIENT)
+322:public class MinecraftClient
+323-extends ReentrantThreadExecutor<Runnable>
+324-implements SnooperListener,
+325-WindowEventHandler {
+
+=== /tmp/extracted-sources/net/minecraft/MinecraftVersion.java ===
+18-import org.apache.logging.log4j.LogManager;
+19-import org.apache.logging.log4j.Logger;
+20-
+21:public class MinecraftVersion
+22-implements GameVersion {
+23-    private static final Logger LOGGER = LogManager.getLogger();
+24-    public static final GameVersion GAME_VERSION = new MinecraftVersion();

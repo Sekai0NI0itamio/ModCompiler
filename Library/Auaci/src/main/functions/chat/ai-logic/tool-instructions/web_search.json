@@ -1,0 +1,47 @@
+{
+  "type": "function",
+  "function": {
+    "name": "web_search",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Search the web for information using keywords. Returns search results with titles, URLs, and snippets. Use this to find current information, documentation, tutorials, code examples, or solutions to problems.\n\nWhen to use:\n- User asks about current events, latest versions, or recent updates\n- Need to find documentation, tutorials, or code examples\n- Looking for solutions to specific technical problems\n- Verifying information that may have changed\n- Finding libraries, packages, or tools\n\nAfter getting results, use web_fetch to load the full content of specific URLs if needed.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search query/keywords to search for. Be specific and use relevant technical terms."
+        },
+        "num_results": {
+          "type": "number",
+          "description": "Number of results to return (1-20, default 10)"
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": true,
+    "maxRetries": 2,
+    "retryBackoff": {
+      "type": "exponential",
+      "initial": 1000,
+      "multiplier": 2,
+      "max": 15000
+    },
+    "commonErrors": [
+      {
+        "pattern": "timeout|connection refused",
+        "solution": "Search service unavailable or slow",
+        "suggestedTool": null
+      },
+      {
+        "pattern": "rate limit",
+        "solution": "Too many search requests",
+        "suggestedTool": null
+      }
+    ]
+  }
+}

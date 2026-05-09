@@ -1,0 +1,50 @@
+{
+  "type": "function",
+  "function": {
+    "name": "grep",
+    "version": "1.0.0",
+    "executionMode": "optional",
+    "description": "Search files under a directory for regex patterns. Returns matched files, line numbers, and context around matches. TIPS: 1) Escape special regex chars: ( ) [ ] { } + * ? ^ $ | . \\ 2) Use \\b for word boundaries (e.g., '\\bfunction\\b' matches 'function' but not 'malfunction'). 3) Results are capped - make queries specific to avoid truncation. 4) Use simple patterns when possible - complex regex may fail.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Directory path to search in"
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of regex patterns to search for"
+        }
+      },
+      "required": [
+        "queries"
+      ]
+    }
+  },
+  "errorHandling": {
+    "retryable": true,
+    "maxRetries": 1,
+    "retryBackoff": {
+      "type": "exponential",
+      "initial": 500,
+      "multiplier": 2,
+      "max": 5000
+    },
+    "commonErrors": [
+      {
+        "pattern": "invalid regex",
+        "solution": "Regex pattern has syntax error",
+        "suggestedTool": null
+      },
+      {
+        "pattern": "too many results",
+        "solution": "Pattern too broad, refine query",
+        "suggestedTool": "context_search"
+      }
+    ]
+  }
+}

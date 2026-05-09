@@ -1,0 +1,107 @@
+/* chat/code.css
+   Code block and pre/code layout, container for code blocks, copy-button placement
+*/
+
+pre {
+  /* ensure we wrap only at newlines, never at spaces */
+  white-space: pre;
+  overflow: visible; /* let parent handle scrolling */
+  width: max-content;
+  min-width: 100%;
+  font-family: monospace;
+  background: #f1f8f1 !important;
+  border-radius: 4px;
+  padding: 0.5em;
+  margin: 0;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+code {
+  white-space: pre !important;
+  background: none !important;
+  display: inline-block;
+}
+
+/* Code container that can scroll horizontally if needed */
+.code-container {
+  position: relative;
+  margin: 15px 0;
+  background: #f8f8f8;
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
+  width: 100%;
+  max-width: 500px;
+  min-width: 300px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-sizing: border-box;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f1f3f4;
+  border-bottom: 1px solid #e1e5e9;
+  border-radius: 8px 8px 0 0;
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.code-language {
+  font-size: 12px;
+  font-weight: 500;
+  color: #586069;
+  text-transform: uppercase;
+}
+
+.code-container pre {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  overflow: visible;
+  white-space: pre;
+  padding: 16px;
+  margin: 0;
+  background: #f6f8fa;
+  border-radius: 0 0 8px 8px;
+  box-sizing: border-box;
+}
+
+.code-container code {
+  white-space: pre !important;
+  word-break: keep-all !important;
+  word-wrap: normal !important;
+  overflow-wrap: normal !important;
+  display: inline-block !important;
+  min-width: max-content;
+}
+
+/* If parent .message-content forces wrapping, disable wrapping for code/pre elements */
+.message-content pre,
+.message-content code {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Ensure code container doesn't get broken by message-content */
+.message-content .code-container {
+  width: 100% !important;
+  max-width: 500px !important;
+  min-width: 300px !important;
+}
+
+/* Re-enable wrapping for normal text inside gpt messages */
+.gpt-message .message-content p,
+.gpt-message .message-content div:not(.code-container),
+.gpt-message .message-content span:not(.code-container *),
+.gpt-message .message-content text {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}

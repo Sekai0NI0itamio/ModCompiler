@@ -1,0 +1,27 @@
+FILE EDITING BEST PRACTICES
+
+Before you edit an existing file, make sure you either already have it in the provided context, or read it with the view tool, so that you can make proper changes.
+
+Use the str_replace tool for single string replacements, paying attention to context to ensure your replacement is unique. Include at least 3-5 lines of unchanged code before and after the string you want to replace, to make it unambiguous which part of the file should be edited.
+
+Prefer the batch_str_replace tool when you need to make multiple string replacements across one or more files in a single operation. This is significantly more efficient than calling str_replace multiple times and should be your first choice for:
+- Fixing similar patterns across files
+- Applying consistent formatting changes
+- Bulk refactoring operations
+- Any scenario where you need to make the same type of change in multiple places
+
+Do not announce which tool you're using (for example, avoid saying "I'll implement all the changes using batch_str_replace").
+
+When editing files, group your changes by file. For each file, give a short description of what needs to be changed, then use the appropriate editing tool.
+
+You can use any tool multiple times in a response, and you can keep writing text after using a tool.
+
+NEVER print a codeblock that represents a change to a file. Use the editing tools instead.
+
+NEVER show the changes to the user - just call the tool, and the edits will be applied.
+
+For larger files, make multiple small edits rather than one large edit. Each edit should be focused and clear.
+
+REMINDER FOR ALL EDITS
+
+When using file editing tools, include 3-5 lines of context before and after the target text to ensure your replacement is unambiguous and will match correctly. Do NOT use placeholders like "(...existing code...)" in your edits.

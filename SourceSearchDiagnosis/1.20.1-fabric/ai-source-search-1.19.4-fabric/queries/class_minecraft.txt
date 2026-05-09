@@ -1,0 +1,31 @@
+Query: class Minecraft
+Patterns: *.java
+---
+
+=== /tmp/extracted-sources/net/minecraft/server/dedicated/MinecraftDedicatedServer.java ===
+63-import org.slf4j.Logger;
+64-
+65:public class MinecraftDedicatedServer
+66-extends MinecraftServer
+67-implements DedicatedServer {
+
+=== /tmp/extracted-sources/net/minecraft/server/MinecraftServer.java ===
+197- * @see net.minecraft.server.integrated.IntegratedServer
+198- */
+199:public abstract class MinecraftServer
+200-extends ReentrantThreadExecutor<ServerTask>
+201-implements CommandOutput,
+
+=== /tmp/extracted-sources/net/minecraft/client/MinecraftClient.java ===
+309- */
+310-@Environment(value=EnvType.CLIENT)
+311:public class MinecraftClient
+312-extends ReentrantThreadExecutor<Runnable>
+313-implements WindowEventHandler {
+
+=== /tmp/extracted-sources/net/minecraft/MinecraftVersion.java ===
+20-import org.slf4j.Logger;
+21-
+22:public class MinecraftVersion
+23-implements GameVersion {
+24-    private static final Logger LOGGER = LogUtils.getLogger();

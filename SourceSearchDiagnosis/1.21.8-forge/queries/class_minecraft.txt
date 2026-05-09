@@ -1,0 +1,38 @@
+Query: class Minecraft
+Patterns: *.java
+---
+
+=== /tmp/extracted-sources/net/minecraftforge/common/MinecraftForge.java ===
+26-import java.util.function.Supplier;
+27-
+28:public class MinecraftForge {
+29-    /**
+30-     * The EventBus for all the Forge Events.
+
+=== /tmp/extracted-sources/net/minecraft/server/gui/MinecraftServerGui.java ===
+32-import org.slf4j.Logger;
+33-
+34:public class MinecraftServerGui extends JComponent {
+35-    private static final Font MONOSPACED = new Font("Monospaced", 0, 12);
+36-    private static final Logger LOGGER = LogUtils.getLogger();
+
+=== /tmp/extracted-sources/net/minecraft/server/MinecraftServer.java ===
+175-import org.slf4j.Logger;
+176-
+177:public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTask> implements ServerInfo, ChunkIOErrorReporter, CommandSource {
+178-    private static final Logger LOGGER = LogUtils.getLogger();
+179-    public static final String VANILLA_BRAND = "vanilla";
+
+=== /tmp/extracted-sources/net/minecraft/util/monitoring/jmx/MinecraftServerStatistics.java ===
+26-import org.slf4j.Logger;
+27-
+28:public final class MinecraftServerStatistics implements DynamicMBean {
+29-    private static final Logger LOGGER = LogUtils.getLogger();
+30-    private final MinecraftServer server;
+
+=== /tmp/extracted-sources/net/minecraft/client/Minecraft.java ===
+257-
+258-@OnlyIn(Dist.CLIENT)
+259:public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements WindowEventHandler, net.minecraftforge.client.extensions.IForgeMinecraft {
+260-    static Minecraft instance;
+261-    private static final Logger LOGGER = LogUtils.getLogger();
