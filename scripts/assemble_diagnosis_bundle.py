@@ -605,52 +605,70 @@ def assemble_bundle(
         lines.append(f"  {description[:1000]}" if description else "  (no description available)")
         lines.append(f"")
 
-        lines.append(f"{'=' * 72}")
-        lines.append(f"Mod Source code from closest version:")
-        if closest_version_label:
+        # Determine if version and loader sources are the same record
+        same_source = (closest_version_label is not None and closest_version_label == closest_loader_label)
+
+        if same_source:
+            lines.append(f"{'=' * 72}")
+            lines.append(f"Mod Source code from closest version and loader:")
             lines.append(f"  Source: {closest_version_label}")
+            lines.append(f"")
+            lines.append(f"  Directory tree:")
+            if closest_version_src:
+                tree_lines = _get_directory_tree(closest_version_src, prefix="  ")
+                lines.extend(tree_lines)
+            else:
+                lines.append("    (no source code available)")
+            lines.append(f"")
+            lines.append(f"  Source code:")
+            if closest_version_src:
+                source_text = _get_source_code_text(closest_version_src)
+                lines.append(f"{source_text}" if source_text else "    (no .java files)")
+            else:
+                lines.append("    (no source code available)")
         else:
-            lines.append(f"  Source: (no closest working version found)")
-        lines.append(f"")
+            lines.append(f"{'=' * 72}")
+            lines.append(f"Mod Source code from closest version:")
+            if closest_version_label:
+                lines.append(f"  Source: {closest_version_label}")
+            else:
+                lines.append(f"  Source: (no closest working version found)")
+            lines.append(f"")
+            lines.append(f"  Directory tree:")
+            if closest_version_src:
+                tree_lines = _get_directory_tree(closest_version_src, prefix="  ")
+                lines.extend(tree_lines)
+            else:
+                lines.append("    (no source code available)")
+            lines.append(f"")
+            lines.append(f"  Source code:")
+            if closest_version_src:
+                source_text = _get_source_code_text(closest_version_src)
+                lines.append(f"{source_text}" if source_text else "    (no .java files)")
+            else:
+                lines.append("    (no source code available)")
 
-        lines.append(f"  Directory tree:")
-        if closest_version_src:
-            tree_lines = _get_directory_tree(closest_version_src, prefix="  ")
-            lines.extend(tree_lines)
-        else:
-            lines.append("    (no source code available)")
-        lines.append(f"")
-
-        lines.append(f"  Source code:")
-        if closest_version_src:
-            source_text = _get_source_code_text(closest_version_src)
-            lines.append(f"{source_text}" if source_text else "    (no .java files)")
-        else:
-            lines.append("    (no source code available)")
-
-        lines.append(f"")
-        lines.append(f"{'=' * 72}")
-        lines.append(f"Mod Source code from closest loader:")
-        if closest_loader_label:
-            lines.append(f"  Source: {closest_loader_label}")
-        else:
-            lines.append(f"  Source: (no closest working version found)")
-        lines.append(f"")
-
-        lines.append(f"  Directory tree:")
-        if closest_loader_src:
-            tree_lines = _get_directory_tree(closest_loader_src, prefix="  ")
-            lines.extend(tree_lines)
-        else:
-            lines.append("    (no source code available)")
-        lines.append(f"")
-
-        lines.append(f"  Source code:")
-        if closest_loader_src:
-            source_text = _get_source_code_text(closest_loader_src)
-            lines.append(f"{source_text}" if source_text else "    (no .java files)")
-        else:
-            lines.append("    (no source code available)")
+            lines.append(f"")
+            lines.append(f"{'=' * 72}")
+            lines.append(f"Mod Source code from closest loader:")
+            if closest_loader_label:
+                lines.append(f"  Source: {closest_loader_label}")
+            else:
+                lines.append(f"  Source: (no closest working version found)")
+            lines.append(f"")
+            lines.append(f"  Directory tree:")
+            if closest_loader_src:
+                tree_lines = _get_directory_tree(closest_loader_src, prefix="  ")
+                lines.extend(tree_lines)
+            else:
+                lines.append("    (no source code available)")
+            lines.append(f"")
+            lines.append(f"  Source code:")
+            if closest_loader_src:
+                source_text = _get_source_code_text(closest_loader_src)
+                lines.append(f"{source_text}" if source_text else "    (no .java files)")
+            else:
+                lines.append("    (no source code available)")
 
         lines.append(f"")
         lines.append(f"{'=' * 72}")
