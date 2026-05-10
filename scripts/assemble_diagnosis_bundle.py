@@ -465,8 +465,7 @@ def assemble_bundle(
             if p.suffix in TEXT_EXTENSIONS:
                 try:
                     text = p.read_text(encoding="utf-8")
-                    lines.append(f"
-  ── {rel} ──")
+                    lines.append(f"  ── {rel} ──")
                     for line in text.splitlines():
                         lines.append(f"  {line}")
                 except Exception as e:
