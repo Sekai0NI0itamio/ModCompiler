@@ -322,10 +322,8 @@ def assemble_bundle(
     _log(f"Missing pairs (repo can build): {len(missing_pairs)}")
 
     # ── Build combined needed-targets list ─────────────────────────────────────
-    # Key: "{mc_version}-{loader}" — unique (mc_version, loader) combo we need
     needed_targets: Dict[str, Dict] = {}
 
-    # Shell versions → each shell is a target (but may have multiple MC versions)
     for rec in shell_records:
         for mc_ver in rec.get("game_versions", []):
             for loader in rec.get("loaders", []):
@@ -338,7 +336,6 @@ def assemble_bundle(
                         "shell_version_number": rec.get("version_number", "?"),
                     }
 
-    # Missing pairs (not on Modrinth, repo can build)
     for pair in missing_pairs:
         mc_ver = pair.get("mc_version", "")
         loader = pair.get("loader", "")
@@ -352,35 +349,28 @@ def assemble_bundle(
                 }
 
     # ── Sort targets by MC version ────────────────────────────────────────────
-    sorted_keys = sorted(
-        needed_targets.keys(),
-        key=lambda k: _parse_mc_version_sort_key(k.split("-")[0]),
-    )
+    def _sort_key(k: str) -> Tuple:
+        parts = []
+        for t in re.split(r"[.\-]", k.split("-")[0]):
+            if t.isdigit():
+                parts.append(int(t))
+            else:
+                parts.append(t)
+        return tuple(parts)
+    sorted_keys = sorted(needed_targets.keys(), key=_sort_key)
 
     _log(f"\nNeeded targets: {len(needed_targets)}")
     for key in sorted_keys:
         t = needed_targets[key]
         _log(f"  {key} [{t['reason']}]")
 
-    # ── Build working index ───────────────────────────────────────────────────
-    # Index working records by MC version and by loader for quick lookup
-    working_by_mc: Dict[str, List[Dict]] = {}
-    working_by_loader: Dict[str, List[Dict]] = {}
-    for rec in working_records:
-        for mc in rec.get("game_versions", []):
-            working_by_mc.setdefault(mc, []).append(rec)
-        for ldr in rec.get("loaders", []):
-            working_by_loader.setdefault(ldr, []).append(rec)
-
     # ── Find decompiled jars we can reuse ─────────────────────────────────────
-    # First, check info-gather's first_version/ for a pre-decompiled source
     first_version_src_dir = info_dir / "first_version" / "src"
     first_version_decompiled_src = None
     if first_version_src_dir.exists() and list(first_version_src_dir.rglob("*.java")):
         first_version_decompiled_src = first_version_src_dir
         _log(f"Found pre-decompiled source in first_version/src ({len(list(first_version_src_dir.rglob('*.java')))} files)")
 
-    # Also check first_version/decompiled/
     first_version_decompiled_dir = info_dir / "first_version" / "decompiled"
     if first_version_decompiled_dir.exists():
         javadir = first_version_decompiled_dir / "java"
@@ -388,10 +378,126 @@ def assemble_bundle(
             first_version_decompiled_src = javadir
             _log(f"Found pre-decompiled source in first_version/decompiled ({len(list(javadir.rglob('*.java')))} files)")
 
-    # Cache of decompiled sources: key is version_id, value is src dir Path
     decompile_cache: Dict[str, Path] = {}
-    # Also track by (mc_ver, loader) for lookup
     decompile_by_key: Dict[str, Path] = {}
+
+    # ── Helper to score how close a working record is to a target ─────────────
+    def _mc_ver_to_tuple(v: str) -> Tuple:
+        parts = []
+        for t in re.split(r"[.\-]", v):
+            if t.isdigit():
+                parts.append(int(t))
+            else:
+                parts.append(t)
+        return tuple(parts)
+
+    def _versions_are_close(a: str, b: str) -> bool:
+        """Check if two MC version strings are close: same, one is prefix of other, or share major.minor prefix."""
+        if a == b:
+            return True
+        a_t = _mc_ver_to_tuple(a)
+        b_t = _mc_ver_to_tuple(b)
+        # One is prefix of the other (e.g. 1.12 vs 1.12.2)
+        if len(a_t) < len(b_t) and a_t == b_t[:len(a_t)]:
+            return True
+        if len(b_t) < len(a_t) and b_t == a_t[:len(b_t)]:
+            return True
+        # Share at least first two components
+        if len(a_t) >= 2 and len(b_t) >= 2 and a_t[:2] == b_t[:2]:
+            return True
+        return False
+
+    def _version_distance(a: str, b: str) -> int:
+        """Compute a distance score between two MC versions. Lower = closer."""
+        if a == b:
+            return 0
+        a_t = _mc_ver_to_tuple(a)
+        b_t = _mc_ver_to_tuple(b)
+        # Compare component by component
+        dist = 0
+        for i in range(max(len(a_t), len(b_t))):
+            av = a_t[i] if i < len(a_t) else 0
+            bv = b_t[i] if i < len(b_t) else 0
+            if isinstance(av, int) and isinstance(bv, int):
+                dist += abs(av - bv) * (10 ** (3 - min(i, 3)))
+            elif av != bv:
+                dist += 1000
+        return dist
+
+    def _score_closest_version_rec(rec: Dict, target_mc: str, target_ldr: str) -> Optional[Tuple[int, str, Dict]]:
+        """Score a working record for 'closest version' matching.
+        Returns (score, label, rec) or None if not a match at all.
+        Lower score = better match.
+        Score breakdown:
+          0-99:   exact MC version match
+          100-199: MC version close (prefix or major.minor match)
+          penalty: +0 for same loader group, +100 for different loader
+        """
+        rec_gvs = [str(g) for g in rec.get("game_versions", [])]
+        target_ldr_group = _loader_group(target_ldr)
+        rec_ldrs = set(str(l) for l in rec.get("loaders", []))
+
+        best_gv = None
+        best_dist = 99999
+        for gv in rec_gvs:
+            if _versions_are_close(target_mc, gv):
+                d = _version_distance(target_mc, gv)
+                if d < best_dist:
+                    best_dist = d
+                    best_gv = gv
+
+        if best_gv is None:
+            return None
+
+        # Score: version distance + loader penalty
+        if best_dist == 0:
+            base = best_dist  # exact match
+        else:
+            base = 100 + best_dist  # close match
+
+        # Prefer same loader group
+        if any(l in target_ldr_group for l in rec_ldrs):
+            pass  # no penalty
+        else:
+            base += 100  # different loader group penalty
+
+        label = f"{rec.get('version_number', '?')} (MC={','.join(rec_gvs)}, Loader={','.join(rec.get('loaders', []))})"
+        return (base, label, rec)
+
+    def _score_closest_loader_rec(rec: Dict, target_mc: str, target_ldr: str) -> Optional[Tuple[int, str, Dict]]:
+        """Score a working record for 'closest loader' matching.
+        Score breakdown:
+          0-9:    exact same loader
+          10-19:   same loader group (forge/neoforge)
+          penalty: +0 for same MC version, +100 for different MC
+        """
+        rec_ldrs = set(str(l) for l in rec.get("loaders", []))
+        rec_gvs = [str(g) for g in rec.get("game_versions", [])]
+        target_ldr_group = _loader_group(target_ldr)
+
+        if target_ldr in rec_ldrs:
+            base = 5  # exact same loader
+        elif any(l in target_ldr_group for l in rec_ldrs):
+            base = 15  # same loader group
+        else:
+            return None
+
+        # Prefer same or close MC version
+        best_mc_dist = 99999
+        for gv in rec_gvs:
+            if _versions_are_close(target_mc, gv):
+                d = _version_distance(target_mc, gv)
+                if d < best_mc_dist:
+                    best_mc_dist = d
+        if best_mc_dist == 99999:
+            base += 100  # different MC version penalty
+        elif best_mc_dist == 0:
+            pass  # same MC version — best
+        else:
+            base += 50  # close but not exact
+
+        label = f"{rec.get('version_number', '?')} (MC={','.join(rec_gvs)}, Loader={','.join(rec.get('loaders', []))})"
+        return (base, label, rec)
 
     # ── Create per-target folders ─────────────────────────────────────────────
     projectinfo_texts: Dict[str, str] = {}
@@ -406,26 +512,25 @@ def assemble_bundle(
         _log(f"\n{'─' * 60}")
         _log(f"Processing target: {key} [{target['reason']}]")
 
-        # ── Find closest version and closest loader ───────────────────────────
         closest_version_label = None
         closest_version_src = None
         closest_loader_label = None
         closest_loader_src = None
 
-        # Closest version: same MC version, any loader
-        closest_version_rec = None
+        # ── Find closest version: same MC version (any loader), with proper scoring ──
+        best_score = 99999
+        best_rec = None
         for rec in working_records:
-            gvs = set(str(g) for g in rec.get("game_versions", []))
-            if mc_ver in gvs:
-                closest_version_rec = rec
-                break
+            scored = _score_closest_version_rec(rec, mc_ver, loader)
+            if scored is not None and scored[0] < best_score:
+                best_score = scored[0]
+                best_rec = scored[2]
+                closest_version_label = scored[1]
 
-        if closest_version_rec:
-            vid = closest_version_rec["id"]
-            closest_version_label = f"{closest_version_rec.get('version_number', '?')} (MC={",".join(closest_version_rec['game_versions'])}, Loader={",".join(closest_version_rec['loaders'])})"
-            _log(f"  Closest version: {closest_version_label}")
+        if best_rec:
+            vid = best_rec["id"]
+            _log(f"  Closest version (score={best_score}): {closest_version_label}")
 
-            # Get source code
             src = decompile_cache.get(vid)
             if src is None:
                 jar = _find_jar_for_version(vid, diagnosis_dir)
@@ -435,53 +540,53 @@ def assemble_bundle(
                     src = _decompile_jar(jar, manifest, src_out)
                     if src:
                         decompile_cache[vid] = src
-                        # Also cache by key
-                        for gv in closest_version_rec.get("game_versions", []):
-                            for ldr in closest_version_rec.get("loaders", []):
+                        for gv in best_rec.get("game_versions", []):
+                            for ldr in best_rec.get("loaders", []):
                                 decompile_by_key[f"{gv}-{ldr}"] = src
             if src:
                 closest_version_src = src
             elif first_version_decompiled_src:
-                _log(f"  Using first_version/src as fallback for closest version")
+                _log(f"  Using fallback source for closest version")
                 closest_version_src = first_version_decompiled_src
         else:
-            _log(f"  No working version found with MC version {mc_ver}")
+            _log(f"  No close version found for MC {mc_ver}")
             if first_version_decompiled_src:
                 _log(f"  Using first_version/src as fallback")
                 closest_version_src = first_version_decompiled_src
 
-        # Closest loader: same loader (or forge/neoforge), any MC version
-        target_ldr_group = _loader_group(loader)
-        closest_loader_rec = None
+        # ── Find closest loader: same loader (any MC version), with proper scoring ──
+        best_loader_score = 99999
+        best_loader_rec = None
         for rec in working_records:
-            rec_ldrs = set(str(l) for l in rec.get("loaders", []))
-            if any(l in target_ldr_group for l in rec_ldrs):
-                closest_loader_rec = rec
-                break
+            scored = _score_closest_loader_rec(rec, mc_ver, loader)
+            if scored is not None and scored[0] < best_loader_score:
+                best_loader_score = scored[0]
+                best_loader_rec = scored[2]
+                closest_loader_label = scored[1]
 
-        if closest_loader_rec:
-            lid = closest_loader_rec["id"]
-            closest_loader_label = f"{closest_loader_rec.get('version_number', '?')} (MC={",".join(closest_loader_rec['game_versions'])}, Loader={",".join(closest_loader_rec['loaders'])})"
-            _log(f"  Closest loader: {closest_loader_label}")
+        if best_loader_rec:
+            lid = best_loader_rec["id"]
+            _log(f"  Closest loader (score={best_loader_score}): {closest_loader_label}")
 
             src = decompile_cache.get(lid)
             if src is None:
                 jar = _find_jar_for_version(lid, diagnosis_dir)
                 if jar and jar.exists():
+                    _log(f"  Decompiling jar: {jar.name}...")
                     src_out = output_dir / ".cache" / f"decompile-{lid}"
                     src = _decompile_jar(jar, manifest, src_out)
                     if src:
                         decompile_cache[lid] = src
-                        for gv in closest_loader_rec.get("game_versions", []):
-                            for ldr in closest_loader_rec.get("loaders", []):
+                        for gv in best_loader_rec.get("game_versions", []):
+                            for ldr in best_loader_rec.get("loaders", []):
                                 decompile_by_key[f"{gv}-{ldr}"] = src
             if src:
                 closest_loader_src = src
             elif first_version_decompiled_src:
-                _log(f"  Using first_version/src as fallback for closest loader")
+                _log(f"  Using fallback source for closest loader")
                 closest_loader_src = first_version_decompiled_src
         else:
-            _log(f"  No working version found with loader {loader} (or close group)")
+            _log(f"  No close loader found for {loader}")
             if first_version_decompiled_src:
                 _log(f"  Using first_version/src as fallback")
                 closest_loader_src = first_version_decompiled_src
@@ -490,7 +595,6 @@ def assemble_bundle(
         lines = []
         lines.append(f"Mod Name: {title}")
         lines.append(f"Mod Author: Itamio")
-        # Get Mod Path from project metadata or infer from slug
         mod_id_clean = slug.replace("-", "").replace("_", "").lower()
         lines.append(f"Mod Path: asd.itamio.{mod_id_clean}")
         lines.append(f"")
@@ -501,7 +605,6 @@ def assemble_bundle(
         lines.append(f"  {description[:1000]}" if description else "  (no description available)")
         lines.append(f"")
 
-        # ── Closest Version Source ────────────────────────────────────────────
         lines.append(f"{'=' * 72}")
         lines.append(f"Mod Source code from closest version:")
         if closest_version_label:
@@ -525,7 +628,6 @@ def assemble_bundle(
         else:
             lines.append("    (no source code available)")
 
-        # ── Closest Loader Source ─────────────────────────────────────────────
         lines.append(f"")
         lines.append(f"{'=' * 72}")
         lines.append(f"Mod Source code from closest loader:")
