@@ -12,10 +12,14 @@ GitHub Actions usage (same script, keys come from NVIDIA_API_KEYS secret):
     python3 aibasedversionupgrader/run_agent.py <modrinth_url>
 
 Options:
-    --artifact-dir DIR    Output artifact directory (default: ai-built-versions/)
-    --sandbox-dir DIR     Sandbox working directory (default: ai-sandbox/)
-    --max-iterations N    Maximum agent iterations (default: 200)
-    --skip-phase1         Skip Phase 1 and reuse existing project_info/ + target_list.json
+    --artifact-dir DIR        Output artifact directory (default: ai-built-versions/)
+    --sandbox-dir DIR         Sandbox working directory (default: ai-sandbox/)
+    --max-iterations N        Maximum agent iterations (default: 200)
+    --skip-phase1             Skip Phase 1 and reuse existing project_info/ + target_list.json
+    --generate-prompts        After Phase 1, generate Background Info.txt and prompt.txt
+                              for each target instead of running the AI agent.
+                              Places them in bundle/<mc>-<loader>/ under the output dir.
+    --prompt-output-dir DIR   Custom output directory for generated prompts (default: auto session dir)
 """
 from __future__ import annotations
 
@@ -66,6 +70,17 @@ Examples:
     p.add_argument(
         "--skip-phase1", action="store_true",
         help="Skip Phase 1 and reuse existing project_info/ + target_list.json",
+    )
+    p.add_argument(
+        "--generate-prompts", action="store_true",
+        help="After Phase 1, generate Background Info.txt and prompt.txt "
+             "for each target instead of running the AI agent. "
+             "Places them in bundle/<mc>-<loader>/ under the output dir.",
+    )
+    p.add_argument(
+        "--prompt-output-dir", default=None,
+        help="Custom output directory for generated prompts (default: auto session dir). "
+             "Use with --generate-prompts.",
     )
     return p.parse_args()
 
@@ -196,6 +211,56 @@ def main() -> None:
         print("\n✅ All versions are already present on Modrinth. Nothing to build.")
         sys.exit(0)
 
+    # ── Branch: Generate Prompts vs Run AI Agent ──────────────────────────
+    if args.generate_prompts:
+        # ── Prompt Generation Phase ──────────────────────────────────────────
+        print(f"\n{'─' * 60}")
+        print("PHASE 2: Prompt Generation")
+        print(f"{'─' * 60}")
+        print(f"Generating prompt files for {len(target_list)} target(s)...")
+
+        # Determine output directory
+        if args.prompt_output_dir:
+            output_base = Path(args.prompt_output_dir)
+        else:
+            import uuid as _uuid
+            session_id = _uuid.uuid4().hex[:8]
+            output_base = Path("ai-sessions") / session_id
+
+        # Generate prompts
+        from aibasedversionupgrader.prompt_generator import generate_all_prompts
+
+        project_info_dir = Path("project_info/")
+        print(f"\n  Output: {output_base}")
+        generated = generate_all_prompts(
+            project_info_dir=project_info_dir,
+            target_list=target_list,
+            output_base_dir=output_base,
+            repo_root=ROOT,
+        )
+
+        print(f"\n{'=' * 60}")
+        print("PROMPT GENERATION COMPLETE")
+        print(f"{'=' * 60}")
+        print(f"Generated {len(generated)} prompt.txt files in {output_base}:")
+        for p in generated:
+            print(f"  \U0001f4c4 {p}")
+
+        if summary_file:
+            with open(summary_file, "a", encoding="utf-8") as f:
+                f.write("\n## Prompt Generation Results\n\n")
+                f.write(f"- **Project:** `{modrinth_url}`\n")
+                f.write(f"- **Targets:** {len(target_list)}\n")
+                f.write(f"- **Prompts generated:** {len(generated)}\n\n")
+                f.write("### Output Files\n")
+                for p in generated:
+                    f.write(f"- `{p}`\n")
+                f.write("\n")
+
+        print(f"\nDone! Copy the prompt.txt files and send them to an AI to generate the mod code.")
+        sys.exit(0)
+
+    # ── Normal AI Agent Path ─────────────────────────────────────────────────
     print(f"\n[INFO] {len(target_list)} target(s) to build — starting AI agent...")
 
     # ── Phase 2 config ──────────────────────────────────────────────────────
