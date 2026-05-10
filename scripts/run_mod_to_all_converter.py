@@ -364,7 +364,7 @@ class Runner:
         ]
 
         if bundle_dir.exists():
-            # Check what files are in the bundle
+            # List all files in the bundle
             files = []
             for p in bundle_dir.rglob("*"):
                 if p.is_file():
@@ -384,23 +384,36 @@ class Runner:
                     sz = f"{size/1024/1024:.1f}MB"
                 lines.append(f"| {name} | {sz} |")
 
-            # Include project info if available
-            pi = bundle_dir / "projectinfo.txt"
-            if pi.exists():
-                text = pi.read_text(encoding="utf-8")
-                lines += ["", "## projectinfo.txt (first 50 lines)", "", "```"]
-                for line in text.splitlines()[:50]:
+            # Count version/loader target folders
+            target_dirs = sorted(d.name for d in bundle_dir.iterdir()
+                                 if d.is_dir() and not d.name.startswith("."))
+            non_target = {"Diagnosis.txt", "Logs.txt"}
+            target_folders = [d for d in target_dirs if d not in non_target]
+            if target_folders:
+                lines += ["", "## Missing Version/Loader Targets"]
+                for folder in target_folders:
+                    pi = bundle_dir / folder / "projectinfo.txt"
+                    status = "✓" if pi.exists() else "✗"
+                    lines.append(f"- {folder}  [{status} projectinfo.txt]")
+
+            # Include Diagnosis.txt
+            diag = bundle_dir / "Diagnosis.txt"
+            if diag.exists():
+                text = diag.read_text(encoding="utf-8")
+                lines += ["", "## Diagnosis.txt (first 60 lines)", "", "```"]
+                for line in text.splitlines()[:60]:
                     lines.append(line)
                 lines.append("```")
 
-            # Include diagnosis summary
-            di = bundle_dir / "diagnosis.txt"
-            if di.exists():
-                text = di.read_text(encoding="utf-8")
-                lines += ["", "## diagnosis.txt (first 50 lines)", "", "```"]
-                for line in text.splitlines()[:50]:
-                    lines.append(line)
-                lines.append("```")
+            # Include a sample projectinfo.txt from the first target
+            if target_folders:
+                first_pi = bundle_dir / target_folders[0] / "projectinfo.txt"
+                if first_pi.exists():
+                    text = first_pi.read_text(encoding="utf-8")
+                    lines += ["", f"## {target_folders[0]}/projectinfo.txt (first 40 lines)", "", "```"]
+                    for line in text.splitlines()[:40]:
+                        lines.append(line)
+                    lines.append("```")
         else:
             lines.append("Artifact bundle was not created (workflow may have failed early).")
 

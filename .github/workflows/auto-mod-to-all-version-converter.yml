@@ -3,18 +3,22 @@ name: Automated Mod to ALL Version Converter
 # ---------------------------------------------------------------------------
 # Purpose
 # -------
-# Scans a Modrinth project and produces a complete analysis bundle:
-#   - projectinfo.txt with project metadata, first working version's
-#     decompiled source code, and paths to all other version sources
-#   - Full diagnosis of what versions exist, are shell/malformed, or missing
+# Runs diagnosis to find working, shell/malformed, and missing mod version/loader
+# combinations. Then for each missing version+loader (shell + repo-can-build),
+# creates a projectinfo.txt with metadata and decompiled source code from the
+# closest working version and closest working loader.
+#
+# Final artifact structure:
+#   Logs.txt                    — Script stdout/stderr capture
+#   Diagnosis.txt               — Working, shell, and missing version summary
+#   <mc_version>-<loader>/      — One folder per missing/shell version combo
+#     projectinfo.txt           — Mod info + source from closest version & loader
 #
 # Two concurrent Phase 1 jobs:
 #   info-gather  — Fetches project info, decompiles the first working jar
 #   diagnosis    — Scans all versions, detects shells/corruption/missing
 #
-# Phase 2 (assemble): merges both outputs into the final artifact.
-#
-# Trigger: workflow_dispatch with a single Modrinth URL input.
+# Phase 2 (assemble): uses diagnosis results to produce the final bundle.
 # ---------------------------------------------------------------------------
 
 on:
@@ -646,10 +650,10 @@ jobs:
           if-no-files-found: error
 
 # ---------------------------------------------------------------------------
-# Phase 2 — Assemble final bundle
+# Phase 2 — Assemble diagnosis bundle with projectinfo.txt for each missing target
 # ---------------------------------------------------------------------------
   assemble:
-    name: Assemble final analysis bundle
+    name: Assemble diagnosis bundle (per-target projectinfo.txt)
     needs: [info-gather, diagnosis]
     if: always()
     runs-on: ubuntu-latest
@@ -661,6 +665,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - uses: actions/download-artifact@v4
         with:
           name: info-gather-output
@@ -671,67 +680,14 @@ jobs:
           name: diagnosis-output
           path: .workflow_downloads/diagnosis
 
-      - name: Assemble final bundle
+      - name: Run assembly script
         shell: bash
         run: |
-          mkdir -p .workflow_artifacts/bundle
-          # Copy projectinfo.txt
-          if [ -f .workflow_downloads/info/projectinfo.txt ]; then
-            cp .workflow_downloads/info/projectinfo.txt .workflow_artifacts/bundle/projectinfo.txt
-          fi
-          # Copy diagnosis
-          if [ -f .workflow_downloads/diagnosis/diagnosis.txt ]; then
-            cp .workflow_downloads/diagnosis/diagnosis.txt .workflow_artifacts/bundle/diagnosis.txt
-          fi
-          if [ -f .workflow_downloads/diagnosis/diagnosis.json ]; then
-            cp .workflow_downloads/diagnosis/diagnosis.json .workflow_artifacts/bundle/diagnosis.json
-          fi
-          # Copy project.json
-          if [ -f .workflow_downloads/info/project.json ]; then
-            cp .workflow_downloads/info/project.json .workflow_artifacts/bundle/project.json
-          fi
-          # Copy first version decompiled source
-          if [ -d .workflow_downloads/info/first_version ]; then
-            cp -r .workflow_downloads/info/first_version .workflow_artifacts/bundle/first_version
-          fi
-          # Copy all versions meta
-          if [ -f .workflow_downloads/info/versions_meta.json ]; then
-            cp .workflow_downloads/info/versions_meta.json .workflow_artifacts/bundle/versions_meta.json
-          fi
-          # Copy diagnosis downloads (per-version jars for inspection)
-          if [ -d .workflow_downloads/diagnosis/downloads ]; then
-            mkdir -p .workflow_artifacts/bundle/jars
-            for vdir in .workflow_downloads/diagnosis/downloads/*/; do
-              slug=$(basename "$vdir")
-              for jar in "$vdir"/*.jar; do
-                [ -f "$jar" ] && cp "$jar" ".workflow_artifacts/bundle/jars/${slug}_$(basename "$jar")"
-              done
-            done
-          fi
-          # Write README
-          cat > .workflow_artifacts/bundle/README.md << 'READMEEOF'
-          # Automated Mod to ALL Version Converter — Analysis Bundle
-
-          ## Files
-
-          - `projectinfo.txt`     — Modrinth project metadata + first version source code + paths to all version sources
-          - `diagnosis.txt`       — Human-readable diagnosis of shells, corruption, and missing versions
-          - `diagnosis.json`      — Machine-readable version of the diagnosis
-          - `project.json`        — Raw Modrinth API project object
-          - `versions_meta.json`  — All selected versions metadata
-          - `first_version/`      — Decompiled source code of the first working version
-          - `first_version/meta.json`  — Metadata about the first version
-          - `first_version/mod_info.txt` — Mod info extracted from the jar
-          - `jars/`               — Downloaded jars for each analysed version
-
-          ## How to use
-
-          1. Read `projectinfo.txt` for the full project overview.
-          2. Read `diagnosis.txt` to see which versions are shells, working, or missing.
-          3. Browse `first_version/src/` for the decompiled source code.
-          4. Use `diagnosis.json` in scripts or tools.
-          READMEEOF
-          echo "Assembled final bundle"
+          python3 scripts/assemble_diagnosis_bundle.py \
+            --info-dir .workflow_downloads/info \
+            --diagnosis-dir .workflow_downloads/diagnosis \
+            --manifest version-manifest.json \
+            --output-dir .workflow_artifacts/bundle
 
       - name: Upload final bundle
         uses: actions/upload-artifact@v4
@@ -744,19 +700,13 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "## Automated Mod to ALL Version Converter — Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Automated Mod to ALL Version Converter — Diagnosis Bundle" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Item | Status |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f .workflow_downloads/info/projectinfo.txt ]; then
-            echo "| projectinfo.txt | Available |" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -f .workflow_downloads/diagnosis/diagnosis.txt ]; then
-            echo "| diagnosis.txt | Available |" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -d .workflow_downloads/info/first_version/src ]; then
-            SRC_COUNT=$(find .workflow_downloads/info/first_version/src -name "*.java" 2>/dev/null | wc -l)
-            echo "| First version source | $SRC_COUNT .java files |" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          echo "### Artifact Structure" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Artifact: \`mod-to-all-analysis-bundle\`" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          find .workflow_artifacts/bundle/ -type f | sort | head -60 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          TARGET_COUNT=$(find .workflow_artifacts/bundle/ -maxdepth 1 -mindepth 1 -type d ! -name '.cache' | wc -l 2>/dev/null || echo "0")
+          echo "**Version/loader target folders: $TARGET_COUNT**" >> "$GITHUB_STEP_SUMMARY"
