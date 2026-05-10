@@ -423,6 +423,67 @@ def assemble_bundle(
             elif av != bv:
                 dist += 1000
         return dist
+    def _parse_version_tuple(v: str) -> Tuple:
+        parts = []
+        for t in re.split(r"[.\-]", v):
+            if t.isdigit():
+                parts.append(int(t))
+            else:
+                parts.append(t)
+        return tuple(parts)
+
+    def _find_template(
+        target_mc: str, target_ldr: str, manifest: Dict
+    ) -> Optional[Path]:
+        target_v = _parse_version_tuple(target_mc)
+        for range_entry in manifest.get("ranges", []):
+            min_v = _parse_version_tuple(range_entry["min_version"])
+            max_v = _parse_version_tuple(range_entry["max_version"])
+            if min_v <= target_v <= max_v:
+                ldrs = range_entry.get("loaders", {})
+                # Exact loader match first
+                if target_ldr in ldrs:
+                    return Path(ldrs[target_ldr]["template_dir"])
+                # Forge/neoforge close
+                tgt_group = _loader_group(target_ldr)
+                for ldr_name, ldr_cfg in ldrs.items():
+                    if any(l in tgt_group for l in [ldr_name]):
+                        return Path(ldr_cfg["template_dir"])
+        return None
+
+    def _read_template_files(template_dir: Path) -> List[str]:
+        if not template_dir.exists():
+            return [f"  Template directory {template_dir} not found"]
+        lines = []
+        TEXT_EXTENSIONS = {".java", ".py", ".properties", ".gradle", ".json", ".txt", ".md", ".sh", ".bat", ".cfg", ".toml", ".info"}
+        for p in sorted(template_dir.rglob("*")):
+            if not p.is_file():
+                continue
+            if p.name == ".gitignore":
+                continue
+            rel = str(p.relative_to(template_dir))
+            if p.suffix in TEXT_EXTENSIONS:
+                try:
+                    text = p.read_text(encoding="utf-8")
+                    lines.append(f"
+  ── {rel} ──")
+                    for line in text.splitlines():
+                        lines.append(f"  {line}")
+                except Exception as e:
+                    lines.append(f"  ── {rel} (could not read: {e})")
+            else:
+                size = p.stat().st_size
+                if size < 1024:
+                    sz = f"{size}B"
+                elif size < 1024 * 1024:
+                    sz = f"{size/1024:.1f}KB"
+                else:
+                    sz = f"{size/1024/1024:.1f}MB"
+                lines.append(f"  ── {rel} (binary, {sz})")
+        if not lines:
+            return ["  (no template files found)"]
+        return lines
+
 
     def _score_closest_version_rec(rec: Dict, target_mc: str, target_ldr: str) -> Optional[Tuple[int, str, Dict]]:
         """Score a working record for 'closest version' matching.
