@@ -536,7 +536,32 @@ class Runner:
             self._append_ai_summary(artifacts_dir)
 
             if ai_result != 0:
+                print("\n⚠ AI coding stage had failures. Proceeding to compile cycle anyway...")
+
+            # 6. Compile Cycle: extract, build, retry
+            print()
+            print("=" * 72)
+            print("  PHASE 3 — COMPILE CYCLE")
+            print("  (Extract sources, create build zip, dispatch build, retry failures)")
+            print("=" * 72)
+            print()
+
+            compile_result = subprocess.run(
+                [sys.executable, "scripts/ai_compile_cycle.py",
+                 "--bundle-dir", str(bundle_dir),
+                 "--slug", self.slug,
+                 "--modrinth-url", self.modrinth_url,
+                 "--repo", self.repo,
+                 "--max-retries", "5"],
+                capture_output=False,
+            )
+
+            if compile_result.returncode != 0:
+                print("\n⚠ Compile cycle completed with some failures.")
+                print("  Check the bundle for failed-* folders with error context.")
                 return 1
+
+            print("\n✓ Compile cycle complete — all versions built and published!")
 
         return 0
 
