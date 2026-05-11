@@ -24,9 +24,12 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 
@@ -82,6 +85,115 @@ def add_to_gitignore(gitignore_path: Path, entry: str) -> None:
         print(f"  Added '{entry}' to .gitignore")
     elif entry in lines:
         print(f"  '{entry}' is already in .gitignore")
+
+
+def get_working_diff() -> str:
+    """Get the full diff of unstaged changes in tracked files."""
+    result = run(["git", "diff"], check=False)
+    return result.stdout.strip()
+
+
+def get_status_text() -> str:
+    """Get a human-readable summary of pending changes."""
+    result = run(["git", "status", "--short"], check=False)
+    return result.stdout.strip()
+
+
+def call_c05localai(system_prompt: str, user_prompt: str, timeout: int = 30) -> str:
+    """Call the local c05localai server to generate a commit message."""
+    url = "http://localhost:8129/chat"
+    payload = {
+        "model": "nvidia/nemotron-3-nano-30b-a3b",
+        "hoster": "nvidia",
+        "response_mode": "direct",
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            response_text = response.read().decode("utf-8")
+    except urllib.error.URLError as e:
+        raise SystemExit(
+            f"  Error: Could not reach c05localai server at {url}.\n"
+            f"  Make sure it's running (see C05LocalAi/ for setup).\n"
+            f"  Details: {e.reason}"
+        )
+    except TimeoutError:
+        raise SystemExit(
+            f"  Error: c05localai server timed out after {timeout}s.\n"
+            f"  Try again or enter a commit message manually."
+        )
+
+    # Parse the SSE-like line-delimited JSON response from the /chat endpoint.
+    # The response consists of lines like:
+    #   {"event": "start", ...}
+    #   {"event": "content", "content": "..."}
+    #   {"status": "end", "content": "...", ...}
+    full_content = ""
+    for line in response_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        # Capture content from content events
+        if obj.get("event") == "content":
+            chunk = obj.get("content", "")
+            if chunk:
+                full_content += chunk
+        # Also capture from the final end event
+        elif obj.get("status") == "end":
+            final_content = obj.get("content", "")
+            if final_content:
+                # If we didn't get it via content events, use this
+                if not full_content:
+                    full_content = final_content
+    return full_content.strip()
+
+
+def generate_ai_commit_message() -> str:
+    """Generate a commit message from the AI based on the working diff and status."""
+    print("  Generating commit message with AI (c05localai)...")
+
+    # Gather context about changes
+    status_summary = get_status_text()
+    diff_context = get_working_diff()
+
+    if not diff_context and not status_summary:
+        raise SystemExit("  Error: No changes detected to generate a commit message.")
+
+    branch = get_current_branch()
+
+    system_prompt = (
+        "You are a helpful assistant that writes concise Git commit messages. "
+        "Given the git diff, status summary, and branch name, write a clear commit message. "
+        "Follow conventional commit format: type(scope): description. "
+        "Use types like feat, fix, refactor, chore, docs, test, style, perf, ci. "
+        "Keep the description under 72 characters. Do not add any extra commentary or explanation."
+    )
+
+    user_prompt = (
+        f"Branch: {branch}\n\n"
+        f"Changes summary:\n{status_summary}\n\n"
+        f"Diff:\n{diff_context}\n"
+    )
+
+    print("  Contacting c05localai (NVIDIA Nemotron)...")
+    message = call_c05localai(system_prompt, user_prompt)
+
+    if not message:
+        raise SystemExit("  AI returned an empty commit message. Try again or enter one manually.")
+
+    return message
 
 
 def parse_status_files(status_output: str) -> list[dict]:
