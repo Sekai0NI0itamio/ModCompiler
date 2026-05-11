@@ -5,22 +5,24 @@ run_mod_to_all_converter.py
 Triggers the "Automated Mod to ALL Version Converter" workflow on GitHub
 Actions, waits for completion, and downloads all artifacts and logs.
 
-After the workflow completes, the script can optionally enter a second
-stage (mode="prompt-and-code") that sends each generated
+After the workflow completes, the script **always** enters the second stage
+(mode="prompt-and-code" by default) that sends each generated
 prompt to an AI (via C05LocalAi / NVIDIA) and saves the response as
 airesponse.txt in each version folder.
+
+Pass --mode prompt-creation to skip the AI coding stage.
 
 Usage
 -----
   python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest
-  python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest --mode prompt-creation
   python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest --mode prompt-and-code
+  python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest --mode prompt-creation
 
 Modes
 -----
-  prompt-creation (default) — Run the workflow and download the prompt bundle.
-  prompt-and-code           — Also execute the prompts locally via AI and save
-                              airesponse.txt files.
+  prompt-and-code (default) — Run workflow, download prompts, THEN execute
+                              prompts locally via AI and save airesponse.txt.
+  prompt-creation            — Run the workflow and download the prompt bundle only.
 
 The script exits 0 on workflow success, 1 on failure or error.
 
@@ -451,13 +453,14 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Max seconds to wait for workflow (default: {DEFAULT_TIMEOUT})")
     parser.add_argument("--repo", default="",
         help="owner/repo override (default: auto-detect from git remote)")
-    parser.add_argument("--mode", default="prompt-creation",
+    parser.add_argument("--mode", default="prompt-and-code",
         choices=["prompt-creation", "prompt-and-code"],
         help=(
             "Operation mode:\n"
-            "  prompt-creation (default) — Run workflow + download prompts.\n"
-            "  prompt-and-code           — Also execute prompts locally via AI\n"
-            "                             and save airesponse.txt files."
+            "  prompt-and-code (default) — Run workflow, download prompts, THEN\n"
+            "                              execute prompts locally via AI and\n"
+            "                              save airesponse.txt files.\n"
+            "  prompt-creation           — Run workflow + download prompts only."
         ))
     args = parser.parse_args(argv)
 
