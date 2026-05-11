@@ -8,17 +8,21 @@ name: Automated Mod to ALL Version Converter
 # creates a projectinfo.txt with metadata and decompiled source code from the
 # closest working version and closest working loader.
 #
-# Final artifact structure:
+# Final artifact structure (after Phase 3):
 #   Logs.txt                    — Script stdout/stderr capture
 #   Diagnosis.txt               — Working, shell, and missing version summary
 #   <mc_version>-<loader>/      — One folder per missing/shell version combo
 #     projectinfo.txt           — Mod info + source from closest version & loader
+#     Background Info.txt       — Template code + top 4 DIF known issues
+#     prompt.txt                — AI-ready prompt: project info + Background Info
+#                                + predesigned instructions to write ALL source files
 #
-# Two concurrent Phase 1 jobs:
-#   info-gather  — Fetches project info, decompiles the first working jar
-#   diagnosis    — Scans all versions, detects shells/corruption/missing
-#
-# Phase 2 (assemble): uses diagnosis results to produce the final bundle.
+# Three jobs:
+#   info-gather     (Phase 1a) — Fetches project info, decompiles the first working jar
+#   diagnosis       (Phase 1b) — Scans all versions, detects shells/corruption/missing
+#   assemble        (Phase 2)  — Uses diagnosis results to produce per-target projectinfo.txt
+#   generate-prompts (Phase 3) — Adds Background Info.txt + prompt.txt to each target folder
+#                                using repo templates and DIF knowledge base entries.
 # ---------------------------------------------------------------------------
 
 on:
@@ -710,3 +714,55 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           TARGET_COUNT=$(find .workflow_artifacts/bundle/ -maxdepth 1 -mindepth 1 -type d ! -name '.cache' | wc -l 2>/dev/null || echo "0")
           echo "**Version/loader target folders: $TARGET_COUNT**" >> "$GITHUB_STEP_SUMMARY"
+
+# ---------------------------------------------------------------------------
+# Phase 3 — Generate prompt.txt from per-target projectinfo.txt + templates + DIF
+# ---------------------------------------------------------------------------
+  generate-prompts:
+    name: Generate AI-ready prompt.txt for each target
+    needs: [assemble]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mod-to-all-analysis-bundle
+          path: .workflow_downloads/bundle
+
+      - name: Generate Background Info.txt and prompt.txt for each target
+        shell: bash
+        run: |
+          python3 scripts/generate_prompts_in_bundle.py \
+            --bundle-dir .workflow_downloads/bundle \
+            --manifest version-manifest.json
+
+      - name: Upload final prompt bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-to-all-analysis-bundle
+          path: .workflow_downloads/bundle/
+          if-no-files-found: error
+
+      - name: Write step summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Automated Mod to ALL Version Converter — AI-Ready Prompt Bundle" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Prompt Bundle Structure" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          find .workflow_downloads/bundle/ -type f | sort | head -80 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          PROMPT_COUNT=$(find .workflow_downloads/bundle/ -name 'prompt.txt' | wc -l 2>/dev/null || echo "0")
+          echo "**prompt.txt files generated: $PROMPT_COUNT**" >> "$GITHUB_STEP_SUMMARY"
+          BG_COUNT=$(find .workflow_downloads/bundle/ -name 'Background Info.txt' | wc -l 2>/dev/null || echo "0")
+          echo "**Background Info.txt files generated: $BG_COUNT**" >> "$GITHUB_STEP_SUMMARY"
