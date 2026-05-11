@@ -231,37 +231,68 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
         print("No prompt.txt files found. Skipping AI coding stage.")
         return 0
 
-    print(f"Found {len(prompt_targets)} target(s) with prompts to execute.")
+    target_names = sorted(td.name for td in prompt_targets)
+    print(f"Found {len(target_names)} target(s) with prompts to execute.")
     print()
 
-    # Shared state
-    statuses: dict[str, str] = {}
-    status_details: dict[str, str] = {}
-    for td in prompt_targets:
-        statuses[td.name] = "queued"
-        status_details[td.name] = ""
-
+    # ── Build and print the status table ───────────────────────────────────
+    # We print it once, then update individual lines in-place.
     print_lock = threading.Lock()
 
-    def _update_status(name: str, status: str, detail: str = "") -> None:
-        with print_lock:
-            statuses[name] = status
-            status_details[name] = detail
-            _print_status_log(name, status, detail)
+    # Table layout:
+    #   ──── separator  (line 1)
+    #   Target ... Status  (line 2)
+    #   ──── separator  (line 3)
+    #   target_1           (line 4)
+    #   target_2           (line 5)
+    #   ...
+    #   target_n           (line 4 + n - 1)
+    #   (blank line)       (line 4 + n)
+    #
+    # All later status updates overwrite lines 4 through 4+n-1.
 
-    # Print initial status line for each target
+    HEADER_LINES = 3  # separator + header + separator
+    TABLE_ROWS = len(target_names)
+
     print(f"{'─' * 72}")
     print(f"  {'Target':<30}  Status")
     print(f"{'─' * 72}")
-    for name in sorted(statuses.keys()):
-        _print_status_log(name, "queued", "")
+    for name in target_names:
+        label, color = _STATUS_LABELS["queued"]
+        print(f"  {name:<30}  {color}{label}{Colors.RESET}")
+    print()  # blank line after table
+
+    # Cursor is now at line (HEADER_LINES + TABLE_ROWS) 0-based from table top.
+    # After "Processing..." and its blank, cursor will be 2 more lines down.
+    TABLE_BOTTOM = HEADER_LINES + TABLE_ROWS  # 0-based row of the blank line after table
 
     # Process with ThreadPoolExecutor for parallel AI requests
-    max_workers = min(10, len(prompt_targets))
-    print()
+    max_workers = min(10, len(target_names))
     print(f"  Processing with up to {max_workers} parallel workers...")
     print()
+    # Cursor now at TABLE_BOTTOM + 2 (0-based) = HEADER_LINES + TABLE_ROWS + 2
+    CURSOR_HOME = TABLE_BOTTOM + 2  # reference line where our cursor stays
 
+    # ── Helper: update a single line in the table in-place ─────────────────
+    def _update_line(name: str, status: str, detail: str = "") -> None:
+        """Overwrite the status line for `name` in-place using ANSI codes."""
+        idx = target_names.index(name)
+        # Target row is HEADER_LINES + idx (0-based).
+        # From CURSOR_HOME, go up: CURSOR_HOME - (HEADER_LINES + idx)
+        # = (HEADER_LINES + TABLE_ROWS + 2) - (HEADER_LINES + idx)
+        # = TABLE_ROWS - idx + 2
+        lines_up = TABLE_ROWS - idx + 3
+        label, color = _STATUS_LABELS.get(status, (status, Colors.RESET))
+        text = f"{color}{label}{Colors.RESET}"
+        if detail:
+            text += f"  ({detail})"
+        with print_lock:
+            # Go up to the target line, clear it, write new content
+            print(f"\033[{lines_up}A\r\033[K  {name:<30}  {text}", flush=True)
+            # Return cursor to home position
+            print(f"\033[{lines_up}B", end="", flush=True)
+
+    # ── Execute ────────────────────────────────────────────────────────────
     success_count = 0
     fail_count = 0
 
@@ -274,7 +305,7 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
                 td.name,
                 prompt_path.read_text(encoding="utf-8"),
                 nvidia_key,
-                _update_status,
+                _update_line,
             )
             fut_to_target[fut] = td
 
@@ -282,16 +313,14 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
             td = fut_to_target[fut]
             try:
                 response_text = fut.result()
-                # Save airesponse.txt
                 resp_path = td / "airesponse.txt"
                 resp_path.write_text(response_text, encoding="utf-8")
-                _update_status(td.name, "complete", f"{len(response_text):,} chars")
+                _update_line(td.name, "complete", f"{len(response_text):,} chars")
                 success_count += 1
             except Exception as exc:
                 error_msg = str(exc)
-                _update_status(td.name, "failed", error_msg[:80])
+                _update_line(td.name, "failed", error_msg[:80])
                 fail_count += 1
-                # Save failure log
                 fail_path = td / "airesponse.txt"
                 fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
 
@@ -301,15 +330,6 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
     print(f"{'─' * 72}")
 
     return 0 if fail_count == 0 else 1
-
-
-def _print_status_log(name: str, status: str, detail: str) -> None:
-    """Print a single status line for one target."""
-    label, color = _STATUS_LABELS.get(status, (status, Colors.RESET))
-    text = f"{color}{label}{Colors.RESET}"
-    if detail:
-        text += f"  ({detail})"
-    print(f"  {name:<30}  {text}")
 
 
 def _send_prompt_to_nvidia(
@@ -324,18 +344,16 @@ def _send_prompt_to_nvidia(
 
     url = f"{AI_NVIDIA_BASE}/chat/completions"
 
-    # Check if the prompt contains loader hints to add system message
-    system_msg = None
-    if "forge" in target_name.lower() and "neoforge" not in target_name.lower():
-        system_msg = "You are a Minecraft Forge mod developer. Output only valid source code files."
-    elif "neoforge" in target_name.lower():
-        system_msg = "You are a Minecraft NeoForge mod developer. Output only valid source code files."
-    elif "fabric" in target_name.lower():
-        system_msg = "You are a Minecraft Fabric mod developer. Output only valid source code files."
-
     messages = []
-    if system_msg:
-        messages.append({"role": "system", "content": system_msg})
+    messages.append({
+        "role": "system",
+        "content": (
+            "You are an excellent and professional Minecraft mod developer. "
+            "You are expert at reading and following technical instructions precisely. "
+            "You write clean, correct, and well-structured Java code. "
+            "Provide ALL files requested with complete implementations — no stubs, no TODOs, no placeholders."
+        )
+    })
     messages.append({"role": "user", "content": prompt_text})
 
     payload: dict[str, Any] = {
@@ -392,21 +410,15 @@ def _send_prompt_to_nvidia(
                             choices = data.get("choices", [])
                             if choices:
                                 delta = choices[0].get("delta", {})
-                                # Some reasoning models put content in "reasoning_content"
                                 content = delta.get("content", "") or ""
-                                reasoning = delta.get("reasoning_content", "") or ""
                                 if content:
                                     full_response += content
                                     accumulated += len(content)
-                                if reasoning:
-                                    full_response += reasoning
-                                    accumulated += len(reasoning)
-                                if accumulated > 0 and accumulated % 500 < 100:
-                                    # Throttle streaming updates to ~every 500 bytes
-                                    status_callback(
-                                        target_name, "streaming",
-                                        f"{accumulated:,} bytes received"
-                                    )
+                                    if accumulated % 500 < 100:
+                                        status_callback(
+                                            target_name, "streaming",
+                                            f"{accumulated:,} bytes received"
+                                        )
                         except json.JSONDecodeError:
                             pass
     except urllib.error.HTTPError as e:
