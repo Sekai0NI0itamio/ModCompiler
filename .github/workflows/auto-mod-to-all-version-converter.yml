@@ -3,10 +3,39 @@ name: Automated Mod to ALL Version Converter
 # ---------------------------------------------------------------------------
 # Purpose
 # -------
-# Runs diagnosis to find working, shell/malformed, and missing mod version/loader
-# combinations. Then for each missing version+loader (shell + repo-can-build),
-# creates a projectinfo.txt with metadata and decompiled source code from the
-# closest working version and closest working loader.
+# Generates an AI-ready "porting bundle" from a Modrinth project URL. The
+# workflow has three distinct phases spanning four jobs:
+#
+#   PHASE 1 — INFORMATION GATHERING & DIAGNOSIS
+#   ────────────────────────────────────────────
+#   Job 1: info-gather     — Fetches Modrinth project metadata, downloads the
+#                            original/oldest working jar, decompiles its source,
+#                            and writes a master projectinfo.txt.
+#   Job 2: diagnosis       — Scans all published versions, detects shells
+#                            (malformed jars) and identifies which MC version +
+#                            loader combos the repo can build but are missing
+#                            from Modrinth.
+#
+#   PHASE 2 — BUNDLE ASSEMBLY
+#   ──────────────────────────
+#   Job 3: assemble        — For each missing/shell target (mc_version-loader),
+#                            creates a per-target folder with projectinfo.txt
+#                            (mod metadata + decompiled source from the closest
+#                            working version AND closest working loader).
+#
+#   PHASE 3 — AI PROMPT GENERATION
+#   ──────────────────────────────
+#   Job 4: generate-prompts — For each target folder created in Phase 2, adds:
+#                              • Background Info.txt  — Working template code
+#                                                       from the repo + top 4
+#                                                       DIF (Documented Issue
+#                                                       Fix) entries.
+#                              • prompt.txt           — Full AI prompt combining
+#                                                       project info, background
+#                                                       info, loader-specific
+#                                                       instructions, and a
+#                                                       requirement to output
+#                                                       ALL source files.
 #
 # Final artifact structure (after Phase 3):
 #   Logs.txt                    — Script stdout/stderr capture
@@ -16,13 +45,6 @@ name: Automated Mod to ALL Version Converter
 #     Background Info.txt       — Template code + top 4 DIF known issues
 #     prompt.txt                — AI-ready prompt: project info + Background Info
 #                                + predesigned instructions to write ALL source files
-#
-# Three jobs:
-#   info-gather     (Phase 1a) — Fetches project info, decompiles the first working jar
-#   diagnosis       (Phase 1b) — Scans all versions, detects shells/corruption/missing
-#   assemble        (Phase 2)  — Uses diagnosis results to produce per-target projectinfo.txt
-#   generate-prompts (Phase 3) — Adds Background Info.txt + prompt.txt to each target folder
-#                                using repo templates and DIF knowledge base entries.
 # ---------------------------------------------------------------------------
 
 on:
@@ -41,8 +63,11 @@ permissions:
 env:
   MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
 
+# ===========================================================================
+# PHASE 1 — INFORMATION GATHERING & DIAGNOSIS
+# ===========================================================================
 # ---------------------------------------------------------------------------
-# Job 1a — Info Gather: project metadata + locate original working version
+# Job 1: Info Gather — Fetch metadata, download original jar, decompile source
 # ---------------------------------------------------------------------------
 jobs:
   info-gather:
@@ -353,7 +378,7 @@ jobs:
           if-no-files-found: error
 
 # ---------------------------------------------------------------------------
-# Job 1b — Diagnosis: scan all versions for shells/corruption/missing
+# Job 2: Diagnosis — Scan all versions for shells/corruption/missing
 # ---------------------------------------------------------------------------
   diagnosis:
     name: Diagnose shells, corruption, and missing versions
@@ -653,8 +678,11 @@ jobs:
           path: .workflow_artifacts/diagnosis/
           if-no-files-found: error
 
+# ===========================================================================
+# PHASE 2 — BUNDLE ASSEMBLY
+# ===========================================================================
 # ---------------------------------------------------------------------------
-# Phase 2 — Assemble diagnosis bundle with projectinfo.txt for each missing target
+# Job 3: Assemble — Create per-target projectinfo.txt with nearest source code
 # ---------------------------------------------------------------------------
   assemble:
     name: Assemble diagnosis bundle (per-target projectinfo.txt)
@@ -715,8 +743,11 @@ jobs:
           TARGET_COUNT=$(find .workflow_artifacts/bundle/ -maxdepth 1 -mindepth 1 -type d ! -name '.cache' | wc -l 2>/dev/null || echo "0")
           echo "**Version/loader target folders: $TARGET_COUNT**" >> "$GITHUB_STEP_SUMMARY"
 
+# ===========================================================================
+# PHASE 3 — AI PROMPT GENERATION
+# ===========================================================================
 # ---------------------------------------------------------------------------
-# Phase 3 — Generate prompt.txt from per-target projectinfo.txt + templates + DIF
+# Job 4: Generate Prompts — Add Background Info.txt + prompt.txt per target
 # ---------------------------------------------------------------------------
   generate-prompts:
     name: Generate AI-ready prompt.txt for each target

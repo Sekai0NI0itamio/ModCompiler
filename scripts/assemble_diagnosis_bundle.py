@@ -310,6 +310,7 @@ def assemble_bundle(
     slug = diagnosis.get("slug", project_info.get("slug", "unknown"))
     title = diagnosis.get("title", project_info.get("title", slug))
     description = project_info.get("description", "")
+    body = project_info.get("body", "") or ""
     loaders = project_info.get("loaders", [])
 
     working_records = [r for r in diagnosis.get("version_records", []) if not r.get("is_shell")]
@@ -662,7 +663,7 @@ def assemble_bundle(
         lines.append(f"  {description[:500]}" if description else "  (no description available)")
         lines.append(f"")
         lines.append(f"Mod Description (what it intends to do):")
-        lines.append(f"  {description[:1000]}" if description else "  (no description available)")
+        lines.append(f"  {body[:1000]}" if body else f"  {description[:1000]}" if description else "  (no description available)")
         lines.append(f"")
 
         # Determine if version and loader sources are the same record
