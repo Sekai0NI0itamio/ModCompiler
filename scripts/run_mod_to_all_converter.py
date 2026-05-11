@@ -158,22 +158,16 @@ class Colors:
     BLACK_BOLD = "\033[1;30m"
     RESET = "\033[0m"
     BOLD = "\033[1m"
-    CLR_LINE = "\033[K"
 
 
-_STATUS_COLORS = {
-    "queued": Colors.GREY,
-    "in_progress": Colors.RED,
-    "streaming": Colors.YELLOW,
-    "complete": Colors.GREEN,
-    "retrying": Colors.BLACK_BOLD,
-    "failed": Colors.BLACK_BOLD,
+_STATUS_LABELS = {
+    "queued": ("Queued", Colors.GREY),
+    "in_progress": ("In Progress", Colors.RED),
+    "streaming": ("Streaming", Colors.YELLOW),
+    "complete": ("Complete", Colors.GREEN),
+    "retrying": ("Retrying", Colors.BLACK_BOLD),
+    "failed": ("Failed", Colors.BLACK_BOLD),
 }
-
-
-def _color_status(status: str) -> str:
-    c = _STATUS_COLORS.get(status, Colors.RESET)
-    return f"{c}{status}{Colors.RESET}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -204,17 +198,10 @@ def _load_nvidia_key() -> str:
     )
 
 
-def _map_loader_to_system_hint(loader: str) -> str:
-    mapping = {
-        "fabric": "Fabric Loader",
-        "forge": "Forge",
-        "neoforge": "NeoForge",
-    }
-    return mapping.get(loader, loader)
-
-
 def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
     """Execute the AI coding stage: send prompts to NVIDIA and save responses."""
+    import threading
+
     print()
     print("=" * 72)
     print("  PHASE 2 — AI MOD CODING (Local)")
@@ -245,19 +232,35 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
         return 0
 
     print(f"Found {len(prompt_targets)} target(s) with prompts to execute.")
-    print(f"\n{'─' * 72}")
-    print(f"  {'Target':<30} {'Status'}")
-    print(f"{'─' * 72}")
+    print()
 
-    # Track status for display
+    # Shared state
     statuses: dict[str, str] = {}
+    status_details: dict[str, str] = {}
     for td in prompt_targets:
         statuses[td.name] = "queued"
-        _print_status_table(statuses)
+        status_details[td.name] = ""
+
+    print_lock = threading.Lock()
+
+    def _update_status(name: str, status: str, detail: str = "") -> None:
+        with print_lock:
+            statuses[name] = status
+            status_details[name] = detail
+            _print_status_log(name, status, detail)
+
+    # Print initial status line for each target
+    print(f"{'─' * 72}")
+    print(f"  {'Target':<30}  Status")
+    print(f"{'─' * 72}")
+    for name in sorted(statuses.keys()):
+        _print_status_log(name, "queued", "")
 
     # Process with ThreadPoolExecutor for parallel AI requests
     max_workers = min(10, len(prompt_targets))
-    print(f"\n  Processing with up to {max_workers} parallel workers...\n")
+    print()
+    print(f"  Processing with up to {max_workers} parallel workers...")
+    print()
 
     success_count = 0
     fail_count = 0
@@ -271,7 +274,7 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
                 td.name,
                 prompt_path.read_text(encoding="utf-8"),
                 nvidia_key,
-                statuses,
+                _update_status,
             )
             fut_to_target[fut] = td
 
@@ -282,18 +285,15 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
                 # Save airesponse.txt
                 resp_path = td / "airesponse.txt"
                 resp_path.write_text(response_text, encoding="utf-8")
-                statuses[td.name] = "complete"
+                _update_status(td.name, "complete", f"{len(response_text):,} chars")
                 success_count += 1
-                _log(f"✓ {td.name}: airesponse.txt saved ({len(response_text):,} chars)")
             except Exception as exc:
                 error_msg = str(exc)
-                statuses[td.name] = "failed"
+                _update_status(td.name, "failed", error_msg[:80])
                 fail_count += 1
-                _log(f"✗ {td.name}: {error_msg[:200]}")
                 # Save failure log
                 fail_path = td / "airesponse.txt"
                 fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
-            _print_status_table(statuses)
 
     print()
     print(f"{'─' * 72}")
@@ -303,37 +303,20 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
     return 0 if fail_count == 0 else 1
 
 
-def _print_status_table(statuses: dict[str, str]) -> None:
-    """Print a status table, overwriting the previous one."""
-    # Move cursor up by the number of previously printed lines + header
-    # We estimate the previous output was 2 header lines + len(statuses) data lines
-    if hasattr(_print_status_table, "_prev_lines"):
-        up = _print_status_table._prev_lines
-        print(f"\033[{up}A", end="")  # Move cursor up
-
-    lines = []
-    for name, status in sorted(statuses.items()):
-        colored = _color_status(status)
-        lines.append(f"  {name:<30} {colored}")
-
-    total = 2 + len(lines)
-    print(f"{'─' * 72}")
-    print(f"  {'Target':<30} {'Status'}")
-    print(f"{'─' * 72}")
-    for line in lines:
-        print(line)
-    sys.stdout.flush()
-    _print_status_table._prev_lines = total
-
-
-_print_status_table._prev_lines = 0
+def _print_status_log(name: str, status: str, detail: str) -> None:
+    """Print a single status line for one target."""
+    label, color = _STATUS_LABELS.get(status, (status, Colors.RESET))
+    text = f"{color}{label}{Colors.RESET}"
+    if detail:
+        text += f"  ({detail})"
+    print(f"  {name:<30}  {text}")
 
 
 def _send_prompt_to_nvidia(
     target_name: str,
     prompt_text: str,
     api_key: str,
-    statuses: dict[str, str],
+    status_callback: callable,
 ) -> str:
     """Send a single prompt to the NVIDIA API and return the full response."""
     import urllib.request
@@ -378,8 +361,7 @@ def _send_prompt_to_nvidia(
         "Accept": "text/event-stream",
     }
 
-    statuses[target_name] = "in_progress"
-    _print_status_table(statuses)
+    status_callback(target_name, "in_progress")
 
     req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
 
@@ -417,12 +399,14 @@ def _send_prompt_to_nvidia(
                                     full_response += content
                                     accumulated += len(content)
                                 if reasoning:
-                                    # Include reasoning as comments in the response
                                     full_response += reasoning
                                     accumulated += len(reasoning)
-                                if accumulated > 0:
-                                    statuses[target_name] = f"streaming ({accumulated:,}B)"
-                                    _print_status_table(statuses)
+                                if accumulated > 0 and accumulated % 500 < 100:
+                                    # Throttle streaming updates to ~every 500 bytes
+                                    status_callback(
+                                        target_name, "streaming",
+                                        f"{accumulated:,} bytes received"
+                                    )
                         except json.JSONDecodeError:
                             pass
     except urllib.error.HTTPError as e:
@@ -434,6 +418,8 @@ def _send_prompt_to_nvidia(
     if not full_response:
         raise RuntimeError("Empty response from AI — no content generated.")
 
+    # Final streaming update
+    status_callback(target_name, "streaming", f"{accumulated:,} bytes received")
     return full_response
 
 
