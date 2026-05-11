@@ -50,6 +50,20 @@ name: Automated Mod to ALL Version Converter
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: >
+          Operation mode.
+            prompt-creation (default) — Full Phase 1-3 pipeline producing the
+            AI-ready prompt bundle (projectinfo.txt + Background Info.txt +
+            prompt.txt for each target).
+            prompt-and-code            — Same as prompt-creation, then run a
+            local AI coding stage to execute prompts and produce airesponse.txt.
+        required: false
+        default: "prompt-creation"
+        type: choice
+        options:
+          - prompt-creation
+          - prompt-and-code
       modrinth_project_url:
         description: >
           Modrinth project URL, slug, or project ID.
@@ -62,6 +76,7 @@ permissions:
 
 env:
   MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
+  WORKFLOW_MODE: ${{ inputs.mode || 'prompt-creation' }}
 
 # ===========================================================================
 # PHASE 1 — INFORMATION GATHERING & DIAGNOSIS

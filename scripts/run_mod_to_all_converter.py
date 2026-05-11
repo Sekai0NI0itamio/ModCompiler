@@ -5,10 +5,22 @@ run_mod_to_all_converter.py
 Triggers the "Automated Mod to ALL Version Converter" workflow on GitHub
 Actions, waits for completion, and downloads all artifacts and logs.
 
+After the workflow completes, the script can optionally enter a second
+stage (mode="prompt-and-code") that sends each generated
+prompt to an AI (via C05LocalAi / NVIDIA) and saves the response as
+airesponse.txt in each version folder.
+
 Usage
 -----
   python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest
-  python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest --output-dir MyRuns
+  python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest --mode prompt-creation
+  python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest --mode prompt-and-code
+
+Modes
+-----
+  prompt-creation (default) — Run the workflow and download the prompt bundle.
+  prompt-and-code           — Also execute the prompts locally via AI and save
+                              airesponse.txt files.
 
 The script exits 0 on workflow success, 1 on failure or error.
 
@@ -22,6 +34,11 @@ Output folder layout
         projectinfo.txt
         diagnosis.txt
         diagnosis.json
+        <mc_version>-<loader>/
+          projectinfo.txt
+          Background Info.txt
+          prompt.txt
+          airesponse.txt    ← only in prompt-and-code mode
         first_version/...
         jars/...
     logs/
@@ -127,6 +144,301 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
     raise RunError(f"gh {' '.join(args)} failed: {last_err}")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Colors / ANSI helpers for the AI coding stage status display
+# ─────────────────────────────────────────────────────────────────────────────
+
+class Colors:
+    GREY = "\033[90m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    GREEN = "\033[92m"
+    BLACK_BOLD = "\033[1;30m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    CLR_LINE = "\033[K"
+
+
+_STATUS_COLORS = {
+    "queued": Colors.GREY,
+    "in_progress": Colors.RED,
+    "streaming": Colors.YELLOW,
+    "complete": Colors.GREEN,
+    "retrying": Colors.BLACK_BOLD,
+    "failed": Colors.BLACK_BOLD,
+}
+
+
+def _color_status(status: str) -> str:
+    c = _STATUS_COLORS.get(status, Colors.RESET)
+    return f"{c}{status}{Colors.RESET}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AI Coding Stage — sends prompts to C05LocalAi / NVIDIA
+# ─────────────────────────────────────────────────────────────────────────────
+
+AI_NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
+AI_MODEL = "stepfun-ai/step-3.5-flash"
+AI_MAX_TOKENS = 16384
+
+
+def _load_nvidia_key() -> str:
+    """Load the first NVIDIA API key from C05LocalAi/keys/nvidia.txt."""
+    key_path = Path("C05LocalAi/keys/nvidia.txt")
+    if key_path.exists():
+        for line in key_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                return line
+    # Fallback: check env
+    for var in ("NVIDIA_API_KEY", "NVAPI_KEY"):
+        val = os.environ.get(var, "").strip()
+        if val:
+            return val
+    raise RunError(
+        "No NVIDIA API key found. "
+        "Either set NVIDIA_API_KEY env var or add a key to C05LocalAi/keys/nvidia.txt"
+    )
+
+
+def _map_loader_to_system_hint(loader: str) -> str:
+    mapping = {
+        "fabric": "Fabric Loader",
+        "forge": "Forge",
+        "neoforge": "NeoForge",
+    }
+    return mapping.get(loader, loader)
+
+
+def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
+    """Execute the AI coding stage: send prompts to NVIDIA and save responses."""
+    print()
+    print("=" * 72)
+    print("  PHASE 2 — AI MOD CODING (Local)")
+    print(f"  Model: {AI_MODEL}")
+    print(f"  Provider: NVIDIA Integrate API")
+    print("=" * 72)
+    print()
+
+    # Find all version folders with prompt.txt
+    target_dirs = sorted([
+        d for d in bundle_dir.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+    ])
+
+    if not target_dirs:
+        print("ERROR: No target directories found in bundle.", file=sys.stderr)
+        return 1
+
+    # Filter to those with prompt.txt
+    prompt_targets = []
+    for td in target_dirs:
+        prompt_path = td / "prompt.txt"
+        if prompt_path.exists():
+            prompt_targets.append(td)
+
+    if not prompt_targets:
+        print("No prompt.txt files found. Skipping AI coding stage.")
+        return 0
+
+    print(f"Found {len(prompt_targets)} target(s) with prompts to execute.")
+    print(f"\n{'─' * 72}")
+    print(f"  {'Target':<30} {'Status'}")
+    print(f"{'─' * 72}")
+
+    # Track status for display
+    statuses: dict[str, str] = {}
+    for td in prompt_targets:
+        statuses[td.name] = "queued"
+        _print_status_table(statuses)
+
+    # Process with ThreadPoolExecutor for parallel AI requests
+    max_workers = min(10, len(prompt_targets))
+    print(f"\n  Processing with up to {max_workers} parallel workers...\n")
+
+    success_count = 0
+    fail_count = 0
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        fut_to_target = {}
+        for td in prompt_targets:
+            prompt_path = td / "prompt.txt"
+            fut = pool.submit(
+                _send_prompt_to_nvidia,
+                td.name,
+                prompt_path.read_text(encoding="utf-8"),
+                nvidia_key,
+                statuses,
+            )
+            fut_to_target[fut] = td
+
+        for fut in as_completed(fut_to_target):
+            td = fut_to_target[fut]
+            try:
+                response_text = fut.result()
+                # Save airesponse.txt
+                resp_path = td / "airesponse.txt"
+                resp_path.write_text(response_text, encoding="utf-8")
+                statuses[td.name] = "complete"
+                success_count += 1
+                _log(f"✓ {td.name}: airesponse.txt saved ({len(response_text):,} chars)")
+            except Exception as exc:
+                error_msg = str(exc)
+                statuses[td.name] = "failed"
+                fail_count += 1
+                _log(f"✗ {td.name}: {error_msg[:200]}")
+                # Save failure log
+                fail_path = td / "airesponse.txt"
+                fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
+            _print_status_table(statuses)
+
+    print()
+    print(f"{'─' * 72}")
+    print(f"  AI Coding Stage Complete: {success_count} success, {fail_count} failed")
+    print(f"{'─' * 72}")
+
+    return 0 if fail_count == 0 else 1
+
+
+def _print_status_table(statuses: dict[str, str]) -> None:
+    """Print a status table, overwriting the previous one."""
+    # Move cursor up by the number of previously printed lines + header
+    # We estimate the previous output was 2 header lines + len(statuses) data lines
+    if hasattr(_print_status_table, "_prev_lines"):
+        up = _print_status_table._prev_lines
+        print(f"\033[{up}A", end="")  # Move cursor up
+
+    lines = []
+    for name, status in sorted(statuses.items()):
+        colored = _color_status(status)
+        lines.append(f"  {name:<30} {colored}")
+
+    total = 2 + len(lines)
+    print(f"{'─' * 72}")
+    print(f"  {'Target':<30} {'Status'}")
+    print(f"{'─' * 72}")
+    for line in lines:
+        print(line)
+    sys.stdout.flush()
+    _print_status_table._prev_lines = total
+
+
+_print_status_table._prev_lines = 0
+
+
+def _send_prompt_to_nvidia(
+    target_name: str,
+    prompt_text: str,
+    api_key: str,
+    statuses: dict[str, str],
+) -> str:
+    """Send a single prompt to the NVIDIA API and return the full response."""
+    import urllib.request
+    import urllib.error
+
+    url = f"{AI_NVIDIA_BASE}/chat/completions"
+
+    # Check if the prompt contains loader hints to add system message
+    system_msg = None
+    if "forge" in target_name.lower() and "neoforge" not in target_name.lower():
+        system_msg = "You are a Minecraft Forge mod developer. Output only valid source code files."
+    elif "neoforge" in target_name.lower():
+        system_msg = "You are a Minecraft NeoForge mod developer. Output only valid source code files."
+    elif "fabric" in target_name.lower():
+        system_msg = "You are a Minecraft Fabric mod developer. Output only valid source code files."
+
+    messages = []
+    if system_msg:
+        messages.append({"role": "system", "content": system_msg})
+    messages.append({"role": "user", "content": prompt_text})
+
+    payload: dict[str, Any] = {
+        "model": AI_MODEL,
+        "messages": messages,
+        "max_tokens": AI_MAX_TOKENS,
+        "temperature": 0.2,
+        "stream": True,
+    }
+
+    # Enable reasoning/thinking for stepfun models via NVIDIA's chat_template_kwargs
+    payload["extra_body"] = {
+        "chat_template_kwargs": {
+            "enable_thinking": True,
+            "reasoning_effort": "high",
+        }
+    }
+
+    body_bytes = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    }
+
+    statuses[target_name] = "in_progress"
+    _print_status_table(statuses)
+
+    req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
+
+    full_response = ""
+    accumulated = 0
+    buffer = ""
+
+    try:
+        with urllib.request.urlopen(req, timeout=600) as resp:
+            while True:
+                chunk = resp.read(4096)
+                if not chunk:
+                    break
+                buffer += chunk.decode("utf-8", errors="replace")
+
+                # Process SSE events
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            choices = data.get("choices", [])
+                            if choices:
+                                delta = choices[0].get("delta", {})
+                                # Some reasoning models put content in "reasoning_content"
+                                content = delta.get("content", "") or ""
+                                reasoning = delta.get("reasoning_content", "") or ""
+                                if content:
+                                    full_response += content
+                                    accumulated += len(content)
+                                if reasoning:
+                                    # Include reasoning as comments in the response
+                                    full_response += reasoning
+                                    accumulated += len(reasoning)
+                                if accumulated > 0:
+                                    statuses[target_name] = f"streaming ({accumulated:,}B)"
+                                    _print_status_table(statuses)
+                        except json.JSONDecodeError:
+                            pass
+    except urllib.error.HTTPError as e:
+        error_detail = e.read().decode("utf-8", errors="replace")[:500]
+        raise RuntimeError(f"HTTP {e.code}: {error_detail}")
+    except Exception as e:
+        raise RuntimeError(str(e))
+
+    if not full_response:
+        raise RuntimeError("Empty response from AI — no content generated.")
+
+    return full_response
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main Runner
+# ─────────────────────────────────────────────────────────────────────────────
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Trigger Automated Mod to ALL Version Converter workflow, wait, and download results."
@@ -139,6 +451,14 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Max seconds to wait for workflow (default: {DEFAULT_TIMEOUT})")
     parser.add_argument("--repo", default="",
         help="owner/repo override (default: auto-detect from git remote)")
+    parser.add_argument("--mode", default="prompt-creation",
+        choices=["prompt-creation", "prompt-and-code"],
+        help=(
+            "Operation mode:\n"
+            "  prompt-creation (default) — Run workflow + download prompts.\n"
+            "  prompt-and-code           — Also execute prompts locally via AI\n"
+            "                             and save airesponse.txt files."
+        ))
     args = parser.parse_args(argv)
 
     try:
@@ -155,6 +475,7 @@ class Runner:
         self.repo = (args.repo or _detect_repo()).strip()
         self.token = _detect_token()
         self.run_id: int = 0
+        self.mode = args.mode
 
         # Derive slug from URL
         m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", self.modrinth_url)
@@ -167,9 +488,10 @@ class Runner:
         self.out_root.mkdir(parents=True, exist_ok=True)
         _ensure_gh()
 
+        print(f"Mode:        {self.mode}")
         print(f"Repo:        {self.repo}")
         print(f"Modrinth:    {self.modrinth_url}")
-        print(f"Ouput dir:   {self.out_root}")
+        print(f"Output dir:  {self.out_root}")
         print()
 
         # 1. Dispatch workflow
@@ -194,11 +516,34 @@ class Runner:
         print(f"\nRun folder:  {self.out_root}")
         print(f"Summary:     {summary_path}")
         print(f"Workflow conclusion: {conclusion.upper()}")
-        return 0 if conclusion == "success" else 1
+
+        if conclusion != "success":
+            return 1
+
+        # 5. AI Coding Stage (only in prompt-and-code mode)
+        if self.mode in ("prompt-and-code",):
+            bundle_dir = artifacts_dir / ANALYSIS_ARTIFACT
+            if not bundle_dir.exists():
+                print("ERROR: Analysis bundle directory not found. Cannot run AI coding stage.",
+                      file=sys.stderr)
+                return 1
+
+            nvidia_key = _load_nvidia_key()
+            ai_result = _run_ai_coding_stage(bundle_dir, nvidia_key)
+
+            # Update SUMMARY.md with AI results
+            self._append_ai_summary(artifacts_dir)
+
+            if ai_result != 0:
+                return 1
+
+        return 0
 
     def _dispatch(self) -> int:
         before = {r["databaseId"] for r in self._list_runs()}
         fields = ["-f", f"modrinth_project_url={self.modrinth_url}"]
+        # Add the mode as a workflow input (the workflow can ignore it or use it)
+        # For now we always dispatch the full prompt-creation workflow
         _gh(["workflow", "run", WORKFLOW_FILE, "-R", self.repo] + fields, token=self.token)
         deadline = time.time() + 120
         while time.time() < deadline:
@@ -360,6 +705,7 @@ class Runner:
             f"- Workflow run: [{self.run_id}]({run_url})",
             f"- Conclusion: {conclusion}",
             f"- Modrinth URL: {self.modrinth_url}",
+            f"- Mode: {self.mode}",
             "",
         ]
 
@@ -395,6 +741,11 @@ class Runner:
                     pi = bundle_dir / folder / "projectinfo.txt"
                     status = "✓" if pi.exists() else "✗"
                     lines.append(f"- {folder}  [{status} projectinfo.txt]")
+                    # Check for airesponse.txt
+                    ai = bundle_dir / folder / "airesponse.txt"
+                    if ai.exists():
+                        ai_size = ai.stat().st_size
+                        lines[-1] += f"  [✓ airesponse.txt ({ai_size:,}B)]"
 
             # Include Diagnosis.txt
             diag = bundle_dir / "Diagnosis.txt"
@@ -414,6 +765,16 @@ class Runner:
                     for line in text.splitlines()[:40]:
                         lines.append(line)
                     lines.append("```")
+
+            # AI coding stage summary
+            ai_files = list(bundle_dir.rglob("airesponse.txt"))
+            if ai_files:
+                lines += ["", "## AI Coding Stage Results"]
+                lines.append(f"\n{len(ai_files)} target(s) processed via AI.")
+                for af in sorted(ai_files):
+                    rel = af.relative_to(bundle_dir)
+                    size = af.stat().st_size
+                    lines.append(f"- `{rel}` ({size:,}B)")
         else:
             lines.append("Artifact bundle was not created (workflow may have failed early).")
 
@@ -425,10 +786,48 @@ class Runner:
             "repo": self.repo,
             "modrinth_url": self.modrinth_url,
             "slug": self.slug,
+            "mode": self.mode,
             "conclusion": conclusion,
             "output_dir": str(self.out_root),
         }
         (self.out_root / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+
+    def _append_ai_summary(self, artifacts_dir: Path) -> None:
+        """Append AI coding stage results to SUMMARY.md."""
+        bundle_dir = artifacts_dir / ANALYSIS_ARTIFACT
+        summary_path = self.out_root / "SUMMARY.md"
+        if not summary_path.exists():
+            return
+
+        ai_files = list(bundle_dir.rglob("airesponse.txt"))
+        if not ai_files:
+            return
+
+        ai_lines = ["", "## AI Coding Stage Results", ""]
+        ai_lines.append(f"{len(ai_files)} target(s) processed via AI model `{AI_MODEL}`.")
+        ai_lines.append("")
+
+        # Count success/fail
+        success = 0
+        failed = 0
+        for af in ai_files:
+            content = af.read_text(encoding="utf-8")
+            if content.startswith("AI CODING FAILED"):
+                failed += 1
+            else:
+                success += 1
+
+        ai_lines.append(f"- **Success:** {success}")
+        ai_lines.append(f"- **Failed:** {failed}")
+        ai_lines.append("")
+
+        for af in sorted(ai_files):
+            rel = af.relative_to(bundle_dir)
+            size = af.stat().st_size
+            ai_lines.append(f"- `{rel}` ({size:,}B)")
+
+        existing = summary_path.read_text(encoding="utf-8")
+        summary_path.write_text(existing + "\n".join(ai_lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
