@@ -5,7 +5,7 @@ tags: [build-system, transient, network, gradle, retry]
 versions: []
 loaders: [forge, fabric, neoforge]
 symbols: []
-error_patterns: ["timeout.*ms", "Response 304.*has no content", "Could not download.*timeout", "Connection reset", "Could not GET.*timed out"]
+error_patterns: ["timeout.*ms", "Response 304.*has no content", "Could not download.*timeout", "Connection reset", "Could not GET.*timed out", "Could not download.*\.jar.*timeout", "Read timed out", "SocketTimeoutException", "Could not resolve all artifacts.*classpath", "Could not download guava"]
 ---
 
 ## Issue

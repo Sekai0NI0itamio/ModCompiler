@@ -70,6 +70,97 @@ def _log(msg: str) -> None:
     print(f"[{ts}] {msg}")
 
 
+def _is_infrastructure_failure(build_log: str) -> bool:
+    """Detect if a build failure is an infrastructure/transient issue, not a code bug.
+
+    Returns True if the failure is infrastructure-related and should just be retried
+    without sending the AI to fix code.
+    """
+    infra_patterns = [
+        r"Read timed out",
+        r"Connection reset",
+        r"Could not download.*timeout",
+        r"Could not get resource.*timeout",
+        r"SocketTimeoutException",
+        r"Could not GET.*timed out",
+        r"Response 304.*has no content",
+        r"Could not resolve all artifacts",
+        r"Could not download.*\.jar",
+        r"Unable to resolve dependency",
+        r"Could not transfer artifact",
+        r"peer not authenticated",
+        r"unable to find valid certification",
+        r"transport error",
+        r"Connection refused",
+        r"No route to host",
+        r"Network is unreachable",
+        r"503.*Service Unavailable",
+        r"502.*Bad Gateway",
+        r"504.*Gateway Timeout",
+        r"Gradle.*download.*timeout",
+        r"Could not install Gradle distribution",
+    ]
+    if not build_log:
+        return False
+    for pattern in infra_patterns:
+        if re.search(pattern, build_log, re.IGNORECASE):
+            return True
+
+    # Check for "BUILD SUCCESSFUL" markers indicating code compiled fine
+    if re.search(r"BUILD SUCCESSFUL", build_log):
+        return False
+
+    # If there are Java compilation errors AND infra errors, it's a code bug too
+    has_compile_errors = re.search(r"error: cannot find symbol|error: incompatible types|compilation failed", build_log, re.IGNORECASE)
+    has_infra_errors = re.search(r"timeout|Could not download|Could not resolve", build_log, re.IGNORECASE)
+    if has_compile_errors and has_infra_errors:
+        return False
+
+    return len(re.findall(r"Could not download|Read timed out|Connection reset|timeout", build_log, re.IGNORECASE)) >= 1
+
+
+def _map_slug_to_target_name(slug: str, target_names: list[str]) -> str | None:
+    """Map a build workflow slug (autofastxp-forge-1-12) to the bundle
+    target folder name (1.12-forge).
+
+    Uses heuristic matching since we don't store the mapping explicitly.
+    """
+    # Extract loader and version from slug
+    # Slug format: {mod_id}-{loader}-{version}  e.g. "autofastxp-forge-1-12"
+    # Target format: {version}-{loader}         e.g. "1.12-forge"
+    parts = slug.rsplit("-", 1)
+    if len(parts) == 2:
+        loader = parts[0].rsplit("-", 1)[-1] if "-" in parts[0] else ""
+        version_part = parts[1]
+
+        # Try exact match: {version}-{loader}
+        for tn in target_names:
+            if tn == f"{version_part}-{parts[0].rsplit('-', 1)[-1]}" if parts[0].rsplit('-', 1) else False:
+                pass
+
+        # Heuristic: find target names containing both the loader and version
+        if loader:
+            for tn in target_names:
+                tn_parts = tn.rsplit("-", 1)
+                if len(tn_parts) == 2:
+                    if tn_parts[0] == version_part and tn_parts[1] == loader:
+                        return tn
+                    if tn_parts[1] == loader and version_part in tn_parts[0]:
+                        return tn
+
+    # Fallback: just return first matching target or None
+    # This handles simple cases like 1.12-forge matching autofastxp-forge-1-12
+    # by extracting the last two tokens from slug
+    slug_last_parts = "-".join(slug.rsplit("-", 2)[-2:]) if "-" in slug else slug
+    for tn in target_names:
+        if tn == slug_last_parts:
+            return tn
+        if tn in slug or slug in tn:
+            return tn
+
+    return target_names[0] if len(target_names) == 1 else None
+
+
 def _detect_repo() -> str:
     try:
         url = subprocess.check_output(
@@ -1129,13 +1220,32 @@ def run_compile_cycle(
 
     _log(f"Results: {len(success_set)} success, {len(failed_set)} failed")
 
+    # Map any slug names from the build workflow back to target folder names
+    mapped_failed: set[str] = set()
+    for slug in failed_set:
+        mapped = _map_slug_to_target_name(slug, target_names)
+        if mapped:
+            mapped_failed.add(mapped)
+        else:
+            mapped_failed.add(slug)
+    failed_set = mapped_failed
+
+    mapped_success: set[str] = set()
+    for slug in success_set:
+        mapped = _map_slug_to_target_name(slug, target_names)
+        if mapped:
+            mapped_success.add(mapped)
+        else:
+            mapped_success.add(slug)
+    success_set = mapped_success
+
     # If no results could be determined (artifact download failed, etc.),
     # treat all targets as failed so the retry cycle can attempt to fix them.
     if not success_set and not failed_set:
         _log("  No results available — treating all targets as failed for retry.")
         failed_set = set(target_names)
 
-    # ── Phase C: Retry Loop ───────────────────────────────────────────────
+    # Phase C: Retry Loop ───────────────────────────────────────────────
     current_targets = list(failed_set)
     active_failed: dict[str, int] = {t: 0 for t in failed_set}
     all_targets_set = set(target_names)
@@ -1200,9 +1310,29 @@ def run_compile_cycle(
             target_dir = bundle_dir / tname
             _create_failed_context(target_dir, attempt, scode, build_log, dif_entries, mc_source)
 
-        # Phase 3: Send AI prompts IN PARALLEL
-        _log(f"  Sending {len(context_list)} AI fix prompt(s) in parallel...")
-        ai_responses = [None] * len(target_data)
+        # Check for infrastructure failures (network timeouts, etc.) that
+        # don't need AI fixes — just re-dispatch without sending to AI
+        infra_failures = []
+        for i, result in enumerate(context_list):
+            if result is None:
+                continue
+            idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source = result
+            if _is_infrastructure_failure(build_log):
+                _log(f"    {tname}: infrastructure failure (network timeout), skipping AI fix")
+                infra_failures.append(tname)
+                # Mark as fixed by re-dispatched — no AI needed
+                target_dir = bundle_dir / tname
+                (target_dir / ".infra_retry").write_text("", encoding="utf-8")
+                fixed_this_round.append(tname)
+
+        # Remove infra failures from AI queue
+        context_list_ai = [r for r in context_list if r is not None and r[1] not in infra_failures]
+        if not context_list_ai:
+            _log("  All failures are infrastructure-related, no AI fixes needed — re-dispatching...")
+        else:
+            # Phase 3: Send AI prompts IN PARALLEL
+            _log(f"  Sending {len(context_list_ai)} AI fix prompt(s) in parallel...")
+            ai_responses = [None] * len(target_data)
 
         def _send_ai(idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source):
             try:
@@ -1216,9 +1346,9 @@ def run_compile_cycle(
             except Exception as exc:
                 return (idx, tname, None, str(exc))
 
-        with ThreadPoolExecutor(max_workers=min(3, len(target_data))) as pool:
+        with ThreadPoolExecutor(max_workers=min(3, len(context_list_ai))) as pool:
             futures = []
-            for result in context_list:
+            for result in context_list_ai:
                 if result is None:
                     continue
                 idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source = result

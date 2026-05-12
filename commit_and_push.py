@@ -428,6 +428,107 @@ def agent_mode(args: argparse.Namespace) -> None:
     print(f"\nDone. Committed and pushed to origin/{branch}.")
 
 
+def quick_mode() -> None:
+    """Run in quick mode: auto-commit and push without asking any questions.
+
+    The commit message is auto-generated from the change summary:
+      modified #N files/folders added #N files/Folders deleted <paths>
+    """
+    print("=" * 60)
+    print("  commit_and_push.py \u2014 Quick Mode")
+    print("=" * 60)
+
+    # Check we're in a git repo
+    run(["git", "rev-parse", "--is-inside-work-tree"])
+
+    branch = get_current_branch()
+    print(f"\n  Branch: {branch}")
+
+    # Check there are changes to commit
+    status = get_status()
+    if not status:
+        print("  Working tree is clean. Nothing to commit.")
+        sys.exit(0)
+
+    # Parse the status to build the commit message BEFORE staging
+    entries = parse_status_files(status)
+
+    # Categorise by status code (porcelain codes)
+    added = []
+    deleted = []
+    modified = []
+
+    for entry in entries:
+        code = entry["status"]
+        path = entry["path"]
+        # Untracked -> added
+        if code in ("??", "A ", "AM", "A"):
+            added.append(path)
+        # Deleted in any work area
+        elif "D" in code:
+            deleted.append(path)
+        # The rest: M, MM, R,  M,  , etc.
+        else:
+            modified.append(path)
+
+    # Build commit message
+    parts = []
+    if added:
+        parts.append(f"#{len(added)} files/folders added")
+    if deleted:
+        parts.append(f"#{len(deleted)} files/Folders deleted")
+    # List the modified/deleted file paths at the end
+    changed_paths = [p for p in modified + deleted]
+    if changed_paths:
+        parts.append(" ".join(changed_paths))
+
+    message = " ".join(parts).strip()
+    if not message:
+        message = "Quick commit"
+
+    # Stage all changes
+    print("\n  Staging all changes...")
+    run(["git", "add", "-A"])
+
+    staged = get_diff_stat()
+    if not staged:
+        print("  Nothing staged to commit.")
+        sys.exit(0)
+
+    print(f"\n{staged}\n")
+    print(f"  Committing: {message}")
+    run(["git", "commit", "-m", message])
+
+    # Pull then push (rebase if needed)
+    print(f"  Syncing with remote...")
+    pull_result = run(["git", "pull", "--rebase", "origin", branch], check=False)
+    if pull_result.returncode != 0:
+        if "Could not read from remote" in (pull_result.stderr or ""):
+            print("  Warning: could not reach remote. Continuing offline.")
+        elif "unstaged changes" in (pull_result.stderr or ""):
+            pass  # Already committed, so this is fine
+
+    print(f"  Pushing to origin/{branch}...")
+    push_result = run(["git", "push", "origin", branch], check=False)
+    if push_result.returncode != 0:
+        # Try pull --rebase then push again
+        stderr_lower = (push_result.stderr or "").lower()
+        if "rejected" in stderr_lower or "fetch first" in stderr_lower:
+            print("  Remote has new commits, rebasing...")
+            rebase_result = run(["git", "pull", "--rebase", "origin", branch], check=False)
+            if rebase_result.returncode != 0:
+                stderr = rebase_result.stderr.strip() if rebase_result.stderr else ""
+                raise SystemExit(f"  Rebase failed:\n{stderr}")
+            push_result = run(["git", "push", "origin", branch], check=False)
+        if push_result.returncode != 0:
+            push_result = run(["git", "push", "--set-upstream", "origin", branch], check=False)
+            if push_result.returncode != 0:
+                stderr = push_result.stderr.strip() if push_result.stderr else ""
+                raise SystemExit(f"  Push failed:\n{stderr}")
+
+    print(f"\n  Done. Committed and pushed to origin/{branch}.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Auto-commit and push changes cleanly.")
     parser.add_argument("-m", "--message", default=None,
@@ -436,10 +537,14 @@ def main() -> None:
                         help="Specific files to stage. If omitted, stages all changes.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Show what would be committed without doing it.")
+    parser.add_argument("--quick", action="store_true",
+                        help="Quick mode: auto-commit and push without asking any questions.")
     args, _ = parser.parse_known_args()
 
     if args.message:
         agent_mode(args)
+    elif args.quick:
+        quick_mode()
     else:
         interactive_mode()
 
