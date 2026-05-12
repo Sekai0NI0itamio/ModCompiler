@@ -392,9 +392,9 @@ jobs:
           path: .workflow_artifacts/info/
           if-no-files-found: error
 
-# ---------------------------------------------------------------------------
-# Job 2: Diagnosis — Scan all versions for shells/corruption/missing
-# ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # Job 2: Diagnosis — Scan all versions for shells/corruption/missing
+  # ---------------------------------------------------------------------------
   diagnosis:
     name: Diagnose shells, corruption, and missing versions
     runs-on: ubuntu-latest
@@ -693,12 +693,12 @@ jobs:
           path: .workflow_artifacts/diagnosis/
           if-no-files-found: error
 
-# ===========================================================================
-# PHASE 2 — BUNDLE ASSEMBLY
-# ===========================================================================
-# ---------------------------------------------------------------------------
-# Job 3: Assemble — Create per-target projectinfo.txt with nearest source code
-# ---------------------------------------------------------------------------
+  # ===========================================================================
+  # PHASE 2 — BUNDLE ASSEMBLY
+  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Job 3: Assemble — Create per-target projectinfo.txt with nearest source code
+  # ---------------------------------------------------------------------------
   assemble:
     name: Assemble diagnosis bundle (per-target projectinfo.txt)
     needs: [info-gather, diagnosis]
@@ -758,12 +758,12 @@ jobs:
           TARGET_COUNT=$(find .workflow_artifacts/bundle/ -maxdepth 1 -mindepth 1 -type d ! -name '.cache' | wc -l 2>/dev/null || echo "0")
           echo "**Version/loader target folders: $TARGET_COUNT**" >> "$GITHUB_STEP_SUMMARY"
 
-# ===========================================================================
-# PHASE 3 — AI PROMPT GENERATION
-# ===========================================================================
-# ---------------------------------------------------------------------------
-# Job 4: Generate Prompts — Add Background Info.txt + prompt.txt per target
-# ---------------------------------------------------------------------------
+  # ===========================================================================
+  # PHASE 3 — AI PROMPT GENERATION
+  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Job 4: Generate Prompts — Add Background Info.txt + prompt.txt per target
+  # ---------------------------------------------------------------------------
   generate-prompts:
     name: Generate AI-ready prompt.txt for each target
     needs: [assemble]
@@ -795,6 +795,7 @@ jobs:
           name: mod-to-all-analysis-bundle
           path: .workflow_downloads/bundle/
           if-no-files-found: error
+          overwrite: true
 
       - name: Write step summary
         if: always()

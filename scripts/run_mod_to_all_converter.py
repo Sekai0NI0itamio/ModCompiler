@@ -519,7 +519,7 @@ class Runner:
         print(f"Workflow conclusion: {conclusion.upper()}")
 
         if conclusion != "success":
-            return 1
+            print(f"\n\u26a0 Workflow had conclusion '{conclusion}' — checking if bundle is still usable...")
 
         # 5. AI Coding Stage (only in prompt-and-code mode)
         if self.mode in ("prompt-and-code",):
@@ -528,6 +528,9 @@ class Runner:
                 print("ERROR: Analysis bundle directory not found. Cannot run AI coding stage.",
                       file=sys.stderr)
                 return 1
+
+            if conclusion != "success":
+                print(f"  Bundle found at {bundle_dir} — proceeding despite workflow conclusion '{conclusion}'.")
 
             nvidia_key = _load_nvidia_key()
             ai_result = _run_ai_coding_stage(bundle_dir, nvidia_key)
