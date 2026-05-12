@@ -206,6 +206,11 @@ def _create_build_bundle(
 ) -> tuple[int, list[str]]:
     """Extract airesponse.txt files, build a source tree, and create a zip.
 
+    The build workflow expects each target directory to contain:
+      - src/        (source tree, e.g. src/main/java/...)
+      - mod.txt     (mod metadata: mod_id, name, version, etc.)
+      - version.txt (minecraft_version=X, loader=Y)
+
     Returns (file_count, target_names).
     """
     temp_dir = Path(output_zip).parent / f".build_bundle_{output_zip.stem}"
@@ -235,14 +240,99 @@ def _create_build_bundle(
             _log(f"  ⚠ No files extracted from {target_name}/airesponse.txt")
             continue
 
+        # Parse mc_version and loader from target_name (e.g. "1.12-forge")
+        parts = target_name.rsplit("-", 1)
+        if len(parts) == 2:
+            mc_version, loader = parts
+        else:
+            mc_version, loader = target_name, "forge"
+
         target_out = temp_dir / target_name
+
         for filepath, content in files.items():
-            dest = target_out / filepath
+            # Strip the target_name prefix if present (AI often writes
+            # "1.12-forge/src/main/java/..." which would double-nest)
+            cleaned = filepath
+            prefix = target_name + "/"
+            if cleaned.startswith(prefix):
+                cleaned = cleaned[len(prefix):]
+            # Also strip leading "src/" duplicates if present
+            if cleaned.startswith("src/"):
+                # Keep as-is – src/ is expected
+                pass
+
+            dest = target_out / cleaned
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(content, encoding="utf-8")
             total_files += 1
 
-        _log(f"  ✓ {target_name}: {len(files)} file(s) extracted")
+        # ── Generate mod.txt from projectinfo.txt ──────────────────────
+        projectinfo = td / "projectinfo.txt"
+        mod_id = "unknown"
+        mod_name = target_name
+        mod_version = "1.0.0"
+        mod_description = ""
+        mod_authors = ""
+        mod_group = ""
+        if projectinfo.exists():
+            info_text = projectinfo.read_text(encoding="utf-8")
+            for line in info_text.splitlines():
+                line = line.strip()
+                if "=" in line and not line.startswith("#"):
+                    key, _, val = line.partition("=")
+                    key = key.strip().lower().replace(" ", "_")
+                    val = val.strip().strip('"').strip("'").rstrip(',').strip().strip('"').strip("'")
+                    if key in ("mod_id", "modid", "id"):
+                        mod_id = val
+                    elif key in ("name", "mod_name", "display_name"):
+                        mod_name = val
+                    elif key == "version":
+                        mod_version = val
+                    elif key == "description":
+                        mod_description = val
+                    elif key in ("authors", "author"):
+                        mod_authors = val
+                    elif key in ("group", "package", "mod_group"):
+                        mod_group = val
+            # Fallback: parse from header lines (Mod Name:, Mod Author:, Mod Path:)
+            if mod_name == target_name or not mod_authors:
+                for line in info_text.splitlines():
+                    if line.startswith("Mod Name:"):
+                        mod_name = line.split(":", 1)[1].strip()
+                    elif line.startswith("Mod Author:"):
+                        mod_authors = line.split(":", 1)[1].strip()
+                    elif line.startswith("Mod Path:"):
+                        mod_group = line.split(":", 1)[1].strip()
+
+        mod_txt_lines = []
+        mod_txt_lines.append(f"mod_id={mod_id}")
+        mod_txt_lines.append(f"name={mod_name}")
+        mod_txt_lines.append(f"mod_version={mod_version}")
+        if mod_group:
+            mod_txt_lines.append(f"group={mod_group}")
+        else:
+            mod_txt_lines.append("group=com.example")
+        mod_txt_lines.append("entrypoint_class=Main")
+        if mod_description:
+            mod_txt_lines.append(f"description={mod_description}")
+        else:
+            mod_txt_lines.append("description=A Minecraft mod.")
+        if mod_authors:
+            mod_txt_lines.append(f"authors={mod_authors}")
+        else:
+            mod_txt_lines.append("authors=Unknown")
+        mod_txt_lines.append("license=MIT")
+        (target_out / "mod.txt").write_text("\n".join(mod_txt_lines), encoding="utf-8")
+        total_files += 1
+
+        # ── Generate version.txt ───────────────────────────────────────
+        (target_out / "version.txt").write_text(
+            f"minecraft_version={mc_version}\nloader={loader}\n",
+            encoding="utf-8",
+        )
+        total_files += 1
+
+        _log(f"  ✓ {target_name}: {len(files)} file(s) extracted + mod.txt/version.txt")
 
     if total_files == 0:
         raise CycleError("No files extracted from any airesponse.txt — cannot create build zip.")
@@ -382,26 +472,36 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
     logs_dir = dest_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    # Download all build artifacts
-    for attempt in range(1, 4):
+    # Wait a few seconds for GitHub to finalize artifacts
+    time.sleep(5)
+
+    # Download all build artifacts with exponential backoff
+    artifact_downloaded = False
+    for attempt in range(1, 7):
         try:
             _gh([
                 "run", "download", str(run_id),
                 "-R", repo, "-n", BUILD_ARTIFACT_ALL, "-D", str(artifacts_dir),
             ], token=token)
+            artifact_downloaded = True
             break
         except CycleError:
-            _log(f"  Download attempt {attempt} failed, retrying...")
-            time.sleep(5 * attempt)
+            delay = min(5 * (2 ** (attempt - 1)), 60)
+            _log(f"  Download attempt {attempt} failed, retrying in {delay}s...")
+            time.sleep(delay)
 
     # Also try publish artifacts
-    try:
-        _gh([
-            "run", "download", str(run_id),
-            "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(artifacts_dir),
-        ], token=token)
-    except CycleError:
-        _log("  No publish artifact (versions may not all be published yet)")
+    for attempt in range(1, 5):
+        try:
+            _gh([
+                "run", "download", str(run_id),
+                "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(artifacts_dir),
+            ], token=token)
+            break
+        except CycleError:
+            if attempt == 4:
+                _log("  No publish artifact (versions may not all be published yet)")
+            time.sleep(3 * attempt)
 
     # Download logs
     try:
@@ -447,7 +547,20 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
     if build_artifact_dir.exists():
         for item in build_artifact_dir.iterdir():
             if item.is_dir() and not item.name.startswith("."):
-                # Check for success markers
+                # Check for per-mod result.json files
+                result_json = item / "result.json"
+                if result_json.exists():
+                    try:
+                        rj = json.loads(result_json.read_text(encoding="utf-8"))
+                        slug = rj.get("slug", "")
+                        status = rj.get("status", "")
+                        if status == "success" and slug not in success_versions:
+                            success_versions.append(slug)
+                        elif status == "failed" and slug not in failed_versions:
+                            failed_versions.append(slug)
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+                # Check for legacy marker files
                 success_marker = item / ".build_success"
                 fail_marker = item / ".build_failed"
                 if success_marker.exists():
@@ -458,6 +571,31 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
                     vname = item.name
                     if vname not in failed_versions:
                         failed_versions.append(vname)
+
+    # Fallback: use job statuses if no artifacts were parsed
+    if not success_versions and not failed_versions:
+        if artifact_downloaded:
+            _log("  No per-target results in artifact, using job statuses...")
+        else:
+            _log("  Could not download artifact, using job statuses...")
+        try:
+            jobs = _get_build_jobs(run_id, repo, token)
+            for job in jobs:
+                job_name = job.get("name", "")
+                m = re.match(r"build\s*\(([^)]+)\)", job_name)
+                if m:
+                    slug = m.group(1).strip()
+                    job_conclusion = job.get("conclusion", "")
+                    if job_conclusion == "success":
+                        if slug not in success_versions:
+                            success_versions.append(slug)
+                    elif job_conclusion in ("failure", "cancelled", "skipped"):
+                        if slug not in failed_versions:
+                            failed_versions.append(slug)
+            if success_versions or failed_versions:
+                _log(f"  Job results: {len(success_versions)} success, {len(failed_versions)} failed")
+        except CycleError:
+            _log("  Could not fetch job list.")
 
     return {
         "success_versions": success_versions,
@@ -547,7 +685,7 @@ code_here_
 ```
 
 4. Provide COMPLETE file contents — no stubs, no TODOs, no placeholders.
-5. If the build error is about missing methods/classes, check the provided 
+5. If the build error is about missing methods/classes, check the provided
    Minecraft source code and DIF entries for the correct API to use.
 6. Output ALL files that need changes, even if only small changes are needed.
 """
@@ -946,6 +1084,12 @@ def run_compile_cycle(
 
     _log(f"Results: {len(success_set)} success, {len(failed_set)} failed")
 
+    # If no results could be determined (artifact download failed, etc.),
+    # treat all targets as failed so the retry cycle can attempt to fix them.
+    if not success_set and not failed_set:
+        _log("  No results available — treating all targets as failed for retry.")
+        failed_set = set(target_names)
+
     # ── Phase C: Retry Loop ───────────────────────────────────────────────
     current_targets = list(failed_set)
     active_failed: dict[str, int] = {t: 0 for t in failed_set}
@@ -1092,7 +1236,9 @@ def run_compile_cycle(
         for v in sorted(published_set):
             print(f"    ✓ {v}")
     print(f"  Built but not published: {len(success_set - published_set)} version(s)")
-    remaining_failed = [t for t in target_names if t not in success_set]
+    # Compute remaining failed from the retry loop final state
+    all_resolved = success_set | set(t for t in target_names if t not in current_targets and active_failed.get(t) is not None)
+    remaining_failed = [t for t in target_names if t not in all_resolved]
     if remaining_failed:
         print(f"  FAILED after {max_retries} retries: {len(remaining_failed)} version(s)")
         for v in sorted(remaining_failed):
