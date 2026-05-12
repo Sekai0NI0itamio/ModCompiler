@@ -164,6 +164,8 @@ def _get_source_code_text(src_dir: Path) -> str:
     """
     Get the actual source code contents from a decompiled source directory.
     Returns a concatenation of all .java files with their paths.
+    SRG/obfuscated names (func_****_, field_****_) are translated to their
+    proper MCP-mapped equivalents using the _srg_to_mcp module.
     """
     if not src_dir or not src_dir.exists():
         return "  (no source code available)"
@@ -174,6 +176,12 @@ def _get_source_code_text(src_dir: Path) -> str:
             code = jf.read_text(encoding="utf-8")
         except Exception:
             code = "(could not read)"
+        # Translate SRG names to MCP names so the AI sees proper names
+        try:
+            from _srg_to_mcp import translate_srg_to_mcp
+            code = translate_srg_to_mcp(code)
+        except ImportError:
+            pass  # silently skip if module not available
         parts.append(f"  ── {rel} ──")
         for cline in code.splitlines():
             parts.append(f"  {cline}")
