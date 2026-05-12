@@ -1246,7 +1246,7 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
                             choices = data.get("choices", [])
                             if choices:
                                 delta = choices[0].get("delta", {})
-                                content = delta.get("content", "") or ""
+                                content = delta.get("content", "") or delta.get("reasoning_content", "") or ""
                                 if content:
                                     full_response += content
                                     accumulated += len(content)

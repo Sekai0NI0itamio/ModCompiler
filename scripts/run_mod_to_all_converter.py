@@ -467,7 +467,7 @@ def _send_prompt_to_nvidia(
                             choices = data.get("choices", [])
                             if choices:
                                 delta = choices[0].get("delta", {})
-                                content = delta.get("content", "") or ""
+                                content = delta.get("content", "") or delta.get("reasoning_content", "") or ""
                                 if content:
                                     full_response += content
                                     accumulated += len(content)
@@ -598,8 +598,8 @@ class Runner:
             if conclusion != "success":
                 print(f"  Bundle found at {bundle_dir} — proceeding despite workflow conclusion '{conclusion}'.")
 
-            nvidia_key = _load_ai_key(args.intelligent)
-            ai_result = _run_ai_coding_stage(bundle_dir, nvidia_key, args.intelligent)
+            nvidia_key = _load_ai_key(self.intelligent)
+            ai_result = _run_ai_coding_stage(bundle_dir, nvidia_key, self.intelligent)
 
             # Update SUMMARY.md with AI results
             self._append_ai_summary(artifacts_dir)
