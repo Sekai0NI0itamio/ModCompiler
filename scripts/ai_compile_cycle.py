@@ -232,52 +232,54 @@ def _load_nvidia_key() -> str:
 # ── Phase A: Extract files from AI responses and create build zip ───────────
 
 def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
-    """Parse AI response into a dict of filepath → content.
+    """Parse AI response into a dict of filepath -> content.
 
-    The AI is instructed to output in the format:
-      filepath (relative, not full)
-      ```language
-      code_here_
-      ```
+    Finds all ```...``` code blocks. Each block starts with ```(lang)\n
+    and ends with \n```. For each block, scans backwards through preceding
+    text for a line that looks like a filepath.
+    Handles adjacent ``` blocks (empty ``````language) and backtick-wrapped paths.
     """
     files: dict[str, str] = {}
-    # Match pattern: a filepath line (no backticks) followed by a code block
-    pattern = re.compile(
-        r"^(?!```)(\S+(?:/\S+)*\.[a-zA-Z0-9]+)\s*\n"
-        r"```(?:\w*)\n"
-        r"(.*?)"
-        r"\n```",
-        re.MULTILINE | re.DOTALL
-    )
-    for m in pattern.finditer(airesponse_text):
-        filepath = m.group(1).strip()
-        content = m.group(2).strip()
-        # Clean the filepath: remove "bundle/" prefix if present
-        if filepath.startswith("bundle/"):
-            filepath = filepath[7:]
-        # Remove leading ./ if present
-        if filepath.startswith("./"):
-            filepath = filepath[2:]
-        if filepath and content:
-            files[filepath] = content
 
-    # Fallback: also match lines like: filepath: ```...``` on same line
-    if not files:
-        alt_pattern = re.compile(
-            r"`([^`]+)`\s*```(?:\w*)\n(.*?)```",
-            re.DOTALL
-        )
-        for m in alt_pattern.finditer(airesponse_text):
-            filepath = m.group(1).strip()
-            content = m.group(2).strip()
-            if filepath.startswith("bundle/"):
-                filepath = filepath[7:]
-            if filepath and content:
-                files[filepath] = content
+    # Match: ```(optional_lang)\n(content)\n```
+    pattern = re.compile(r"```([a-zA-Z0-9_+\-]*)\n(.*?)\n```", re.DOTALL)
+    for m in pattern.finditer(airesponse_text):
+        lang_spec = m.group(1)
+        raw_content = m.group(2)
+        text_before = airesponse_text[:m.start()]
+
+        # Find filepath: last line in text_before that looks like a path
+        before_lines = text_before.splitlines()
+        filepath = ""
+        for line in reversed(before_lines):
+            s = line.strip().strip("`*[]'\"")
+            if "/" in s:
+                last_part = s.split("/")[-1]
+                if "." in last_part and not last_part.startswith("."):
+                    filepath = s
+                    break
+            if "bundle/" in s:
+                filepath = s
+                break
+        if not filepath:
+            continue
+
+        # Strip bundle/ prefix
+        for prefix in ("bundle/", "./"):
+            if filepath.startswith(prefix):
+                filepath = filepath[len(prefix):]
+
+        # Remove stray ``` lines from content
+        clean_lines = [
+            ln for ln in raw_content.splitlines()
+            if not ln.strip().startswith("```")
+        ]
+        clean_content = "\n".join(clean_lines).strip()
+
+        if filepath and clean_content and filepath not in files:
+            files[filepath] = clean_content
 
     return files
-
-
 def _get_expected_build_dir(target_name: str) -> str:
     """Get the expected build source directory for a target.
 

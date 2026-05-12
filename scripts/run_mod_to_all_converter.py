@@ -78,6 +78,11 @@ class RunError(Exception):
     pass
 
 
+class RetryableHTTPError(RuntimeError):
+    """An HTTP error that can be retried (429, 503)."""
+    pass
+
+
 def _log(msg: str) -> None:
     ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
     print(f"[{ts}] {msg}")
@@ -316,6 +321,29 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
                 resp_path.write_text(response_text, encoding="utf-8")
                 _update_line(td.name, "complete", f"{len(response_text):,} chars")
                 success_count += 1
+            except RetryableHTTPError:
+                # Retry on 429/503 with backoff
+                _update_line(td.name, "retrying", "server busy, retrying in 30s...")
+                _log(f"  Retrying {td.name} after 30s (503 ResourceExhausted)...")
+                time.sleep(30)
+                try:
+                    prompt_path = td / "prompt.txt"
+                    response_text = _send_prompt_to_nvidia(
+                        td.name,
+                        prompt_path.read_text(encoding="utf-8"),
+                        nvidia_key,
+                        _update_line,
+                    )
+                    resp_path = td / "airesponse.txt"
+                    resp_path.write_text(response_text, encoding="utf-8")
+                    _update_line(td.name, "complete", f"{len(response_text):,} chars")
+                    success_count += 1
+                except Exception as exc2:
+                    error_msg = str(exc2)
+                    _update_line(td.name, "failed", error_msg[:80])
+                    fail_count += 1
+                    fail_path = td / "airesponse.txt"
+                    fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
             except Exception as exc:
                 error_msg = str(exc)
                 _update_line(td.name, "failed", error_msg[:80])
@@ -412,8 +440,16 @@ def _send_prompt_to_nvidia(
                         except json.JSONDecodeError:
                             pass
     except urllib.error.HTTPError as e:
+        error_code = e.code
         error_detail = e.read().decode("utf-8", errors="replace")[:500]
-        raise RuntimeError(f"HTTP {e.code}: {error_detail}")
+        # Retry on 429 (rate limit) and 503 (service busy / ResourceExhausted)
+        if error_code in (429, 503):
+            status_callback(target_name, "retrying", f"HTTP {error_code}: {error_detail}")
+            import time as _time
+            _time.sleep(30)
+            # Tell caller to retry via a special signal
+            raise RetryableHTTPError(f"HTTP {error_code}: {error_detail}")
+        raise RuntimeError(f"HTTP {error_code}: {error_detail}")
     except Exception as e:
         raise RuntimeError(str(e))
 
