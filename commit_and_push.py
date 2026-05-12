@@ -1,24 +1,16 @@
 #!/usr/bin/env python3
 """Auto-commit and push changes cleanly.
 
-Two modes of operation:
-
-1. Interactive (no arguments):
+Interactive mode:
    - Shows git status
    - Pulls latest from remote to stay up to date
    - Displays all pending changes
    - Lets the user exclude files/folders by adding them to .gitignore
-   - Asks for a commit message
+   - Offers to generate commit message with AI (1 = Manual, 2 = AI, default 2)
    - Commits and pushes
 
-2. AI agent mode (with -m flag):
-   - Stages specified files (or all changes)
-   - Commits with the given message
-   - Pushes to remote
-
 Usage:
-    python3 commit_and_push.py                     # Interactive mode
-    python3 commit_and_push.py -m "message"        # AI agent mode
+    python3 commit_and_push.py                         # Interactive mode (recommended)
     python3 commit_and_push.py --files a.py b.py -m "message"
     python3 commit_and_push.py --dry-run -m "message"
 """
@@ -99,15 +91,20 @@ def get_status_text() -> str:
     return result.stdout.strip()
 
 
-def call_c05localai(system_prompt: str, user_prompt: str, timeout: int = 30) -> str:
-    """Call the local c05localai server to generate a commit message."""
+def call_c05localai(system_prompt: str, user_prompt: str, timeout: int = 60) -> str:
+    """Call the local c05localai server to generate a commit message.
+
+    Uses the /chat endpoint with a separate system_prompt field for proper
+    conversation structure.
+    """
     url = "http://localhost:8129/chat"
     payload = {
-        "model": "nvidia/nemotron-3-nano-30b-a3b",
+        "model": "stepfun-ai/step-3.5-flash",
         "hoster": "nvidia",
         "response_mode": "direct",
         "system_prompt": system_prompt,
         "user_prompt": user_prompt,
+        "include_history": False,
     }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
@@ -131,9 +128,9 @@ def call_c05localai(system_prompt: str, user_prompt: str, timeout: int = 30) -> 
             f"  Try again or enter a commit message manually."
         )
 
-    # Parse the SSE-like line-delimited JSON response from the /chat endpoint.
-    # The response consists of lines like:
-    #   {"event": "start", ...}
+    # Parse the NDJSON (newline-delimited JSON) response from the /chat endpoint.
+    # The response consists of newline-delimited JSON objects:
+    #   {"status": "start", ...}
     #   {"event": "content", "content": "..."}
     #   {"status": "end", "content": "...", ...}
     full_content = ""
@@ -150,13 +147,11 @@ def call_c05localai(system_prompt: str, user_prompt: str, timeout: int = 30) -> 
             chunk = obj.get("content", "")
             if chunk:
                 full_content += chunk
-        # Also capture from the final end event
+        # Also capture from the final end event (fallback)
         elif obj.get("status") == "end":
             final_content = obj.get("content", "")
-            if final_content:
-                # If we didn't get it via content events, use this
-                if not full_content:
-                    full_content = final_content
+            if final_content and not full_content:
+                full_content = final_content
     return full_content.strip()
 
 
@@ -187,7 +182,7 @@ def generate_ai_commit_message() -> str:
         f"Diff:\n{diff_context}\n"
     )
 
-    print("  Contacting c05localai (NVIDIA Nemotron)...")
+    print("  Contacting c05localai (stepfun-ai/step-3.5-flash via NVIDIA)...")
     message = call_c05localai(system_prompt, user_prompt)
 
     if not message:
@@ -306,8 +301,30 @@ def interactive_mode() -> None:
         print("  Aborted.")
         sys.exit(0)
 
-    # Get commit message
-    message = input("  Commit message: ").strip()
+    # Get commit message — choose manual or AI-generated
+    message = None
+    print("\n  Commit message method:")
+    print("    1) Manual — type your own message")
+    print("    2) AI     — auto-generate from git diff (default)")
+    method = input("  Choose 1 or 2 [2]: ").strip()
+
+    if method == "1":
+        # Manual entry
+        message = input("  Commit message: ").strip()
+    else:
+        # AI-generated (default)
+        try:
+            message = generate_ai_commit_message()
+            print(f"\n  AI-generated message:\n    {message}\n")
+            choice = input("  Accept? (y/n, or type to edit): ").strip()
+            if choice.lower() not in ("y", "yes", ""):
+                message = choice if choice.lower() not in ("n", "no") else None
+        except SystemExit:
+            print("  Falling back to manual entry...\n")
+
+        if not message:
+            message = input("  Commit message: ").strip()
+
     if not message:
         print("  Error: commit message cannot be empty.")
         sys.exit(1)
@@ -349,10 +366,11 @@ def interactive_mode() -> None:
 
 
 def agent_mode(args: argparse.Namespace) -> None:
-    """Run in AI agent mode: non-interactive commit and push."""
+    """Run in agent mode: non-interactive commit and push."""
     message = args.message
+
     if not message:
-        raise SystemExit("Error: commit message is required.")
+        raise SystemExit("Error: commit message is required (use -m).")
 
     # Check we're in a git repo
     run(["git", "rev-parse", "--is-inside-work-tree"])
@@ -411,13 +429,9 @@ def agent_mode(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    # If no arguments at all, run interactive mode
-    if len(sys.argv) == 1:
-        interactive_mode()
-        return
-
     parser = argparse.ArgumentParser(description="Auto-commit and push changes cleanly.")
-    parser.add_argument("-m", "--message", default=None, help="Commit message (enables agent mode)")
+    parser.add_argument("-m", "--message", default=None,
+                        help="Commit message (enables non-interactive agent mode)")
     parser.add_argument("--files", nargs="*", default=None,
                         help="Specific files to stage. If omitted, stages all changes.")
     parser.add_argument("--dry-run", action="store_true",
