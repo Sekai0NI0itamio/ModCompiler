@@ -624,19 +624,65 @@ def _get_build_jobs(run_id: int, repo: str, token: str) -> list[dict]:
     return data.get("jobs", [])
 
 
-def _get_step_log_for_target(target_name: str, jobs: list[dict], logs_dir: Path) -> str:
-    """Find the build log for a specific target from the jobs."""
+def _get_step_log_for_target(target_name: str, jobs: list[dict], logs_dir: Path, repo: str, token: str, run_id: int) -> str:
+    """Get the actual build.log from the per-mod artifact (fastest way).
+
+    Downloads the per-mod artifact mod-{slug} which contains build.log
+    (actual compiler error output) and is tiny compared to all-mod-builds.
+    """
+    slug = None
+    job_id = None
     for job in jobs:
         job_name = job.get("name", "")
-        steps = job.get("steps", [])
-        for step in steps:
-            step_name = step.get("name", "")
-            # Check if this step is for our target
-            if target_name in job_name or target_name in step_name:
-                # Try to download the specific log
-                log_file = logs_dir / f"{target_name}_build.log"
-                if log_file.exists():
-                    return log_file.read_text(encoding="utf-8")
+        m = re.match(r"build\s*\(([^)]+)\)", job_name)
+        if m:
+            matched_slug = m.group(1).strip()
+            if target_name in matched_slug or target_name.split("-", 1)[-1] in matched_slug:
+                slug = matched_slug
+                job_id = job.get("databaseId") or job.get("id")
+                break
+
+    if slug:
+        per_mod_dir = logs_dir.parent / "per_mod_artifacts" / slug
+        per_mod_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            _gh([
+                "run", "download", str(run_id),
+                "-R", repo, "-n", f"mod-{slug}", "-D", str(per_mod_dir),
+            ], token=token, retries=2)
+
+            for p in per_mod_dir.rglob("build.log"):
+                return p.read_text(encoding="utf-8")
+
+            result_json = per_mod_dir / "result.json"
+            if result_json.exists():
+                rj = json.loads(result_json.read_text(encoding="utf-8"))
+                log_rel = rj.get("log_relpath", "build.log")
+                lp = per_mod_dir / log_rel
+                if lp.exists():
+                    return lp.read_text(encoding="utf-8")
+        except (CycleError, json.JSONDecodeError, OSError):
+            pass
+
+    if job_id:
+        try:
+            job_log = _gh([
+                "run", "view", str(run_id), "-R", repo,
+                "--log", "--job", str(job_id),
+            ], token=token, retries=2)
+            if job_log.strip():
+                (logs_dir / f"{target_name}_build.log").write_text(job_log, encoding="utf-8")
+                return job_log
+        except CycleError:
+            pass
+
+    for p in [logs_dir / f"{target_name}_build.log", logs_dir / "build_overview.txt"]:
+        if p.exists():
+            text = p.read_text(encoding="utf-8", errors="replace")
+            if "error" in text.lower() or "compile" in text.lower():
+                return text
+
     return "(no specific build log found for this target)"
 
 
@@ -931,7 +977,6 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
     payload = {
         "model": AI_MODEL,
         "messages": messages,
-        "max_tokens": AI_MAX_TOKENS,
         "temperature": 0.2,
         "stream": True,
     }
@@ -1111,80 +1156,115 @@ def run_compile_cycle(
         fixed_this_round: list[str] = []
         still_failed: list[str] = []
 
+        # Fetch jobs once for this entire retry round
+        jobs = _get_build_jobs(build_run_id, repo, token)
+
+        # Pre-collect source code for all targets
+        target_data = []
         for target_name in current_targets:
             active_failed[target_name] = attempt
             mc_ver, loader = target_name.rsplit("-", 1)
-
-            _log(f"\n  Processing failed: {target_name} (attempt {attempt})")
-
-            # Get current source code
             source_code = _get_current_source_code(bundle_dir, target_name)
+            target_data.append((target_name, mc_ver, loader, source_code))
 
-            # Get build error log
-            jobs = _get_build_jobs(build_run_id, repo, token)
-            build_log = _get_step_log_for_target(target_name, jobs, Path(results["build_log_dir"]))
-            if not build_log:
-                build_log = "(build log not available for this target)"
+        # Phase 1: Download per-mod artifacts + collect context IN PARALLEL
+        _log(f"  Collecting context for {len(target_data)} failed target(s)...")
+        context_list = [None] * len(target_data)
 
-            # Collect DIF entries and MC source
-            dif_entries = _collect_dif_for_target(mc_ver, loader)
-            mc_source = _collect_mc_source_files(mc_ver, loader)
-
-            # Create failed-N folder with context
-            target_dir = bundle_dir / target_name
-            _create_failed_context(
-                target_dir, attempt, source_code,
-                build_log, dif_entries, mc_source,
-            )
-
-            # Get mod info text from projectinfo.txt
-            projectinfo_path = target_dir / "projectinfo.txt"
-            mod_info = projectinfo_path.read_text(encoding="utf-8") if projectinfo_path.exists() else ""
-
-            # Recompose the fix prompt
-            fix_prompt = _recompose_fix_prompt(
-                target_name, mod_info, source_code,
-                build_log, dif_entries, mc_source,
-            )
-
-            # Send to AI
-            _log(f"  Sending fix prompt to AI ({len(fix_prompt):,} chars)...")
+        def _collect_context(idx, tname, mcver, loader, scode):
             try:
-                ai_response = _send_fix_prompt_to_ai(fix_prompt, nvidia_key, target_name)
-            except CycleError as e:
-                _log(f"  ✗ AI request failed: {e}")
-                still_failed.append(target_name)
+                build_log = _get_step_log_for_target(
+                    tname, jobs, Path(results["build_log_dir"]), repo, token, build_run_id
+                )
+                if not build_log:
+                    build_log = "(build log not available)"
+                dif_entries = _collect_dif_for_target(mcver, loader)
+                mc_source = _collect_mc_source_files(mcver, loader)
+                return (idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source)
+            except Exception as exc:
+                return (idx, tname, mcver, loader, scode, str(exc), [], {})
+
+        with ThreadPoolExecutor(max_workers=min(4, len(target_data))) as pool:
+            futures = []
+            for idx, (tname, mcver, loader, scode) in enumerate(target_data):
+                futures.append(pool.submit(_collect_context, idx, tname, mcver, loader, scode))
+            for fut in as_completed(futures):
+                result = fut.result()
+                context_list[result[0]] = result
+
+        # Phase 2: Create failed-N folders
+        for result in context_list:
+            if result is None:
+                continue
+            idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source = result
+            target_dir = bundle_dir / tname
+            _create_failed_context(target_dir, attempt, scode, build_log, dif_entries, mc_source)
+
+        # Phase 3: Send AI prompts IN PARALLEL
+        _log(f"  Sending {len(context_list)} AI fix prompt(s) in parallel...")
+        ai_responses = [None] * len(target_data)
+
+        def _send_ai(idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source):
+            try:
+                target_dir = bundle_dir / tname
+                projectinfo_path = target_dir / "projectinfo.txt"
+                mod_info = projectinfo_path.read_text(encoding="utf-8") if projectinfo_path.exists() else ""
+                fix_prompt = _recompose_fix_prompt(tname, mod_info, scode, build_log, dif_entries, mc_source)
+                _log(f"    AI: {tname} ({len(fix_prompt):,} chars)...")
+                ai_response = _send_fix_prompt_to_ai(fix_prompt, nvidia_key, tname)
+                return (idx, tname, ai_response, None)
+            except Exception as exc:
+                return (idx, tname, None, str(exc))
+
+        with ThreadPoolExecutor(max_workers=min(3, len(target_data))) as pool:
+            futures = []
+            for result in context_list:
+                if result is None:
+                    continue
+                idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source = result
+                futures.append(pool.submit(_send_ai, idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source))
+            for fut in as_completed(futures):
+                result = fut.result()
+                ai_responses[result[0]] = result
+
+        # Phase 4: Process AI responses
+        for result in ai_responses:
+            if result is None:
+                continue
+            idx, tname, ai_response, error = result
+            target_dir = bundle_dir / tname
+
+            if error or not ai_response:
+                _log(f"  \u2717 {tname}: AI request failed: {error}")
+                still_failed.append(tname)
                 continue
 
-            # Save fix response
             fix_response_path = target_dir / f"airesponse_fix_{attempt}.txt"
             fix_response_path.write_text(ai_response, encoding="utf-8")
-            _log(f"  ✓ AI fix response saved ({len(ai_response):,} chars)")
+            _log(f"  \u2713 {tname}: AI response saved ({len(ai_response):,} chars)")
 
-            # Extract fixed files
             fix_files = _extract_ai_files(ai_response)
             if not fix_files:
-                _log(f"  ✗ No files extracted from AI fix response")
-                still_failed.append(target_name)
+                _log(f"  \u2717 {tname}: No files extracted")
+                still_failed.append(tname)
                 continue
 
-            _log(f"  Extracted {len(fix_files)} fixed file(s)")
+            _log(f"  \u2713 {tname}: {len(fix_files)} fixed file(s)")
 
-            # Merge and update airesponse.txt
+            source_code = _get_current_source_code(bundle_dir, tname)
             merged_source = _merge_source_files(source_code, fix_files)
-            merged_dir = bundle_dir / target_name / ".merged_source"
+            merged_dir = bundle_dir / tname / ".merged_source"
             _save_source_files(merged_source, merged_dir)
-            _save_source_files(merged_source, bundle_dir / target_name)
+            _save_source_files(merged_source, bundle_dir / tname)
 
-            # Re-create airesponse.txt with merged code
             merged_text = ""
-            for filepath in sorted(merged_source.keys()):
-                content = merged_source[filepath]
-                lang = "java" if filepath.endswith(".java") else ""
-                merged_text += f"`bundle/{target_name}/{filepath}`\n```{lang}\n{content}\n```\n\n"
-            (bundle_dir / target_name / "airesponse.txt").write_text(merged_text, encoding="utf-8")
+            for fp in sorted(merged_source.keys()):
+                c = merged_source[fp]
+                lang = "java" if fp.endswith(".java") else ""
+                merged_text += f"`bundle/{tname}/{fp}`\n```{lang}\n{c}\n```\n\n"
+            (bundle_dir / tname / "airesponse.txt").write_text(merged_text, encoding="utf-8")
 
-            fixed_this_round.append(target_name)
+            fixed_this_round.append(tname)
 
         if not fixed_this_round:
             _log("No versions could be fixed this round. Aborting retry cycle.")

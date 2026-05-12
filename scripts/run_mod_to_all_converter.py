@@ -359,7 +359,6 @@ def _send_prompt_to_nvidia(
     payload: dict[str, Any] = {
         "model": AI_MODEL,
         "messages": messages,
-        "max_tokens": AI_MAX_TOKENS,
         "temperature": 0.2,
         "stream": True,
     }

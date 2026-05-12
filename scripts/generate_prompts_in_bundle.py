@@ -330,6 +330,17 @@ def _get_loader_instructions(loader: str, minecraft_version: str) -> List[str]:
                 "    @Mod.EventHandler for preInit(FMLPreInitializationEvent), init(FMLInitializationEvent), postInit(FMLPostInitializationEvent)",
                 "    MinecraftForge.EVENT_BUS.register(handler) in preInit",
                 "    Resource file: mcmod.info (JSON array in src/main/resources/)",
+                '    WARNING - Forge 1.12.x uses MCP-mapped names (NOT SRG/obfuscated names):',
+                '      Minecraft.getMinecraft()   - NOT Minecraft.func_71410_x()',
+                '      mc.player                  - NOT mc.field_71439_g',
+                '      mc.world                   - NOT mc.field_71441_e',
+                '      mc.gameSettings            - NOT mc.field_71474_y',
+                '      mc.playerController        - NOT mc.field_71442_b',
+                '      heldItem.isEmpty()         - NOT heldItem.func_190926_b()',
+                '      heldItem.getItem()         - NOT heldItem.func_77973_b()',
+                '      Items.EXPERIENCE_BOTTLE    - NOT Items.field_151062_by',
+                '    If decompiled source shows func_***() or field_*** names, translate',
+                '    them using the table above. Treat SRG names as hints only.',
             ]
         elif major_minor >= (1, 16) and major_minor <= (1, 19):
             return [
@@ -464,7 +475,24 @@ def generate_prompt(
     lines.append("")
     lines.append(f"7. **The main class name is `{main_class_name}`** — filename must match exactly.")
     lines.append("")
-    lines.append("8. **Loader-specific API patterns:**")
+    lines.append("8. **NEVER use obfuscated/SRG field names** — if decompiled source code in")
+    lines.append("   PART 1 shows `func_***()` methods or `field_***` variables, those are")
+    lines.append("   obfuscated SRG names that will NOT compile. You MUST translate them to")
+    lines.append("   the proper deobfuscated names that exist in the build environment.")
+    lines.append("   Common translations for all Forge versions:")
+    lines.append('     `Minecraft.getMinecraft()`            -> use instead of `func_71410_x()`')
+    lines.append('     `mc.player` / `mc.thePlayer`          -> use instead of `field_71439_g`')
+    lines.append('     `mc.world` / `mc.theWorld`            -> use instead of `field_71441_e`')
+    lines.append('     `mc.gameSettings`                     -> use instead of `field_71474_y`')
+    lines.append('     `heldItem.isEmpty()`                  -> use instead of `func_190926_b()`')
+    lines.append('     `heldItem.getItem()`                  -> use instead of `func_77973_b()`')
+    lines.append('     `Items.EXPERIENCE_BOTTLE` / similar   -> use instead of `field_151062_by`')
+    lines.append("   If the decompiled source you were given contains SRG/obfuscated names,")
+    lines.append("   this is a known issue with the decompiler. ALWAYS translate to proper")
+    lines.append("   mapped names. When in doubt, prefer the simple English method name")
+    lines.append("   (e.g. `getMinecraft`, `isEmpty`, `getItem`) over the obfuscated one.")
+    lines.append("")
+    lines.append("9. **Loader-specific API patterns:**")
     lines.append("")
     lines.extend(_get_loader_instructions(loader, minecraft_version))
     lines.append("")
