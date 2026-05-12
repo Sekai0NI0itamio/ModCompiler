@@ -180,7 +180,7 @@ _STATUS_LABELS = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 AI_NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
-AI_MODEL = "qwen/qwen3-coder-480b-a35b-instruct"
+AI_MODEL = "stepfun-ai/step-3.5-flash"
 
 
 def _load_nvidia_key() -> str:
@@ -388,6 +388,14 @@ def _send_prompt_to_nvidia(
         "messages": messages,
         "temperature": 0.2,
         "stream": True,
+    }
+
+    # Enable reasoning/thinking for stepfun models via NVIDIA's chat_template_kwargs
+    payload["extra_body"] = {
+        "chat_template_kwargs": {
+            "enable_thinking": True,
+            "reasoning_effort": "high",
+        }
     }
 
     body_bytes = json.dumps(payload).encode("utf-8")

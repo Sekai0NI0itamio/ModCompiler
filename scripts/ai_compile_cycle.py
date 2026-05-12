@@ -52,7 +52,6 @@ GH_RETRY_DELAY = 3.0
 # NVIDIA AI config
 AI_NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
 AI_MODEL = "stepfun-ai/step-3.5-flash"
-AI_MAX_TOKENS = 16384
 
 # Build artifact names
 BUILD_ARTIFACT_ALL = "all-mod-builds"
@@ -234,21 +233,26 @@ def _load_nvidia_key() -> str:
 def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
     """Parse AI response into a dict of filepath -> content.
 
-    Finds all ```...``` code blocks. Each block starts with ```(lang)\n
-    and ends with \n```. For each block, scans backwards through preceding
-    text for a line that looks like a filepath.
-    Handles adjacent ``` blocks (empty ``````language) and backtick-wrapped paths.
+    Finds all ```(...)\n(content)\n``` code blocks.
+    For each block, only looks at the text segment between the previous
+    block's closing ``` and this block's opening ``` to find the filepath.
+    This prevents mispairing filepaths with wrong code blocks.
     """
     files: dict[str, str] = {}
-
-    # Match: ```(optional_lang)\n(content)\n```
     pattern = re.compile(r"```([a-zA-Z0-9_+\-]*)\n(.*?)\n```", re.DOTALL)
+    prev_end = None
+
     for m in pattern.finditer(airesponse_text):
         lang_spec = m.group(1)
         raw_content = m.group(2)
-        text_before = airesponse_text[:m.start()]
 
-        # Find filepath: last line in text_before that looks like a path
+        # Only scan text between previous block's close and this block's open
+        if prev_end is not None:
+            text_before = airesponse_text[prev_end:m.start()]
+        else:
+            text_before = airesponse_text[:m.start()]
+
+        # Find filepath: last line that looks like a path
         before_lines = text_before.splitlines()
         filepath = ""
         for line in reversed(before_lines):
@@ -262,14 +266,13 @@ def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
                 filepath = s
                 break
         if not filepath:
+            prev_end = m.end()
             continue
 
-        # Strip bundle/ prefix
         for prefix in ("bundle/", "./"):
             if filepath.startswith(prefix):
                 filepath = filepath[len(prefix):]
 
-        # Remove stray ``` lines from content
         clean_lines = [
             ln for ln in raw_content.splitlines()
             if not ln.strip().startswith("```")
@@ -278,6 +281,8 @@ def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
 
         if filepath and clean_content and filepath not in files:
             files[filepath] = clean_content
+
+        prev_end = m.end()
 
     return files
 def _get_expected_build_dir(target_name: str) -> str:
