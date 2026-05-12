@@ -49,9 +49,34 @@ POLL_INTERVAL = 30
 MAX_GH_RETRIES = 4
 GH_RETRY_DELAY = 3.0
 
-# NVIDIA AI config
-AI_NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
-AI_MODEL = "stepfun-ai/step-3.5-flash"
+# --- AI Provider Config ---
+AI_PROVIDERS = {
+    "default": {
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "model": "z-ai/glm4.7",
+        "provider_name": "NVIDIA Integrate API",
+    },
+    "intelligent": {
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-chat",
+        "provider_name": "DeepSeek API",
+    },
+}
+
+AI_NVIDIA_BASE = AI_PROVIDERS["default"]["base_url"]
+AI_MODEL = AI_PROVIDERS["default"]["model"]
+
+
+def _get_ai_config(intelligent: bool = False) -> dict:
+    mode = "intelligent" if intelligent else "default"
+    return AI_PROVIDERS[mode]
+
+
+def _apply_ai_config(intelligent: bool = False) -> None:
+    global AI_NVIDIA_BASE, AI_MODEL
+    c = _get_ai_config(intelligent)
+    AI_NVIDIA_BASE = c["base_url"]
+    AI_MODEL = c["model"]
 
 # Build artifact names
 BUILD_ARTIFACT_ALL = "all-mod-builds"
@@ -233,12 +258,24 @@ def _load_nvidia_key() -> str:
 def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
     """Parse AI response into a dict of filepath -> content.
 
-    Finds all ```(...)\n(content)\n``` code blocks.
-    For each block, only looks at the text segment between the previous
-    block's closing ``` and this block's opening ``` to find the filepath.
-    This prevents mispairing filepaths with wrong code blocks.
+    Handles two formats:
+      Format A (standard):
+        filepath (or `filepath`)
+        ```java
+        code
+        ```
+
+      Format B (DeepSeek):
+        ```filepath
+        ```
+        ```java
+        code
+        ```
+
+    Also handles adjacent ``` blocks (empty ``````language).
     """
     files: dict[str, str] = {}
+    pending_path: str = ""  # filepath saved from a filepath-only code block
     pattern = re.compile(r"```([a-zA-Z0-9_+\-]*)\n(.*?)\n```", re.DOTALL)
     prev_end = None
 
@@ -246,25 +283,49 @@ def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
         lang_spec = m.group(1)
         raw_content = m.group(2)
 
-        # Only scan text between previous block's close and this block's open
-        if prev_end is not None:
-            text_before = airesponse_text[prev_end:m.start()]
-        else:
-            text_before = airesponse_text[:m.start()]
+        # Check if this block's content IS a filepath (e.g. ```path/to/file.java```)
+        s = raw_content.strip().strip("`*[]'\"")
+        content_is_path = False
+        if "/" in s:
+            last_part = s.split("/")[-1]
+            if "." in last_part and not last_part.startswith("."):
+                pending_path = s
+                content_is_path = True
+        if not content_is_path and "bundle/" in s:
+            pending_path = s
+            content_is_path = True
 
-        # Find filepath: last line that looks like a path
-        before_lines = text_before.splitlines()
+        if content_is_path:
+            # This block just contains a filepath, save for next code block
+            prev_end = m.end()
+            continue
+
+        # This block contains actual code - find its filepath
         filepath = ""
-        for line in reversed(before_lines):
-            s = line.strip().strip("`*[]'\"")
-            if "/" in s:
-                last_part = s.split("/")[-1]
-                if "." in last_part and not last_part.startswith("."):
+
+        # 1. Check if we have a pending path from a previous filepath-only block
+        if pending_path:
+            filepath = pending_path
+            pending_path = ""  # consume it
+
+        # 2. Fallback: scan text between previous block's close and this block's open
+        if not filepath:
+            text_before = (
+                airesponse_text[prev_end:m.start()] if prev_end is not None
+                else airesponse_text[:m.start()]
+            )
+            before_lines = text_before.splitlines()
+            for line in reversed(before_lines):
+                s = line.strip().strip("`*[]'\"")
+                if "/" in s:
+                    last_part = s.split("/")[-1]
+                    if "." in last_part and not last_part.startswith("."):
+                        filepath = s
+                        break
+                if "bundle/" in s:
                     filepath = s
                     break
-            if "bundle/" in s:
-                filepath = s
-                break
+
         if not filepath:
             prev_end = m.end()
             continue
@@ -364,43 +425,64 @@ def _create_build_bundle(
             dest.write_text(content, encoding="utf-8")
             total_files += 1
 
-        # ── Generate mod.txt from projectinfo.txt ──────────────────────
+        # ── Generate mod.txt from projectinfo.txt and AI source ──────
         projectinfo = td / "projectinfo.txt"
+        ai_text = ai_path.read_text(encoding="utf-8") if ai_path.exists() else ""
         mod_id = "unknown"
         mod_name = target_name
         mod_version = "1.0.0"
         mod_description = ""
         mod_authors = ""
         mod_group = ""
-        if projectinfo.exists():
-            info_text = projectinfo.read_text(encoding="utf-8")
-            for line in info_text.splitlines():
-                line = line.strip()
-                if "=" in line and not line.startswith("#"):
-                    key, _, val = line.partition("=")
-                    key = key.strip().lower().replace(" ", "_")
-                    val = val.strip().strip('"').strip("'").rstrip(',').strip().strip('"').strip("'")
-                    if key in ("mod_id", "modid", "id"):
-                        mod_id = val
-                    elif key in ("name", "mod_name", "display_name"):
-                        mod_name = val
-                    elif key == "version":
-                        mod_version = val
-                    elif key == "description":
-                        mod_description = val
-                    elif key in ("authors", "author"):
-                        mod_authors = val
-                    elif key in ("group", "package", "mod_group"):
-                        mod_group = val
-            # Fallback: parse from header lines (Mod Name:, Mod Author:, Mod Path:)
-            if mod_name == target_name or not mod_authors:
-                for line in info_text.splitlines():
-                    if line.startswith("Mod Name:"):
-                        mod_name = line.split(":", 1)[1].strip()
-                    elif line.startswith("Mod Author:"):
-                        mod_authors = line.split(":", 1)[1].strip()
-                    elif line.startswith("Mod Path:"):
-                        mod_group = line.split(":", 1)[1].strip()
+
+        # Scan both projectinfo.txt and AI response for mod identifiers
+        for source_text, source_name in [(ai_text, "AI"), 
+                                          (projectinfo.read_text(encoding="utf-8") if projectinfo.exists() else "", "info")]:
+            # FIRST: Header-based parsing (reliable, from projectinfo headers)
+            for line in source_text.splitlines():
+                s = line.strip()
+                if s.startswith("Mod Name:"):
+                    mod_name = s.split(":", 1)[1].strip()
+                elif s.startswith("Mod Author:"):
+                    mod_authors = s.split(":", 1)[1].strip()
+                elif s.startswith("Mod Path:"):
+                    mod_group = s.split(":", 1)[1].strip()
+                    if mod_id == "unknown":
+                        path_parts = mod_group.rsplit(".", 1)
+                        if len(path_parts) > 1:
+                            mod_id = path_parts[-1]
+            
+            # SECOND: @Mod, modid, MOD_ID patterns
+            for line in source_text.splitlines():
+                s = line.strip()
+                m = re.search(r'@Mod\s*\(\s*(?:modid\s*=\s*)?["\x27]([^"\x27]+)["\x27]', s)
+                if m and mod_id == "unknown":
+                    mod_id = m.group(1)
+                m = re.search(r'["\x27](?:modId|modid|id)["\x27]\s*:\s*["\x27]([^"\x27]+)["\x27]', s)
+                if m and mod_id == "unknown":
+                    mod_id = m.group(1)
+                m = re.search(r'MOD_ID\s*=\s*["\x27]([^"\x27]+)["\x27]', s)
+                if m and mod_id == "unknown":
+                    mod_id = m.group(1)
+            
+            # THIRD: key = value pairs (for mod_id and version only, NOT name)
+            if mod_id == "unknown" or mod_version == "1.0.0" or not mod_authors or not mod_group:
+                for line in source_text.splitlines():
+                    s = line.strip()
+                    if "=" in s and not s.startswith("#"):
+                        key, _, val = s.partition("=")
+                        key = key.strip().lower().replace(" ", "_")
+                        val = val.strip().strip('"').strip("'").rstrip(',').strip().strip('"').strip("'")
+                        if key in ("mod_id", "modid", "id") and mod_id == "unknown":
+                            mod_id = val
+                        elif key in ("version", "mod_version") and mod_version == "1.0.0":
+                            mod_version = val
+                        elif key in ("authors", "author") and not mod_authors:
+                            mod_authors = val
+                        elif key in ("description") and not mod_description:
+                            mod_description = val
+                        elif key in ("group", "package", "mod_group") and not mod_group:
+                            mod_group = val
 
         mod_txt_lines = []
         mod_txt_lines.append(f"mod_id={mod_id}")
@@ -588,18 +670,63 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
             _log(f"  Download attempt {attempt} failed, retrying in {delay}s...")
             time.sleep(delay)
 
-    # Also try publish artifacts
-    for attempt in range(1, 5):
+    # Publish artifact: check via API first, then download with patience
+    publish_available = False
+    try:
+        # Check if the artifact exists via the GitHub API
+        api_out = _gh([
+            "api", f"repos/{repo}/actions/runs/{run_id}/artifacts",
+        ], token=token, retries=2)
+        api_data = json.loads(api_out)
+        for art in api_data.get("artifacts", []):
+            if art.get("name") == BUILD_ARTIFACT_PUBLISH:
+                publish_available = True
+                break
+    except (CycleError, json.JSONDecodeError):
+        pass
+
+    if publish_available:
+        _log("  Publish artifact found via API, downloading...")
+        for attempt in range(1, 10):
+            try:
+                _gh([
+                    "run", "download", str(run_id),
+                    "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(artifacts_dir),
+                ], token=token)
+                break
+            except CycleError:
+                delay = min(10 * attempt, 60)
+                _log(f"  Publish download attempt {attempt} failed, retrying in {delay}s...")
+                time.sleep(delay)
+    else:
+        # Fallback: try the run view to check if publish-modrinth job succeeded
         try:
-            _gh([
-                "run", "download", str(run_id),
-                "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(artifacts_dir),
-            ], token=token)
-            break
-        except CycleError:
-            if attempt == 4:
-                _log("  No publish artifact (versions may not all be published yet)")
-            time.sleep(3 * attempt)
+            publish_check = _gh([
+                "run", "view", str(run_id), "-R", repo,
+                "--json", "jobs",
+            ], token=token, retries=2)
+            pub_data = json.loads(publish_check)
+            pub_success = any(
+                j.get("conclusion") == "success" and "publish" in j.get("name", "").lower()
+                for j in pub_data.get("jobs", [])
+            )
+            if pub_success:
+                _log("  Publish job succeeded (artifact may not be available yet)")
+                # Still try to download in case it appears
+                for attempt in range(1, 6):
+                    try:
+                        _gh([
+                            "run", "download", str(run_id),
+                            "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(artifacts_dir),
+                        ], token=token)
+                        break
+                    except CycleError:
+                        if attempt < 5:
+                            time.sleep(10 * attempt)
+            else:
+                _log("  No publish artifact or publish job did not run")
+        except (CycleError, json.JSONDecodeError):
+            _log("  Could not check publish status")
 
     # Download logs
     try:
@@ -1057,7 +1184,7 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
     import urllib.request
     import urllib.error
 
-    url = f"{AI_NVIDIA_BASE}/chat/completions"
+    url = f"{AI_NVIDIA_BASE}/v1/chat/completions"
 
     messages = [
         {
@@ -1166,6 +1293,7 @@ def run_compile_cycle(
     nvidia_key: str,
     repo: str,
     max_retries: int = MAX_RETRIES,
+    intelligent: bool = False,
 ) -> int:
     """Run the full compile cycle: build, analyze, retry.
 
@@ -1479,6 +1607,8 @@ def main() -> int:
                         help="Full Modrinth project URL")
     parser.add_argument("--repo", default="",
                         help="owner/repo (auto-detected from git remote)")
+    parser.add_argument("--intelligent", action="store_true",
+                        help="Use DeepSeek/deepseek-chat instead of default NVIDIA/z-ai/glm4.7")
     parser.add_argument("--max-retries", type=int, default=MAX_RETRIES,
                         help=f"Max retry attempts per version (default: {MAX_RETRIES})")
     args = parser.parse_args()
@@ -1493,6 +1623,7 @@ def main() -> int:
     nvidia_key = _load_nvidia_key()
 
     try:
+        _apply_ai_config(args.intelligent)
         return run_compile_cycle(
             bundle_dir=bundle_dir,
             slug=args.slug,
@@ -1501,6 +1632,7 @@ def main() -> int:
             nvidia_key=nvidia_key,
             repo=repo,
             max_retries=args.max_retries,
+            intelligent=args.intelligent,
         )
     except CycleError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)

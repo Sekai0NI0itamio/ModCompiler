@@ -179,30 +179,61 @@ _STATUS_LABELS = {
 # AI Coding Stage — sends prompts to C05LocalAi / NVIDIA
 # ─────────────────────────────────────────────────────────────────────────────
 
-AI_NVIDIA_BASE = "https://integrate.api.nvidia.com/v1"
-AI_MODEL = "stepfun-ai/step-3.5-flash"
+# --- AI Provider Config ---
+AI_PROVIDERS = {
+    "default": {
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "model": "z-ai/glm4.7",
+        "provider_name": "NVIDIA Integrate API",
+        "key_file": "C05LocalAi/keys/nvidia.txt",
+        "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
+    },
+    "intelligent": {
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-chat",
+        "provider_name": "DeepSeek API",
+        "key_file": "C05LocalAi/keys/deepseek.txt",
+        "key_env_vars": ("DEEPSEEK_API_KEY", "DEEPSEEK_KEY", "NVIDIA_API_KEY", "NVAPI_KEY"),
+    },
+}
+
+AI_NVIDIA_BASE = AI_PROVIDERS["default"]["base_url"]
+AI_MODEL = AI_PROVIDERS["default"]["model"]
 
 
-def _load_nvidia_key() -> str:
-    """Load the first NVIDIA API key from C05LocalAi/keys/nvidia.txt."""
-    key_path = Path("C05LocalAi/keys/nvidia.txt")
+def _get_ai_config(intelligent: bool = False) -> dict:
+    mode = "intelligent" if intelligent else "default"
+    return AI_PROVIDERS[mode]
+
+
+def _apply_ai_config(intelligent: bool = False) -> None:
+    global AI_NVIDIA_BASE, AI_MODEL
+    c = _get_ai_config(intelligent)
+    AI_NVIDIA_BASE = c["base_url"]
+    AI_MODEL = c["model"]
+
+
+def _load_ai_key(intelligent: bool = False) -> str:
+    """Load a DeepSeek API key from C05LocalAi/keys/deepseek.txt."""
+    c = _get_ai_config(intelligent)
+    key_path = Path(c["key_file"])
     if key_path.exists():
         for line in key_path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if line and not line.startswith("#"):
                 return line
-    # Fallback: check env
-    for var in ("NVIDIA_API_KEY", "NVAPI_KEY"):
+    for var in c["key_env_vars"]:
         val = os.environ.get(var, "").strip()
         if val:
             return val
+    key_path.parent.mkdir(parents=True, exist_ok=True)
     raise RunError(
-        "No NVIDIA API key found. "
-        "Either set NVIDIA_API_KEY env var or add a key to C05LocalAi/keys/nvidia.txt"
+        f"No API key found. Set {c['key_env_vars'][0]} env var "
+        f"or add a key to {c['key_file']}"
     )
 
 
-def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
+def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str, intelligent: bool = False) -> int:
     """Execute the AI coding stage: send prompts to NVIDIA and save responses."""
     import threading
 
@@ -210,7 +241,7 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str) -> int:
     print("=" * 72)
     print("  PHASE 2 — AI MOD CODING (Local)")
     print(f"  Model: {AI_MODEL}")
-    print(f"  Provider: NVIDIA Integrate API")
+    print(f'  Provider: {_get_ai_config(intelligent)["provider_name"]}')
     print("=" * 72)
     print()
 
@@ -369,7 +400,7 @@ def _send_prompt_to_nvidia(
     import urllib.request
     import urllib.error
 
-    url = f"{AI_NVIDIA_BASE}/chat/completions"
+    url = f"{AI_NVIDIA_BASE}/v1/chat/completions"
 
     messages = []
     messages.append({
@@ -511,6 +542,7 @@ class Runner:
         self.token = _detect_token()
         self.run_id: int = 0
         self.mode = args.mode
+        self.intelligent = getattr(args, 'intelligent', False)
 
         # Derive slug from URL
         m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", self.modrinth_url)
@@ -566,8 +598,8 @@ class Runner:
             if conclusion != "success":
                 print(f"  Bundle found at {bundle_dir} — proceeding despite workflow conclusion '{conclusion}'.")
 
-            nvidia_key = _load_nvidia_key()
-            ai_result = _run_ai_coding_stage(bundle_dir, nvidia_key)
+            nvidia_key = _load_ai_key(args.intelligent)
+            ai_result = _run_ai_coding_stage(bundle_dir, nvidia_key, args.intelligent)
 
             # Update SUMMARY.md with AI results
             self._append_ai_summary(artifacts_dir)
@@ -589,7 +621,8 @@ class Runner:
                  "--slug", self.slug,
                  "--modrinth-url", self.modrinth_url,
                  "--repo", self.repo,
-                 "--max-retries", "5"],
+                 "--max-retries", "5"]
+                + (["--intelligent"] if self.intelligent else []),
                 capture_output=False,
             )
 
