@@ -152,120 +152,87 @@ def _map_slug_to_target_name(slug: str, target_names: list[str]) -> str | None:
 def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
     """Parse AI response into a dict of filepath -> content.
 
-    Handles two formats:
-      Format A (standard):
-        filepath (or `filepath`)
-        ```java
-        code
-        ```
+    Uses simple line-by-line parsing (no regex).
 
-      Format B (DeepSeek):
-        ```filepath
-        ```
-        ```java
-        code
-        ```
+    The AI response structure is:
+      ```                      ← open block
+      filepath                 ← content
+      ```json / ```java / ```  ← close block (the 3 backticks close)
+      code                     ← MORE content (next block starts here implicitly)
+      ```                      ← close second block
 
-    Also handles adjacent ``` blocks (empty ``````language).
+    Every PAIR of consecutive ``` markers defines one block.
+    Odd-indexed blocks (0, 2, 4…) are filepaths.
+    Even-indexed blocks (1, 3, 5…) are the corresponding code.
     """
+    # Find the line number of every ``` marker
+    marker_lines: list[int] = []
+    for idx, line in enumerate(airesponse_text.splitlines()):
+        if "```" in line:
+            marker_lines.append(idx)
+
+    if len(marker_lines) < 2:
+        return {}  # need at least one complete pair
+
+    all_lines = airesponse_text.splitlines()
+    blocks: list[str] = []
+
+    for i in range(len(marker_lines) - 1):
+        start = marker_lines[i] + 1
+        end = marker_lines[i + 1]
+        if start >= end:
+            # Adjacent markers → empty block, skip
+            continue
+        content_lines = all_lines[start:end]
+        content = "\n".join(content_lines).strip()
+        if content:
+            blocks.append(content)
+
+    # blocks = [filepath, code, filepath, code, …]
     files: dict[str, str] = {}
-    pending_path: str = ""  # filepath saved from a filepath-only code block
-    pattern = re.compile(r"```([a-zA-Z0-9_+\-]*)\n(.*?)\n```", re.DOTALL)
-    prev_end = None
+    for i in range(0, len(blocks) - 1, 2):
+        filepath = blocks[i].strip()
+        code = blocks[i + 1].strip()
 
-    for m in pattern.finditer(airesponse_text):
-        lang_spec = m.group(1)
-        raw_content = m.group(2)
-
-        # Check if this block's content IS a filepath (e.g. ```path/to/file.java```)
-        s = raw_content.strip().strip("`*[]'\"")
-        content_is_path = False
-        if "/" in s:
-            last_part = s.split("/")[-1]
-            if "." in last_part and not last_part.startswith("."):
-                pending_path = s
-                content_is_path = True
-        if not content_is_path and "bundle/" in s:
-            pending_path = s
-            content_is_path = True
-
-        if content_is_path:
-            # This block just contains a filepath, save for next code block
-            prev_end = m.end()
+        if not filepath or not code:
             continue
 
-        # This block contains actual code - find its filepath
-        filepath = ""
+        # Clean up the filepath
+        filepath = filepath.strip("`*[]'\"")
 
-        # 1. Check if we have a pending path from a previous filepath-only block
-        if pending_path:
-            filepath = pending_path
-            pending_path = ""  # consume it
-
-        # 2. Fallback: scan text between previous block's close and this block's open
-        if not filepath:
-            text_before = (
-                airesponse_text[prev_end:m.start()] if prev_end is not None
-                else airesponse_text[:m.start()]
-            )
-            before_lines = text_before.splitlines()
-            for line in reversed(before_lines):
-                s = line.strip().strip("`*[]'\"")
-                if "/" in s:
-                    last_part = s.split("/")[-1]
-                    if "." in last_part and not last_part.startswith("."):
-                        filepath = s
-                        break
-                if "bundle/" in s:
-                    filepath = s
-                    break
-
-        if not filepath:
-            prev_end = m.end()
-            continue
-
-        # Validate: filepath must look like a real path, not Java source code
-        if filepath:
-            # Reject obvious code: contains Java keywords, annotations, or operators
-            code_patterns = ["package ", "import ", " class ", "public ", "private ",
-                             "protected ", " @", "//", "/*", " =>", " ->", "{|}", ";}"]
-            if any(p in filepath for p in code_patterns):
-                prev_end = m.end()
-                continue
-            # Reject if path segment is too long (>120 chars)
-            for segment in filepath.split("/"):
-                if len(segment) > 120:
-                    prev_end = m.end()
-                    filepath = ""
-                    continue
-            if not filepath:
-                continue
-
+        # Strip known prefixes
         for prefix in ("bundle/", "./"):
             if filepath.startswith(prefix):
                 filepath = filepath[len(prefix):]
 
-        # Skip build files - these are provided by the build workflow
+        # Strip leading target-name prefix ("1.12-forge/src/..." → "src/...")
+        if "/" in filepath and not filepath.startswith("src/"):
+            parts = filepath.split("/", 1)
+            if len(parts) == 2:
+                filepath = parts[1]
+
+        # Skip build files — provided by the build workflow
         build_files = {
             "build.gradle", "build.gradle.kts",
             "settings.gradle", "settings.gradle.kts",
             "gradle.properties", "gradlew", "gradlew.bat",
         }
-        filepath_lower = filepath.lower()
-        if filepath_lower in build_files or "/gradle/" in filepath_lower:
-            prev_end = m.end()
+        if filepath.lower() in build_files or "/gradle/" in filepath.lower():
             continue
 
-        clean_lines = [
-            ln for ln in raw_content.splitlines()
-            if not ln.strip().startswith("```")
-        ]
-        clean_content = "\n".join(clean_lines).strip()
+        # Skip if filepath looks like code (wasn't a proper path)
+        code_starts = ("package ", "import ", "public ", "private ",
+                       "protected ", "class ", "interface ", "@", "{")
+        if any(filepath.startswith(p) for p in code_starts):
+            continue
 
-        if filepath and clean_content and filepath not in files:
-            files[filepath] = clean_content
+        # Reject if filepath has no extension-like segment
+        last_part = filepath.split("/")[-1] if "/" in filepath else filepath
+        if "." not in last_part and "bundle" not in filepath:
+            continue
 
-        prev_end = m.end()
+        if filepath not in files:
+            files[filepath] = code
 
     return files
 def _get_expected_build_dir(target_name: str) -> str:
