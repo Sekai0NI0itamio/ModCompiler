@@ -183,11 +183,11 @@ _STATUS_LABELS = {
 # --- AI Provider Config ---
 AI_PROVIDERS = {
     "default": {
-        "base_url": "https://integrate.api.nvidia.com/v1",
-        "model": "stepfun-ai/step-3.5-flash",
-        "provider_name": "NVIDIA StepFun",
-        "key_file": "C05LocalAi/keys/nvidia.txt",
-        "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
+        "base_url": "https://openrouter.ai/api/v1",
+        "model": "inclusionai/ring-2.6-1t:free",
+        "provider_name": "OpenRouter",
+        "key_file": "C05LocalAi/keys/openrouter.txt",
+        "key_env_vars": ("OPENROUTER_API_KEY",),
     },
     "intelligent": {
         "base_url": "https://api.deepseek.com/v1",
@@ -429,6 +429,7 @@ def _send_prompt_to_nvidia(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "Accept": "text/event-stream",
+        "HTTP-Referer": "https://github.com/Sekai0NI0itamio/ModCompiler",
     }
 
     status_callback(target_name, "in_progress")
