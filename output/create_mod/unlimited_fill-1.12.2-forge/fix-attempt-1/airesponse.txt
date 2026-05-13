@@ -1,0 +1,38 @@
+We need to fix the import error in `FillCommandHandler.java`. The class `CommandFill` is not found because the source file was likely placed in a wrong directory, but more importantly, we can avoid importing the class altogether by checking the command's name instead of its type. This is more robust.  
+
+I'll replace the import and the `instanceof` check with a name comparison. Also, I'll keep the rest of the logic the same.
+
+```java
+package io.itamio.unlimited_fill;
+
+import net.minecraft.command.CommandBase;
+import net.minecraft.command.CommandException;
+import net.minecraft.command.ICommandSender;
+import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.event.CommandEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import org.apache.logging.log4j.Logger;
+
+import static io.itamio.unlimited_fill.UnlimitedFillMod.LOGGER;
+
+public class FillCommandHandler {
+
+    @SubscribeEvent
+    public void onCommand(CommandEvent event) {
+        // Intercept the /fill command by checking the command's name
+        if (event.getCommand().getName().equals("fill")) {
+            event.setCanceled(true);
+            MinecraftServer server = event.getSender().getServer();
+            if (server != null) {
+                server.addScheduledTask(() -> {
+                    try {
+                        UnlimitedFillExecutor.executeFill(event.getSender(), event.getParameters());
+                    } catch (CommandException e) {
+                        event.getSender().sendMessage(e.getComponent());
+                    }
+                });
+            }
+        }
+    }
+}
+```

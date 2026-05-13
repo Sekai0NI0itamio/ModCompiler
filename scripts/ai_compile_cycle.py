@@ -95,11 +95,13 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
-            last_err = e.stderr[:300] if e.stderr else str(e)
+            last_err = e.stderr[:500] if e.stderr else str(e)
+            _log(f"  gh command failed (attempt {attempt}/{retries}): {last_err}")
             if attempt < retries:
                 time.sleep(GH_RETRY_DELAY * attempt)
         except subprocess.TimeoutExpired as e:
             last_err = str(e)
+            _log(f"  gh command timed out (attempt {attempt}/{retries}): {last_err}")
             if attempt < retries:
                 time.sleep(GH_RETRY_DELAY * attempt)
     raise CycleError(f"gh {' '.join(args)} failed: {last_err}")
@@ -135,20 +137,43 @@ def _is_infrastructure_failure(build_log: str) -> bool:
 
 
 def _map_slug_to_target_name(slug: str, target_names: list[str]) -> str | None:
-    parts = slug.rsplit("-", 1)
-    if len(parts) == 2:
-        loader = parts[0].rsplit("-", 1)[-1] if "-" in parts[0] else ""
-        version_part = parts[1]
-        if loader:
+    """Map a build workflow slug (e.g. 'lifestealparrotmod-fabric-1-20-6')
+    back to a bundle target folder name (e.g. '1.20.6-fabric')."""
+    # Slug format: <modid>-<loader>-<mc-version>   (dashes in version)
+    # Target format: <mc-version>-<loader>          (dots in version)
+    #
+    slug_lower = slug.lower()
+    for loader_key in ("neoforge", "forge", "fabric"):
+        if loader_key in slug_lower:
+            idx = slug_lower.rfind(loader_key)
+            version_slug_part = slug[idx + len(loader_key):].lstrip("-")  # "1-20-6"
+            # Convert dashes to dots for matching: "1-20-6" → "1.20.6"
+            version_dotted = version_slug_part.replace("-", ".")
             for tn in target_names:
                 tn_parts = tn.rsplit("-", 1)
                 if len(tn_parts) == 2:
-                    if tn_parts[1] == loader and version_part in tn_parts[0]:
-                        return tn
-    slug_last = "-".join(slug.rsplit("-", 2)[-2:]) if "-" in slug else slug
+                    tn_loader = tn_parts[1].lower()
+                    tn_version = tn_parts[0]  # "1.20.6"
+                    if tn_loader == loader_key:
+                        # Exact match on dotted version
+                        if tn_version == version_dotted:
+                            return tn
+                        # Fuzzy: dotted version contains slug version
+                        if version_dotted in tn_version or tn_version in version_dotted:
+                            return tn
+
+    # 2. Fallback: search by substring (reversed: tn="1.20.6-fabric")
+    #    "1.20.6-fabric" in "lifestealparrotmod-fabric-1-20-6" → YES
     for tn in target_names:
-        if tn == slug_last or tn in slug or slug in tn:
+        if tn in slug:
             return tn
+        # Also try with version dots → dashes
+        parts = tn.rsplit("-", 1)
+        if len(parts) == 2:
+            dotted_version = parts[0].replace(".", "-")
+            slug_pattern = f"{parts[1]}-{dotted_version}"
+            if slug_pattern in slug:
+                return tn
     return target_names[0] if len(target_names) == 1 else None
 
 
@@ -285,6 +310,7 @@ def _get_expected_build_dir(target_name: str) -> str:
 def _create_build_bundle(
     bundle_dir: Path,
     output_zip: Path,
+    targets_filter: set[str] | None = None,
 ) -> tuple[int, list[str]]:
     """Extract airesponse.txt files, build a source tree, and create a zip.
 
@@ -292,6 +318,14 @@ def _create_build_bundle(
       - src/        (source tree, e.g. src/main/java/...)
       - mod.txt     (mod metadata: mod_id, name, version, etc.)
       - version.txt (minecraft_version=X, loader=Y)
+
+    Args:
+        bundle_dir: The analysis bundle directory.
+        output_zip: Path where the build zip will be created.
+        targets_filter: Optional set of target names to include.  If provided,
+                        only these targets are added to the zip.  This is used
+                        during retry cycles to avoid rebuilding already-successful
+                        versions.
 
     Returns (file_count, target_names).
     """
@@ -303,6 +337,7 @@ def _create_build_bundle(
     target_dirs = sorted([
         d for d in bundle_dir.iterdir()
         if d.is_dir() and not d.name.startswith(".")
+        and (targets_filter is None or d.name in targets_filter)
     ])
 
     target_names: list[str] = []
@@ -585,6 +620,10 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
       all_artifacts_dir: Path to downloaded artifacts
       build_log_dir: Path to build logs
     """
+    # Clean any stale artifacts from a previous run to avoid
+    # "file exists" errors — gh run download refuses to overwrite.
+    if dest_dir.exists():
+        shutil.rmtree(str(dest_dir))
     dest_dir.mkdir(parents=True, exist_ok=True)
     artifacts_dir = dest_dir / "artifacts"
     logs_dir = dest_dir / "logs"
@@ -593,86 +632,93 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
     # Wait a few seconds for GitHub to finalize artifacts
     time.sleep(5)
 
-    # ── Download ALL build artifacts ─────────────────────────────────
-    # IMPORTANT: Each artifact is downloaded to its OWN subdirectory to
-    # avoid "file exists" conflicts — gh run download extracts the zip
-    # directly into the destination, so two artifacts with overlapping
-    # files (e.g. both contain "SUMMARY.md") will collide.
+    # ── Download per-mod build artifacts ───────────────────────────
+    # The individual per-mod artifacts (mod-{slug}) are uploaded by the
+    # `build` job in build.yml with `if: always()`, making them much more
+    # reliable than the combined `all-mod-builds` bundle.
     #
-    artifact_downloaded = False
-    all_artifact_dir = artifacts_dir / BUILD_ARTIFACT_ALL
-    all_artifact_dir.mkdir(parents=True, exist_ok=True)
-    for attempt in range(1, 7):
-        try:
-            _gh([
-                "run", "download", str(run_id),
-                "-R", repo, "-n", BUILD_ARTIFACT_ALL, "-D", str(all_artifact_dir),
-            ], token=token)
-            artifact_downloaded = True
-            break
-        except CycleError as e:
-            delay = min(5 * (2 ** (attempt - 1)), 60)
-            _log(f"  all-mod-builds download attempt {attempt} failed, retrying in {delay}s...")
-            time.sleep(delay)
-
-    # ── Download publish artifact ────────────────────────────────────
-    publish_artifact_dir = artifacts_dir / BUILD_ARTIFACT_PUBLISH
-    publish_artifact_dir.mkdir(parents=True, exist_ok=True)
-    publish_available = False
+    # First list ALL artifacts to discover what's available
+    artifact_names: list[str] = []
     try:
         api_out = _gh([
             "api", f"repos/{repo}/actions/runs/{run_id}/artifacts",
         ], token=token, retries=2)
         api_data = json.loads(api_out)
         for art in api_data.get("artifacts", []):
-            if art.get("name") == BUILD_ARTIFACT_PUBLISH:
-                publish_available = True
+            artifact_names.append(art["name"])
+        _log(f"  Found {len(artifact_names)} artifact(s) via API")
+    except (CycleError, json.JSONDecodeError) as e:
+        _log(f"  Could not list artifacts: {e}")
+
+    # Download each per-mod artifact individually
+    artifact_downloaded = False
+    per_mod_artifact_dir = artifacts_dir / "per_mod"
+    per_mod_artifact_dir.mkdir(parents=True, exist_ok=True)
+    for art_name in artifact_names:
+        if not art_name.startswith("mod-"):
+            continue
+        # Each per-mod artifact goes into its own subdirectory
+        slug = art_name[len("mod-"):]
+        slug_dir = per_mod_artifact_dir / slug
+        slug_dir.mkdir(parents=True, exist_ok=True)
+        for attempt in range(1, 4):
+            try:
+                _gh([
+                    "run", "download", str(run_id),
+                    "-R", repo, "-n", art_name, "-D", str(slug_dir),
+                ], token=token, retries=2)
+                artifact_downloaded = True
+                _log(f"    ✓ Downloaded {art_name}")
                 break
-    except (CycleError, json.JSONDecodeError):
-        pass
+            except CycleError as e:
+                err_preview = str(e)[:200]
+                if attempt < 3:
+                    _log(f"    Retry {attempt} for {art_name}: {err_preview}")
+                    time.sleep(5)
+                else:
+                    _log(f"    ⚠ Could not download {art_name}: {err_preview}")
+
+    # Fallback: try the combined bundle if no per-mod artifacts were available
+    all_artifact_dir = artifacts_dir / BUILD_ARTIFACT_ALL
+    all_artifact_dir.mkdir(parents=True, exist_ok=True)
+    if not artifact_downloaded:
+        _log("  No per-mod artifacts found, trying combined bundle...")
+        for attempt in range(1, 4):
+            try:
+                _gh([
+                    "run", "download", str(run_id),
+                    "-R", repo, "-n", BUILD_ARTIFACT_ALL, "-D", str(all_artifact_dir),
+                ], token=token)
+                artifact_downloaded = True
+                break
+            except CycleError as e:
+                err_preview = str(e)[:200]
+                _log(f"  Combined bundle attempt {attempt}: {err_preview}")
+                if attempt < 3:
+                    time.sleep(10)
+
+    # ── Download publish artifact ────────────────────────────────────
+    publish_artifact_dir = artifacts_dir / BUILD_ARTIFACT_PUBLISH
+    publish_artifact_dir.mkdir(parents=True, exist_ok=True)
+    publish_available = BUILD_ARTIFACT_PUBLISH in artifact_names
 
     if publish_available:
         _log("  Publish artifact found via API, downloading...")
-        for attempt in range(1, 10):
+        for attempt in range(1, 6):
             try:
                 _gh([
                     "run", "download", str(run_id),
                     "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(publish_artifact_dir),
-                ], token=token)
+                ], token=token, retries=2)
                 break
-            except CycleError:
+            except CycleError as e:
                 delay = min(10 * attempt, 60)
-                _log(f"  Publish download attempt {attempt} failed, retrying in {delay}s...")
-                time.sleep(delay)
+                err_preview = str(e)[:200]
+                _log(f"  Publish download attempt {attempt} failed: {err_preview}")
+                if attempt < 6:
+                    time.sleep(delay)
     else:
-        # Fallback: try the run view to check if publish-modrinth job succeeded
-        try:
-            publish_check = _gh([
-                "run", "view", str(run_id), "-R", repo,
-                "--json", "jobs",
-            ], token=token, retries=2)
-            pub_data = json.loads(publish_check)
-            pub_success = any(
-                j.get("conclusion") == "success" and "publish" in j.get("name", "").lower()
-                for j in pub_data.get("jobs", [])
-            )
-            if pub_success:
-                _log("  Publish job succeeded (artifact may not be available yet)")
-                # Still try to download in case it appears
-                for attempt in range(1, 6):
-                    try:
-                        _gh([
-                            "run", "download", str(run_id),
-                            "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(publish_artifact_dir),
-                        ], token=token)
-                        break
-                    except CycleError:
-                        if attempt < 5:
-                            time.sleep(10 * attempt)
-            else:
-                _log("  No publish artifact or publish job did not run")
-        except (CycleError, json.JSONDecodeError):
-            _log("  Could not check publish status")
+        _log("  No publish artifact found via API")
 
     # Download logs
     try:
@@ -681,67 +727,59 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
     except CycleError:
         pass
 
-    # Analyze results
+    # Analyze results from per-mod artifacts
     success_versions: list[str] = []
     failed_versions: list[str] = []
     published_versions: list[str] = []
 
-    # Read SUMMARY.md from artifacts if available
-    summary_file = artifacts_dir / BUILD_ARTIFACT_ALL / "SUMMARY.md"
-    if summary_file.exists():
-        summary_text = summary_file.read_text(encoding="utf-8")
-        # Look for build results markers
-        for line in summary_text.splitlines():
-            # Example: "| 1.12-forge | ✅ | ..."
-            if "|" in line and "✅" in line:
-                parts = [p.strip() for p in line.split("|") if p.strip()]
-                if parts:
-                    success_versions.append(parts[0])
-            if "|" in line and "❌" in line:
-                parts = [p.strip() for p in line.split("|") if p.strip()]
-                if parts:
-                    failed_versions.append(parts[0])
+    # Scan per-mod build artifacts (mod-{slug}) — these are the most reliable
+    # source of build results since each is uploaded independently.
+    per_mod_dir = artifacts_dir / "per_mod"
+    if per_mod_dir.exists():
+        for slug_dir in sorted(per_mod_dir.iterdir()):
+            if not slug_dir.is_dir() or slug_dir.name.startswith("."):
+                continue
+            result_json = slug_dir / "result.json"
+            if result_json.exists():
+                try:
+                    rj = json.loads(result_json.read_text(encoding="utf-8"))
+                    slug = rj.get("slug", "")
+                    status = rj.get("status", "")
+                    if status == "success":
+                        if slug not in success_versions:
+                            success_versions.append(slug)
+                    elif status == "failed":
+                        if slug not in failed_versions:
+                            failed_versions.append(slug)
+                except (json.JSONDecodeError, KeyError):
+                    pass
+
+    # Also check the combined bundle as fallback
+    all_artifact_dir = artifacts_dir / BUILD_ARTIFACT_ALL
+    if all_artifact_dir.exists():
+        summary_file = all_artifact_dir / "SUMMARY.md"
+        if summary_file.exists():
+            summary_text = summary_file.read_text(encoding="utf-8")
+            for line in summary_text.splitlines():
+                if "|" in line and "✅" in line:
+                    parts = [p.strip() for p in line.split("|") if p.strip()]
+                    if parts and parts[0] not in success_versions:
+                        success_versions.append(parts[0])
+                if "|" in line and "❌" in line:
+                    parts = [p.strip() for p in line.split("|") if p.strip()]
+                    if parts and parts[0] not in failed_versions:
+                        failed_versions.append(parts[0])
 
     # Check for published versions
-    publish_summary = artifacts_dir / BUILD_ARTIFACT_PUBLISH / "SUMMARY.md"
+    publish_artifact_dir = artifacts_dir / BUILD_ARTIFACT_PUBLISH
+    publish_summary = publish_artifact_dir / "SUMMARY.md"
     if publish_summary.exists():
         pub_text = publish_summary.read_text(encoding="utf-8")
         for line in pub_text.splitlines():
             if "✅" in line or "Published" in line:
-                # Extract version name from markdown
                 m = re.search(r"\*\*([^*]+)\*\*", line)
                 if m:
                     published_versions.append(m.group(1).strip())
-
-    # Fallback: scan per-mod build artifacts
-    build_artifact_dir = artifacts_dir / BUILD_ARTIFACT_ALL
-    if build_artifact_dir.exists():
-        for item in build_artifact_dir.iterdir():
-            if item.is_dir() and not item.name.startswith("."):
-                # Check for per-mod result.json files
-                result_json = item / "result.json"
-                if result_json.exists():
-                    try:
-                        rj = json.loads(result_json.read_text(encoding="utf-8"))
-                        slug = rj.get("slug", "")
-                        status = rj.get("status", "")
-                        if status == "success" and slug not in success_versions:
-                            success_versions.append(slug)
-                        elif status == "failed" and slug not in failed_versions:
-                            failed_versions.append(slug)
-                    except (json.JSONDecodeError, KeyError):
-                        pass
-                # Check for legacy marker files
-                success_marker = item / ".build_success"
-                fail_marker = item / ".build_failed"
-                if success_marker.exists():
-                    vname = item.name
-                    if vname not in success_versions:
-                        success_versions.append(vname)
-                elif fail_marker.exists():
-                    vname = item.name
-                    if vname not in failed_versions:
-                        failed_versions.append(vname)
 
     # Fallback: use job statuses if no artifacts were parsed
     if not success_versions and not failed_versions:
@@ -772,7 +810,7 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
         "success_versions": success_versions,
         "failed_versions": failed_versions,
         "published_versions": published_versions,
-        "all_artifacts_dir": str(build_artifact_dir) if build_artifact_dir.exists() else "",
+        "all_artifacts_dir": str(per_mod_dir) if per_mod_dir.exists() else str(all_artifact_dir) if all_artifact_dir.exists() else "",
         "build_log_dir": str(logs_dir),
     }
 
@@ -795,12 +833,50 @@ def _get_build_jobs(run_id: int, repo: str, token: str) -> list[dict]:
     return data.get("jobs", [])
 
 
-def _get_step_log_for_target(target_name: str, jobs: list[dict], logs_dir: Path, repo: str, token: str, run_id: int) -> str:
-    """Get the actual build.log from the per-mod artifact (fastest way).
+def _extract_build_errors(build_log: str) -> str:
+    """Extract only the actual compilation errors from a Gradle build log.
 
-    Downloads the per-mod artifact mod-{slug} which contains build.log
-    (actual compiler error output) and is tiny compared to all-mod-builds.
+    The build log structure is:
+      1. Gradle download progress / welcome banner
+      2. Config messages
+      3. > Task :compileJava         ← errors start HERE
+      4. ... error messages ...
+      5. > Task :compileJava FAILED  ← failure marker
+
+    Everything before ':compileJava' is Gradle boilerplate (download progress,
+    version banner, config), not useful for the AI.  We return everything from
+    the first line containing ':compileJava' onward.
     """
+    if not build_log:
+        return build_log
+
+    lines = build_log.splitlines()
+    for i, line in enumerate(lines):
+        if ":compileJava" in line:
+            # Found the marker — return from this line to end
+            return "\n".join(lines[i:])
+
+    # Fallback: if no marker found, just return the last 50 lines
+    last_lines = lines[-50:] if len(lines) > 50 else lines
+    return "\n".join(last_lines)
+
+
+def _get_step_log_for_target(
+    target_name: str,
+    jobs: list[dict],
+    logs_dir: Path,
+    repo: str,
+    token: str,
+    run_id: int,
+) -> str:
+    """Get the build log for a specific target.
+
+    First tries to find the already-downloaded per-mod artifact from the main
+    download phase (artifacts/per_mod/…), then falls back to re-downloading.
+    The log is automatically trimmed to only the error section.
+    """
+    def _read_and_trim(path: Path) -> str:
+        return _extract_build_errors(path.read_text(encoding="utf-8"))
     slug = None
     job_id = None
     for job in jobs:
@@ -814,25 +890,42 @@ def _get_step_log_for_target(target_name: str, jobs: list[dict], logs_dir: Path,
                 break
 
     if slug:
-        per_mod_dir = logs_dir.parent / "per_mod_artifacts" / slug
-        per_mod_dir.mkdir(parents=True, exist_ok=True)
+        # 1. Check the already-downloaded per-mod artifact first
+        # logs_dir = .../.build_results/logs/  →  artifacts are at .../.build_results/artifacts/
+        cached_dir = logs_dir.parent / "artifacts" / "per_mod" / slug
+        if cached_dir.exists():
+            for p in cached_dir.rglob("build.log"):
+                return _read_and_trim(p)
+            result_json = cached_dir / "result.json"
+            if result_json.exists():
+                try:
+                    rj = json.loads(result_json.read_text(encoding="utf-8"))
+                    log_rel = rj.get("log_relpath", "build.log")
+                    lp = cached_dir / log_rel
+                    if lp.exists():
+                        return _read_and_trim(lp)
+                except (json.JSONDecodeError, OSError):
+                    pass
 
+        # 2. Fallback: re-download (clean old dir first to avoid file-exists)
+        per_mod_dir = logs_dir.parent / "per_mod_artifacts" / slug
+        if per_mod_dir.exists():
+            shutil.rmtree(str(per_mod_dir))
+        per_mod_dir.mkdir(parents=True, exist_ok=True)
         try:
             _gh([
                 "run", "download", str(run_id),
                 "-R", repo, "-n", f"mod-{slug}", "-D", str(per_mod_dir),
             ], token=token, retries=2)
-
             for p in per_mod_dir.rglob("build.log"):
-                return p.read_text(encoding="utf-8")
-
+                return _read_and_trim(p)
             result_json = per_mod_dir / "result.json"
             if result_json.exists():
                 rj = json.loads(result_json.read_text(encoding="utf-8"))
                 log_rel = rj.get("log_relpath", "build.log")
                 lp = per_mod_dir / log_rel
                 if lp.exists():
-                    return lp.read_text(encoding="utf-8")
+                    return _read_and_trim(lp)
         except (CycleError, json.JSONDecodeError, OSError):
             pass
 
@@ -843,14 +936,15 @@ def _get_step_log_for_target(target_name: str, jobs: list[dict], logs_dir: Path,
                 "--log", "--job", str(job_id),
             ], token=token, retries=2)
             if job_log.strip():
-                (logs_dir / f"{target_name}_build.log").write_text(job_log, encoding="utf-8")
-                return job_log
+                trimmed = _extract_build_errors(job_log)
+                (logs_dir / f"{target_name}_build.log").write_text(trimmed, encoding="utf-8")
+                return trimmed
         except CycleError:
             pass
 
     for p in [logs_dir / f"{target_name}_build.log", logs_dir / "build_overview.txt"]:
         if p.exists():
-            text = p.read_text(encoding="utf-8", errors="replace")
+            text = _extract_build_errors(p.read_text(encoding="utf-8", errors="replace"))
             if "error" in text.lower() or "compile" in text.lower():
                 return text
 
@@ -896,28 +990,30 @@ The build failed with the following error(s):
 2. Output ONLY the files that need to be changed/replaced.
 3. For each file, you MUST follow this EXACT format — two code blocks per file:
 
-   ```
+   ```filepath
    bundle/{target_name}/src/main/java/com/example/MyMod.java
+   ```
    ```java
    package com.example;
-   public class MyMod {
+   public class MyMod {{
        // ...
-   }
+   }}
    ```
 
-The parser groups the BACKTICK markers into pairs.  The FIRST block between
-markers is the filepath, and the SECOND block is the code content.  This means
-you MUST separate each file into TWO consecutive code blocks like above.
+The FIRST backtick block has the language `filepath` and contains ONLY the path.
+The SECOND backtick block contains the actual code with the correct language
+(e.g. `java`, `json`, `toml`).  The parser reads both blocks in pairs.
 {source_code_note}
 
 ### IMPORTANT FILEPATH RULES
 
 - **Java source files MUST be placed under `src/main/java/`**.  For example:
-  ```
+  ```filepath
   bundle/{target_name}/src/main/java/com/example/MyMod.java
+  ```
   ```java
   package com.example;
-  public class MyMod { ... }
+  public class MyMod {{ ... }}
   ```
 - Resource files should go under `src/main/resources/`.
 - Every filepath MUST contain an extension (`.java`, `.json`, `.toml`, etc.).
@@ -1112,31 +1208,39 @@ def _recompose_fix_prompt(
     """Create a fix prompt for a failed version."""
     mc_ver, loader = target_name.rsplit("-", 1)
 
-    # Format source code
+    # Format source code — cap each file to 3KB and total to 15KB
+    MAX_SRC_PER_FILE = 3000
+    MAX_SRC_TOTAL = 15000
     src_lines = []
+    total_src_size = 0
     for filepath in sorted(source_code.keys()):
-        content = source_code[filepath]
+        if total_src_size >= MAX_SRC_TOTAL:
+            src_lines.append(f"  (… remaining {len(source_code) - len(src_lines)} files truncated)")
+            break
+        content = source_code[filepath][:MAX_SRC_PER_FILE]
         src_lines.append(f"`{filepath}`")
         src_lines.append("```java" if filepath.endswith(".java") else "```")
         src_lines.append(content)
         src_lines.append("```")
         src_lines.append("")
+        total_src_size += len(content)
 
     src_text = "\n".join(src_lines) if src_lines else "(no source code available)"
 
-    # Format DIF entries
+    # Format DIF entries — cap at 4 to keep prompt size manageable
     dif_text = ""
-    for entry in dif_entries:
-        dif_text += f"### [{entry['id']}] {entry['title']}\n{entry['fix']}\n\n"
+    for entry in dif_entries[:4]:
+        fix_text = entry.get("fix", "")[:1500]  # Truncate each fix to 1.5KB
+        dif_text += f"### [{entry['id']}] {entry['title']}\n{fix_text}\n\n"
 
     if not dif_text:
         dif_text = "(no DIF entries found for this target)"
 
-    # Format MC source
+    # Format MC source — cap at 4 files, 1KB each max
     mc_text = ""
-    for filepath in sorted(mc_source_files.keys())[:10]:  # Limit to 10 files
-        content = mc_source_files[filepath]
-        mc_text += f"### DecompiledMinecraftSourceCode/{filepath}\n```java\n{content[:2000]}\n```\n\n"
+    for filepath in sorted(mc_source_files.keys())[:4]:
+        content = mc_source_files[filepath][:1000]
+        mc_text += f"### DecompiledMinecraftSourceCode/{filepath}\n```java\n{content}\n```\n\n"
 
     # Detect if there are no Java source files at all — this indicates the
     # AI response didn't produce valid code, which requires a special note.
@@ -1159,11 +1263,17 @@ def _recompose_fix_prompt(
     if not mc_text:
         mc_text = "(no Minecraft source files available)"
 
+    # Truncate build log to 5KB to keep prompt size manageable
+    build_log_truncated = build_error_log[:5000] if build_error_log else "(no build log)"
+    if build_error_log and len(build_error_log) > 5000:
+        build_log_truncated += "\n\n(... build log truncated, last 300 chars shown below ...)\n"
+        build_log_truncated += build_error_log[-300:]
+
     prompt = FIX_PROMPT_TEMPLATE.format(
         mod_info=mod_info_text[:2000] if mod_info_text else "(no mod info)",
         source_code=src_text,
         mc_source=mc_text,
-        build_log=build_error_log,
+        build_log=build_log_truncated,
         dif_entries=dif_text,
         target_name=target_name,
         source_code_note=source_code_note,
@@ -1384,7 +1494,9 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
         error_detail = e.read().decode("utf-8", errors="replace")[:500]
         raise CycleError(f"AI HTTP {e.code}: {error_detail}")
     except Exception as e:
-        raise CycleError(f"AI request failed: {e}")
+        import traceback
+        tb = traceback.format_exc()
+        raise CycleError(f"AI request failed: {e}\nTraceback:\n{tb}")
 
     if not full_response:
         raise CycleError("Empty response from AI — no content generated.")
@@ -1421,6 +1533,7 @@ def run_compile_cycle(
     key_mgr: KeyManager,
     repo: str,
     max_retries: int = MAX_RETRIES,
+    continuefrom: bool = False,
 
 ) -> int:
     """Run the full compile cycle: build, analyze, retry.
@@ -1449,13 +1562,16 @@ def run_compile_cycle(
     zip_filename = f"{slug}-all-versions.zip"
     zip_path = Path(INCOMING_DIR) / zip_filename
 
-    file_count, _ = _create_build_bundle(bundle_dir, zip_path)
-    _log(f"Extracted {file_count} file(s) into {zip_path}")
+    if continuefrom and zip_path.exists():
+        _log(f"  Skipping Phase A (build zip already exists): {zip_path}")
+    else:
+        file_count, _ = _create_build_bundle(bundle_dir, zip_path)
+        _log(f"Extracted {file_count} file(s) into {zip_path}")
 
-    # Commit and push
-    print()
-    _log("Committing build bundle to repository...")
-    _commit_and_push_zip(zip_path, slug, token)
+        # Commit and push
+        print()
+        _log("Committing build bundle to repository...")
+        _commit_and_push_zip(zip_path, slug, token)
 
     # ── Phase B: Build & Analyze ──────────────────────────────────────────
     print()
@@ -1464,24 +1580,53 @@ def run_compile_cycle(
     print(f"{'─' * 72}")
     print()
 
-    build_run_id = _dispatch_build(
-        zip_path=str(zip_path),
-        slug=slug,
-        modrinth_url=modrinth_url,
-        repo=repo,
-        token=token,
-    )
-    build_conclusion = _wait_for_build(build_run_id, repo, token)
-
-    _log(f"Downloading build results...")
     build_results_dir = bundle_dir.parent / ".build_results"
-    results = _download_build_results(build_run_id, repo, token, build_results_dir)
+    results_json_path = build_results_dir / "results.json"
 
-    success_set = set(results["success_versions"])
-    failed_set = set(results["failed_versions"])
-    published_set = set(results["published_versions"])
+    if continuefrom and results_json_path.exists():
+        _log("  Skipping Phase B (build results already downloaded)")
+        saved = json.loads(results_json_path.read_text(encoding="utf-8"))
+        build_run_id = saved["build_run_id"]
+        success_set = set(saved["success_versions"])
+        failed_set = set(saved["failed_versions"])
+        published_set = set(saved["published_versions"])
+        results = {
+            "success_versions": saved["success_versions"],
+            "failed_versions": saved["failed_versions"],
+            "published_versions": saved["published_versions"],
+            "all_artifacts_dir": saved.get("all_artifacts_dir", ""),
+            "build_log_dir": saved.get("build_log_dir", ""),
+        }
+        _log(f"  Loaded results: {len(success_set)} success, {len(failed_set)} failed")
+    else:
+        build_run_id = _dispatch_build(
+            zip_path=str(zip_path),
+            slug=slug,
+            modrinth_url=modrinth_url,
+            repo=repo,
+            token=token,
+        )
+        build_conclusion = _wait_for_build(build_run_id, repo, token)
 
-    _log(f"Results: {len(success_set)} success, {len(failed_set)} failed")
+        _log(f"Downloading build results...")
+        results = _download_build_results(build_run_id, repo, token, build_results_dir)
+
+        # Save results for future --continuefrom
+        build_results_dir.mkdir(parents=True, exist_ok=True)
+        results_json_path.write_text(json.dumps({
+            "build_run_id": build_run_id,
+            "success_versions": results["success_versions"],
+            "failed_versions": results["failed_versions"],
+            "published_versions": results["published_versions"],
+            "all_artifacts_dir": results.get("all_artifacts_dir", ""),
+            "build_log_dir": results.get("build_log_dir", ""),
+        }, indent=2), encoding="utf-8")
+        _log(f"  Saved build results to {results_json_path}")
+
+        success_set = set(results["success_versions"])
+        failed_set = set(results["failed_versions"])
+        published_set = set(results["published_versions"])
+        _log(f"Results: {len(success_set)} success, {len(failed_set)} failed")
 
     # Map any slug names from the build workflow back to target folder names
     mapped_failed: set[str] = set()
@@ -1490,6 +1635,7 @@ def run_compile_cycle(
         if mapped:
             mapped_failed.add(mapped)
         else:
+            _log(f"  ⚠ Could not map slug '{slug}' to target — using as-is")
             mapped_failed.add(slug)
     failed_set = mapped_failed
 
@@ -1499,6 +1645,7 @@ def run_compile_cycle(
         if mapped:
             mapped_success.add(mapped)
         else:
+            _log(f"  ⚠ Could not map slug '{slug}' to target — using as-is")
             mapped_success.add(slug)
     success_set = mapped_success
 
@@ -1631,7 +1778,10 @@ def run_compile_cycle(
                     key_mgr.release(worker_key)
                 return (idx, tname, ai_response, None)
             except Exception as exc:
-                return (idx, tname, None, str(exc))
+                import traceback
+                exc_type = type(exc).__name__
+                tb = traceback.format_exc()
+                return (idx, tname, None, f"[{exc_type}] {exc}\n{tb}")
 
         with ThreadPoolExecutor(max_workers=min(3, len(context_list_ai))) as pool:
             futures = []
@@ -1695,7 +1845,10 @@ def run_compile_cycle(
         # Rebuild the zip with fixed versions
         print()
         _log(f"Rebuilding bundle zip with {len(fixed_this_round)} fixed version(s)...")
-        file_count, _ = _create_build_bundle(bundle_dir, zip_path)
+        # Only include the failed targets + infra retries to avoid re-building
+        # versions that already succeeded.
+        retry_targets = set(fixed_this_round) | set(infra_failures)
+        file_count, _ = _create_build_bundle(bundle_dir, zip_path, targets_filter=retry_targets)
         _log(f"Updated zip with {file_count} file(s) (including fixes)")
 
         # Commit the updated zip (only failed versions changed)
@@ -1719,9 +1872,19 @@ def run_compile_cycle(
         _log("Downloading updated build results...")
         results = _download_build_results(build_run_id, repo, token, build_results_dir)
 
-        new_success = set(results["success_versions"])
-        new_failed = set(results["failed_versions"])
+        new_success_raw = set(results["success_versions"])
+        new_failed_raw = set(results["failed_versions"])
         published_set.update(results["published_versions"])
+
+        # Map raw slugs back to target folder names (same as Phase B)
+        new_success: set[str] = set()
+        for slug in new_success_raw:
+            mapped = _map_slug_to_target_name(slug, target_names)
+            new_success.add(mapped if mapped else slug)
+        new_failed: set[str] = set()
+        for slug in new_failed_raw:
+            mapped = _map_slug_to_target_name(slug, target_names)
+            new_failed.add(mapped if mapped else slug)
 
         _log(f"Updated results: {len(new_success)} success, {len(new_failed)} failed")
 
@@ -1812,6 +1975,8 @@ def main() -> int:
                         help="owner/repo (auto-detected from git remote)")
     parser.add_argument("--max-retries", type=int, default=MAX_RETRIES,
                         help=f"Max retry attempts per version (default: {MAX_RETRIES})")
+    parser.add_argument("--continuefrom", action="store_true",
+                        help="Resume a previous run. Skips phases already completed.")
     args = parser.parse_args()
 
     bundle_dir = Path(args.bundle_dir)
@@ -1833,6 +1998,7 @@ def main() -> int:
             key_mgr=key_mgr,
             repo=repo,
             max_retries=args.max_retries,
+            continuefrom=args.continuefrom,
         )
     except CycleError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)

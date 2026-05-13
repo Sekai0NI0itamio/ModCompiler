@@ -69,7 +69,6 @@ from _key_manager import KeyManager
 WORKFLOW_FILE = "auto-mod-to-all-version-converter.yml"
 ANALYSIS_ARTIFACT = "mod-to-all-analysis-bundle"
 DEFAULT_OUTPUT_DIR = "ModToAllRuns"
-DEFAULT_TIMEOUT = 7200
 POLL_INTERVAL = 15
 LOG_POLL_INTERVAL = 30
 MAX_GH_RETRIES = 4
@@ -630,8 +629,6 @@ def main(argv: list[str] | None = None) -> int:
         help="Modrinth project URL or slug (e.g. https://modrinth.com/mod/sort-chest)")
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR,
         help=f"Root folder for run outputs (default: {DEFAULT_OUTPUT_DIR})")
-    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
-        help=f"Max seconds to wait for workflow (default: {DEFAULT_TIMEOUT})")
     parser.add_argument("--continuefrom",
         help="Folder name (from ModToAllRuns/) to resume from. Skips workflow dispatch and re-downloads if artifacts exist.")
     parser.add_argument("--repo", default="",
@@ -664,7 +661,6 @@ def main(argv: list[str] | None = None) -> int:
 
 class Runner:
     def __init__(self, args: argparse.Namespace) -> None:
-        self.timeout = int(args.timeout)
         self.repo = (args.repo or _detect_repo()).strip()
         self.token = _detect_token()
         self.mode = args.mode
@@ -699,12 +695,14 @@ class Runner:
     def _detect_progress(self) -> dict[str, bool]:
         artifacts_dir = self.out_root / "artifacts"
         bundle_dir = artifacts_dir / ANALYSIS_ARTIFACT if artifacts_dir.exists() else None
+        build_results_dir = artifacts_dir / ".build_results" if artifacts_dir.exists() else None
         progress = {
             "workflow_completed": (self.out_root / "result.json").exists(),
             "artifacts_downloaded": bundle_dir is not None and bundle_dir.exists(),
             "has_prompt_txt": False,
             "has_airesponse_txt": False,
             "has_build_zip": False,
+            "has_build_results": False,
             "compile_started": False,
             "compile_complete": False,
         }
@@ -723,6 +721,10 @@ class Runner:
                 if f.is_file() and f.suffix == ".zip" and "all-versions" in f.name:
                     progress["has_build_zip"] = True
                     break
+        if build_results_dir and build_results_dir.exists():
+            results_json = build_results_dir / "results.json"
+            if results_json.exists():
+                progress["has_build_results"] = True
         return progress
 
     def run(self) -> int:
@@ -752,6 +754,7 @@ class Runner:
             print(f"  Prompt files:    {'✓ present' if progress['has_prompt_txt'] else '✗ missing'}")
             print(f"  AI responses:    {'✓ present' if progress['has_airesponse_txt'] else '✗ missing'}")
             print(f"  Build zip:       {'✓ present' if progress['has_build_zip'] else '✗ missing'}")
+            print(f"  Build results:   {'✓ present' if progress['has_build_results'] else '✗ missing'}")
             print()
         else:
             print(f"Modrinth:    {self.modrinth_url}")
@@ -853,6 +856,7 @@ class Runner:
              "--modrinth-url", self.modrinth_url,
              "--repo", self.repo,
              "--max-retries", "5"]
+            + (["--continuefrom"] if self.resuming else [])
             + (["--intelligent"] if False else []),
             capture_output=False,
         )
@@ -892,13 +896,12 @@ class Runner:
         return json.loads(out or "[]")
 
     def _wait(self) -> str:
-        deadline = time.time() + self.timeout
         last_status = ""
         last_jobs_print = 0.0
         print("Waiting for workflow to complete...")
-        print(f"  (polling every {POLL_INTERVAL}s, timeout {self.timeout}s)\n")
+        print(f"  (polling every {POLL_INTERVAL}s)\n")
 
-        while time.time() < deadline:
+        while True:
             info = self._run_view()
             status = info.get("status", "")
             conclusion = info.get("conclusion") or ""
@@ -912,8 +915,6 @@ class Runner:
                 _log(f"Completed — conclusion: {conclusion}")
                 return conclusion
             time.sleep(POLL_INTERVAL)
-
-        raise RunError(f"Timed out after {self.timeout}s waiting for run {self.run_id}.")
 
     def _run_view(self) -> dict:
         out = _gh([

@@ -210,6 +210,85 @@ Mod loader: {loader}
 Return ONLY the JSON object, no other text."""
 
 
+# ── Decompiled Minecraft Source Selection ──────────────────────────────────
+
+DECOMPILED_ROOT = ROOT / "DecompiledMinecraftSourceCode"
+
+
+def find_decompiled_source_dir(mc_version: str, loader: str) -> Path | None:
+    """Find the decompiled source directory matching version and loader."""
+    target_name = f"{mc_version}-{loader}"
+    direct = DECOMPILED_ROOT / target_name
+    if direct.exists() and direct.is_dir():
+        return direct
+    for d in DECOMPILED_ROOT.iterdir():
+        if not d.is_dir():
+            continue
+        if d.name.startswith(f"{mc_version}-{loader}"):
+            return d
+        if mc_version.startswith(d.name.split("-")[0]):
+            return d
+    return None
+
+
+def collect_source_file_paths(source_dir: Path) -> list[str]:
+    """Collect all .java file paths relative to the source directory."""
+    paths = []
+    for p in sorted(source_dir.rglob("*.java")):
+        rel = str(p.relative_to(source_dir))
+        if rel.endswith("package-info.java"):
+            continue
+        paths.append(rel)
+    return paths
+
+
+def select_relevant_sources_prompt(source_files: list[str], description: str, mc_version: str, loader: str) -> str:
+    file_list = "\n".join(source_files)
+    return f"""You are a Minecraft mod developer analyzing source files needed for a new mod.
+
+## Mod Description
+{description}
+
+## Target
+- Minecraft: {mc_version}
+- Loader: {loader}
+
+## Available Decompiled Minecraft Source Files
+Below is the complete list of available decompiled source files for this version/loader.
+Select the files that would be most relevant and useful for developing this mod.
+
+{file_list}
+
+## Instructions
+1. Think about what classes the mod might need to extend, implement, or reference
+2. Focus on files related to: commands, world editing, block placement, game rules, player interaction
+3. Output ONLY the file paths you want included, one per line, inside a code block
+4. Limit your selection to at most 20 most important files
+5. Only include files that directly relate to the mod's functionality
+
+## Output Format
+```files
+net/minecraft/server/MinecraftServer.java
+net/minecraft/world/World.java
+...
+```"""
+
+
+def read_selected_source_files(source_dir: Path, selected_paths: list[str]) -> dict[str, str]:
+    """Read the content of selected source files."""
+    files: dict[str, str] = {}
+    for path in selected_paths:
+        file_path = source_dir / path
+        if file_path.exists() and file_path.is_file():
+            try:
+                text = file_path.read_text(encoding="utf-8", errors="replace")
+                if len(text) < 200000:
+                    files[path] = text
+            except Exception:
+                pass
+    return files
+
+
 def generate_code_prompt(
     user_description: str,
     mc_version: str,
@@ -217,6 +296,7 @@ def generate_code_prompt(
     metadata: dict[str, Any],
     template_code: str,
     dif_entries: list[str],
+    mc_source_context: dict[str, str] | None = None,
 ) -> str:
     loader_notes = {
         "fabric": "- Use Fabric API (fabric-api) for events\n- Main class annotated with @Mod\n- Mixins use @Mixin + @Inject\n- Client code goes in src/client/java\n- Use fabric.mod.json for metadata\n- Use mixins.<modid>.json for Mixin configuration",
@@ -230,6 +310,16 @@ def generate_code_prompt(
         dif_section = "\n\n## Known Issues & Fixes for this version/loader\n"
         for entry in dif_entries:
             dif_section += f"\n---\n{entry}\n"
+
+    mc_source_section = ""
+    if mc_source_context:
+        source_section = "\n\n## Relevant Minecraft Source Code\n"
+        source_section += "The following decompiled Minecraft source files are provided for reference. Use them to understand the correct API signatures, class names, and method patterns:\n"
+        for filepath, content in mc_source_context.items():
+            source_section += f"\n--- {filepath} ---\n```java\n{content[:3000]}\n```\n"
+            if len(content) > 3000:
+                source_section += f"// ... ({len(content) - 3000} more chars truncated)\n"
+        mc_source_section = source_section
 
     return f"""You are an expert Minecraft mod developer with deep knowledge of {mc_version} and {loader}. Create a COMPLETE, COMPILABLE Minecraft mod based on the description below.
 
@@ -260,6 +350,8 @@ The following is the template code for this version and loader. Follow the same 
 ```
 
 {dif_section}
+
+{mc_source_section}
 
 ## CRITICAL REQUIREMENTS
 1. Create ALL necessary Java source files for the mod to compile and work
@@ -1291,14 +1383,13 @@ def main() -> int:
     log(f"  Searching DIF knowledge base for {mc_version} ({loader})...")
     dif_entries: list[str] = []
     try:
-        from dif_core import search_dif
+        from dif_core import search_dif_filtered
         query = f"{mc_version} {loader} {description}"
-        dif_results = search_dif(query, top_n=5)
+        dif_results = search_dif_filtered(query, mc_version=mc_version, loader=loader, top_n=5)
         for score, entry in dif_results:
             pct = int(score * 100)
-            if pct >= 20:
-                dif_entries.append(f"### {entry.title} ({pct}% match)\n{entry.body[:300]}")
-                log(f"    DIF: {entry.title} ({pct}%)")
+            dif_entries.append(f"### {entry.title} ({pct}% match)\n{entry.body[:300]}")
+            log(f"    DIF: {entry.title} ({pct}%)")
     except ImportError:
         log(f"  DIF search unavailable")
     except Exception as e:
@@ -1365,6 +1456,56 @@ def main() -> int:
     output.ensure_dirs()
     write_json(output.dir / "metadata.json", metadata)
 
+    # ── Select relevant decompiled Minecraft source files ──────────────
+    mc_source_context: dict[str, str] = {}
+    log(f"  Searching decompiled Minecraft sources for {mc_version} ({loader})...")
+    source_dir = find_decompiled_source_dir(mc_version, loader)
+    if source_dir:
+        all_source_paths = collect_source_file_paths(source_dir)
+        if all_source_paths:
+            log(f"  Found {len(all_source_paths)} decompiled source files")
+            # Let AI select the most relevant files
+            source_select_prompt = select_relevant_sources_prompt(
+                all_source_paths, description, mc_version, loader
+            )
+            try:
+                source_select_response = send_prompt(
+                    model=AI_MODEL,
+                    base_url=AI_BASE_URL,
+                    api_key=api_key,
+                    messages=[
+                        {"role": "system", "content": "You select relevant Minecraft source files for mod development. Output ONLY file paths inside a code block."},
+                        {"role": "user", "content": source_select_prompt},
+                    ],
+                    temperature=0.1,
+                    stream=True,
+                    size_limit=10000,
+                    reasoning_effort=AI_REASONING_EFFORT,
+                )
+                selected_paths = []
+                for m in re.finditer(r"```files?\n(.*?)```", source_select_response, re.DOTALL):
+                    for line in m.group(1).strip().splitlines():
+                        line = line.strip()
+                        if line.endswith(".java") and "/" in line:
+                            selected_paths.append(line)
+                if selected_paths:
+                    mc_source_context = read_selected_source_files(source_dir, selected_paths)
+                    log(f"  AI selected {len(selected_paths)} relevant file(s), read {len(mc_source_context)} successfully")
+                    for fp in sorted(mc_source_context.keys())[:5]:
+                        log(f"    - {fp}")
+                    if len(mc_source_context) > 5:
+                        log(f"    ... and {len(mc_source_context) - 5} more")
+                else:
+                    log(f"  No files selected by AI")
+            except RuntimeError as e:
+                log(f"  Source selection AI request failed: {e}")
+            except Exception as e:
+                log(f"  Source selection error: {e}")
+        else:
+            log(f"  No decompiled source files found in {source_dir}")
+    else:
+        log(f"  No decompiled source directory found for {mc_version}-{loader}")
+
     # ── Generate code via AI ─────────────────────────────────────────────
     log(f"  Generating mod source code via AI (this may take a while)...")
     code_prompt = generate_code_prompt(
@@ -1374,6 +1515,7 @@ def main() -> int:
         metadata=metadata,
         template_code=template_code,
         dif_entries=dif_entries,
+        mc_source_context=mc_source_context,
     )
     output.prompt_path.write_text(code_prompt, encoding="utf-8")
 

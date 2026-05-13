@@ -466,6 +466,41 @@ def search_dif(query: str, top_n: int = 10, show_all: bool = False) -> list[tupl
     return results[:max(top_n, 3)]
 
 
+def search_dif_filtered(
+    query: str,
+    mc_version: str = "",
+    loader: str = "",
+    top_n: int = 5,
+    min_score: int = 20,
+) -> list[tuple[float, DifEntry]]:
+    """
+    Search DIF database filtered by version and loader.
+    Only returns entries whose versions/loaders match or are empty (broad entries).
+    """
+    results = _dif_engine.search(query, top_n=50)
+    filtered = []
+    for score, entry in results:
+        pct = int(score * 100)
+        if pct < min_score:
+            continue
+        # Check version match
+        if entry.versions and mc_version:
+            mc_major_minor = ".".join(mc_version.split(".")[:2])
+            version_match = any(
+                mc_version.startswith(v) or v.startswith(mc_major_minor)
+                for v in entry.versions
+            )
+            if not version_match:
+                continue
+        # Check loader match
+        if entry.loaders and loader:
+            if loader not in entry.loaders:
+                continue
+        filtered.append((score, entry))
+    filtered.sort(key=lambda x: x[0], reverse=True)
+    return filtered[:top_n]
+
+
 def match_errors_to_dif(log_text: str, threshold: float = 0.35) -> list[tuple[float, DifEntry]]:
     """
     Match a build log against the DIF database.

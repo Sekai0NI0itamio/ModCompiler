@@ -61,7 +61,7 @@ def send_prompt(
     }
 
     if status_callback:
-        status_callback(target_name, "in_progress")
+        status_callback(target_name, "in_progress", "")
 
     req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
     full_response = ""

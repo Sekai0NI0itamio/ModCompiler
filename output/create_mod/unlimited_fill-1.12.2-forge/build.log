@@ -1,0 +1,98 @@
+[2026-05-13T11:36:03+00:00] Step 1: Cleaning workspace
+
+[2026-05-13T11:36:03+00:00] Step 2: Gradle clean
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.14/userguide/gradle_daemon.html.
+This mapping 'stable_39' was designed for MC 1.12! Use at your own peril.
+WARNING: You are using an unsupported version of ForgeGradle.
+Please consider upgrading to ForgeGradle 5 and helping in the efforts to get old versions working on the modern toolchain.
+See https://gist.github.com/TheCurle/fe7ad3ede188cbdd15c235cc75d52d4a for more info on contributing.
+#################################################
+         ForgeGradle 2.3.4-gfc67182        
+  https://github.com/MinecraftForge/ForgeGradle  
+#################################################
+                 Powered by MCP                  
+             http://modcoderpack.com             
+     by: Searge, ProfMobius, R4wk, ZeuX          
+     Fesh0r, IngisKahn, bspkrs, LexManos         
+#################################################
+:clean
+
+BUILD SUCCESSFUL
+
+Total time: 11.298 secs
+
+
+
+[2026-05-13T11:36:15+00:00] Step 3: Placing source files
+  Copied: filepath: main/java/io/itamio/unlimited_fill/UnlimitedFillExecutor.java
+  Copied: filepath: main/java/io/itamio/unlimited_fill/FillTask.java
+  Copied: filepath: main/java/io/itamio/unlimited_fill/UnlimitedFillMod.java
+  Copied: filepath: main/java/io/itamio/unlimited_fill/CommandSmartFill.java
+  Copied: filepath: main/java/io/itamio/unlimited_fill/FillCommandHandler.java
+
+[2026-05-13T11:36:15+00:00] Step 4: Updating build.gradle
+  Updated build.gradle
+
+[2026-05-13T11:36:15+00:00] Step 5: Updating mcmod.info
+  Updated mcmod.info
+
+[2026-05-13T11:36:15+00:00] Step 6: Running gradle build
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.14/userguide/gradle_daemon.html.
+This mapping 'stable_39' was designed for MC 1.12! Use at your own peril.
+WARNING: You are using an unsupported version of ForgeGradle.
+Please consider upgrading to ForgeGradle 5 and helping in the efforts to get old versions working on the modern toolchain.
+See https://gist.github.com/TheCurle/fe7ad3ede188cbdd15c235cc75d52d4a for more info on contributing.
+#################################################
+         ForgeGradle 2.3.4-gfc67182        
+  https://github.com/MinecraftForge/ForgeGradle  
+#################################################
+                 Powered by MCP                  
+             http://modcoderpack.com             
+     by: Searge, ProfMobius, R4wk, ZeuX          
+     Fesh0r, IngisKahn, bspkrs, LexManos         
+#################################################
+:clean UP-TO-DATE
+:deobfCompileDummyTask
+:getVersionJson
+:extractUserdev UP-TO-DATE
+:downloadClient SKIPPED
+:downloadServer SKIPPED
+:splitServerJar SKIPPED
+:mergeJars SKIPPED
+:applyBinaryPatches SKIPPED
+:deobfProvidedDummyTask
+:extractDependencyATs SKIPPED
+:extractMcpData SKIPPED
+:extractMcpMappings SKIPPED
+:genSrgs SKIPPED
+:deobfMcMCP SKIPPED
+:sourceApiJava
+:compileApiJava UP-TO-DATE
+:processApiResources UP-TO-DATE
+:apiClasses UP-TO-DATE
+:sourceMainJava
+:compileJava FAILED
+
+BUILD FAILED
+
+Total time: 16.763 secs
+
+/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/Mod Developement/1.12.2-forge/build/sources/main/java/filepath: main/java/io/itamio/unlimited_fill/FillCommandHandler.java:6: error: cannot find symbol
+import net.minecraft.command.server.CommandFill;
+                                   ^
+  symbol:   class CommandFill
+  location: package net.minecraft.command.server
+1 error
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output.
+
+
+gradle exit code: 1
+Build failed with exit code 1
