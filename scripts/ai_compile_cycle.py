@@ -337,10 +337,17 @@ def _create_build_bundle(
             prefix = target_name + "/"
             if cleaned.startswith(prefix):
                 cleaned = cleaned[len(prefix):]
-            # Also strip leading "src/" duplicates if present
-            if cleaned.startswith("src/"):
-                # Keep as-is – src/ is expected
-                pass
+            # Ensure paths with "bundle/" prefix are stripped
+            if cleaned.startswith("bundle/"):
+                cleaned = cleaned[len("bundle/"):]
+                if cleaned.startswith(prefix):
+                    cleaned = cleaned[len(prefix):]
+
+            # Ensure .java files are placed under src/main/java/ if they
+            # don't already have a proper prefix.  The AI sometimes outputs
+            # bare paths like "com/example/Mod.java" without src/main/java/.
+            if cleaned.endswith(".java") and not cleaned.startswith("src/"):
+                cleaned = "src/main/java/" + cleaned
 
             dest = target_out / cleaned
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -358,7 +365,7 @@ def _create_build_bundle(
         mod_group = ""
 
         # Scan both projectinfo.txt and AI response for mod identifiers
-        for source_text, source_name in [(ai_text, "AI"), 
+        for source_text, source_name in [(ai_text, "AI"),
                                           (projectinfo.read_text(encoding="utf-8") if projectinfo.exists() else "", "info")]:
             # FIRST: Header-based parsing (reliable, from projectinfo headers)
             for line in source_text.splitlines():
@@ -373,7 +380,7 @@ def _create_build_bundle(
                         path_parts = mod_group.rsplit(".", 1)
                         if len(path_parts) > 1:
                             mod_id = path_parts[-1]
-            
+
             # SECOND: @Mod, modid, MOD_ID patterns
             for line in source_text.splitlines():
                 s = line.strip()
@@ -386,7 +393,7 @@ def _create_build_bundle(
                 m = re.search(r'MOD_ID\s*=\s*["\x27]([^"\x27]+)["\x27]', s)
                 if m and mod_id == "unknown":
                     mod_id = m.group(1)
-            
+
             # THIRD: key = value pairs (for mod_id and version only, NOT name)
             if mod_id == "unknown" or mod_version == "1.0.0" or not mod_authors or not mod_group:
                 for line in source_text.splitlines():
@@ -434,7 +441,15 @@ def _create_build_bundle(
         )
         total_files += 1
 
-        _log(f"  ✓ {target_name}: {len(files)} file(s) extracted + mod.txt/version.txt")
+        # Validate: the target MUST contain at least one .java file, otherwise
+        # Gradle will report 'compileJava NO-SOURCE' and produce empty jars.
+        java_files = list(target_out.rglob("*.java"))
+        if not java_files:
+            _log(f"  ⚠ {target_name}: NO .JAVA FILES in AI response — build will produce empty jars")
+            _log(f"      Expected at least one file under src/main/java/ (got {len(files)} misc files)")
+            _log(f"      The retry cycle will attempt to fix this via a targeted AI prompt.")
+        else:
+            _log(f"  ✓ {target_name}: {len(files)} file(s) ({len(java_files)} .java) + mod.txt/version.txt")
 
     if total_files == 0:
         raise CycleError("No files extracted from any airesponse.txt — cannot create build zip.")
@@ -877,6 +892,16 @@ The build failed with the following error(s):
 code_here_
 ```
 
+### IMPORTANT FILEPATH RULES
+
+- **Java source files MUST be placed under `src/main/java/`**.  For example, if your mod class is
+  `com.example.MyMod`, the filepath should be:
+  `bundle/{target_name}/src/main/java/com/example/MyMod.java`
+- If a path like `com/example/Foo.java` appears WITHOUT the `src/main/java/` prefix, the build
+  will NOT find it and you will get "compileJava NO-SOURCE" or "no .class files" errors.
+- Resource files (JSON, TOML, textures) should go under `src/main/resources/`.
+{source_code_note}
+
 4. Provide COMPLETE file contents — no stubs, no TODOs, no placeholders.
 5. If the build error is about missing methods/classes, check the provided
    Minecraft source code and DIF entries for the correct API to use.
@@ -1093,6 +1118,24 @@ def _recompose_fix_prompt(
         content = mc_source_files[filepath]
         mc_text += f"### DecompiledMinecraftSourceCode/{filepath}\n```java\n{content[:2000]}\n```\n\n"
 
+    # Detect if there are no Java source files at all — this indicates the
+    # AI response didn't produce valid code, which requires a special note.
+    has_java_sources = any(fp.endswith(".java") for fp in source_code)
+    if not has_java_sources:
+        source_code_note = (
+            "\n### ❌ NO JAVA SOURCE FILES FOUND\n"
+            "The current source code contains NO Java files at all. "
+            "This is why the build produced empty jars.\n"
+            "You MUST create the complete Java source files for this mod. "
+            f"Begin by writing the main mod class at:\n"
+            f"  `bundle/{target_name}/src/main/java/.../ModClass.java`\n"
+            "Refer to the Mod Information section above for the package path.\n"
+            "Create ALL necessary classes (main mod, mixins, config, storage, etc.) "
+            "with FULL implementations — no stubs or TODOs."
+        )
+    else:
+        source_code_note = ""
+
     if not mc_text:
         mc_text = "(no Minecraft source files available)"
 
@@ -1103,6 +1146,7 @@ def _recompose_fix_prompt(
         build_log=build_error_log,
         dif_entries=dif_text,
         target_name=target_name,
+        source_code_note=source_code_note,
     )
 
     return prompt
@@ -1226,7 +1270,7 @@ def run_compile_cycle(
     key_mgr: KeyManager,
     repo: str,
     max_retries: int = MAX_RETRIES,
-    
+
 ) -> int:
     """Run the full compile cycle: build, analyze, retry.
 
@@ -1574,7 +1618,7 @@ def main() -> int:
     key_mgr = _create_key_manager()
 
     try:
-        
+
         return run_compile_cycle(
             bundle_dir=bundle_dir,
             slug=args.slug,

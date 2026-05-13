@@ -189,7 +189,10 @@ _STATUS_LABELS = {
 
 # --- AI Provider Config ---
 AI_NVIDIA_BASE = "https://api.deepseek.com/v1"
-AI_MODEL = "deepseek-chat"
+AI_MODEL = "deepseek-v4-flash"
+
+# Maximum retries when the AI response contains no Java source files
+AI_JAVA_RETRIES = 3
 
 
 def _create_key_manager() -> KeyManager:
@@ -198,6 +201,39 @@ def _create_key_manager() -> KeyManager:
         env_vars=("DEEPSEEK_API_KEY", "DEEPSEEK_KEY"),
     )
 
+def _response_has_java_files(response_text: str) -> bool:
+    """Quick check whether an AI response contains any .java source paths."""
+    # Look for .java in code-block context
+    import re
+    # Pattern A: inline path before a code block  (e.g. `src/main/java/Foo.java`)
+    if re.search(r'\.java[`\s]', response_text):
+        return True
+    # Pattern B: filepath-only code block  (e.g. ```path/to/Foo.java```)
+    if re.search(r'```[^\n]*\.java\s*\n\s*```', response_text):
+        return True
+    # Pattern C: .java inside a ```codeblock```
+    for m in re.finditer(r'```[a-zA-Z0-9_+\-]*\n.*?\n```', response_text, re.DOTALL):
+        if '.java' in m.group():
+            return True
+    return False
+
+
+def _read_author_info(target_dir: Path) -> tuple[str, str]:
+    """Read author name and mod path from projectinfo.txt.
+    Returns (author, mod_path)."""
+    projectinfo = target_dir / "projectinfo.txt"
+    author = ""
+    mod_path = ""
+    if projectinfo.exists():
+        for line in projectinfo.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if s.startswith("Mod Author:"):
+                author = s.split(":", 1)[1].strip()
+            elif s.startswith("Mod Path:"):
+                mod_path = s.split(":", 1)[1].strip()
+    return author, mod_path
+
+
 def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
     """Execute the AI coding stage: send prompts to NVIDIA and save responses."""
     import threading
@@ -205,8 +241,9 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
     print()
     print("=" * 72)
     print("  PHASE 2 — AI MOD CODING (Local)")
-    print(f"  Model: {AI_MODEL}")
-    print(f'  Provider: DeepSeek API')
+    print(f"  Model: {AI_MODEL} (reasoning=high)")
+    print(f"  Provider: DeepSeek API")
+    print(f"  Auto-retry on missing Java code: up to {AI_JAVA_RETRIES} retries per target")
     print("=" * 72)
     print()
 
@@ -297,10 +334,16 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
     fail_count = 0
     key_mgr.reset_stress()
 
+    # Pre-read author info for every target so we can pass it with each request
+    target_author_info: dict[str, tuple[str, str]] = {}
+    for td in prompt_targets:
+        target_author_info[td.name] = _read_author_info(td)
+
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         fut_to_target = {}
         for td in prompt_targets:
             prompt_path = td / "prompt.txt"
+            author_info = target_author_info.get(td.name, ("", ""))
             # Acquire a key from the pool (stress-aware)
             worker_key = key_mgr.acquire()
             fut = pool.submit(
@@ -309,54 +352,123 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
                 prompt_path.read_text(encoding="utf-8"),
                 worker_key,
                 _update_line,
+                author_info,
+                "",
             )
             # Store the key so we can release it after completion
             fut_to_target[fut] = (td, worker_key)
             _update_line(td.name, "request_sent")
             time.sleep(2)  # Stagger requests 2s apart to avoid API rate limits
 
+        def _do_send(
+            td: Path,
+            prompt_text: str,
+            retry_context: str,
+            author_info: tuple[str, str],
+            key: str,
+        ) -> str:
+            """Helper: send prompt and return response, handling HTTP errors."""
+            return _send_prompt_to_nvidia(
+                td.name, prompt_text, key, _update_line,
+                author_info=author_info, retry_context=retry_context,
+            )
 
         for fut in as_completed(fut_to_target):
             td, used_key = fut_to_target[fut]
+            author_info = target_author_info.get(td.name, ("", ""))
+            prompt_text = (td / "prompt.txt").read_text(encoding="utf-8")
+
             try:
                 response_text = fut.result()
-                resp_path = td / "airesponse.txt"
-                resp_path.write_text(response_text, encoding="utf-8")
-                _update_line(td.name, "complete", f"{len(response_text):,} chars")
-                success_count += 1
             except RetryableHTTPError:
                 # Retry on 429/503 with backoff
                 _update_line(td.name, "retrying", "server busy, retrying in 30s...")
                 _log(f"  Retrying {td.name} after 30s (503 ResourceExhausted)...")
                 time.sleep(30)
                 try:
-                    prompt_path = td / "prompt.txt"
                     retry_key = key_mgr.acquire()
                     try:
-                        response_text = _send_prompt_to_nvidia(
-                            td.name,
-                            prompt_path.read_text(encoding="utf-8"),
-                            retry_key,
-                            _update_line,
-                        )
+                        response_text = _do_send(td, prompt_text, "", author_info, retry_key)
                     finally:
                         key_mgr.release(retry_key)
-                    resp_path = td / "airesponse.txt"
-                    resp_path.write_text(response_text, encoding="utf-8")
-                    _update_line(td.name, "complete", f"{len(response_text):,} chars")
-                    success_count += 1
                 except Exception as exc2:
                     error_msg = str(exc2)
                     _update_line(td.name, "failed", error_msg[:80])
                     fail_count += 1
                     fail_path = td / "airesponse.txt"
                     fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
+                    key_mgr.release(used_key)
+                    continue
             except Exception as exc:
                 error_msg = str(exc)
                 _update_line(td.name, "failed", error_msg[:80])
                 fail_count += 1
                 fail_path = td / "airesponse.txt"
                 fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
+                key_mgr.release(used_key)
+                continue
+
+            # ── Save initial response ──────────────────────────────────
+            resp_path = td / "airesponse.txt"
+            resp_path.write_text(response_text, encoding="utf-8")
+
+            # ── Retry loop: re-prompt AI if response lacks Java code ───
+            final_response = response_text
+            _, mod_path = author_info
+            for ai_attempt in range(AI_JAVA_RETRIES + 1):  # 0=initial, 1..N=retries
+                if _response_has_java_files(final_response):
+                    break  # Good — response contains Java code
+
+                if ai_attempt >= AI_JAVA_RETRIES:
+                    _log(f"  {td.name}: No Java code after {AI_JAVA_RETRIES} AI retries")
+                    break  # Exhausted all retries
+
+                attempt_num = ai_attempt + 1
+                _update_line(
+                    td.name, "retrying",
+                    f"no Java files, retry {attempt_num}/{AI_JAVA_RETRIES}",
+                )
+                _log(f"  {td.name}: No Java files in response, retry {attempt_num}/{AI_JAVA_RETRIES}")
+
+                # Build a retry context that tells the AI what went wrong
+                if attempt_num == 1:
+                    retry_context = (
+                        "YOUR PREVIOUS RESPONSE HAD NO JAVA SOURCE FILES.\n"
+                        "This means the build will produce empty jars with no .class files.\n"
+                        "You MUST generate COMPLETE Java source files for this mod, "
+                        "each one starting with the correct `package` declaration.\n"
+                        "Output each file under `src/main/java/` with its full package path.\n"
+                        "Do NOT output the same JSON/config files again — they are already present."
+                    )
+                else:
+                    pkg = mod_path if mod_path else "com.example"
+                    retry_context = (
+                        f"RETRY ATTEMPT {attempt_num}: Your previous responses STILL lack Java files.\n"
+                        "You MUST write the Java source code for this mod.\n"
+                        f"Package path: {pkg}\n"
+                        "Output each file under `src/main/java/` with the correct package path."
+                    )
+
+                retry_key = key_mgr.acquire()
+                try:
+                    final_response = _do_send(
+                        td, prompt_text, retry_context, author_info, retry_key,
+                    )
+                finally:
+                    key_mgr.release(retry_key)
+
+            # ── Save final response ────────────────────────────────────
+            try:
+                resp_path = td / "airesponse.txt"
+                resp_path.write_text(final_response, encoding="utf-8")
+
+                if _response_has_java_files(final_response):
+                    _update_line(td.name, "complete", f"{len(final_response):,} chars")
+                    success_count += 1
+                else:
+                    _update_line(td.name, "failed", "no Java code after retries")
+                    _log(f"  {td.name}: FAILED — no Java code after {AI_JAVA_RETRIES} retries")
+                    fail_count += 1
             finally:
                 key_mgr.release(used_key)
 
@@ -373,38 +485,61 @@ def _send_prompt_to_nvidia(
     prompt_text: str,
     api_key: str,
     status_callback: callable,
+    author_info: tuple[str, str] = ("", ""),
+    retry_context: str = "",
 ) -> str:
-    """Send a single prompt to the NVIDIA API and return the full response."""
+    """Send a single prompt to the NVIDIA API and return the full response.
+
+    Args:
+        target_name: The name of the target (e.g. "1.20.5-fabric").
+        prompt_text: The prompt to send.
+        api_key: The API key.
+        status_callback: Callback for status updates.
+        author_info: (author_name, mod_path) tuple from projectinfo.txt.
+        retry_context: If non-empty, this is a retry — the text explains what
+                       was wrong with the previous response.
+    """
     import urllib.request
     import urllib.error
 
     url = f"{AI_NVIDIA_BASE}/chat/completions"
 
+    author, mod_path = author_info
+
+    system_parts = [
+        "You are an excellent and professional Minecraft mod developer.",
+        "You are expert at reading and following technical instructions precisely.",
+        "You write clean, correct, and well-structured Java code.",
+        "Provide ALL files requested with complete implementations — no stubs, no TODOs, no placeholders.",
+    ]
+    if author:
+        system_parts.append(f"")
+        system_parts.append(f"The mod author is: {author}")
+        system_parts.append(f"You should keep the package path and style consistent with this author's work.")
+    if mod_path:
+        system_parts.append(f"")
+        system_parts.append(f"The preferred package path for the mod is: {mod_path}")
+        system_parts.append(f"Use this Java package path for all source files.")
+
     messages = []
     messages.append({
         "role": "system",
-        "content": (
-            "You are an excellent and professional Minecraft mod developer. "
-            "You are expert at reading and following technical instructions precisely. "
-            "You write clean, correct, and well-structured Java code. "
-            "Provide ALL files requested with complete implementations — no stubs, no TODOs, no placeholders."
-        )
+        "content": "\n".join(system_parts),
     })
-    messages.append({"role": "user", "content": prompt_text})
+
+    if retry_context:
+        # Prepend the retry explanation so the AI sees it first
+        augmented_prompt = f"{retry_context}\n\n---\n\n{prompt_text}"
+        messages.append({"role": "user", "content": augmented_prompt})
+    else:
+        messages.append({"role": "user", "content": prompt_text})
 
     payload: dict[str, Any] = {
         "model": AI_MODEL,
         "messages": messages,
         "temperature": 0.2,
         "stream": True,
-    }
-
-    # Enable thinking/reasoning for Nemotron
-    payload["extra_body"] = {
-        "chat_template_kwargs": {
-            "enable_thinking": True,
-            "reasoning_effort": "max",
-        }
+        "reasoning_effort": "high",
     }
 
 
@@ -587,6 +722,39 @@ class Runner:
 
             if ai_result != 0:
                 print("\n⚠ AI coding stage had failures. Proceeding to compile cycle anyway...")
+
+            # ── Validate AI responses for Java code before compile cycle ──
+            _log("Validating AI responses before compile cycle...")
+            targets_no_java: list[str] = []
+            for td in sorted(bundle_dir.iterdir()):
+                if not td.is_dir() or td.name.startswith("."):
+                    continue
+                ai_path = td / "airesponse.txt"
+                if not ai_path.exists():
+                    targets_no_java.append(td.name)
+                    continue
+                # Quick check: does the response contain ``` code blocks with .java files?
+                text = ai_path.read_text(encoding="utf-8")
+                # Look for .java extensions inside or near code blocks
+                has_java = bool(re.search(r'\.java[`\s]', text)) or bool(
+                    re.search(r'```[a-zA-Z]*\n', text)
+                )
+                # More thorough: check if any code block contains a .java path
+                if not has_java:
+                    targets_no_java.append(td.name)
+
+            if targets_no_java:
+                print()
+                print(f"{'─' * 72}")
+                print(f"  ⚠ {len(targets_no_java)} target(s) have no Java source code in AI response:")
+                for t in targets_no_java:
+                    print(f"    • {t}")
+                print(f"  The build will produce empty jars for these targets.")
+                print(f"  The compile cycle's retry logic will attempt to fix them.")
+                print(f"{'─' * 72}")
+                print()
+            else:
+                _log("All targets contain Java source code. Proceeding to compile cycle.")
 
             # 6. Compile Cycle: extract, build, retry
             print()
