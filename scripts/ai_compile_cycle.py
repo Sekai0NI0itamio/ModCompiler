@@ -46,13 +46,17 @@ from _key_manager import KeyManager
 BUILD_WORKFLOW_FILE = "build.yml"
 INCOMING_DIR = "incoming"
 MAX_RETRIES = 5
+
+# Artifact names from the Build workflow (build.yml)
+BUILD_ARTIFACT_ALL = "all-mod-builds"
+BUILD_ARTIFACT_PUBLISH = "modrinth-publish"
 POLL_INTERVAL = 30
 MAX_GH_RETRIES = 4
 GH_RETRY_DELAY = 3.0
 
 # --- AI Provider Config ---
 AI_NVIDIA_BASE = "https://api.deepseek.com/v1"
-AI_MODEL = "deepseek-chat"
+AI_MODEL = "deepseek-v4-flash"
 
 class CycleError(Exception):
     pass
@@ -149,6 +153,34 @@ def _map_slug_to_target_name(slug: str, target_names: list[str]) -> str | None:
 
 
 
+def _is_valid_filepath(candidate: str) -> bool:
+    """Check if a string looks like a valid filepath (not code)."""
+    candidate = candidate.strip("`*[]'\"")
+    if not candidate:
+        return False
+    # Must contain a path separator or at least look like a filename
+    if "/" not in candidate and "." not in candidate:
+        return False
+    # Reject if it looks like code
+    code_starts = ("package ", "import ", "public ", "private ",
+                   "protected ", "class ", "interface ", "@", "{",
+                   "//", "/*")
+    if any(candidate.startswith(p) for p in code_starts):
+        return False
+    # Reject if it has multiple lines (a real path is a single line)
+    if "\n" in candidate.rstrip():
+        return False
+    # The last segment should have an extension (e.g. file.java, file.json)
+    last_part = candidate.split("/")[-1] if "/" in candidate else candidate
+    if "." not in last_part:
+        return False
+    # Segment length sanity
+    for seg in candidate.split("/"):
+        if len(seg) > 120:
+            return False
+    return True
+
+
 def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
     """Parse AI response into a dict of filepath -> content.
 
@@ -162,8 +194,9 @@ def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
       ```                      ← close second block
 
     Every PAIR of consecutive ``` markers defines one block.
-    Odd-indexed blocks (0, 2, 4…) are filepaths.
-    Even-indexed blocks (1, 3, 5…) are the corresponding code.
+    Instead of assuming strict [path, code, path, code] ordering (which can
+    break if the AI puts extra text between blocks), we scan forward through
+    blocks and pair the NEXT valid-looking path with the block after it.
     """
     # Find the line number of every ``` marker
     marker_lines: list[int] = []
@@ -188,28 +221,37 @@ def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
         if content:
             blocks.append(content)
 
-    # blocks = [filepath, code, filepath, code, …]
+    # Scan forward through blocks: find path → next block is its code
     files: dict[str, str] = {}
-    for i in range(0, len(blocks) - 1, 2):
-        filepath = blocks[i].strip()
-        code = blocks[i + 1].strip()
+    i = 0
+    while i < len(blocks) - 1:
+        raw_path = blocks[i].strip()
+        raw_code = blocks[i + 1].strip()
 
-        if not filepath or not code:
+        if not raw_path or not raw_code:
+            i += 1
             continue
 
-        # Clean up the filepath
-        filepath = filepath.strip("`*[]'\"")
+        # Check if raw_path looks like a valid filepath
+        filepath = raw_path.strip("`*[]'\"")
+        if not _is_valid_filepath(filepath):
+            # This might be code content that leaked into the path slot.
+            # Try skipping ahead to find a real path.
+            i += 1
+            continue
+
+        stripe = filepath
 
         # Strip known prefixes
         for prefix in ("bundle/", "./"):
-            if filepath.startswith(prefix):
-                filepath = filepath[len(prefix):]
+            if stripe.startswith(prefix):
+                stripe = stripe[len(prefix):]
 
         # Strip leading target-name prefix ("1.12-forge/src/..." → "src/...")
-        if "/" in filepath and not filepath.startswith("src/"):
-            parts = filepath.split("/", 1)
+        if "/" in stripe and not stripe.startswith("src/"):
+            parts = stripe.split("/", 1)
             if len(parts) == 2:
-                filepath = parts[1]
+                stripe = parts[1]
 
         # Skip build files — provided by the build workflow
         build_files = {
@@ -217,22 +259,14 @@ def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
             "settings.gradle", "settings.gradle.kts",
             "gradle.properties", "gradlew", "gradlew.bat",
         }
-        if filepath.lower() in build_files or "/gradle/" in filepath.lower():
+        if stripe.lower() in build_files or "/gradle/" in stripe.lower():
+            i += 2
             continue
 
-        # Skip if filepath looks like code (wasn't a proper path)
-        code_starts = ("package ", "import ", "public ", "private ",
-                       "protected ", "class ", "interface ", "@", "{")
-        if any(filepath.startswith(p) for p in code_starts):
-            continue
+        if stripe not in files:
+            files[stripe] = raw_code
 
-        # Reject if filepath has no extension-like segment
-        last_part = filepath.split("/")[-1] if "/" in filepath else filepath
-        if "." not in last_part and "bundle" not in filepath:
-            continue
-
-        if filepath not in files:
-            files[filepath] = code
+        i += 2
 
     return files
 def _get_expected_build_dir(target_name: str) -> str:
@@ -852,22 +886,33 @@ The build failed with the following error(s):
 
 1. Analyze the build errors and identify what needs to be fixed.
 2. Output ONLY the files that need to be changed/replaced.
-3. For each file, use this format:
+3. For each file, you MUST follow this EXACT format — two code blocks per file:
 
-`bundle/{target_name}/filepath`
-```language
-code_here_
-```
+   ```
+   bundle/{target_name}/src/main/java/com/example/MyMod.java
+   ```java
+   package com.example;
+   public class MyMod {
+       // ...
+   }
+   ```
+
+The parser groups the BACKTICK markers into pairs.  The FIRST block between
+markers is the filepath, and the SECOND block is the code content.  This means
+you MUST separate each file into TWO consecutive code blocks like above.
+{source_code_note}
 
 ### IMPORTANT FILEPATH RULES
 
-- **Java source files MUST be placed under `src/main/java/`**.  For example, if your mod class is
-  `com.example.MyMod`, the filepath should be:
-  `bundle/{target_name}/src/main/java/com/example/MyMod.java`
-- If a path like `com/example/Foo.java` appears WITHOUT the `src/main/java/` prefix, the build
-  will NOT find it and you will get "compileJava NO-SOURCE" or "no .class files" errors.
-- Resource files (JSON, TOML, textures) should go under `src/main/resources/`.
-{source_code_note}
+- **Java source files MUST be placed under `src/main/java/`**.  For example:
+  ```
+  bundle/{target_name}/src/main/java/com/example/MyMod.java
+  ```java
+  package com.example;
+  public class MyMod { ... }
+  ```
+- Resource files should go under `src/main/resources/`.
+- Every filepath MUST contain an extension (`.java`, `.json`, `.toml`, etc.).
 
 4. Provide COMPLETE file contents — no stubs, no TODOs, no placeholders.
 5. If the build error is about missing methods/classes, check the provided
@@ -1119,6 +1164,144 @@ def _recompose_fix_prompt(
     return prompt
 
 
+DIF_GENERATION_TEMPLATE = """You are a documentation expert for Minecraft mod development.
+You analyze build successes and failures to create DIF (Documented Issue Fix)
+entries that help other AI agents avoid the same mistakes.
+
+## Context
+
+A mod version **{mc_version}** / **{loader}** failed to build with the errors below.
+The AI retry cycle fixed it on attempt {fixed_on_attempt}.  Below is the full
+history — source code before the fix, the build errors, and the working source code.
+
+## Build Error Log
+
+{build_log}
+
+## Source Code BEFORE Fix
+
+{source_before}
+
+## Source Code AFTER Fix (working)
+
+{source_after}
+
+## Instructions
+
+Write a DIF document in the following exact format.  Use YAML frontmatter between
+`---` markers, then a markdown body.
+
+---
+id: <UPPERCASE-ID>
+title: A short, descriptive title
+tags: [{loader}, compile-error, api-change, {mc_version}]
+versions: [{mc_version}]
+loaders: [{loader}]
+symbols: [<relevant-class-names>]
+error_patterns: ["<regex patterns that match the build errors>"]
+---
+
+## Issue
+
+1-2 sentence description of the problem.
+
+## Error
+
+Copy the exact error message from the build log.
+
+## Root Cause
+
+Brief explanation of why the error occurred.
+
+## Fix
+
+Show the corrected code snippet(s) from the AFTER version that fixed the issue.
+Explain what changed.
+
+## Verified
+
+Confirmed in {slug} build run."
+
+---
+
+Use this information:
+- Target: {target_name}
+- Slug: {slug}
+- Write the id like "{loader.upper()}-{mc_version.replace('.','')}-SHORT-DESC"
+- The error_patterns should be regex patterns that would match the build errors
+Generate ONLY the DIF document content, nothing else."""
+
+
+def _generate_dif_entry(
+    mc_version: str,
+    loader: str,
+    target_name: str,
+    slug: str,
+    build_log: str,
+    source_before: dict[str, str],
+    source_after: dict[str, str],
+    fixed_on_attempt: int,
+    api_key: str,
+    dif_dir: Path,
+) -> None:
+    """Generate a DIF document from build history and save to dif/ directory."""
+    # Format source code for the prompt
+    def _fmt_source(src: dict[str, str]) -> str:
+        lines = []
+        for fp in sorted(src.keys()):
+            content = src[fp]
+            lang = "java" if fp.endswith(".java") else ""
+            lines.append(f"`{fp}`")
+            lines.append(f"```{lang}")
+            lines.append(content[:2000])  # Limit per file for prompt size
+            lines.append("```")
+            lines.append("")
+        return "\n".join(lines) if lines else "(no source code)"
+
+    prompt = DIF_GENERATION_TEMPLATE.format(
+        mc_version=mc_version,
+        loader=loader,
+        target_name=target_name,
+        slug=slug,
+        build_log=build_log[-3000:],  # Last 3000 chars of build log
+        source_before=_fmt_source(source_before),
+        source_after=_fmt_source(source_after),
+        fixed_on_attempt=fixed_on_attempt,
+    )
+
+    _log(f"  Generating DIF entry for {target_name}...")
+    try:
+        dif_content = _send_fix_prompt_to_ai(prompt, api_key, target_name)
+    except CycleError as e:
+        _log(f"  ⚠ DIF generation failed for {target_name}: {e}")
+        return
+
+    if not dif_content.strip():
+        _log(f"  ⚠ DIF generation returned empty content for {target_name}")
+        return
+
+    # Extract the DIF content (strip any extra commentary from the AI)
+    # The AI might wrap in extra ``` markers — strip those
+    clean = dif_content.strip().strip("`").strip()
+
+    # Generate a filename from the first few lines
+    first_line = clean.split("\n")[0] if "\n" in clean else clean[:60]
+    # Find the id from frontmatter
+    id_match = re.search(r"^id:\s*(.+)$", clean, re.MULTILINE)
+    dif_id = id_match.group(1).strip() if id_match else slug.upper()
+    # Sanitize for filename
+    safe_id = re.sub(r"[^A-Za-z0-9_-]", "_", dif_id)[:80]
+    dif_path = dif_dir / f"{safe_id}.md"
+
+    # Don't overwrite existing DIF entries
+    if dif_path.exists():
+        _log(f"  ⚠ DIF entry already exists: {dif_path.name} — skipping")
+        return
+
+    dif_path.write_text(clean, encoding="utf-8")
+    _log(f"  ✓ DIF entry saved: {dif_path.name}")
+
+
 def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
     """Send a fix prompt to the NVIDIA API and return the full response."""
     import urllib.request
@@ -1144,14 +1327,7 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
         "messages": messages,
         "temperature": 0.2,
         "stream": True,
-    }
-
-    # Enable thinking/reasoning for Nemotron
-    payload["extra_body"] = {
-        "chat_template_kwargs": {
-            "enable_thinking": True,
-            "reasoning_effort": "max",
-        }
+        "reasoning_effort": "high",
     }
 
 
@@ -1329,6 +1505,20 @@ def run_compile_cycle(
     active_failed: dict[str, int] = {t: 0 for t in failed_set}
     all_targets_set = set(target_names)
 
+    # Build history tracker for DIF generation
+    build_history: dict[str, dict] = {}
+    for tname in target_names:
+        mc_ver, loader = tname.rsplit("-", 1)
+        build_history[tname] = {
+            "mc_version": mc_ver,
+            "loader": loader,
+            "errors": [],         # list of build error logs
+            "source_before": {},   # source BEFORE any fix
+            "source_after": {},    # source AFTER successful fix
+            "fixed_on_attempt": 0, # which retry attempt fixed it
+            "fixed": False,
+        }
+
     for attempt in range(1, max_retries + 1):
         if not current_targets:
             _log("All versions built successfully!")
@@ -1369,6 +1559,12 @@ def run_compile_cycle(
                     build_log = "(build log not available)"
                 dif_entries = _collect_dif_for_target(mcver, loader)
                 mc_source = _collect_mc_source_files(mcver, loader)
+                # Record build error for DIF history
+                if tname in build_history and build_log and build_log != "(build log not available)":
+                    build_history[tname]["errors"].append(build_log)
+                    # Capture source BEFORE any fix on first failure
+                    if not build_history[tname]["source_before"]:
+                        build_history[tname]["source_before"] = dict(scode)
                 return (idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source)
             except Exception as exc:
                 return (idx, tname, mcver, loader, scode, str(exc), [], {})
@@ -1462,7 +1658,7 @@ def run_compile_cycle(
                 still_failed.append(tname)
                 continue
 
-            _log(f"  \u2713 {tname}: {len(fix_files)} fixed file(s)")
+            _log(f"  ✓ {tname}: {len(fix_files)} fixed file(s)")
 
             source_code = _get_current_source_code(bundle_dir, tname)
             merged_source = _merge_source_files(source_code, fix_files)
@@ -1476,6 +1672,11 @@ def run_compile_cycle(
                 lang = "java" if fp.endswith(".java") else ""
                 merged_text += f"`bundle/{tname}/{fp}`\n```{lang}\n{c}\n```\n\n"
             (bundle_dir / tname / "airesponse.txt").write_text(merged_text, encoding="utf-8")
+
+            # Track the fix for DIF generation
+            if tname in build_history:
+                build_history[tname]["source_after"] = dict(merged_source)
+                build_history[tname]["fixed_on_attempt"] = attempt
 
             fixed_this_round.append(tname)
 
@@ -1515,6 +1716,36 @@ def run_compile_cycle(
         published_set.update(results["published_versions"])
 
         _log(f"Updated results: {len(new_success)} success, {len(new_failed)} failed")
+
+        # After a successful retry, generate DIF entries for newly-fixed targets
+        newly_fixed = [t for t in new_success if t in build_history and not build_history[t]["fixed"]]
+        if newly_fixed and key_mgr is not None:
+            _log(f"  Generating DIF entries for {len(newly_fixed)} newly-fixed target(s)...")
+            dif_dir = Path("dif")
+            dif_dir.mkdir(parents=True, exist_ok=True)
+            for tname in newly_fixed:
+                hist = build_history[tname]
+                hist["fixed"] = True
+                if not hist["source_after"] or not hist["errors"]:
+                    continue
+                # Combine all error logs
+                combined_log = "\n---\n".join(hist["errors"][-3:])
+                ai_key = key_mgr.acquire()
+                try:
+                    _generate_dif_entry(
+                        mc_version=hist["mc_version"],
+                        loader=hist["loader"],
+                        target_name=tname,
+                        slug=slug,
+                        build_log=combined_log,
+                        source_before=hist["source_before"],
+                        source_after=hist["source_after"],
+                        fixed_on_attempt=hist["fixed_on_attempt"],
+                        api_key=ai_key,
+                        dif_dir=dif_dir,
+                    )
+                finally:
+                    key_mgr.release(ai_key)
 
         # Update the current targets for next iteration
         current_targets = [t for t in current_targets if t in new_failed]

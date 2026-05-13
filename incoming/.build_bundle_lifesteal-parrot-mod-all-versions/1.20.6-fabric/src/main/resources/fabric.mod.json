@@ -1,0 +1,38 @@
+{
+    "schemaVersion": 1,
+    "id": "lifestealparrotmod",
+    "version": "${version}",
+    "name": "Lifesteal Mod",
+    "description": "Lose a heart on death, gain a heart by killing a player. Hit 0 hearts and you are permanently banned.",
+    "authors": [
+        "Itamio"
+    ],
+    "contact": {
+        "homepage": "https://modrinth.com/mod/lifesteal-parrotmod",
+        "sources": "https://github.com/Itamio/lifestealparrotmod"
+    },
+    "license": "CC0-1.0",
+    "icon": "assets/lifestealparrotmod/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "asd.itamio.lifestealparrotmod.ExampleMod"
+        ],
+        "client": [
+            "asd.itamio.lifestealparrotmod.ExampleModClient"
+        ]
+    },
+    "mixins": [
+        "modid.mixins.json",
+        {
+            "config": "modid.client.mixins.json",
+            "environment": "client"
+        }
+    ],
+    "depends": {
+        "fabricloader": ">=0.15.10",
+        "minecraft": "~1.20.6",
+        "java": ">=21",
+        "fabric-api": "*"
+    }
+}
