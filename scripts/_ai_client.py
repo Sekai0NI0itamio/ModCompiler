@@ -34,6 +34,7 @@ def send_prompt(
     size_limit: int = MAX_RESPONSE_BYTES,
     status_callback: Callable[[str, str, str], None] | None = None,
     target_name: str = "",
+    reasoning_effort: str | None = None,
 ) -> str:
     """Send a prompt to the AI API and return the full response text.
 
@@ -42,12 +43,15 @@ def send_prompt(
     """
     url = f"{base_url}/chat/completions"
 
-    payload = {
+    payload: dict[str, Any] = {
         "model": model,
         "messages": messages,
         "temperature": temperature,
         "stream": stream,
     }
+
+    if reasoning_effort:
+        payload["reasoning_effort"] = reasoning_effort
 
     body_bytes = json.dumps(payload).encode("utf-8")
     headers = {

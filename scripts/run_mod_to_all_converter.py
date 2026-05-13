@@ -17,6 +17,7 @@ Usage
   python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest
   python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest --mode prompt-and-code
   python3 scripts/run_mod_to_all_converter.py https://modrinth.com/mod/sort-chest --mode prompt-creation
+  python3 scripts/run_mod_to_all_converter.py --continuefrom lifesteal-parrot-mod-20260513-104548
 
 Modes
 -----
@@ -625,12 +626,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Trigger Automated Mod to ALL Version Converter workflow, wait, and download results."
     )
-    parser.add_argument("modrinth_url",
+    parser.add_argument("modrinth_url", nargs="?", default="",
         help="Modrinth project URL or slug (e.g. https://modrinth.com/mod/sort-chest)")
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR,
         help=f"Root folder for run outputs (default: {DEFAULT_OUTPUT_DIR})")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
         help=f"Max seconds to wait for workflow (default: {DEFAULT_TIMEOUT})")
+    parser.add_argument("--continuefrom",
+        help="Folder name (from ModToAllRuns/) to resume from. Skips workflow dispatch and re-downloads if artifacts exist.")
     parser.add_argument("--repo", default="",
         help="owner/repo override (default: auto-detect from git remote)")
     parser.add_argument("--mode", default="prompt-and-code",
@@ -644,6 +647,14 @@ def main(argv: list[str] | None = None) -> int:
         ))
     args = parser.parse_args(argv)
 
+    if args.continuefrom and args.modrinth_url:
+        parser.error("Cannot specify both a modrinth_url and --continuefrom. Use one or the other.")
+        return 1
+
+    if not args.continuefrom and not args.modrinth_url:
+        parser.error("Either a modrinth_url or --continuefrom must be specified.")
+        return 1
+
     try:
         return Runner(args).run()
     except RunError as exc:
@@ -653,19 +664,66 @@ def main(argv: list[str] | None = None) -> int:
 
 class Runner:
     def __init__(self, args: argparse.Namespace) -> None:
-        self.modrinth_url = args.modrinth_url.strip()
         self.timeout = int(args.timeout)
         self.repo = (args.repo or _detect_repo()).strip()
         self.token = _detect_token()
-        self.run_id: int = 0
         self.mode = args.mode
 
-        # Derive slug from URL
-        m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", self.modrinth_url)
-        self.slug = m.group(1) if m else self.modrinth_url.replace("https://", "").replace("/", "-")
+        if args.continuefrom:
+            self.out_root = Path(args.output_dir).resolve() / args.continuefrom
+            self.resuming = True
+            self._load_existing_run(args.continuefrom)
+        else:
+            self.modrinth_url = args.modrinth_url.strip()
+            self.resuming = False
+            m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", self.modrinth_url)
+            self.slug = m.group(1) if m else self.modrinth_url.replace("https://", "").replace("/", "-")
+            ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+            self.out_root = Path(args.output_dir).resolve() / f"{self.slug}-{ts}"
+            self.run_id = 0
 
-        ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-        self.out_root = Path(args.output_dir).resolve() / f"{self.slug}-{ts}"
+    def _load_existing_run(self, folder_name: str) -> None:
+        result_json = self.out_root / "result.json"
+        if result_json.exists():
+            data = json.loads(result_json.read_text(encoding="utf-8"))
+            self.modrinth_url = data.get("modrinth_url", "")
+            self.slug = data.get("slug", folder_name.rsplit("-", 2)[0] if "-" in folder_name else folder_name)
+            self.run_id = data.get("run_id", 0)
+            self.mode = data.get("mode", self.mode)
+        else:
+            self.modrinth_url = ""
+            parts = folder_name.rsplit("-", 2)
+            self.slug = parts[0] if parts else folder_name
+            self.run_id = 0
+
+    def _detect_progress(self) -> dict[str, bool]:
+        artifacts_dir = self.out_root / "artifacts"
+        bundle_dir = artifacts_dir / ANALYSIS_ARTIFACT if artifacts_dir.exists() else None
+        progress = {
+            "workflow_completed": (self.out_root / "result.json").exists(),
+            "artifacts_downloaded": bundle_dir is not None and bundle_dir.exists(),
+            "has_prompt_txt": False,
+            "has_airesponse_txt": False,
+            "has_build_zip": False,
+            "compile_started": False,
+            "compile_complete": False,
+        }
+        if bundle_dir and bundle_dir.exists():
+            for target_dir in bundle_dir.iterdir():
+                if target_dir.is_dir() and (target_dir / "prompt.txt").exists():
+                    progress["has_prompt_txt"] = True
+                    break
+            for target_dir in bundle_dir.iterdir():
+                if target_dir.is_dir() and (target_dir / "airesponse.txt").exists():
+                    progress["has_airesponse_txt"] = True
+                    break
+        incoming_dir = self.out_root / "incoming"
+        if incoming_dir.exists():
+            for f in incoming_dir.iterdir():
+                if f.is_file() and f.suffix == ".zip" and "all-versions" in f.name:
+                    progress["has_build_zip"] = True
+                    break
+        return progress
 
     def run(self) -> int:
         self.out_root.mkdir(parents=True, exist_ok=True)
@@ -673,114 +731,138 @@ class Runner:
 
         print(f"Mode:        {self.mode}")
         print(f"Repo:        {self.repo}")
-        print(f"Modrinth:    {self.modrinth_url}")
         print(f"Output dir:  {self.out_root}")
         print()
 
-        # 1. Dispatch workflow
-        self.run_id = self._dispatch()
-        run_url = f"https://github.com/{self.repo}/actions/runs/{self.run_id}"
-        print(f"Dispatched run #{self.run_id}")
-        print(f"URL: {run_url}")
-        print()
+        progress = self._detect_progress()
 
-        # 2. Wait for completion
-        conclusion = self._wait()
+        if self.resuming:
+            print("=" * 72)
+            print("  RESUME MODE — continuing from previous run")
+            print("=" * 72)
+            print()
+            if self.modrinth_url:
+                print(f"Modrinth:    {self.modrinth_url}")
+            if self.run_id:
+                print(f"Run ID:      #{self.run_id}")
+            print()
+            print("Progress detected:")
+            print(f"  Workflow:        {'✓ completed' if progress['workflow_completed'] else '✗ not done'}")
+            print(f"  Artifacts:       {'✓ downloaded' if progress['artifacts_downloaded'] else '✗ not downloaded'}")
+            print(f"  Prompt files:    {'✓ present' if progress['has_prompt_txt'] else '✗ missing'}")
+            print(f"  AI responses:    {'✓ present' if progress['has_airesponse_txt'] else '✗ missing'}")
+            print(f"  Build zip:       {'✓ present' if progress['has_build_zip'] else '✗ missing'}")
+            print()
+        else:
+            print(f"Modrinth:    {self.modrinth_url}")
+            print()
 
-        # 3. Download artifacts and logs
-        print("\nDownloading artifacts and logs...")
-        artifacts_dir = self.out_root / "artifacts"
-        self._download_all(artifacts_dir)
+        conclusion = ""
 
-        # 4. Write summary
-        self._write_summary(conclusion, run_url, artifacts_dir)
+        if not self.resuming or not progress["artifacts_downloaded"]:
+            if not self.resuming:
+                self.run_id = self._dispatch()
+                run_url = f"https://github.com/{self.repo}/actions/runs/{self.run_id}"
+                print(f"Dispatched run #{self.run_id}")
+                print(f"URL: {run_url}")
+                print()
+                conclusion = self._wait()
+            else:
+                run_url = f"https://github.com/{self.repo}/actions/runs/{self.run_id}"
+                print(f"Run URL: {run_url}")
+
+            print("\nDownloading artifacts and logs...")
+            artifacts_dir = self.out_root / "artifacts"
+            self._download_all(artifacts_dir)
+            progress = self._detect_progress()
+
+            conclusion = "success"
+            self._write_summary(conclusion, run_url, artifacts_dir)
+            print(f"\nWorkflow conclusion: {conclusion.upper()}")
+        else:
+            print("Skipping workflow dispatch and artifact download (already present)")
+            print()
+            run_url = f"https://github.com/{self.repo}/actions/runs/{self.run_id}"
+            conclusion = "success"
 
         summary_path = self.out_root / "SUMMARY.md"
         print(f"\nRun folder:  {self.out_root}")
         print(f"Summary:     {summary_path}")
-        print(f"Workflow conclusion: {conclusion.upper()}")
+        print()
 
-        if conclusion != "success":
-            print(f"\n\u26a0 Workflow had conclusion '{conclusion}' — checking if bundle is still usable...")
+        if self.mode not in ("prompt-and-code",):
+            return 0
 
-        # 5. AI Coding Stage (only in prompt-and-code mode)
-        if self.mode in ("prompt-and-code",):
-            bundle_dir = artifacts_dir / ANALYSIS_ARTIFACT
-            if not bundle_dir.exists():
-                print("ERROR: Analysis bundle directory not found. Cannot run AI coding stage.",
-                      file=sys.stderr)
-                return 1
+        bundle_dir = self.out_root / "artifacts" / ANALYSIS_ARTIFACT
+        if not bundle_dir.exists():
+            print("ERROR: Analysis bundle directory not found. Cannot run AI coding stage.",
+                  file=sys.stderr)
+            return 1
 
-            if conclusion != "success":
-                print(f"  Bundle found at {bundle_dir} — proceeding despite workflow conclusion '{conclusion}'.")
-
+        if not progress["has_airesponse_txt"]:
             key_mgr = _create_key_manager()
             ai_result = _run_ai_coding_stage(bundle_dir, key_mgr)
 
-            # Update SUMMARY.md with AI results
-            self._append_ai_summary(artifacts_dir)
+            self._append_ai_summary(self.out_root / "artifacts")
 
             if ai_result != 0:
                 print("\n⚠ AI coding stage had failures. Proceeding to compile cycle anyway...")
+        else:
+            print("Skipping AI coding stage (airesponse.txt files already present)")
 
-            # ── Validate AI responses for Java code before compile cycle ──
-            _log("Validating AI responses before compile cycle...")
-            targets_no_java: list[str] = []
-            for td in sorted(bundle_dir.iterdir()):
-                if not td.is_dir() or td.name.startswith("."):
-                    continue
-                ai_path = td / "airesponse.txt"
-                if not ai_path.exists():
-                    targets_no_java.append(td.name)
-                    continue
-                # Quick check: does the response contain ``` code blocks with .java files?
-                text = ai_path.read_text(encoding="utf-8")
-                # Look for .java extensions inside or near code blocks
-                has_java = bool(re.search(r'\.java[`\s]', text)) or bool(
-                    re.search(r'```[a-zA-Z]*\n', text)
-                )
-                # More thorough: check if any code block contains a .java path
-                if not has_java:
-                    targets_no_java.append(td.name)
-
-            if targets_no_java:
-                print()
-                print(f"{'─' * 72}")
-                print(f"  ⚠ {len(targets_no_java)} target(s) have no Java source code in AI response:")
-                for t in targets_no_java:
-                    print(f"    • {t}")
-                print(f"  The build will produce empty jars for these targets.")
-                print(f"  The compile cycle's retry logic will attempt to fix them.")
-                print(f"{'─' * 72}")
-                print()
-            else:
-                _log("All targets contain Java source code. Proceeding to compile cycle.")
-
-            # 6. Compile Cycle: extract, build, retry
-            print()
-            print("=" * 72)
-            print("  PHASE 3 — COMPILE CYCLE")
-            print("  (Extract sources, create build zip, dispatch build, retry failures)")
-            print("=" * 72)
-            print()
-
-            compile_result = subprocess.run(
-                [sys.executable, "scripts/ai_compile_cycle.py",
-                 "--bundle-dir", str(bundle_dir),
-                 "--slug", self.slug,
-                 "--modrinth-url", self.modrinth_url,
-                 "--repo", self.repo,
-                 "--max-retries", "5"]
-                + (["--intelligent"] if False else []),
-                capture_output=False,
+        _log("Validating AI responses before compile cycle...")
+        targets_no_java: list[str] = []
+        for td in sorted(bundle_dir.iterdir()):
+            if not td.is_dir() or td.name.startswith("."):
+                continue
+            ai_path = td / "airesponse.txt"
+            if not ai_path.exists():
+                targets_no_java.append(td.name)
+                continue
+            text = ai_path.read_text(encoding="utf-8")
+            has_java = bool(re.search(r'\.java[`\s]', text)) or bool(
+                re.search(r'```[a-zA-Z]*\n', text)
             )
+            if not has_java:
+                targets_no_java.append(td.name)
 
-            if compile_result.returncode != 0:
-                print("\n⚠ Compile cycle completed with some failures.")
-                print("  Check the bundle for failed-* folders with error context.")
-                return 1
+        if targets_no_java:
+            print()
+            print(f"{'─' * 72}")
+            print(f"  ⚠ {len(targets_no_java)} target(s) have no Java source code in AI response:")
+            for t in targets_no_java:
+                print(f"    • {t}")
+            print(f"  The build will produce empty jars for these targets.")
+            print(f"  The compile cycle's retry logic will attempt to fix them.")
+            print(f"{'─' * 72}")
+            print()
+        else:
+            _log("All targets contain Java source code. Proceeding to compile cycle.")
 
-            print("\n✓ Compile cycle complete — all versions built and published!")
+        print()
+        print("=" * 72)
+        print("  PHASE 3 — COMPILE CYCLE")
+        print("  (Extract sources, create build zip, dispatch build, retry failures)")
+        print("=" * 72)
+        print()
+
+        compile_result = subprocess.run(
+            [sys.executable, "scripts/ai_compile_cycle.py",
+             "--bundle-dir", str(bundle_dir),
+             "--slug", self.slug,
+             "--modrinth-url", self.modrinth_url,
+             "--repo", self.repo,
+             "--max-retries", "5"]
+            + (["--intelligent"] if False else []),
+            capture_output=False,
+        )
+
+        if compile_result.returncode != 0:
+            print("\n⚠ Compile cycle completed with some failures.")
+            print("  Check the bundle for failed-* folders with error context.")
+            return 1
+
+        print("\n✓ Compile cycle complete — all versions built and published!")
 
         return 0
 

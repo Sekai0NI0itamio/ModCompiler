@@ -48,8 +48,9 @@ from modcompiler.common import (
 # ── Constants ────────────────────────────────────────────────────────────────
 
 AI_BASE_URL = "https://api.deepseek.com/v1"
-AI_MODEL = "deepseek-chat"
+AI_MODEL = "deepseek-v4-flash"
 AI_TEMPERATURE = 0.2
+AI_REASONING_EFFORT = "high"
 MAX_RESPONSE_BYTES = 100_000
 
 LOCAL_WORKSPACE = ROOT / "Mod Developement" / "1.12.2-forge"
@@ -129,6 +130,30 @@ def gh(args: list[str], *, token: str = "") -> str:
     raise RuntimeError(f"gh {' '.join(args[:3])}... failed: {last_err}")
 
 
+# ── Colors / ANSI helpers for status display ──────────────────────────────────
+
+class Colors:
+    GREY = "\033[90m"
+    BLUE = "\033[94m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    GREEN = "\033[92m"
+    BLACK_BOLD = "\033[1;30m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+
+
+_STATUS_LABELS = {
+    "queued": ("Queued", Colors.GREY),
+    "request_sent": ("Request Sent", Colors.BLUE),
+    "waiting": ("Waiting for response", Colors.RED),
+    "streaming": ("Streaming", Colors.YELLOW),
+    "complete": ("Complete", Colors.GREEN),
+    "retrying": ("Retrying", Colors.BLACK_BOLD),
+    "failed": ("Failed", Colors.BLACK_BOLD),
+}
+
+
 def detect_github_repo() -> str:
     try:
         url = subprocess.check_output(
@@ -171,10 +196,10 @@ Return ONLY a JSON object with these exact keys:
 - mod_id: short lowercase id (no spaces, hyphens allowed)
 - name: display name
 - mod_version: start with "1.0.0"
-- group: Java package group (e.g. com.myname.modid)
-- entrypoint_class: full qualified main mod class (e.g. com.myname.modid.MyMod)
+- group: Java package group using itamio as domain: "asd.itamio", "net.itamio", "io.itamio", or similar. Always use itamio.
+- entrypoint_class: full qualified main mod class (e.g. asd.itamio.<modid>.ModName or net.itamio.<modid>.ModName)
 - description: a concise 1-2 sentence description of what the mod does
-- authors: list with one author name
+- authors: ALWAYS list ["itamio"] as the author
 - license: "MIT" or "All Rights Reserved"
 - runtime_side: "both", "client", or "server"
 
@@ -194,9 +219,9 @@ def generate_code_prompt(
     dif_entries: list[str],
 ) -> str:
     loader_notes = {
-        "fabric": "- Use Fabric API (fabric-api) for events\n- Main class annotated with @Mod\n- Mixins use @Mixin + @Inject\n- Client code goes in src/client/java",
-        "forge": "- Use @Mod + @Mod.EventHandler for Forge events\n- mcmod.info for 1.12.2 metadata\n- mods.toml for 1.13+ Forge\n- Register items/blocks in FMLInitializationEvent or RegistryEvent",
-        "neoforge": "- Use @Mod + bus events for NeoForge\n- neoforge.mods.toml for metadata\n- NeoForge events use NeoForge.EVENT_BUS",
+        "fabric": "- Use Fabric API (fabric-api) for events\n- Main class annotated with @Mod\n- Mixins use @Mixin + @Inject\n- Client code goes in src/client/java\n- Use fabric.mod.json for metadata\n- Use mixins.<modid>.json for Mixin configuration",
+        "forge": "- Use @Mod + @Mod.EventHandler for Forge events\n- mcmod.info for 1.12.2 metadata\n- mods.toml for 1.13+ Forge\n- Register items/blocks in FMLInitializationEvent or RegistryEvent\n- Use @SubscribeEvent for registry events",
+        "neoforge": "- Use @Mod + bus events for NeoForge\n- neoforge.mods.toml for metadata\n- NeoForge events use NeoForge.EVENT_BUS\n- Use @SubscribeEvent with appropriate event bus",
     }
     loader_note = loader_notes.get(loader, "")
 
@@ -206,45 +231,46 @@ def generate_code_prompt(
         for entry in dif_entries:
             dif_section += f"\n---\n{entry}\n"
 
-    return f"""You are a Minecraft mod developer. Create a complete Minecraft mod based on the description below.
+    return f"""You are an expert Minecraft mod developer with deep knowledge of {mc_version} and {loader}. Create a COMPLETE, COMPILABLE Minecraft mod based on the description below.
 
 ## Mod Description
 {user_description}
 
-## Mod Metadata
+## Mod Metadata (CRITICAL - follow exactly)
 - mod_id: {metadata['mod_id']}
 - name: {metadata['name']}
 - version: {metadata['mod_version']}
-- group: {metadata['group']}
-- entrypoint: {metadata['entrypoint_class']}
+- group: {metadata['group']}  <-- USE THIS PACKAGE EXACTLY
+- entrypoint: {metadata['entrypoint_class']}  <-- USE THIS CLASS NAME EXACTLY
 - runtime_side: {metadata.get('runtime_side', 'both')}
-- authors: {', '.join(metadata.get('authors', ['Author']))}
+- authors: ["itamio"]  <-- ALWAYS use itamio as author
 - license: {metadata.get('license', 'MIT')}
 
 ## Target
 - Minecraft version: {mc_version}
-- Loader: {loader}
+- Mod loader: {loader}
 
-## Loader-Specific Notes
+## Loader-Specific Requirements
 {loader_note}
 
 ## Reference Template Code
-The following is the template code for this version and loader. Follow the same patterns, package structure, and annotations:
+The following is the template code for this version and loader. Follow the same patterns, package structure, and annotations EXACTLY:
 ```java
 {template_code}
 ```
 
 {dif_section}
 
-## Requirements
+## CRITICAL REQUIREMENTS
 1. Create ALL necessary Java source files for the mod to compile and work
 2. Create ALL necessary resource files (mixins.json, fabric.mod.json, mods.toml, etc.)
-3. Use the correct package structure: src/main/java/<group-path>/
+3. Use the EXACT package structure: src/main/java/<group-path>/ (e.g., src/main/java/{metadata['group'].replace('.', '/')}/)
 4. For Fabric with split source: src/client/java/ for client-only code
 5. Include proper annotations, event handlers, and registrations
-6. Make sure the mod actually does what the description says
+6. The mod MUST actually do what the description says
+7. Use itamio as the author in ALL metadata files
 
-## Output Format
+## Output Format (STRICT)
 For each file, output:
 
 filepath: <relative-path-from-src>
@@ -252,35 +278,51 @@ filepath: <relative-path-from-src>
 <file-content>
 ```
 
-For example:
-filepath: main/java/com/example/ExampleMod.java
+Example format:
+filepath: main/java/asd/itamio/healcommand/HealCommand.java
 ```java
-package com.example;
-...
+package asd.itamio.healcommand;
+
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+
+public class HealCommand implements ModInitializer {{
+    @Override
+    public void onInitialize() {{
+        // Your code here
+    }}
+}}
 ```
 
-Do NOT include build.gradle, settings.gradle, gradle.properties, gradlew, or gradlew.bat — only source files."""
+## IMPORTANT
+- Do NOT include build.gradle, settings.gradle, gradle.properties, gradlew, or gradlew.bat
+- Do NOT create empty or placeholder classes
+- Every class must have complete, working implementation
+- Include all necessary imports
+- Ensure all files are syntactically correct Java code"""
 
 
 # ── Phase 1: Parse AI Response ───────────────────────────────────────────────
 
 def extract_ai_files(airesponse_text: str) -> dict[str, str]:
     files: dict[str, str] = {}
-    pending_path: str = ""
+    
     pattern = re.compile(r"```([a-zA-Z0-9_+\-]*)\n(.*?)\n```", re.DOTALL)
     prev_end: int | None = None
+    pending_path: str = ""
 
     for m in pattern.finditer(airesponse_text):
-        lang_spec = m.group(1)
         raw_content = m.group(2)
+        lang_spec = m.group(1)
 
         s = raw_content.strip().strip("`*[]'\"")
         content_is_path = False
         if "/" in s:
             last_part = s.split("/")[-1]
             if "." in last_part and not last_part.startswith("."):
-                pending_path = s
-                content_is_path = True
+                if not any(kw in s for kw in ("package ", "import ", "class ", "public ", "private ", "protected ", "void ", "return ", "//", "/*", "=>", "->")):
+                    pending_path = s
+                    content_is_path = True
 
         if content_is_path:
             prev_end = m.end()
@@ -302,29 +344,31 @@ def extract_ai_files(airesponse_text: str) -> dict[str, str]:
                 if "/" in s:
                     last_part = s.split("/")[-1]
                     if "." in last_part and not last_part.startswith("."):
-                        filepath = s
-                        break
+                        if not any(kw in s for kw in ("package ", "import ", "class ", "public ", "private ", "protected ", "void ", "return ", "//", "/*", "=>", "->")):
+                            filepath = s
+                            break
 
         if not filepath:
             prev_end = m.end()
             continue
 
-        code_patterns = ["package ", "import ", " class ", "public ", "private ",
-                         "protected ", " @", "//", "/*", " =>", " ->"]
-        if any(p in filepath for p in code_patterns):
+        if any(p in filepath for p in ("package ", "import ", "class ", "public ", "private ", "protected ", "@", "//", "/*", "=>", "->", "=>", "->")):
             prev_end = m.end()
             continue
+
         for segment in filepath.split("/"):
             if len(segment) > 120:
-                prev_end = m.end()
                 filepath = ""
-                continue
+                break
+
         if not filepath:
+            prev_end = m.end()
             continue
 
-        for prefix in ("./",):
+        for prefix in ("./", "src/", "src/main/", "main/"):
             if filepath.startswith(prefix):
                 filepath = filepath[len(prefix):]
+                break
 
         build_files = {
             "build.gradle", "build.gradle.kts",
@@ -342,11 +386,34 @@ def extract_ai_files(airesponse_text: str) -> dict[str, str]:
         clean_content = "\n".join(clean_lines).strip()
 
         if filepath and clean_content and filepath not in files:
-            files[filepath] = clean_content
+            if len(clean_content) > 20:
+                files[filepath] = clean_content
 
         prev_end = m.end()
 
     return files
+
+
+def validate_java_content(filepath: str, content: str) -> bool:
+    has_package = "package " in content
+    has_class = "class " in content or "interface " in content or "enum " in content
+    has_public = "public " in content
+    has_meaningful = len(content) > 100
+    
+    if not (has_package or has_class or has_public):
+        return False
+    if not has_meaningful:
+        return False
+    
+    code_patterns = [
+        "import ", "public class", "public interface", "public enum",
+        "void ", "public void", "private void", "protected void",
+        "@", "//", "/*"
+    ]
+    if not any(p in content for p in code_patterns):
+        return False
+    
+    return True
 
 
 # ── Phase 1: Write files to bundle structure ─────────────────────────────────
@@ -955,6 +1022,7 @@ def retry_cycle(
             temperature=AI_TEMPERATURE,
             stream=True,
             size_limit=MAX_RESPONSE_BYTES,
+            reasoning_effort=AI_REASONING_EFFORT,
         )
     except ResponseTooLarge:
         log("  ERROR: AI response too large")
@@ -1170,7 +1238,7 @@ def main() -> int:
             log(f"  Invalid loader: {loader}")
             return 1
 
-    author = args.author.strip() or "ModAuthor"
+    author = "itamio"
 
     log(f"\n  Creating mod for: {mc_version} ({loader})")
     log(f"  Description: {description[:100]}...")
@@ -1252,6 +1320,7 @@ def main() -> int:
             temperature=AI_TEMPERATURE,
             stream=True,
             size_limit=20000,
+            reasoning_effort=AI_REASONING_EFFORT,
         )
     except RuntimeError as e:
         log(f"  ERROR: AI request failed: {e}")
@@ -1260,14 +1329,13 @@ def main() -> int:
     metadata: dict[str, Any] = {}
     try:
         metadata = json.loads(meta_response)
-        # Ensure required fields
+        metadata["authors"] = ["itamio"]
         metadata.setdefault("mod_id", "mymod")
         metadata.setdefault("name", "My Mod")
         metadata.setdefault("mod_version", "1.0.0")
-        metadata.setdefault("group", f"com.{author.lower()}.{metadata.get('mod_id', 'mymod')}")
+        metadata.setdefault("group", f"asd.itamio.{metadata.get('mod_id', 'mymod')}")
         metadata.setdefault("entrypoint_class",
-                           f"com.{author.lower()}.{metadata.get('mod_id', 'mymod')}.{metadata.get('name', 'MyMod').replace(' ', '')}")
-        metadata.setdefault("authors", [author])
+                           f"asd.itamio.{metadata.get('mod_id', 'mymod')}.{metadata.get('name', 'MyMod').replace(' ', '')}")
         metadata.setdefault("license", "MIT")
         metadata.setdefault("description", description)
         metadata.setdefault("runtime_side", "both")
@@ -1278,16 +1346,15 @@ def main() -> int:
     except json.JSONDecodeError:
         log(f"  ERROR: AI returned invalid JSON for metadata")
         log(f"  Response: {meta_response[:200]}")
-        # Fallback to basic metadata
         slug = make_slug(description[:20], loader, mc_version)
         metadata = {
             "mod_id": slug[:30],
             "name": description[:50],
             "mod_version": "1.0.0",
-            "group": f"com.{author.lower()}.{slug[:20]}",
-            "entrypoint_class": f"com.{author.lower()}.{slug[:20]}.{slug[:20].title().replace('-', '')}Mod",
+            "group": f"asd.itamio.{slug[:20]}",
+            "entrypoint_class": f"asd.itamio.{slug[:20]}.{slug[:20].title().replace('-', '')}Mod",
             "description": description,
-            "authors": [author],
+            "authors": ["itamio"],
             "license": "MIT",
             "runtime_side": "both",
         }
@@ -1316,7 +1383,33 @@ def main() -> int:
         key_mgr.release(api_key)
         return 0
 
+    # ── Streaming Progress Display ──────────────────────────────────────
+    print()
+    print("=" * 72)
+    print(f"  AI Code Generation")
+    print(f"  Model: {AI_MODEL} (reasoning={AI_REASONING_EFFORT})")
+    print("=" * 72)
+    print()
+    print(f"{'─' * 72}")
+    print(f"  {'Target':<30}  Status")
+    print(f"{'─' * 72}")
+    print(f"  {'Code Generation':<30}  {Colors.GREY}Queued{Colors.RESET}")
+    print()
+
+    status_line = "  Code Generation"
+
+    def _update_status(status: str, detail: str = "") -> None:
+        label, color = _STATUS_LABELS.get(status, (status, Colors.RESET))
+        text = f"{color}{label}{Colors.RESET}"
+        if detail:
+            text += f"  ({detail})"
+        print(f"\033[2A\r\033[K  {status_line:<30}  {text}", flush=True)
+        print(f"\033[1B", end="", flush=True)
+
+    _update_status("request_sent")
+
     try:
+        _update_status("waiting")
         airesponse = send_prompt(
             model=AI_MODEL,
             base_url=AI_BASE_URL,
@@ -1328,32 +1421,56 @@ def main() -> int:
             temperature=AI_TEMPERATURE,
             stream=True,
             size_limit=MAX_RESPONSE_BYTES,
+            reasoning_effort=AI_REASONING_EFFORT,
+            status_callback=lambda name, status, detail: _update_status(status, detail),
+            target_name="Code Generation",
         )
+        _update_status("complete", f"{len(airesponse):,} chars")
     except ResponseTooLarge:
+        print(f"\033[2A\r\033[K  {status_line:<30}  {Colors.RED}FAILED (response too large){Colors.RESET}")
+        print()
         log(f"  ERROR: AI response too large")
         key_mgr.release(api_key)
         return 1
     except RuntimeError as e:
+        print(f"\033[2A\r\033[K  {status_line:<30}  {Colors.RED}FAILED{Colors.RESET}")
+        print()
         log(f"  ERROR: AI request failed: {e}")
         key_mgr.release(api_key)
         return 1
 
     output.airesponse_path.write_text(airesponse, encoding="utf-8")
+    print()
+    print(f"{'─' * 72}")
+    print()
 
     # ── Extract AI files ─────────────────────────────────────────────────
     log(f"  Extracting source files from AI response...")
     extracted_files = extract_ai_files(airesponse)
-    if not extracted_files:
-        log(f"  ERROR: No source files could be extracted from AI response")
+    
+    valid_files = {}
+    invalid_count = 0
+    for filepath, content in extracted_files.items():
+        if validate_java_content(filepath, content):
+            valid_files[filepath] = content
+        else:
+            invalid_count += 1
+    
+    if not valid_files:
+        log(f"  ERROR: No valid source files could be extracted from AI response")
         log(f"  Check {output.airesponse_path} for the raw response")
+        log(f"  Total blocks found: {len(extracted_files)}, Valid: {len(valid_files)}, Invalid: {invalid_count}")
         key_mgr.release(api_key)
         return 1
 
-    log(f"  Extracted {len(extracted_files)} file(s):")
-    for fpath in sorted(extracted_files.keys()):
+    if invalid_count > 0:
+        log(f"  WARNING: {invalid_count} block(s) failed validation")
+
+    log(f"  Extracted {len(valid_files)} valid file(s):")
+    for fpath in sorted(valid_files.keys()):
         log(f"    - {fpath}")
 
-    write_ai_files_to_bundle(extracted_files, metadata, mc_version, loader, output)
+    write_ai_files_to_bundle(valid_files, metadata, mc_version, loader, output)
     log(f"  Source files saved to {output.src_dir}")
 
     # ── Phase 2: Build ───────────────────────────────────────────────────

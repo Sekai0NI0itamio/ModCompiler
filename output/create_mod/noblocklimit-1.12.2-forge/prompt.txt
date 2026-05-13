@@ -1,0 +1,2172 @@
+You are an expert Minecraft mod developer with deep knowledge of 1.12.2 and forge. Create a COMPLETE, COMPILABLE Minecraft mod based on the description below.
+
+## Mod Description
+I want to make a mod that removes the limit for command block modifications, for instance many players see this message when the user the /fill command: Too Many blocks in the specified area C520251) 327683, and my goal is to remove that limit and allow players to fill in inifintely blocks, and not only remove the limit, but also optimize and make the fill terrain be smart instead of linear fill and calculations.
+
+## Mod Metadata (CRITICAL - follow exactly)
+- mod_id: noblocklimit
+- name: No Block Limit
+- version: 1.0.0
+- group: net.itamio  <-- USE THIS PACKAGE EXACTLY
+- entrypoint: net.itamio.noblocklimit.NoBlockLimit  <-- USE THIS CLASS NAME EXACTLY
+- runtime_side: both
+- authors: ["itamio"]  <-- ALWAYS use itamio as author
+- license: MIT
+
+## Target
+- Minecraft version: 1.12.2
+- Mod loader: forge
+
+## Loader-Specific Requirements
+- Use @Mod + @Mod.EventHandler for Forge events
+- mcmod.info for 1.12.2 metadata
+- mods.toml for 1.13+ Forge
+- Register items/blocks in FMLInitializationEvent or RegistryEvent
+- Use @SubscribeEvent for registry events
+
+## Reference Template Code
+The following is the template code for this version and loader. Follow the same patterns, package structure, and annotations EXACTLY:
+```java
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/mcp/MethodsReturnNonnullByDefault.java
+package mcp;
+import javax.annotation.Nonnull;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+import javax.annotation.meta.TypeQualifierDefault;
+
+/**
+ * This annotation can be applied to a package, class or method to indicate that
+ * the method in that element are nonnull by default unless there is:
+ * <ul>
+ * <li>An explicit nullness annotation
+ * <li>The method overrides a method in a superclass (in which case the
+ * annotation of the corresponding method in the superclass applies)
+ * <li> there is a default parameter annotation applied to a more tightly nested
+ * element.
+ * </ul>
+ *
+ */
+@Documented
+@Nonnull
+@TypeQualifierDefault(ElementType.METHOD) // Note: This is a copy of javax.annotation.ParametersAreNonnullByDefault with target changed to METHOD
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MethodsReturnNonnullByDefault {}
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/mcp/client/Start.java
+package mcp.client;
+
+import java.io.File;
+import java.lang.reflect.Field;
+import java.util.Arrays;
+
+import net.minecraft.client.main.Main;
+
+public class Start
+{
+    public static void main(String[] args)
+    {
+        /* 
+         * start minecraft game application
+         * --version is just used as 'launched version' in snoop data and is required
+         * Working directory is used as gameDir if not provided
+         */
+        Main.main(concat(new String[]{"--version", "mcp", "--accessToken", "0", "--assetsDir", "assets", "--assetIndex", "1.12", "--userProperties", "{}"}, args));
+    }
+    
+    public static <T> T[] concat(T[] first, T[] second)
+    {
+        T[] result = Arrays.copyOf(first, first.length + second.length);
+        System.arraycopy(second, 0, result, first.length, second.length);
+        return result;
+    }
+}
+
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/advancements/critereon/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.advancements.critereon;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/advancements/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.advancements;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/block/material/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.block.material;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/block/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.block;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/block/properties/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.block.properties;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/block/state/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.block.state;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/block/state/pattern/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.block.state.pattern;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/audio/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.audio;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/entity/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.entity;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/achievement/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui.achievement;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/advancements/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui.advancements;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/chat/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui.chat;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/inventory/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui.inventory;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/recipebook/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui.recipebook;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/spectator/categories/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui.spectator.categories;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/spectator/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui.spectator;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/gui/toasts/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.gui.toasts;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/main/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.main;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/model/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.model;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/multiplayer/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.multiplayer;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/network/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.network;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/particle/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.particle;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/player/inventory/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.player.inventory;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/block/model/multipart/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.block.model.multipart;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/block/model/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.block.model;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/block/statemap/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.block.statemap;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/chunk/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.chunk;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/color/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.color;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/culling/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.culling;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/debug/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.debug;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/entity/layers/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.entity.layers;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/entity/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.entity;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/texture/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.texture;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/tileentity/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.tileentity;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/renderer/vertex/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.renderer.vertex;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/resources/data/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.resources.data;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/resources/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.resources;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/settings/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.settings;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/shader/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.shader;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/tutorial/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.tutorial;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/client/util/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.client.util;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/command/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.command;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/command/server/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.command.server;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/crash/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.crash;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/creativetab/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.creativetab;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/dispenser/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.dispenser;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/enchantment/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.enchantment;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/ai/attributes/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.ai.attributes;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/ai/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.ai;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/boss/dragon/phase/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.boss.dragon.phase;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/boss/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.boss;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/effect/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.effect;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/item/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.item;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/monster/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.monster;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/passive/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.passive;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/player/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.player;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/entity/projectile/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.entity.projectile;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/init/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.init;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/inventory/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.inventory;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/item/crafting/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.item.crafting;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/item/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.item;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/nbt/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.nbt;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/datasync/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.datasync;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/handshake/client/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.handshake.client;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/handshake/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.handshake;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/login/client/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.login.client;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/login/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.login;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/login/server/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.login.server;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/play/client/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.play.client;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/play/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.play;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/play/server/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.play.server;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/rcon/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.rcon;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/status/client/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.status.client;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/status/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.status;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/network/status/server/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.network.status.server;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/pathfinding/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.pathfinding;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/potion/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.potion;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/profiler/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.profiler;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/realms/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.realms;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/scoreboard/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.scoreboard;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/server/dedicated/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.server.dedicated;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/server/gui/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.server.gui;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/server/integrated/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.server.integrated;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/server/management/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.server.management;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/server/network/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.server.network;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/server/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.server;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/stats/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.stats;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/tileentity/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.tileentity;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/datafix/fixes/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util.datafix.fixes;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/datafix/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util.datafix;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/datafix/walkers/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util.datafix.walkers;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/math/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util.math;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/registry/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util.registry;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/text/event/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util.text.event;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/text/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util.text;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/util/text/translation/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.util.text.translation;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/village/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.village;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/biome/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.biome;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/border/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.border;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/chunk/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.chunk;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/chunk/storage/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.chunk.storage;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/end/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.end;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/gen/feature/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.gen.feature;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/gen/layer/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.gen.layer;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/gen/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.gen;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/gen/structure/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.gen.structure;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/gen/structure/template/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.gen.structure.template;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/storage/loot/conditions/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.storage.loot.conditions;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/storage/loot/functions/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.storage.loot.functions;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/storage/loot/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.storage.loot;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/storage/loot/properties/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.storage.loot.properties;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// build/tmp/expandedArchives/forge-1.12.2-14.23.5.2864-inject_src.jar_9dc3fbaa5ca7b66255ea5693cd3b5294/net/minecraft/world/storage/package-info.java
+// Auto generated package-info by MCP
+@ParametersAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+package net.minecraft.world.storage;
+
+import mcp.MethodsReturnNonnullByDefault;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+// src/main/java/com/example/examplemod/ExampleMod.java
+package com.example.examplemod;
+
+import net.minecraft.init.Blocks;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+
+@Mod(modid = ExampleMod.MODID, name = ExampleMod.NAME, version = ExampleMod.VERSION)
+public class ExampleMod {
+    public static final String MODID = "examplemod";
+    public static final String NAME = "Example Mod";
+    public static final String VERSION = "1.0";
+
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        System.out.println("DIRT BLOCK >> " + Blocks.DIRT.getRegistryName());
+    }
+}
+
+
+// src/main/java/com/hostilemobs/HostileMobsMod.java
+package com.hostilemobs;
+
+import com.hostilemobs.ai.EntityAIZombieBlockPlace;
+import com.hostilemobs.config.HostileMobsConfig;
+import java.io.File;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.monster.EntityZombie;
+import net.minecraft.entity.monster.IMob;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.world.World;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = HostileMobsMod.MOD_ID, name = HostileMobsMod.NAME, version = HostileMobsMod.VERSION)
+@Mod.EventBusSubscriber(modid = HostileMobsMod.MOD_ID)
+public final class HostileMobsMod {
+    public static final String MOD_ID = "hostilemobs";
+    public static final String NAME = "Hostile Mobs";
+    public static final String VERSION = "1.0.0";
+    public static final Logger LOGGER = LogManager.getLogger(NAME);
+
+    private static final long UPDATE_INTERVAL_TICKS = 20L;
+    private static HostileMobsConfig config;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        config = new HostileMobsConfig(new File(event.getModConfigurationDirectory(), "hostilemobs.txt"));
+        config.load();
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.player.world.isRemote) {
+            return;
+        }
+
+        LOGGER.info("Player {} joined - activating all hostile mobs", event.player.getName());
+        activateAllHostileMobs(event.player.world, event.player);
+    }
+
+    @SubscribeEvent
+    public static void onEntityJoin(EntityJoinWorldEvent event) {
+        if (event.getWorld().isRemote || !(event.getEntity() instanceof EntityLiving) || !(event.getEntity() instanceof IMob)) {
+            return;
+        }
+
+        EntityLiving mob = (EntityLiving) event.getEntity();
+        
+        // Give zombies block-placing abilities
+        if (mob instanceof EntityZombie) {
+            setupZombieWithBlocks((EntityZombie) mob);
+        }
+        
+        // Set nearest player as target
+        EntityPlayer nearestPlayer = findNearestPlayer(mob.world, mob);
+        if (nearestPlayer != null) {
+            mob.setAttackTarget(nearestPlayer);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || event.world == null || event.world.isRemote) {
+            return;
+        }
+
+        if ((event.world.getTotalWorldTime() % UPDATE_INTERVAL_TICKS) != 0L) {
+            return;
+        }
+
+        // Periodically update hostile mob targets
+        for (Entity entity : event.world.loadedEntityList) {
+            if (entity instanceof EntityLiving && entity instanceof IMob) {
+                EntityLiving mob = (EntityLiving) entity;
+                EntityPlayer nearestPlayer = findNearestPlayer(mob.world, mob);
+                if (nearestPlayer != null) {
+                    mob.setAttackTarget(nearestPlayer);
+                }
+            }
+        }
+    }
+
+    private static void activateAllHostileMobs(World world, EntityPlayer player) {
+        for (Entity entity : world.loadedEntityList) {
+            if (entity instanceof EntityLiving && entity instanceof IMob) {
+                EntityLiving mob = (EntityLiving) entity;
+                mob.setAttackTarget(player);
+                
+                if (mob instanceof EntityZombie && !hasBlockPlacingAI((EntityZombie) mob)) {
+                    setupZombieWithBlocks((EntityZombie) mob);
+                }
+            }
+        }
+    }
+
+    private static void setupZombieWithBlocks(EntityZombie zombie) {
+        // Check if already has block-placing AI
+        if (hasBlockPlacingAI(zombie)) {
+            return;
+        }
+        
+        // Add block-placing AI task (high priority)
+        zombie.tasks.addTask(1, new EntityAIZombieBlockPlace(zombie));
+        
+        LOGGER.info("Zombie equipped with block-placing AI and {} blocks", 
+            EntityAIZombieBlockPlace.getInventory(zombie).getBlockCount());
+    }
+
+    private static boolean hasBlockPlacingAI(EntityZombie zombie) {
+        return zombie.tasks.taskEntries.stream()
+            .anyMatch(entry -> entry.action instanceof EntityAIZombieBlockPlace);
+    }
+
+    private static EntityPlayer findNearestPlayer(World world, EntityLiving mob) {
+        EntityPlayer nearest = null;
+        double bestDistanceSq = Double.MAX_VALUE;
+
+        for (EntityPlayer player : world.playerEntities) {
+            if (player == null || !player.isEntityAlive() || player.isSpectator() || player.capabilities.disableDamage) {
+                continue;
+            }
+
+            double distanceSq = mob.getDistanceSq(player);
+            if (distanceSq >= bestDistanceSq) {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
+            nearest = player;
+        }
+
+        return nearest;
+    }
+}
+
+
+// src/main/java/com/hostilemobs/ai/EntityAIZombieBlockPlace.java
+package com.hostilemobs.ai;
+
+import net.minecraft.block.Block;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.ai.EntityAIBase;
+import net.minecraft.entity.monster.EntityZombie;
+import net.minecraft.init.Blocks;
+import net.minecraft.pathfinding.Path;
+import net.minecraft.pathfinding.PathPoint;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+import java.util.*;
+
+/**
+ * Custom AI for zombies that allows them to place blocks to reach their target.
+ * This AI recalculates pathfinding to account for block placement possibilities.
+ */
+public class EntityAIZombieBlockPlace extends EntityAIBase {
+    private final EntityZombie zombie;
+    private final World world;
+    private ZombieBlockInventory inventory;
+    private BlockPos lastTargetPos;
+    private int pathRecalculationDelay;
+    private static final int PATH_RECALC_INTERVAL = 20;
+    private static final double BLOCK_PLACE_RANGE = 4.0D;
+    private static final Map<EntityZombie, ZombieBlockInventory> ZOMBIE_INVENTORIES = new WeakHashMap<>();
+
+    public EntityAIZombieBlockPlace(EntityZombie zombie) {
+        this.zombie = zombie;
+        this.world = zombie.world;
+        
+        // Use shared inventory map to persist across AI resets
+        if (!ZOMBIE_INVENTORIES.containsKey(zombie)) {
+            ZOMBIE_INVENTORIES.put(zombie, new ZombieBlockInventory());
+        }
+        this.inventory = ZOMBIE_INVENTORIES.get(zombie);
+        
+        this.setMutexBits(1);
+    }
+    
+    public static ZombieBlockInventory getInventory(EntityZombie zombie) {
+        return ZOMBIE_INVENTORIES.get(zombie);
+    }
+
+    @Override
+    public boolean shouldExecute() {
+        EntityLivingBase target = zombie.getAttackTarget();
+        if (target == null || !target.isEntityAlive()) {
+            return false;
+        }
+        return inventory.hasBlocks();
+    }
+
+    @Override
+    public boolean shouldContinueExecuting() {
+        EntityLivingBase target = zombie.getAttackTarget();
+        return target != null && target.isEntityAlive() && inventory.hasBlocks();
+    }
+
+    @Override
+    public void startExecuting() {
+        pathRecalculationDelay = 0;
+    }
+
+    @Override
+    public void updateTask() {
+        EntityLivingBase target = zombie.getAttackTarget();
+        if (target == null) {
+            return;
+        }
+
+        pathRecalculationDelay--;
+        
+        if (pathRecalculationDelay <= 0) {
+            pathRecalculationDelay = PATH_RECALC_INTERVAL;
+            
+            // Check if zombie needs to place a block to continue pathfinding
+            if (shouldPlaceBlock(target)) {
+                BlockPos placePos = findBlockPlacementPosition(target);
+                if (placePos != null && inventory.hasBlocks()) {
+                    placeBlock(placePos);
+                }
+            }
+        }
+    }
+
+    private boolean shouldPlaceBlock(EntityLivingBase target) {
+        // Check if there's a vertical or horizontal obstacle
+        Path currentPath = zombie.getNavigator().getPath();
+        if (currentPath == null || currentPath.isFinished()) {
+            return checkDirectObstacle(target);
+        }
+        return false;
+    }
+
+    private boolean checkDirectObstacle(EntityLivingBase target) {
+        BlockPos zombiePos = zombie.getPosition();
+        BlockPos targetPos = target.getPosition();
+        
+        // Check if target is higher and there's a wall
+        if (targetPos.getY() > zombiePos.getY()) {
+            // Check blocks in front of zombie
+            double dx = targetPos.getX() - zombiePos.getX();
+            double dz = targetPos.getZ() - zombiePos.getZ();
+            double distance = Math.sqrt(dx * dx + dz * dz);
+            
+            if (distance > 0.1D) {
+                dx /= distance;
+                dz /= distance;
+                
+                BlockPos checkPos = zombiePos.add((int) Math.round(dx), 0, (int) Math.round(dz));
+                return !world.isAirBlock(checkPos) || !world.isAirBlock(checkPos.up());
+            }
+        }
+        
+        return false;
+    }
+
+    private BlockPos findBlockPlacementPosition(EntityLivingBase target) {
+        BlockPos zombiePos = zombie.getPosition();
+        BlockPos targetPos = target.getPosition();
+        
+        // Calculate direction to target
+        double dx = targetPos.getX() - zombiePos.getX();
+        double dy = targetPos.getY() - zombiePos.getY();
+        double dz = targetPos.getZ() - zombiePos.getZ();
+        double horizontalDist = Math.sqrt(dx * dx + dz * dz);
+        
+        if (horizontalDist < 0.1D) {
+            return null;
+        }
+        
+        // Normalize horizontal direction
+        dx /= horizontalDist;
+        dz /= horizontalDist;
+        
+        // Try to place blocks to create a path upward or forward
+        List<BlockPos> candidates = new ArrayList<>();
+        
+        // Forward positions
+        for (int dist = 1; dist <= 3; dist++) {
+            BlockPos forward = zombiePos.add((int) Math.round(dx * dist), 0, (int) Math.round(dz * dist));
+            
+            // Check if we can place a block here (air block with solid block below)
+            if (world.isAirBlock(forward) && canPlaceBlockAt(forward)) {
+                candidates.add(forward);
+            }
+            
+            // Check one block up (for climbing)
+            BlockPos forwardUp = forward.up();
+            if (world.isAirBlock(forwardUp) && canPlaceBlockAt(forwardUp)) {
+                candidates.add(forwardUp);
+            }
+        }
+        
+        // Return the first valid candidate
+        return candidates.isEmpty() ? null : candidates.get(0);
+    }
+
+    private boolean canPlaceBlockAt(BlockPos pos) {
+        if (!world.isAirBlock(pos)) {
+            return false;
+        }
+        
+        // Check if there's a solid block below or adjacent
+        BlockPos below = pos.down();
+        if (world.getBlockState(below).isFullBlock()) {
+            return true;
+        }
+        
+        // Check adjacent blocks for support
+        for (BlockPos adjacent : new BlockPos[]{pos.north(), pos.south(), pos.east(), pos.west()}) {
+            if (world.getBlockState(adjacent).isFullBlock()) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    private void placeBlock(BlockPos pos) {
+        Block blockToPlace = inventory.consumeBlock();
+        if (blockToPlace != null && zombie.getDistance(pos.getX(), pos.getY(), pos.getZ()) < BLOCK_PLACE_RANGE) {
+            world.setBlockState(pos, blockToPlace.getDefaultState(), 3);
+            
+            // Recalculate path after placing block
+            EntityLivingBase target = zombie.getAttackTarget();
+            if (target != null) {
+                zombie.getNavigator().tryMoveToEntityLiving(target, 1.0D);
+            }
+        }
+    }
+
+    /**
+     * Internal inventory system for zombie blocks
+     */
+    public static class ZombieBlockInventory {
+        private final List<Block> blocks;
+        
+        public ZombieBlockInventory() {
+            this.blocks = new ArrayList<>();
+            initializeBlocks();
+        }
+        
+        private void initializeBlocks() {
+            Random random = new Random();
+            int totalBlocks = 15 + random.nextInt(6); // 15-20 blocks
+            
+            Block[] availableBlocks = {
+                Blocks.COBBLESTONE,
+                Blocks.DIRT,
+                Blocks.DIRT, // Coarse dirt (metadata 1)
+                Blocks.MOSSY_COBBLESTONE
+            };
+            
+            for (int i = 0; i < totalBlocks; i++) {
+                blocks.add(availableBlocks[random.nextInt(availableBlocks.length)]);
+            }
+        }
+        
+        public boolean hasBlocks() {
+            return !blocks.isEmpty();
+        }
+        
+        public Block consumeBlock() {
+            if (blocks.isEmpty()) {
+                return null;
+            }
+            return blocks.remove(0);
+        }
+        
+        public int getBlockCount() {
+            return blocks.size();
+        }
+    }
+}
+
+
+// src/main/java/com/hostilemobs/config/HostileMobsConfig.java
+package com.hostilemobs.config;
+
+import com.hostilemobs.HostileMobsMod;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
+
+public class HostileMobsConfig {
+    private final File file;
+    private boolean enableZombieBlockPlacing = true;
+    private int minZombieBlocks = 15;
+    private int maxZombieBlocks = 20;
+    private long lastModified = -1L;
+
+    public HostileMobsConfig(File file) {
+        this.file = file;
+    }
+
+    public synchronized void load() {
+        if (!file.exists()) {
+            writeDefaultFile();
+        }
+        readFile();
+    }
+
+    public boolean isZombieBlockPlacingEnabled() {
+        return enableZombieBlockPlacing;
+    }
+
+    public int getMinZombieBlocks() {
+        return minZombieBlocks;
+    }
+
+    public int getMaxZombieBlocks() {
+        return maxZombieBlocks;
+    }
+
+    private void writeDefaultFile() {
+        List<String> lines = new ArrayList<>();
+        lines.add("# Hostile Mobs Configuration");
+        lines.add("# This mod makes hostile mobs actively hunt players");
+        lines.add("");
+        lines.add("# Enable zombies to place blocks to reach players");
+        lines.add("enable_zombie_block_placing=true");
+        lines.add("");
+        lines.add("# Minimum blocks zombies spawn with");
+        lines.add("min_zombie_blocks=15");
+        lines.add("");
+        lines.add("# Maximum blocks zombies spawn with");
+        lines.add("max_zombie_blocks=20");
+
+        try {
+            File parent = file.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            Files.write(file.toPath(), lines, StandardCharsets.UTF_8, 
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            HostileMobsMod.LOGGER.error("Could not write config file", e);
+        }
+    }
+
+    private void readFile() {
+        try {
+            List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            for (String line : lines) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                String[] parts = line.split("=", 2);
+                if (parts.length != 2) {
+                    continue;
+                }
+
+                String key = parts[0].trim();
+                String value = parts[1].trim();
+
+                switch (key.toLowerCase()) {
+                    case "enable_zombie_block_placing":
+                        enableZombieBlockPlacing = Boolean.parseBoolean(value);
+                        break;
+                    case "min_zombie_blocks":
+                        minZombieBlocks = parseIntSafe(value, 15);
+                        break;
+                    case "max_zombie_blocks":
+                        maxZombieBlocks = parseIntSafe(value, 20);
+                        break;
+                }
+            }
+            lastModified = file.lastModified();
+        } catch (IOException e) {
+            HostileMobsMod.LOGGER.error("Could not read config file", e);
+        }
+    }
+
+    private int parseIntSafe(String value, int defaultValue) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+}
+
+
+// src/main/java/com/hostilemobs/pathfinding/ZombiePathfinder.java
+package com.hostilemobs.pathfinding;
+
+import net.minecraft.block.Block;
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.pathfinding.Path;
+import net.minecraft.pathfinding.PathFinder;
+import net.minecraft.pathfinding.PathPoint;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+
+import java.util.*;
+
+/**
+ * Custom pathfinding engine for zombies that can place blocks.
+ * Extends standard pathfinding to consider block placement as a valid path option.
+ */
+public class ZombiePathfinder {
+    private final World world;
+    private final EntityLiving entity;
+    private final int maxBlocksToUse;
+    
+    private static final int MAX_SEARCH_NODES = 500;
+    private static final double BLOCK_PLACE_COST = 2.0D;
+    
+    public ZombiePathfinder(World world, EntityLiving entity, int maxBlocksToUse) {
+        this.world = world;
+        this.entity = entity;
+        this.maxBlocksToUse = maxBlocksToUse;
+    }
+    
+    /**
+     * Calculate a path that may include block placements
+     */
+    public ZombiePath findPath(BlockPos start, BlockPos target) {
+        PriorityQueue<PathNode> openSet = new PriorityQueue<>(Comparator.comparingDouble(n -> n.fScore));
+        Map<BlockPos, PathNode> allNodes = new HashMap<>();
+        Set<BlockPos> closedSet = new HashSet<>();
+        
+        PathNode startNode = new PathNode(start, 0, 0, heuristic(start, target), null, false);
+        openSet.add(startNode);
+        allNodes.put(start, startNode);
+        
+        int nodesExplored = 0;
+        
+        while (!openSet.isEmpty() && nodesExplored < MAX_SEARCH_NODES) {
+            PathNode current = openSet.poll();
+            nodesExplored++;
+            
+            if (current.pos.equals(target) || current.pos.distanceSq(target) < 4.0D) {
+                return reconstructPath(current);
+            }
+            
+            closedSet.add(current.pos);
+            
+            // Explore neighbors
+            for (PathNode neighbor : getNeighbors(current, target)) {
+                if (closedSet.contains(neighbor.pos)) {
+                    continue;
+                }
+                
+                if (neighbor.blocksUsed > maxBlocksToUse) {
+                    continue;
+                }
+                
+                PathNode existingNode = allNodes.get(neighbor.pos);
+                if (existingNode == null || neighbor.gScore < existingNode.gScore) {
+                    allNodes.put(neighbor.pos, neighbor);
+                    openSet.remove(existingNode);
+                    openSet.add(neighbor);
+                }
+            }
+        }
+        
+        return null; // No path found
+    }
+    
+    private List<PathNode> getNeighbors(PathNode current, BlockPos target) {
+        List<PathNode> neighbors = new ArrayList<>();
+        BlockPos pos = current.pos;
+        
+        // Standard movement directions
+        BlockPos[] directions = {
+            pos.north(), pos.south(), pos.east(), pos.west(),
+            pos.north().up(), pos.south().up(), pos.east().up(), pos.west().up(),
+            pos.up(), pos.down()
+        };
+        
+        for (BlockPos nextPos : directions) {
+            if (canWalkTo(nextPos)) {
+                // Normal walkable path
+                double moveCost = 1.0D;
+                if (nextPos.getY() > pos.getY()) {
+                    moveCost = 1.5D; // Climbing is more expensive
+                }
+                
+                neighbors.add(new PathNode(
+                    nextPos,
+                    current.gScore + moveCost,
+                    current.blocksUsed,
+                    heuristic(nextPos, target),
+                    current,
+                    false
+                ));
+            } else if (canPlaceBlockAt(nextPos) && current.blocksUsed < maxBlocksToUse) {
+                // Can place a block here to create a path
+                double moveCost = 1.0D + BLOCK_PLACE_COST;
+                
+                neighbors.add(new PathNode(
+                    nextPos,
+                    current.gScore + moveCost,
+                    current.blocksUsed + 1,
+                    heuristic(nextPos, target),
+                    current,
+                    true
+                ));
+            }
+        }
+        
+        return neighbors;
+    }
+    
+    private boolean canWalkTo(BlockPos pos) {
+        // Check if position is walkable (air with solid ground below)
+        if (!world.isAirBlock(pos) || !world.isAirBlock(pos.up())) {
+            return false;
+        }
+        
+        BlockPos below = pos.down();
+        return world.getBlockState(below).isFullBlock();
+    }
+    
+    private boolean canPlaceBlockAt(BlockPos pos) {
+        if (!world.isAirBlock(pos)) {
+            return false;
+        }
+        
+        // Must have solid support below or adjacent
+        BlockPos below = pos.down();
+        if (world.getBlockState(below).isFullBlock()) {
+            return true;
+        }
+        
+        // Check adjacent blocks
+        for (BlockPos adjacent : new BlockPos[]{pos.north(), pos.south(), pos.east(), pos.west()}) {
+            if (world.getBlockState(adjacent).isFullBlock()) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    private double heuristic(BlockPos from, BlockPos to) {
+        // Manhattan distance with vertical penalty
+        int dx = Math.abs(to.getX() - from.getX());
+        int dy = Math.abs(to.getY() - from.getY());
+        int dz = Math.abs(to.getZ() - from.getZ());
+        return dx + dz + (dy * 1.5D);
+    }
+    
+    private ZombiePath reconstructPath(PathNode endNode) {
+        List<PathStep> steps = new ArrayList<>();
+        PathNode current = endNode;
+        
+        while (current != null) {
+            steps.add(new PathStep(current.pos, current.requiresBlockPlacement));
+            current = current.parent;
+        }
+        
+        Collections.reverse(steps);
+        return new ZombiePath(steps);
+    }
+    
+    /**
+     * Node in the pathfinding graph
+     */
+    private static class PathNode {
+        final BlockPos pos;
+        final double gScore;
+        final int blocksUsed;
+        final double fScore;
+        final PathNode parent;
+        final boolean requiresBlockPlacement;
+        
+        PathNode(BlockPos pos, double gScore, int blocksUsed, double hScore, PathNode parent, boolean requiresBlockPlacement) {
+            this.pos = pos;
+            this.gScore = gScore;
+            this.blocksUsed = blocksUsed;
+            this.fScore = gScore + hScore;
+            this.parent = parent;
+            this.requiresBlockPlacement = requiresBlockPlacement;
+        }
+    }
+    
+    /**
+     * Represents a complete path with block placement information
+     */
+    public static class ZombiePath {
+        private final List<PathStep> steps;
+        
+        public ZombiePath(List<PathStep> steps) {
+            this.steps = steps;
+        }
+        
+        public List<PathStep> getSteps() {
+            return steps;
+        }
+        
+        public int getBlocksRequired() {
+            return (int) steps.stream().filter(s -> s.requiresBlockPlacement).count();
+        }
+    }
+    
+    /**
+     * Single step in a zombie path
+     */
+    public static class PathStep {
+        public final BlockPos pos;
+        public final boolean requiresBlockPlacement;
+        
+        public PathStep(BlockPos pos, boolean requiresBlockPlacement) {
+            this.pos = pos;
+            this.requiresBlockPlacement = requiresBlockPlacement;
+        }
+    }
+}
+
+
+// src/main/java/com/itamio/antiworldlag/AntiWorldLag.java
+package com.itamio.antiworldlag;
+
+import com.itamio.antiworldlag.config.AntiWorldLagConfig;
+import com.itamio.antiworldlag.handler.ChunkLoadHandler;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod(
+    modid = AntiWorldLag.MOD_ID,
+    name = AntiWorldLag.MOD_NAME,
+    version = AntiWorldLag.VERSION,
+    acceptedMinecraftVersions = "[1.12.2]"
+)
+public class AntiWorldLag {
+
+    public static final String MOD_ID  = "antiworldlag";
+    public static final String MOD_NAME = "Anti World Lag";
+    public static final String VERSION  = "1.0.0";
+
+    public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
+
+    @Mod.Instance(MOD_ID)
+    public static AntiWorldLag INSTANCE;
+
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        AntiWorldLagConfig.init(event.getSuggestedConfigurationFile());
+        LOGGER.info("[AntiWorldLag] Configuration loaded.");
+    }
+
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new ChunkLoadHandler());
+        LOGGER.info("[AntiWorldLag] Chunk protection active.");
+    }
+}
+
+
+// src/main/java/com/itamio/eurekavalkerianships/entity/EntitySeat.java
+package com.itamio.eurekavalkerianships.entity;
+
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.block.state.IBlockState;
+import com.itamio.eurekavalkerianships.block.BlockShipHelm;
+
+public class EntitySeat extends Entity {
+
+    private BlockPos helmPos;
+
+    public EntitySeat(World worldIn) {
+        super(worldIn);
+        this.setSize(0.0F, 0.0F);
+    }
+
+    public EntitySeat(World worldIn, BlockPos pos) {
+        this(worldIn);
+        this.helmPos = pos;
+        this.setPosition(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+    }
+
+    @Override
+    protected void entityInit() {
+    }
+
+    @Override
+    public void onUpdate() {
+        super.onUpdate();
+
+        if (!this.world.isRemote) {
+            if (this.getPassengers().isEmpty() || this.world.isAirBlock(new BlockPos(this))) {
+                this.setDead();
+            }
+        }
+    }
+
+    @Override
+    public double getMountedYOffset() {
+        return 0.0D; // Adjust height as necessary
+    }
+
+    @Override
+    protected boolean canTriggerWalking() {
+        return false;
+    }
+
+    @Override
+    public AxisAlignedBB getCollisionBoundingBox() {
+        return null;
+    }
+
+    @Override
+    public boolean canBePushed() {
+        return false;
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        return false;
+    }
+
+    @Override
+    protected void readEntityFromNBT(NBTTagCompound compound) {
+        if (compound.hasKey("HelmX")) {
+            this.helmPos = new BlockPos(compound.getInteger("HelmX"), compound.getInteger("HelmY"), compound.getInteger("HelmZ"));
+        }
+    }
+
+    @Override
+    protected void writeEntityToNBT(NBTTagCompound compound) {
+        if (this.helmPos != null) {
+            compound.setInteger("HelmX", this.helmPos.getX());
+            compound.setInteger("HelmY", this.helmPos.getY());
+            compound.setInteger("HelmZ", this.helmPos.getZ());
+        }
+    }
+
+    public BlockPos getHelmPos() {
+        return helmPos;
+    }
+}
+
+
+// src/main/java/com/itamio/stayinthelight/StayInTheLight.java
+package com.itamio.stayinthelight;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+
+@Mod(modid = "stayinthelight", name = "Stay In The Light", version = "1.0", acceptedMinecraftVersions = "[1.12.2]")
+public class StayInTheLight {
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        System.out.println("Stay In The Light Initialized");
+    }
+}
+
+
+
+```
+
+
+
+## Known Issues & Fixes for this version/loader
+
+---
+### NeoForge 26.1+ — FMLJavaModLoadingContext removed, use constructor injection (IEventBus, ModContainer) (41% match)
+## Issue
+
+NeoForge 26.1+ fails to compile when using `FMLJavaModLoadingContext` to get
+the mod event bus or register event listeners.
+
+## Error
+
+```
+error: cannot find symbol
+import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
+                                   ^
+  symbol:   class FMLJavaM
+
+---
+### Forge 1.16.5 — CommandSource.asPlayer() does not exist, use (ServerPlayerEntity) src.getEntity() (36% match)
+## Issue
+
+In Forge 1.16.5, `CommandSource` does not have an `asPlayer()` method. Code
+written for 1.17+ that calls `src.asPlayer()` will fail to compile.
+
+## Error
+
+```
+error: cannot find symbol
+    ServerPlayerEntity from = src.asPlayer();
+                                  ^
+  symbol:   method asPl
+
+---
+### Forge 1.21 (51.x) and 1.21.6-1.21.8 (56-58.x) — HUD overlay API not in public mod classpath (35% match)
+## Issue
+
+Forge 1.21 (51.x) and Forge 1.21.6-1.21.8 (56-58.x) fail to compile any mod that uses the HUD overlay API (`AddGuiOverlayLayersEvent`, `ForgeLayeredDraw`, `ForgeLayer`).
+
+## Error
+
+```
+package net.minecraftforge.client.gui.overlay does not exist
+import net.minecraftforge.client.gui.overlay
+
+---
+### Forge/NeoForge — sendMessage(Component, UUID) removed in 1.19+, use sendSystemMessage() (33% match)
+## Issue
+
+In Forge/NeoForge 1.19+, `ServerPlayer.sendMessage(Component, UUID)` was removed.
+The replacement is `sendSystemMessage(Component)` which takes only one argument.
+
+## Error
+
+```
+error: incompatible types: UUID cannot be converted to ResourceKey<ChatType>
+    player.sendMessage(Component.li
+
+---
+### Forge 1.21.3+ — Level.getGameRules() removed, must cast to ServerLevel (28% match)
+## Issue
+
+Forge 1.21.3+ fails to compile when calling `level.getGameRules()` on a `Level` variable.
+
+## Error
+
+```
+error: cannot find symbol
+    GameRules rules = level.getGameRules();
+                           ^
+  symbol:   method getGameRules()
+  location: variable level of type Level
+```
+
+## Roo
+
+
+## CRITICAL REQUIREMENTS
+1. Create ALL necessary Java source files for the mod to compile and work
+2. Create ALL necessary resource files (mixins.json, fabric.mod.json, mods.toml, etc.)
+3. Use the EXACT package structure: src/main/java/<group-path>/ (e.g., src/main/java/net/itamio/)
+4. For Fabric with split source: src/client/java/ for client-only code
+5. Include proper annotations, event handlers, and registrations
+6. The mod MUST actually do what the description says
+7. Use itamio as the author in ALL metadata files
+
+## Output Format (STRICT)
+For each file, output:
+
+filepath: <relative-path-from-src>
+```java
+<file-content>
+```
+
+Example format:
+filepath: main/java/asd/itamio/healcommand/HealCommand.java
+```java
+package asd.itamio.healcommand;
+
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+
+public class HealCommand implements ModInitializer {
+    @Override
+    public void onInitialize() {
+        // Your code here
+    }
+}
+```
+
+## IMPORTANT
+- Do NOT include build.gradle, settings.gradle, gradle.properties, gradlew, or gradlew.bat
+- Do NOT create empty or placeholder classes
+- Every class must have complete, working implementation
+- Include all necessary imports
+- Ensure all files are syntactically correct Java code

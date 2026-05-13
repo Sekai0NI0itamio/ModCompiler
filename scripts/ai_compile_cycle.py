@@ -593,25 +593,33 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
     # Wait a few seconds for GitHub to finalize artifacts
     time.sleep(5)
 
-    # Download all build artifacts with exponential backoff
+    # ── Download ALL build artifacts ─────────────────────────────────
+    # IMPORTANT: Each artifact is downloaded to its OWN subdirectory to
+    # avoid "file exists" conflicts — gh run download extracts the zip
+    # directly into the destination, so two artifacts with overlapping
+    # files (e.g. both contain "SUMMARY.md") will collide.
+    #
     artifact_downloaded = False
+    all_artifact_dir = artifacts_dir / BUILD_ARTIFACT_ALL
+    all_artifact_dir.mkdir(parents=True, exist_ok=True)
     for attempt in range(1, 7):
         try:
             _gh([
                 "run", "download", str(run_id),
-                "-R", repo, "-n", BUILD_ARTIFACT_ALL, "-D", str(artifacts_dir),
+                "-R", repo, "-n", BUILD_ARTIFACT_ALL, "-D", str(all_artifact_dir),
             ], token=token)
             artifact_downloaded = True
             break
-        except CycleError:
+        except CycleError as e:
             delay = min(5 * (2 ** (attempt - 1)), 60)
-            _log(f"  Download attempt {attempt} failed, retrying in {delay}s...")
+            _log(f"  all-mod-builds download attempt {attempt} failed, retrying in {delay}s...")
             time.sleep(delay)
 
-    # Publish artifact: check via API first, then download with patience
+    # ── Download publish artifact ────────────────────────────────────
+    publish_artifact_dir = artifacts_dir / BUILD_ARTIFACT_PUBLISH
+    publish_artifact_dir.mkdir(parents=True, exist_ok=True)
     publish_available = False
     try:
-        # Check if the artifact exists via the GitHub API
         api_out = _gh([
             "api", f"repos/{repo}/actions/runs/{run_id}/artifacts",
         ], token=token, retries=2)
@@ -629,7 +637,7 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
             try:
                 _gh([
                     "run", "download", str(run_id),
-                    "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(artifacts_dir),
+                    "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(publish_artifact_dir),
                 ], token=token)
                 break
             except CycleError:
@@ -655,7 +663,7 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
                     try:
                         _gh([
                             "run", "download", str(run_id),
-                            "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(artifacts_dir),
+                            "-R", repo, "-n", BUILD_ARTIFACT_PUBLISH, "-D", str(publish_artifact_dir),
                         ], token=token)
                         break
                     except CycleError:
