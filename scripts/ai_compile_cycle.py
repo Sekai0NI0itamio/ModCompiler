@@ -54,8 +54,8 @@ GH_RETRY_DELAY = 3.0
 AI_PROVIDERS = {
     "default": {
         "base_url": "https://integrate.api.nvidia.com/v1",
-        "model": "nvidia/nemotron-3-nano-30b-a3b",
-        "provider_name": "NVIDIA Nemotron",
+        "model": "stepfun-ai/step-3.5-flash",
+        "provider_name": "NVIDIA StepFun",
         "key_file": "C05LocalAi/keys/nvidia.txt",
         "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
     },
