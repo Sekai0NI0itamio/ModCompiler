@@ -113,11 +113,13 @@ This ensures:
 ```bash
 python3 scripts/test_all_templates.py
 ```
+⚠️ **Note:** To test locally you need ALL required Java versions (8, 16, 17, 21, and 25) installed. GitHub Actions is recommended for full testing!
 
 **To test a single range and loader:**
+First, make sure you have the required Java version for that range installed, then run:
 ```bash
 mkdir -p .workflow_artifacts/test-output/1.21.2-1.21.8-neoforge
-python3 scripts/verify_template.py --range-folder 1.21.2-1.21.8 --loader neoforge --output-dir .workflow_artifacts/test-output/1.21.2-1.21.8-neoforge
+python3 scripts/verify_template.py --range-folder 1.21.2-1.21.8 --loader neoforge --output-dir .workflow_artifacts/test-output/1.21.2-1.21.8-neoforge --timeout-minutes 10
 ```
 
 ### 3. Run Template Verify GitHub Workflow

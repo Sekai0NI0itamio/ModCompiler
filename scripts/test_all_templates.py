@@ -6,6 +6,7 @@ Runs verify_template.py for every range and loader in version-manifest.json.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -28,7 +29,7 @@ def main() -> int:
     overall_success = True
 
     # Set some fast build options
-    env = dict(sys.environ)
+    env = dict(os.environ)
     env["MODCOMPILER_GRADLE_TASKS"] = "jar"
     env["MODCOMPILER_FAST_BUILD"] = "0"
     env["MODCOMPILER_SKIP_TESTS"] = "1"
