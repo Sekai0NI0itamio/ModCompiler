@@ -54,6 +54,52 @@ GH_RETRY_DELAY = 3.0
 AI_NVIDIA_BASE = "https://api.deepseek.com/v1"
 AI_MODEL = "deepseek-chat"
 
+class CycleError(Exception):
+    pass
+
+
+def _log(msg: str) -> None:
+    ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    print(f"[{ts}] {msg}")
+
+
+def _detect_repo() -> str:
+    try:
+        url = subprocess.check_output(
+            ["git", "remote", "get-url", "origin"],
+            stderr=subprocess.DEVNULL, text=True).strip()
+    except subprocess.CalledProcessError:
+        raise CycleError("Could not detect GitHub repo from git remote.")
+    m = re.search(r"github\.com[:/]([^/]+/[^/]+?)(?:\.git)?$", url)
+    if not m:
+        raise CycleError(f"Could not parse owner/repo from remote URL: {url}")
+    return m.group(1)
+
+
+def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
+    env = os.environ.copy()
+    if token:
+        env["GH_TOKEN"] = token
+        env["GITHUB_TOKEN"] = token
+    last_err = ""
+    for attempt in range(1, retries + 1):
+        try:
+            result = subprocess.run(
+                ["gh"] + args,
+                capture_output=True, text=True, check=True,
+                env=env, timeout=120,
+            )
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            last_err = e.stderr[:300] if e.stderr else str(e)
+            if attempt < retries:
+                time.sleep(GH_RETRY_DELAY * attempt)
+        except subprocess.TimeoutExpired as e:
+            last_err = str(e)
+            if attempt < retries:
+                time.sleep(GH_RETRY_DELAY * attempt)
+    raise CycleError(f"gh {' '.join(args)} failed: {last_err}")
+
 
 def _create_key_manager() -> KeyManager:
     return KeyManager(
@@ -61,13 +107,47 @@ def _create_key_manager() -> KeyManager:
         env_vars=("DEEPSEEK_API_KEY", "DEEPSEEK_KEY"),
     )
 
-def _create_key_manager() -> KeyManager:
-    mode = "default" "default"
-    cfg = AI_PROVIDERS[mode]
-    return KeyManager(key_path=cfg["key_file"], env_vars=cfg["key_env_vars"])
+
 
 
 # ── Phase A: Extract files from AI responses and create build zip ───────────
+
+
+def _is_infrastructure_failure(build_log: str) -> bool:
+    if not build_log:
+        return False
+    infra_patterns = [
+        r"Read timed out", r"Connection reset", r"Could not download.*timeout",
+        r"Could not get resource.*timeout", r"SocketTimeoutException",
+        r"Could not GET.*timed out", r"Response 304.*has no content",
+        r"Could not resolve all artifacts", r"Could not download.*\\.jar",
+        r"Unable to resolve dependency", r"503.*Service Unavailable",
+        r"502.*Bad Gateway", r"504.*Gateway Timeout",
+    ]
+    for p in infra_patterns:
+        if re.search(p, build_log, re.IGNORECASE):
+            return True
+    return False
+
+
+def _map_slug_to_target_name(slug: str, target_names: list[str]) -> str | None:
+    parts = slug.rsplit("-", 1)
+    if len(parts) == 2:
+        loader = parts[0].rsplit("-", 1)[-1] if "-" in parts[0] else ""
+        version_part = parts[1]
+        if loader:
+            for tn in target_names:
+                tn_parts = tn.rsplit("-", 1)
+                if len(tn_parts) == 2:
+                    if tn_parts[1] == loader and version_part in tn_parts[0]:
+                        return tn
+    slug_last = "-".join(slug.rsplit("-", 2)[-2:]) if "-" in slug else slug
+    for tn in target_names:
+        if tn == slug_last or tn in slug or slug in tn:
+            return tn
+    return target_names[0] if len(target_names) == 1 else None
+
+
 
 def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
     """Parse AI response into a dict of filepath -> content.
@@ -144,9 +224,37 @@ def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
             prev_end = m.end()
             continue
 
+        # Validate: filepath must look like a real path, not Java source code
+        if filepath:
+            # Reject obvious code: contains Java keywords, annotations, or operators
+            code_patterns = ["package ", "import ", " class ", "public ", "private ",
+                             "protected ", " @", "//", "/*", " =>", " ->", "{|}", ";}"]
+            if any(p in filepath for p in code_patterns):
+                prev_end = m.end()
+                continue
+            # Reject if path segment is too long (>120 chars)
+            for segment in filepath.split("/"):
+                if len(segment) > 120:
+                    prev_end = m.end()
+                    filepath = ""
+                    continue
+            if not filepath:
+                continue
+
         for prefix in ("bundle/", "./"):
             if filepath.startswith(prefix):
                 filepath = filepath[len(prefix):]
+
+        # Skip build files - these are provided by the build workflow
+        build_files = {
+            "build.gradle", "build.gradle.kts",
+            "settings.gradle", "settings.gradle.kts",
+            "gradle.properties", "gradlew", "gradlew.bat",
+        }
+        filepath_lower = filepath.lower()
+        if filepath_lower in build_files or "/gradle/" in filepath_lower:
+            prev_end = m.end()
+            continue
 
         clean_lines = [
             ln for ln in raw_content.splitlines()
@@ -773,6 +881,13 @@ code_here_
 5. If the build error is about missing methods/classes, check the provided
    Minecraft source code and DIF entries for the correct API to use.
 6. Output ALL files that need changes, even if only small changes are needed.
+7. **CRITICAL: DO NOT create build files** — The build system already provides:
+   - build.gradle / build.gradle.kts
+   - settings.gradle / settings.gradle.kts
+   - gradle.properties
+   - gradlew / gradlew.bat
+   - gradle/wrapper/*
+   Creating these files will cause build failures. Only create source files.
 """
 
 
@@ -1062,7 +1177,7 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
                             choices = data.get("choices", [])
                             if choices:
                                 delta = choices[0].get("delta", {})
-                                content = delta.get("content", "") or delta.get("reasoning_content", "") or ""
+                                content = delta.get("content", "") or ""
                                 if content:
                                     full_response += content
                                     accumulated += len(content)
@@ -1416,6 +1531,22 @@ def run_compile_cycle(
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
+
+def _detect_token() -> str:
+    for var in ("GH_TOKEN", "GITHUB_TOKEN"):
+        t = os.environ.get(var, "").strip()
+        if t:
+            return t
+    try:
+        t = subprocess.check_output(
+            ["gh", "auth", "token"], stderr=subprocess.DEVNULL, text=True).strip()
+        if t:
+            return t
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    return ""
+
+
 def main() -> int:
     import argparse
     parser = argparse.ArgumentParser(
@@ -1440,7 +1571,7 @@ def main() -> int:
 
     repo = args.repo or _detect_repo()
     token = _detect_token()
-    key_mgr = _create_key_manager(False)
+    key_mgr = _create_key_manager()
 
     try:
         

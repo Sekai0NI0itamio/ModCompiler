@@ -446,7 +446,7 @@ def _send_prompt_to_nvidia(
                             choices = data.get("choices", [])
                             if choices:
                                 delta = choices[0].get("delta", {})
-                                content = delta.get("content", "") or delta.get("reasoning_content", "") or ""
+                                content = delta.get("content", "") or ""
                                 if content:
                                     full_response += content
                                     accumulated += len(content)

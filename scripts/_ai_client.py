@@ -84,7 +84,7 @@ def send_prompt(
                             data = json.loads(data_str)
                             for c in data.get("choices", []):
                                 delta = c.get("delta", {})
-                                text = delta.get("content", "") or delta.get("reasoning_content", "") or ""
+                                text = delta.get("content", "") or ""
                                 if text:
                                     full_response += text
                                     accumulated += len(text)
@@ -223,7 +223,7 @@ def benchmark_model(
                                 delta = c.get("delta", {})
                                 if delta.get("reasoning_content"):
                                     reasoning_chunks += 1
-                                text = delta.get("content", "") or delta.get("reasoning_content", "") or ""
+                                text = delta.get("content", "") or ""
                                 if text:
                                     full += text
                                     if len(full) > 100000:

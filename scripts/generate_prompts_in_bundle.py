@@ -146,8 +146,14 @@ def _collect_template_files(template_dir: Path, repo_root: Path) -> List[Dict]:
         "CREDITS.txt", "changelog.txt",
         "README.txt", "README.md",
         "build.log", ".ds_store", ".DS_Store",
+        # Build files - DO NOT include these as they are provided by the build workflow
+        "build.gradle", "build.gradle.kts",
+        "settings.gradle", "settings.gradle.kts",
+        "gradle.properties",
+        ".gitignore", ".gitattributes",
+        "LICENSE.txt", "CREDITS.txt", "changelog.txt", "README.txt",
     }
-    SKIP_DIR_PREFIXES = {".gradle", "build", ".git", "__pycache__"}
+    SKIP_DIR_PREFIXES = {".gradle", "build", ".git", "__pycache__", "gradle"}
 
     files = []
     if not template_dir or not template_dir.exists():
@@ -495,6 +501,15 @@ def generate_prompt(
     lines.append("9. **Loader-specific API patterns:**")
     lines.append("")
     lines.extend(_get_loader_instructions(loader, minecraft_version))
+    lines.append("")
+
+    lines.append("10. **DO NOT create build files** — The build system already provides:")
+    lines.append("    - build.gradle / build.gradle.kts")
+    lines.append("    - settings.gradle / settings.gradle.kts")
+    lines.append("    - gradle.properties")
+    lines.append("    - gradlew / gradlew.bat")
+    lines.append("    - gradle/wrapper/*")
+    lines.append("    Creating these files will cause build failures. Only create source files.")
     lines.append("")
 
     # Expected files based on template
