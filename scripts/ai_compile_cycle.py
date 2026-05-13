@@ -51,200 +51,18 @@ MAX_GH_RETRIES = 4
 GH_RETRY_DELAY = 3.0
 
 # --- AI Provider Config ---
-AI_PROVIDERS = {
-    "default": {
-        "base_url": "https://integrate.api.nvidia.com/v1",
-        "model": "deepseek-ai/deepseek-v4-pro",
-        "provider_name": "NVIDIA",
-        "key_file": "C05LocalAi/keys/nvidia.txt",
-        "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
-    },
-    "intelligent": {
-        "base_url": "https://integrate.api.nvidia.com/v1",
-        "model": "deepseek-chat",
-        "provider_name": "DeepSeek API",
-        "key_file": "C05LocalAi/keys/nvidia.txt",
-        "key_env_vars": ("DEEPSEEK_API_KEY", "DEEPSEEK_KEY", "NVIDIA_API_KEY", "NVAPI_KEY"),
-    },
-}
-
-AI_NVIDIA_BASE = AI_PROVIDERS["default"]["base_url"]
-AI_MODEL = AI_PROVIDERS["default"]["model"]
+AI_NVIDIA_BASE = "https://api.deepseek.com/v1"
+AI_MODEL = "deepseek-chat"
 
 
-def _get_ai_config(intelligent: bool = False) -> dict:
-    mode = "intelligent" if intelligent else "default"
-    return AI_PROVIDERS[mode]
+def _create_key_manager() -> KeyManager:
+    return KeyManager(
+        key_path="C05LocalAi/keys/deepseek.txt",
+        env_vars=("DEEPSEEK_API_KEY", "DEEPSEEK_KEY"),
+    )
 
-
-def _apply_ai_config(intelligent: bool = False) -> None:
-    global AI_NVIDIA_BASE, AI_MODEL
-    c = _get_ai_config(intelligent)
-    AI_NVIDIA_BASE = c["base_url"]
-    AI_MODEL = c["model"]
-
-# Build artifact names
-BUILD_ARTIFACT_ALL = "all-mod-builds"
-BUILD_ARTIFACT_PUBLISH = "modrinth-publish"
-
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-class CycleError(Exception):
-    pass
-
-
-def _log(msg: str) -> None:
-    ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
-    print(f"[{ts}] {msg}")
-
-
-def _is_infrastructure_failure(build_log: str) -> bool:
-    """Detect if a build failure is an infrastructure/transient issue, not a code bug.
-
-    Returns True if the failure is infrastructure-related and should just be retried
-    without sending the AI to fix code.
-    """
-    infra_patterns = [
-        r"Read timed out",
-        r"Connection reset",
-        r"Could not download.*timeout",
-        r"Could not get resource.*timeout",
-        r"SocketTimeoutException",
-        r"Could not GET.*timed out",
-        r"Response 304.*has no content",
-        r"Could not resolve all artifacts",
-        r"Could not download.*\.jar",
-        r"Unable to resolve dependency",
-        r"Could not transfer artifact",
-        r"peer not authenticated",
-        r"unable to find valid certification",
-        r"transport error",
-        r"Connection refused",
-        r"No route to host",
-        r"Network is unreachable",
-        r"503.*Service Unavailable",
-        r"502.*Bad Gateway",
-        r"504.*Gateway Timeout",
-        r"Gradle.*download.*timeout",
-        r"Could not install Gradle distribution",
-    ]
-    if not build_log:
-        return False
-    for pattern in infra_patterns:
-        if re.search(pattern, build_log, re.IGNORECASE):
-            return True
-
-    # Check for "BUILD SUCCESSFUL" markers indicating code compiled fine
-    if re.search(r"BUILD SUCCESSFUL", build_log):
-        return False
-
-    # If there are Java compilation errors AND infra errors, it's a code bug too
-    has_compile_errors = re.search(r"error: cannot find symbol|error: incompatible types|compilation failed", build_log, re.IGNORECASE)
-    has_infra_errors = re.search(r"timeout|Could not download|Could not resolve", build_log, re.IGNORECASE)
-    if has_compile_errors and has_infra_errors:
-        return False
-
-    return len(re.findall(r"Could not download|Read timed out|Connection reset|timeout", build_log, re.IGNORECASE)) >= 1
-
-
-def _map_slug_to_target_name(slug: str, target_names: list[str]) -> str | None:
-    """Map a build workflow slug (autofastxp-forge-1-12) to the bundle
-    target folder name (1.12-forge).
-
-    Uses heuristic matching since we don't store the mapping explicitly.
-    """
-    # Extract loader and version from slug
-    # Slug format: {mod_id}-{loader}-{version}  e.g. "autofastxp-forge-1-12"
-    # Target format: {version}-{loader}         e.g. "1.12-forge"
-    parts = slug.rsplit("-", 1)
-    if len(parts) == 2:
-        loader = parts[0].rsplit("-", 1)[-1] if "-" in parts[0] else ""
-        version_part = parts[1]
-
-        # Try exact match: {version}-{loader}
-        for tn in target_names:
-            if tn == f"{version_part}-{parts[0].rsplit('-', 1)[-1]}" if parts[0].rsplit('-', 1) else False:
-                pass
-
-        # Heuristic: find target names containing both the loader and version
-        if loader:
-            for tn in target_names:
-                tn_parts = tn.rsplit("-", 1)
-                if len(tn_parts) == 2:
-                    if tn_parts[0] == version_part and tn_parts[1] == loader:
-                        return tn
-                    if tn_parts[1] == loader and version_part in tn_parts[0]:
-                        return tn
-
-    # Fallback: just return first matching target or None
-    # This handles simple cases like 1.12-forge matching autofastxp-forge-1-12
-    # by extracting the last two tokens from slug
-    slug_last_parts = "-".join(slug.rsplit("-", 2)[-2:]) if "-" in slug else slug
-    for tn in target_names:
-        if tn == slug_last_parts:
-            return tn
-        if tn in slug or slug in tn:
-            return tn
-
-    return target_names[0] if len(target_names) == 1 else None
-
-
-def _detect_repo() -> str:
-    try:
-        url = subprocess.check_output(
-            ["git", "remote", "get-url", "origin"],
-            stderr=subprocess.DEVNULL, text=True).strip()
-    except subprocess.CalledProcessError:
-        raise CycleError("Could not detect GitHub repo from git remote.")
-    m = re.search(r"github\.com[:/]([^/]+/[^/]+?)(?:\.git)?$", url)
-    if not m:
-        raise CycleError(f"Could not parse owner/repo from remote URL: {url}")
-    return m.group(1)
-
-
-def _detect_token() -> str:
-    for var in ("GH_TOKEN", "GITHUB_TOKEN"):
-        t = os.environ.get(var, "").strip()
-        if t:
-            return t
-    try:
-        t = subprocess.check_output(
-            ["gh", "auth", "token"], stderr=subprocess.DEVNULL, text=True).strip()
-        if t:
-            return t
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
-    return ""
-
-
-def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
-    env = os.environ.copy()
-    if token:
-        env["GH_TOKEN"] = token
-        env["GITHUB_TOKEN"] = token
-    last_err = ""
-    for attempt in range(1, retries + 1):
-        try:
-            result = subprocess.run(
-                ["gh"] + args,
-                capture_output=True, text=True, check=True,
-                env=env, timeout=120,
-            )
-            return result.stdout
-        except subprocess.CalledProcessError as e:
-            last_err = e.stderr[:300] if e.stderr else str(e)
-            if attempt < retries:
-                time.sleep(GH_RETRY_DELAY * attempt)
-        except subprocess.TimeoutExpired as e:
-            last_err = str(e)
-            if attempt < retries:
-                time.sleep(GH_RETRY_DELAY * attempt)
-    raise CycleError(f"gh {' '.join(args)} failed: {last_err}")
-
-
-def _create_key_manager(intelligent: bool = False) -> KeyManager:
-    mode = "intelligent" if intelligent else "default"
+def _create_key_manager() -> KeyManager:
+    mode = "default" "default"
     cfg = AI_PROVIDERS[mode]
     return KeyManager(key_path=cfg["key_file"], env_vars=cfg["key_env_vars"])
 
@@ -1293,7 +1111,7 @@ def run_compile_cycle(
     key_mgr: KeyManager,
     repo: str,
     max_retries: int = MAX_RETRIES,
-    intelligent: bool = False,
+    
 ) -> int:
     """Run the full compile cycle: build, analyze, retry.
 
@@ -1611,8 +1429,6 @@ def main() -> int:
                         help="Full Modrinth project URL")
     parser.add_argument("--repo", default="",
                         help="owner/repo (auto-detected from git remote)")
-    parser.add_argument("--intelligent", action="store_true",
-                        help="Use DeepSeek/deepseek-chat instead of default NVIDIA/z-ai/glm4.7")
     parser.add_argument("--max-retries", type=int, default=MAX_RETRIES,
                         help=f"Max retry attempts per version (default: {MAX_RETRIES})")
     args = parser.parse_args()
@@ -1624,10 +1440,10 @@ def main() -> int:
 
     repo = args.repo or _detect_repo()
     token = _detect_token()
-    key_mgr = _create_key_manager(args.intelligent)
+    key_mgr = _create_key_manager(False)
 
     try:
-        _apply_ai_config(args.intelligent)
+        
         return run_compile_cycle(
             bundle_dir=bundle_dir,
             slug=args.slug,
@@ -1636,7 +1452,6 @@ def main() -> int:
             key_mgr=key_mgr,
             repo=repo,
             max_retries=args.max_retries,
-            intelligent=args.intelligent,
         )
     except CycleError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)

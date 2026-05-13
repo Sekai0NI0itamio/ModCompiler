@@ -163,6 +163,7 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
 
 class Colors:
     GREY = "\033[90m"
+    BLUE = "[94m"
     RED = "\033[91m"
     YELLOW = "\033[93m"
     GREEN = "\033[92m"
@@ -173,7 +174,8 @@ class Colors:
 
 _STATUS_LABELS = {
     "queued": ("Queued", Colors.GREY),
-    "in_progress": ("In Progress", Colors.RED),
+    "request_sent": ("Request Sent", Colors.BLUE),
+    "waiting": ("Waiting for response", Colors.RED),
     "streaming": ("Streaming", Colors.YELLOW),
     "complete": ("Complete", Colors.GREEN),
     "retrying": ("Retrying", Colors.BLACK_BOLD),
@@ -186,45 +188,17 @@ _STATUS_LABELS = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 # --- AI Provider Config ---
-AI_PROVIDERS = {
-    "default": {
-        "base_url": "https://integrate.api.nvidia.com/v1",
-        "model": "deepseek-ai/deepseek-v4-pro",
-        "provider_name": "NVIDIA",
-        "key_file": "C05LocalAi/keys/nvidia.txt",
-        "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
-    },
-    "intelligent": {
-        "base_url": "https://api.deepseek.com/v1",
-        "model": "deepseek-chat",
-        "provider_name": "DeepSeek API",
-        "key_file": "C05LocalAi/keys/deepseek.txt",
-        "key_env_vars": ("DEEPSEEK_API_KEY", "DEEPSEEK_KEY"),
-    },
-}
-
-AI_NVIDIA_BASE = AI_PROVIDERS["default"]["base_url"]
-AI_MODEL = AI_PROVIDERS["default"]["model"]
+AI_NVIDIA_BASE = "https://api.deepseek.com/v1"
+AI_MODEL = "deepseek-chat"
 
 
-def _get_ai_config(intelligent: bool = False) -> dict:
-    mode = "intelligent" if intelligent else "default"
-    return AI_PROVIDERS[mode]
+def _create_key_manager() -> KeyManager:
+    return KeyManager(
+        key_path="C05LocalAi/keys/deepseek.txt",
+        env_vars=("DEEPSEEK_API_KEY", "DEEPSEEK_KEY"),
+    )
 
-
-def _apply_ai_config(intelligent: bool = False) -> None:
-    global AI_NVIDIA_BASE, AI_MODEL
-    c = _get_ai_config(intelligent)
-    AI_NVIDIA_BASE = c["base_url"]
-    AI_MODEL = c["model"]
-
-
-def _create_key_manager(intelligent: bool = False) -> KeyManager:
-    c = _get_ai_config(intelligent)
-    return KeyManager(key_path=c["key_file"], env_vars=c["key_env_vars"])
-
-
-def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager, intelligent: bool = False) -> int:
+def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
     """Execute the AI coding stage: send prompts to NVIDIA and save responses."""
     import threading
 
@@ -232,7 +206,7 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager, intelligent: boo
     print("=" * 72)
     print("  PHASE 2 — AI MOD CODING (Local)")
     print(f"  Model: {AI_MODEL}")
-    print(f'  Provider: {_get_ai_config(intelligent)["provider_name"]}')
+    print(f'  Provider: DeepSeek API')
     print("=" * 72)
     print()
 
@@ -338,6 +312,8 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager, intelligent: boo
             )
             # Store the key so we can release it after completion
             fut_to_target[fut] = (td, worker_key)
+            _update_line(td.name, "request_sent")
+            time.sleep(2)  # Stagger requests 2s apart to avoid API rate limits
 
 
         for fut in as_completed(fut_to_target):
@@ -439,7 +415,7 @@ def _send_prompt_to_nvidia(
         "Accept": "text/event-stream",
     }
 
-    status_callback(target_name, "in_progress")
+    status_callback(target_name, "waiting")
 
     req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
 
@@ -548,7 +524,6 @@ class Runner:
         self.token = _detect_token()
         self.run_id: int = 0
         self.mode = args.mode
-        self.intelligent = getattr(args, 'intelligent', False)
 
         # Derive slug from URL
         m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", self.modrinth_url)
@@ -604,8 +579,8 @@ class Runner:
             if conclusion != "success":
                 print(f"  Bundle found at {bundle_dir} — proceeding despite workflow conclusion '{conclusion}'.")
 
-            key_mgr = _create_key_manager(self.intelligent)
-            ai_result = _run_ai_coding_stage(bundle_dir, key_mgr, self.intelligent)
+            key_mgr = _create_key_manager()
+            ai_result = _run_ai_coding_stage(bundle_dir, key_mgr)
 
             # Update SUMMARY.md with AI results
             self._append_ai_summary(artifacts_dir)
@@ -628,7 +603,7 @@ class Runner:
                  "--modrinth-url", self.modrinth_url,
                  "--repo", self.repo,
                  "--max-retries", "5"]
-                + (["--intelligent"] if self.intelligent else []),
+                + (["--intelligent"] if False else []),
                 capture_output=False,
             )
 
