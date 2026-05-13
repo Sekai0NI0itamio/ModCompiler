@@ -38,6 +38,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from _key_manager import KeyManager
 
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -53,13 +54,17 @@ GH_RETRY_DELAY = 3.0
 AI_PROVIDERS = {
     "default": {
         "base_url": "https://integrate.api.nvidia.com/v1",
-        "model": "z-ai/glm4.7",
-        "provider_name": "NVIDIA Integrate API",
+        "model": "nvidia/nemotron-3-nano-30b-a3b",
+        "provider_name": "NVIDIA Nemotron",
+        "key_file": "C05LocalAi/keys/nvidia.txt",
+        "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
     },
     "intelligent": {
-        "base_url": "https://api.deepseek.com",
+        "base_url": "https://api.deepseek.com/v1",
         "model": "deepseek-chat",
         "provider_name": "DeepSeek API",
+        "key_file": "C05LocalAi/keys/deepseek.txt",
+        "key_env_vars": ("DEEPSEEK_API_KEY", "DEEPSEEK_KEY", "NVIDIA_API_KEY", "NVAPI_KEY"),
     },
 }
 
@@ -238,19 +243,10 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
     raise CycleError(f"gh {' '.join(args)} failed: {last_err}")
 
 
-def _load_nvidia_key() -> str:
-    """Load the first NVIDIA API key."""
-    key_path = Path("C05LocalAi/keys/nvidia.txt")
-    if key_path.exists():
-        for line in key_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#"):
-                return line
-    for var in ("NVIDIA_API_KEY", "NVAPI_KEY"):
-        val = os.environ.get(var, "").strip()
-        if val:
-            return val
-    raise CycleError("No NVIDIA API key found.")
+def _create_key_manager(intelligent: bool = False) -> KeyManager:
+    mode = "intelligent" if intelligent else "default"
+    cfg = AI_PROVIDERS[mode]
+    return KeyManager(key_path=cfg["key_file"], env_vars=cfg["key_env_vars"])
 
 
 # ── Phase A: Extract files from AI responses and create build zip ───────────
@@ -1184,7 +1180,7 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
     import urllib.request
     import urllib.error
 
-    url = f"{AI_NVIDIA_BASE}/v1/chat/completions"
+    url = f"{AI_NVIDIA_BASE}/chat/completions"
 
     messages = [
         {
@@ -1206,12 +1202,14 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
         "stream": True,
     }
 
+    # Enable thinking/reasoning for Nemotron
     payload["extra_body"] = {
         "chat_template_kwargs": {
             "enable_thinking": True,
-            "reasoning_effort": "high",
+            "reasoning_effort": "max",
         }
     }
+
 
     body_bytes = json.dumps(payload).encode("utf-8")
     headers = {
@@ -1290,7 +1288,7 @@ def run_compile_cycle(
     slug: str,
     modrinth_url: str,
     token: str,
-    nvidia_key: str,
+    key_mgr: KeyManager,
     repo: str,
     max_retries: int = MAX_RETRIES,
     intelligent: bool = False,
@@ -1476,7 +1474,11 @@ def run_compile_cycle(
                 mod_info = projectinfo_path.read_text(encoding="utf-8") if projectinfo_path.exists() else ""
                 fix_prompt = _recompose_fix_prompt(tname, mod_info, scode, build_log, dif_entries, mc_source)
                 _log(f"    AI: {tname} ({len(fix_prompt):,} chars)...")
-                ai_response = _send_fix_prompt_to_ai(fix_prompt, nvidia_key, tname)
+                worker_key = key_mgr.acquire()
+                try:
+                    ai_response = _send_fix_prompt_to_ai(fix_prompt, worker_key, tname)
+                finally:
+                    key_mgr.release(worker_key)
                 return (idx, tname, ai_response, None)
             except Exception as exc:
                 return (idx, tname, None, str(exc))
@@ -1620,7 +1622,7 @@ def main() -> int:
 
     repo = args.repo or _detect_repo()
     token = _detect_token()
-    nvidia_key = _load_nvidia_key()
+    key_mgr = _create_key_manager(args.intelligent)
 
     try:
         _apply_ai_config(args.intelligent)
@@ -1629,7 +1631,7 @@ def main() -> int:
             slug=args.slug,
             modrinth_url=args.modrinth_url,
             token=token,
-            nvidia_key=nvidia_key,
+            key_mgr=key_mgr,
             repo=repo,
             max_retries=args.max_retries,
             intelligent=args.intelligent,

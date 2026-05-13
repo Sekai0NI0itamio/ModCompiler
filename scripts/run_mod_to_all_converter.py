@@ -62,6 +62,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from _key_manager import KeyManager
 
 
 WORKFLOW_FILE = "auto-mod-to-all-version-converter.yml"
@@ -183,13 +184,13 @@ _STATUS_LABELS = {
 AI_PROVIDERS = {
     "default": {
         "base_url": "https://integrate.api.nvidia.com/v1",
-        "model": "z-ai/glm4.7",
-        "provider_name": "NVIDIA Integrate API",
+        "model": "nvidia/nemotron-3-nano-30b-a3b",
+        "provider_name": "NVIDIA Nemotron",
         "key_file": "C05LocalAi/keys/nvidia.txt",
         "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
     },
     "intelligent": {
-        "base_url": "https://api.deepseek.com",
+        "base_url": "https://api.deepseek.com/v1",
         "model": "deepseek-chat",
         "provider_name": "DeepSeek API",
         "key_file": "C05LocalAi/keys/deepseek.txt",
@@ -213,27 +214,12 @@ def _apply_ai_config(intelligent: bool = False) -> None:
     AI_MODEL = c["model"]
 
 
-def _load_ai_key(intelligent: bool = False) -> str:
-    """Load a DeepSeek API key from C05LocalAi/keys/deepseek.txt."""
+def _create_key_manager(intelligent: bool = False) -> KeyManager:
     c = _get_ai_config(intelligent)
-    key_path = Path(c["key_file"])
-    if key_path.exists():
-        for line in key_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#"):
-                return line
-    for var in c["key_env_vars"]:
-        val = os.environ.get(var, "").strip()
-        if val:
-            return val
-    key_path.parent.mkdir(parents=True, exist_ok=True)
-    raise RunError(
-        f"No API key found. Set {c['key_env_vars'][0]} env var "
-        f"or add a key to {c['key_file']}"
-    )
+    return KeyManager(key_path=c["key_file"], env_vars=c["key_env_vars"])
 
 
-def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str, intelligent: bool = False) -> int:
+def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager, intelligent: bool = False) -> int:
     """Execute the AI coding stage: send prompts to NVIDIA and save responses."""
     import threading
 
@@ -335,17 +321,21 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str, intelligent: bool = 
         fut_to_target = {}
         for td in prompt_targets:
             prompt_path = td / "prompt.txt"
+            # Acquire a key from the pool (stress-aware)
+            worker_key = key_mgr.acquire()
             fut = pool.submit(
                 _send_prompt_to_nvidia,
                 td.name,
                 prompt_path.read_text(encoding="utf-8"),
-                nvidia_key,
+                worker_key,
                 _update_line,
             )
-            fut_to_target[fut] = td
+            # Store the key so we can release it after completion
+            fut_to_target[fut] = (td, worker_key)
+
 
         for fut in as_completed(fut_to_target):
-            td = fut_to_target[fut]
+            td, used_key = fut_to_target[fut]
             try:
                 response_text = fut.result()
                 resp_path = td / "airesponse.txt"
@@ -359,12 +349,16 @@ def _run_ai_coding_stage(bundle_dir: Path, nvidia_key: str, intelligent: bool = 
                 time.sleep(30)
                 try:
                     prompt_path = td / "prompt.txt"
-                    response_text = _send_prompt_to_nvidia(
-                        td.name,
-                        prompt_path.read_text(encoding="utf-8"),
-                        nvidia_key,
-                        _update_line,
-                    )
+                    retry_key = key_mgr.acquire()
+                    try:
+                        response_text = _send_prompt_to_nvidia(
+                            td.name,
+                            prompt_path.read_text(encoding="utf-8"),
+                            retry_key,
+                            _update_line,
+                        )
+                    finally:
+                        key_mgr.release(retry_key)
                     resp_path = td / "airesponse.txt"
                     resp_path.write_text(response_text, encoding="utf-8")
                     _update_line(td.name, "complete", f"{len(response_text):,} chars")
@@ -400,7 +394,7 @@ def _send_prompt_to_nvidia(
     import urllib.request
     import urllib.error
 
-    url = f"{AI_NVIDIA_BASE}/v1/chat/completions"
+    url = f"{AI_NVIDIA_BASE}/chat/completions"
 
     messages = []
     messages.append({
@@ -421,13 +415,14 @@ def _send_prompt_to_nvidia(
         "stream": True,
     }
 
-    # Enable reasoning/thinking for stepfun models via NVIDIA's chat_template_kwargs
+    # Enable thinking/reasoning for Nemotron
     payload["extra_body"] = {
         "chat_template_kwargs": {
             "enable_thinking": True,
-            "reasoning_effort": "high",
+            "reasoning_effort": "max",
         }
     }
+
 
     body_bytes = json.dumps(payload).encode("utf-8")
     headers = {
@@ -598,8 +593,8 @@ class Runner:
             if conclusion != "success":
                 print(f"  Bundle found at {bundle_dir} — proceeding despite workflow conclusion '{conclusion}'.")
 
-            nvidia_key = _load_ai_key(self.intelligent)
-            ai_result = _run_ai_coding_stage(bundle_dir, nvidia_key, self.intelligent)
+            key_mgr = _create_key_manager(self.intelligent)
+            ai_result = _run_ai_coding_stage(bundle_dir, key_mgr, self.intelligent)
 
             # Update SUMMARY.md with AI results
             self._append_ai_summary(artifacts_dir)
