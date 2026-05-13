@@ -84,6 +84,11 @@ class RetryableHTTPError(RuntimeError):
     pass
 
 
+class ResponseTooLarge(RuntimeError):
+    """Response exceeded the maximum allowed size."""
+    pass
+
+
 def _log(msg: str) -> None:
     ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
     print(f"[{ts}] {msg}")
@@ -183,18 +188,18 @@ _STATUS_LABELS = {
 # --- AI Provider Config ---
 AI_PROVIDERS = {
     "default": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "model": "inclusionai/ring-2.6-1t:free",
-        "provider_name": "OpenRouter",
-        "key_file": "C05LocalAi/keys/openrouter.txt",
-        "key_env_vars": ("OPENROUTER_API_KEY",),
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "model": "deepseek-ai/deepseek-v4-pro",
+        "provider_name": "NVIDIA",
+        "key_file": "C05LocalAi/keys/nvidia.txt",
+        "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
     },
     "intelligent": {
         "base_url": "https://api.deepseek.com/v1",
         "model": "deepseek-chat",
         "provider_name": "DeepSeek API",
         "key_file": "C05LocalAi/keys/deepseek.txt",
-        "key_env_vars": ("DEEPSEEK_API_KEY", "DEEPSEEK_KEY", "NVIDIA_API_KEY", "NVAPI_KEY"),
+        "key_env_vars": ("DEEPSEEK_API_KEY", "DEEPSEEK_KEY"),
     },
 }
 
@@ -316,6 +321,7 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager, intelligent: boo
     # ── Execute ────────────────────────────────────────────────────────────
     success_count = 0
     fail_count = 0
+    key_mgr.reset_stress()
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         fut_to_target = {}
@@ -375,6 +381,8 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager, intelligent: boo
                 fail_count += 1
                 fail_path = td / "airesponse.txt"
                 fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
+            finally:
+                key_mgr.release(used_key)
 
     print()
     print(f"{'─' * 72}")
@@ -429,7 +437,6 @@ def _send_prompt_to_nvidia(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "Accept": "text/event-stream",
-        "HTTP-Referer": "https://github.com/Sekai0NI0itamio/ModCompiler",
     }
 
     status_callback(target_name, "in_progress")
@@ -467,6 +474,9 @@ def _send_prompt_to_nvidia(
                                 if content:
                                     full_response += content
                                     accumulated += len(content)
+                                    # Hard limit: if response exceeds 100KB, abort
+                                    if accumulated > 100000:
+                                        raise ResponseTooLarge(f"Response exceeded 100KB ({accumulated:,} bytes)")
                                     if accumulated % 500 < 100:
                                         status_callback(
                                             target_name, "streaming",

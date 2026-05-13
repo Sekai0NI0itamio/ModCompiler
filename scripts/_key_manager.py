@@ -65,6 +65,12 @@ class KeyManager:
             if key in self._stress and self._stress[key] > 0:
                 self._stress[key] -= 1
 
+    def reset_stress(self) -> None:
+        """Reset all key stress counts to zero."""
+        with self._lock:
+            for k in self._stress:
+                self._stress[k] = 0
+
     @property
     def key_count(self) -> int:
         return len(self._keys)

@@ -53,17 +53,17 @@ GH_RETRY_DELAY = 3.0
 # --- AI Provider Config ---
 AI_PROVIDERS = {
     "default": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "model": "inclusionai/ring-2.6-1t:free",
-        "provider_name": "OpenRouter",
-        "key_file": "C05LocalAi/keys/openrouter.txt",
-        "key_env_vars": ("OPENROUTER_API_KEY",),
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "model": "deepseek-ai/deepseek-v4-pro",
+        "provider_name": "NVIDIA",
+        "key_file": "C05LocalAi/keys/nvidia.txt",
+        "key_env_vars": ("NVIDIA_API_KEY", "NVAPI_KEY"),
     },
     "intelligent": {
-        "base_url": "https://api.deepseek.com/v1",
+        "base_url": "https://integrate.api.nvidia.com/v1",
         "model": "deepseek-chat",
         "provider_name": "DeepSeek API",
-        "key_file": "C05LocalAi/keys/deepseek.txt",
+        "key_file": "C05LocalAi/keys/nvidia.txt",
         "key_env_vars": ("DEEPSEEK_API_KEY", "DEEPSEEK_KEY", "NVIDIA_API_KEY", "NVAPI_KEY"),
     },
 }
@@ -1216,7 +1216,6 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "Accept": "text/event-stream",
-        "HTTP-Referer": "https://github.com/Sekai0NI0itamio/ModCompiler",
     }
 
     req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
@@ -1249,6 +1248,8 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
                                 if content:
                                     full_response += content
                                     accumulated += len(content)
+                                    if accumulated > 100000:
+                                        raise CycleError(f"Response exceeded 100KB ({accumulated:,} bytes)")
                         except json.JSONDecodeError:
                             pass
     except urllib.error.HTTPError as e:
