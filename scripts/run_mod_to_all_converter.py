@@ -395,9 +395,11 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
         bundle_dir: Path to the analysis bundle directory.
         previous_progress: Dict mapping target_name -> status ("complete" or "failed")
                            from a previous partial run. Targets already marked complete
-                           will be skipped.
+                           will be skipped. Only used when --continuefrom is specified.
     """
     import threading
+
+    is_resume = bool(previous_progress)
 
     print()
     print("=" * 72)
@@ -418,36 +420,36 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
         print("ERROR: No target directories found in bundle.", file=sys.stderr)
         return 1
 
-    # Filter to those with prompt.txt (skip if already completed from previous run)
     previous_progress = previous_progress or {}
     prompt_targets = []
     skipped_targets = []
+
     for td in target_dirs:
         prompt_path = td / "prompt.txt"
         if not prompt_path.exists():
             continue
-        # Skip targets that already have airesponse.txt AND are marked complete/failed in progress
-        prev_status = previous_progress.get(td.name, "")
-        if prev_status in ("complete", "failed") and (td / "airesponse.txt").exists():
-            skipped_targets.append(td.name)
-            _log(f"  Skipping already-processed target: {td.name} (status: {prev_status})")
-            continue
+
+        if is_resume:
+            prev_status = previous_progress.get(td.name, "")
+            if prev_status in ("complete", "failed") and (td / "airesponse.txt").exists():
+                skipped_targets.append(td.name)
+                _log(f"  Skipping already-processed target: {td.name} (status: {prev_status})")
+                continue
+            if (td / "airesponse.txt").exists():
+                _log(f"  Target already has airesponse.txt: {td.name} — skipping")
+                continue
+        else:
+            if (td / "airesponse.txt").exists():
+                _log(f"  Clearing stale airesponse.txt: {td.name}")
+                (td / "airesponse.txt").unlink()
+            if (td / "conversation.json").exists():
+                (td / "conversation.json").unlink()
+
         prompt_targets.append(td)
 
     if skipped_targets:
         print(f"\n  Skipping {len(skipped_targets)} already-processed target(s): {', '.join(skipped_targets)}")
         print()
-
-    if not prompt_targets:
-        print("All targets already processed. Skipping AI coding stage.")
-        return 0
-
-    # Also drop any target that has airesponse.txt even without progress file
-    already_done = [td for td in prompt_targets if (td / "airesponse.txt").exists()]
-    if already_done:
-        for td in already_done:
-            _log(f"  Target already has airesponse.txt: {td.name} — skipping")
-        prompt_targets = [td for td in prompt_targets if not (td / "airesponse.txt").exists()]
 
     if not prompt_targets:
         print("All targets already processed. Skipping AI coding stage.")

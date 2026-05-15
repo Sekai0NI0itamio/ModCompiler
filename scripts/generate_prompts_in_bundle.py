@@ -53,11 +53,11 @@ def _get_version_range_for_version(minecraft_version: str, manifest: Dict) -> st
         max_v = rng.get("max_version", "")
         if min_v and max_v:
             try:
-                from packaging.version import Version, InvalidVersion
-                target = Version(minecraft_version)
-                if Version(min_v) <= target <= Version(max_v):
+                from packaging.version import Version as _Version
+                target = _Version(minecraft_version)
+                if _Version(min_v) <= target <= _Version(max_v):
                     return folder
-            except (ImportError, InvalidVersion):
+            except (ImportError, ModuleNotFoundError, ValueError):
                 pass
     return ""
 
@@ -733,33 +733,32 @@ def add_prompts_to_bundle(
 
 def _find_template_dir(manifest: Dict, minecraft_version: str, loader: str, repo_root: Path) -> Optional[Path]:
     """Find the template directory for a version+loader combo from the manifest."""
+    # Try to use packaging for version comparison if available
+    use_packaging = False
     try:
-        from packaging.version import Version, InvalidVersion
+        from packaging.version import Version as _Version, InvalidVersion as _InvalidVersion
+        use_packaging = True
+
         def ver(v):
             try:
-                return Version(v)
-            except InvalidVersion:
-                return Version("0")
+                return _Version(v)
+            except _InvalidVersion:
+                return _Version("0")
         target = ver(minecraft_version)
-        for rng in manifest.get("ranges", []):
-            if loader not in rng.get("loaders", {}):
-                continue
-            ldr_cfg = rng["loaders"][loader]
-            supported = ldr_cfg.get("supported_versions", [])
-            if supported and minecraft_version in supported:
-                return repo_root / ldr_cfg["template_dir"]
+    except (ImportError, ModuleNotFoundError):
+        pass
+
+    for rng in manifest.get("ranges", []):
+        if loader not in rng.get("loaders", {}):
+            continue
+        ldr_cfg = rng["loaders"][loader]
+        supported = ldr_cfg.get("supported_versions", [])
+        if supported and minecraft_version in supported:
+            return repo_root / ldr_cfg["template_dir"]
+        if use_packaging:
             min_v = ver(rng.get("min_version", "0"))
             max_v = ver(rng.get("max_version", "99999"))
             if min_v <= target <= max_v:
-                return repo_root / ldr_cfg["template_dir"]
-    except ImportError:
-        # Fallback without packaging
-        for rng in manifest.get("ranges", []):
-            if loader not in rng.get("loaders", {}):
-                continue
-            ldr_cfg = rng["loaders"][loader]
-            supported = ldr_cfg.get("supported_versions", [])
-            if supported and minecraft_version in supported:
                 return repo_root / ldr_cfg["template_dir"]
     return None
 
