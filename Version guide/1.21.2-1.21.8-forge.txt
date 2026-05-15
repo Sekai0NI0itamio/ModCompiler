@@ -1,0 +1,368 @@
+Comprehensive Forge Modding Guide for 1.21.2-1.21.8
+This guide covers everything needed to develop Forge mods for the Minecraft 1.21.2 to 1.21.8 version range, including API changes, code patterns, common pitfalls, and error fixes.
+
+---
+1. Modding Framework: Forge Version & Mojang Mappings
+Each Minecraft sub-version in this range requires a matching Forge version and official Mojang mappings:
+Minecraft Version
+Recommended Forge Version
+Mappings Channel
+Mappings Version
+1.21.2
+53.x.x
+official
+1.21.2
+1.21.3
+54.x.x
+official
+1.21.3
+1.21.4
+55.x.x
+official
+1.21.4
+1.21.5
+56.x.x
+official
+1.21.5
+1.21.6
+57.x.x
+official
+1.21.6
+1.21.8
+58.x.x
+official
+1.21.8
+Warning: Official Mojang mappings are the only supported mappings for this version range. Legacy MCP mappings are no longer maintained for 1.21.x.
+
+---
+2. Build System: Gradle, ForgeGradle, Java 21
+The bundle workflow provides the build system setup — no changes needed. Use Java 21.
+
+---
+3. Key Changes from 1.21.1
+Bundle Changes
+Bundles were fully released from experimental status in 1.21.2, with significant changes:
+- Crafting Recipe: Changed from 6 rabbit hides + 2 string to 1 string + 1 leather (much cheaper)
+- Dyeable Bundles: Bundles can now be dyed in all 16 vanilla colors
+- Full Implementation: No longer requires experimental features toggle to function
+Game Rule Changes
+- New game rule: disablePlayerMovementCheck (added in 1.21.2)
+  - Disables player movement speed restriction when true
+  - Functions similarly to disableElytraMovementCheck but applies to all movement
+
+---
+4. Mod Entry Point: @Mod & mods.toml
+Main Mod Class
+package ${PACKAGE_PATH};
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+
+// The value here should match the modId in mods.toml
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS}
+{
+    public static final String MOD_ID = "${MOD_ID}";
+    public static final Logger LOGGER = LogUtils.getLogger();
+
+    public ${MOD_CLASS}() {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        // Register deferred registries
+        DeferredRegister.BLOCKS.register(modEventBus);
+        DeferredRegister.ITEMS.register(modEventBus);
+        DeferredRegister.CREATIVE_MODE_TABS.register(modEventBus);
+
+        // Register config
+        FMLJavaModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
+    }
+}
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+
+---
+5. Registry System: DeferredRegister
+DeferredRegister is the standard registration pattern for this version range, replacing manual event-based registration.
+Exact Imports
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+Basic Usage
+// Create Deferred Registers for your mod
+public static final DeferredRegister<Block> BLOCKS =
+    DeferredRegister.create(ForgeRegistries.BLOCKS, MOD_ID);
+
+public static final DeferredRegister<Item> ITEMS =
+    DeferredRegister.create(ForgeRegistries.ITEMS, MOD_ID);
+
+public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
+    DeferredRegister.create(ForgeRegistries.CREATIVE_MODE_TABS, MOD_ID);
+Note: In 1.21.8+ with EventBus 7, DeferredRegister automatically uses the new BusGroup system, no changes required for basic usage.
+
+---
+6. Block/Item Registration: DeferredRegister Patterns
+Block Registration
+// Register a simple block
+public static final DeferredBlock<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block",
+    () -> new Block(BlockBehaviour.Properties.of()
+        .strength(2.0f)
+        .requiresCorrectToolForDrops())
+);
+
+// Automatically register the BlockItem for the block
+public static final DeferredItem<Item> EXAMPLE_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(EXAMPLE_BLOCK);
+Item Registration
+// Register a custom item
+public static final DeferredItem<Item> EXAMPLE_ITEM = ITEMS.register("example_item",
+    () -> new Item(new Item.Properties().stacksTo(64))
+);
+Creative Tab Registration
+public static final DeferredHolder<CreativeModeTab, CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("example_tab",
+    () -> CreativeModeTab.builder()
+        .title(Component.translatable("itemGroup.${MOD_ID}"))
+        .icon(() -> new ItemStack(EXAMPLE_ITEM.get()))
+        .displayItems((parameters, output) -> {
+            ITEMS.getEntries().forEach(entry -> output.accept(entry.get()));
+        })
+        .build()
+);
+Gotcha: Minecraft 1.21.3 had a bug where block/item IDs were not automatically set, causing crashes. If targeting 1.21.3, update to the latest patch version or manually set IDs during registration.
+
+---
+7. Rendering: Model Changes
+The rendering system underwent significant refactoring across this version range:
+Model Loading Changes (1.21.3+)
+- Removed: ModelEvent.RegisterAdditional event. Vanilla now automatically discovers and pre-loads all models.
+- Migration: Remove any code that manually registered additional models. Place model files in standard resource locations, and they will be loaded automatically.
+Entity Rendering Changes (1.21.3+)
+- Entity renderers now use EntityRenderState to separate state from rendering logic.
+- The render method signature changed:
+// Old (pre-1.21.3)
+public void render(T entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, int packedLight)
+
+// New (1.21.3+)
+public void render(EntityRenderState state, PoseStack poseStack, MultiBufferSource buffer, int packedLight)
+GUI Rendering Changes (1.21.6+)
+- GUI rendering was split into two phases: prepare and render.
+- GuiRenderState is now used to store render data during the prepare phase.
+- Screen render methods no longer directly render during the first pass, instead submitting state to the render state.
+
+---
+8. GUI/Container: MenuType, Screen
+MenuType Registration
+public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+    DeferredRegister.create(ForgeRegistries.MENU_TYPES, MOD_ID);
+
+public static final DeferredHolder<MenuType<?>, MenuType<ExampleMenu>> EXAMPLE_MENU =
+    MENU_TYPES.register("example_menu",
+        () -> new MenuType<>(ExampleMenu::new, StreamCodecs.unit())
+    );
+Screen Implementation
+public class ExampleScreen extends AbstractContainerScreen<ExampleMenu> {
+    public ExampleScreen(ExampleMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+        // Render background texture
+        guiGraphics.blit(GUI_LOCATION, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+    }
+
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+}
+Warning: In 1.21.6+, ensure you use the new GuiGraphics class correctly, as the old rendering methods were deprecated.
+
+---
+9. Networking: SimpleChannel
+SimpleChannel is still supported for cross-version networking in this range, with minor updates.
+Exact Imports
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.SimpleChannel;
+import net.minecraft.resources.ResourceLocation;
+Channel Setup
+public static final int PROTOCOL_VERSION = 1;
+public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
+    new ResourceLocation(MOD_ID, "network"),
+    () -> PROTOCOL_VERSION,
+    PROTOCOL_VERSION::equals,
+    PROTOCOL_VERSION::equals
+);
+
+// Register packets during common setup
+public void commonSetup(FMLCommonSetupEvent event) {
+    int id = 0;
+    CHANNEL.registerMessage(id++, ExamplePacket.class, ExamplePacket::encode, ExamplePacket::decode, ExamplePacket::handle);
+}
+Packet Example
+public record ExamplePacket(int data) {
+    public static void encode(ExamplePacket packet, FriendlyByteBuf buf) {
+        buf.writeInt(packet.data);
+    }
+
+    public static ExamplePacket decode(FriendlyByteBuf buf) {
+        return new ExamplePacket(buf.readInt());
+    }
+
+    public static void handle(ExamplePacket packet, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            // Handle packet data
+            LOGGER.info("Received packet data: {}", packet.data);
+        });
+        ctx.get().setPacketHandled(true);
+    }
+}
+Critical Fix: Use FriendlyByteBuf instead of the old PacketBuffer class. PacketBuffer was deprecated and removed in this version range.
+
+---
+10. Events: Forge Event Bus
+The event system underwent a major rewrite in 1.21.8 with EventBus 7, causing breaking changes.
+Pre-1.21.6 Event API
+// Old import (1.21.2-1.21.5)
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
+@SubscribeEvent
+public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+    LOGGER.info("Player joined: {}", event.getEntity().getName());
+}
+1.21.6+ Event API
+// New import (1.21.6-1.21.8)
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+
+@SubscribeEvent
+public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+    LOGGER.info("Player joined: {}", event.getEntity().getName());
+}
+EventBus 7 Changes (1.21.8+)
+EventBus 7 is a full rewrite with major changes:
+1. Per-event Buses: Each event now has its own bus, replacing the global event bus:
+// Old
+MinecraftForge.EVENT_BUS.addListener(this::onServerStarting);
+
+// New
+ServerStartingEvent.BUS.addListener(this::onServerStarting);
+2. Event Cancellation: Cancellation is now done via return value instead of method calls:
+// Old
+@SubscribeEvent
+public void onTeleport(EntityTeleportEvent.ChorusFruit event) {
+    if (blocked) event.setCanceled(true);
+}
+
+// New
+@SubscribeEvent
+public boolean onTeleport(EntityTeleportEvent.ChorusFruit event) {
+    return !blocked; // Return false to cancel
+}
+3. Removed InheritableEvent: Abstract base events like EntityEvent can no longer have listeners. You must listen to specific sub-events.
+Migration Helper: Use EventBusMigrationHelper for backwards compatibility across versions:
+var helper = new EventBusMigrationHelper(modBusGroup);
+helper.register(this);
+
+---
+11. Config: ModConfig
+Forge's config system uses TOML files with ForgeConfigSpec.
+Config Class
+package ${PACKAGE_PATH};
+
+import net.minecraftforge.common.ForgeConfigSpec;
+
+public class Config {
+    public static final ForgeConfigSpec COMMON_SPEC;
+    public static final CommonConfig COMMON;
+
+    static {
+        final Pair<CommonConfig, ForgeConfigSpec> pair = new ForgeConfigSpec.Builder()
+            .configure(CommonConfig::new);
+        COMMON_SPEC = pair.getRight();
+        COMMON = pair.getLeft();
+    }
+
+    public static class CommonConfig {
+        public final ForgeConfigSpec.ConfigValue<Integer> exampleValue;
+        public final ForgeConfigSpec.ConfigValue<Boolean> enableFeature;
+
+        public CommonConfig(ForgeConfigSpec.Builder builder) {
+            builder.push("General");
+            exampleValue = builder
+                .comment("Example config value")
+                .define("exampleValue", 10);
+            enableFeature = builder
+                .comment("Enable the example feature")
+                .define("enableFeature", true);
+            builder.pop();
+        }
+    }
+}
+Register Config
+Register the config in your mod constructor:
+public ${MOD_CLASS}() {
+    // Register config
+    FMLJavaModLoadingContext.get().registerConfig(
+        ModConfig.Type.COMMON,
+        Config.COMMON_SPEC
+    );
+}
+
+---
+12. Common Pitfalls: Sub-version Differences
+Version
+Breaking Changes
+1.21.2
+Initial release of bundles, new game rule
+1.21.3
+Model loading refactor, removed ModelEvent.RegisterAdditional; EntityRenderState introduced; 1.21.3 ID bug
+1.21.5
+Rendering pipeline refactor, some old Forge rendering APIs deprecated
+1.21.6
+GUI render state split; @SubscribeEvent package moved
+1.21.8
+EventBus 7 rewrite; genRunConfigs task removed; static mod bus posting methods
+Cross-Version Warning: It is not recommended to build a single jar for the entire 1.21.2-1.21.8 range. The EventBus 7 and rendering changes are binary-breaking. Build separate jars for pre-1.21.6 and 1.21.6+ versions, or use the migration helper.
+
+---
+13. Java Version: Java 21
+Requirements
+- Minimum: Java 21 JDK. Java 17 or older will not work, as Minecraft 1.21+ requires Java 21.
+
+---
+14. Common Errors & Fixes
+Error
+Cause
+Fix
+Task 'genRunConfigs' not found
+Using old task name in 1.21.8+
+Use IDE-specific run generation tasks
+error: cannot find symbol @SubscribeEvent
+Using old import in 1.21.6+
+Update import to net.minecraftforge.eventbus.api.listener.SubscribeEvent
+cannot find symbol ModelEvent.RegisterAdditional
+Using removed event in 1.21.3+
+Remove manual model registration, use vanilla auto-discovery
+ModLoadingContext.getModEventBus() is deprecated
+Using deprecated context method
+Use FMLJavaModLoadingContext.get().getModEventBus() instead
+Unsupported major.minor version 65.0
+Wrong Java version
+Use Java 21
+Could not resolve net.minecraftforge.gradle:forgegradle...
+Wrong ForgeGradle version
+The bundle workflow handles ForgeGradle versioning
+Mixin apply failed
+Version mismatch between mod and Forge/Minecraft
+Ensure your mod is built for the exact Minecraft/Forge version
+Block/item id not set
+1.21.3 ID bug
+Update to the latest 1.21.3 patch, or manually set IDs
+Event listener not called
+Registered listener on wrong bus, or old EventBus API
+Use per-event buses, ensure you're using the correct registration method
+
+---
+Additional Resources
+- Official Forge Documentation
+- EventBus 7 Migration Guide
+- Forge File Download Site

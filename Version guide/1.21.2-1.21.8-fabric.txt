@@ -1,0 +1,482 @@
+Fabric Modding Guide for 1.21.2-1.21.8
+This guide covers everything you need to develop Fabric mods for the Minecraft 1.21.2 to 1.21.8 version range, including exact code patterns, import paths, sub-version differences, and common pitfalls.
+
+---
+1. Modding Framework
+The Fabric modding ecosystem provides the core tools for modding this version range:
+Core Components
+Component
+Purpose
+Version Range
+Fabric Loader
+The mod loader that handles mod loading, mixin application, and environment separation
+0.16.7 - 0.16.14
+Yarn Mappings
+Open-source, community-maintained mappings for Minecraft's obfuscated code
+Matching each sub-version (1.21.2+ builds)
+Mojang Mappings
+Official Mojang-provided mappings, available for use with Loom
+Supported for all versions in this range
+Fabric Loom
+Gradle plugin that sets up the development environment, handles deobfuscation, and builds mods
+1.8 (1.21.2) → 1.9 (1.21.4) → 1.10 (1.21.6-1.21.8)
+Key Notes
+- Warning: Loom versions are tightly coupled to Minecraft versions. You must use the correct Loom version for your target Minecraft version to avoid build failures.
+- Yarn mappings are updated within hours of each Minecraft release, ensuring you have access to readable names immediately.
+
+---
+2. Build System
+The bundle workflow provides the build system setup — no changes needed.
+
+---
+3. Key Changes from 1.21.1
+This section covers the major changes introduced in 1.21.2 that affect modders, compared to 1.21.1:
+Bundle Changes (1.21.2 "Bundles of Bravery")
+- Bundles received a complete overhaul, with their data storage moved to data components.
+- Bundle stack size is now properly handled via components, allowing for larger bundle contents.
+- The old bundle NBT format is automatically migrated to the new component system.
+Game Rule Changes
+- New game rules added for trial chambers functionality, including doTrialSpawning to control trial mob spawns.
+- Existing game rules have been optimized to reduce server overhead.
+Performance Improvements
+- Rendering Pipeline Separation: Mojang began splitting the rendering pipeline into extraction and render phases to enable parallel rendering. This affects many RenderSystem methods, which were removed in 1.21.6+.
+- Registry Optimizations: Registry lookups are now faster, with Registry implementing RegistryEntryLookup to improve performance.
+- Chunk Loading Optimizations: Improved chunk loading performance, with new events for chunk level changes.
+
+---
+4. Mod Entry Point
+Entry points are the initialization hooks Fabric uses to run your mod code at the correct time.
+Common Entry Point
+The main entry point that runs on both client and server:
+// Exact import path
+import net.fabricmc.api.ModInitializer;
+import net.minecraft.util.Identifier;
+
+public class ${MOD_CLASS} implements ModInitializer {
+	// Mod ID, used throughout your mod
+	public static final String MOD_ID = "${MOD_ID}";
+
+	@Override
+	public void onInitialize() {
+		// Common initialization code (runs on both client and server)
+		ModItems.initialize();
+		ModBlocks.initialize();
+		ModComponents.initialize();
+
+		LOGGER.info("${MOD_DISPLAY_NAME} initialized!");
+	}
+}
+Client-Only Entry Point
+For client-specific initialization (rendering, keybindings, client-only events):
+// Exact import path
+import net.fabricmc.api.ClientModInitializer;
+
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+	@Override
+	public void onInitializeClient() {
+		// Client-only initialization code
+		ClientNetworking.initialize();
+		BlockRenderLayerMap.putBlock(ModBlocks.CUSTOM_GLASS, BlockRenderLayer.CUTOUT);
+	}
+}
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+
+---
+5. Registry System
+The registry system is used to register your custom content (blocks, items, components, etc.) with the game.
+Core Registry Changes (1.21.2+)
+Mojang renamed several registry methods to better reflect their functionality:
+Old Method
+New Method
+getEntry
+getOptional
+entryOf
+getOrThrow
+getOrThrow
+getValueOrThrow
+getOrEmpty
+getOptionalValue
+Basic Registration Pattern
+// Exact imports
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
+
+public class ModItems {
+	public static final Item CUSTOM_ITEM = register(
+		"custom_item",
+		Item::new,
+		new Item.Settings()
+	);
+
+	private static <T extends Item> T register(String name, java.util.function.Function<Item.Settings, T> factory, Item.Settings settings) {
+		RegistryKey<Item> key = RegistryKey.of(Registries.ITEM, Identifier.of(${MOD_CLASS}.MOD_ID, name));
+		T item = factory.apply(settings.registryKey(key));
+		return Registry.register(Registries.ITEM, key, item);
+	}
+
+	public static void initialize() {}
+}
+Data Components
+Data components replace the old NBT system for item stack data, providing structured, type-safe storage.
+Registering a Custom Data Component
+// Exact imports
+import net.minecraft.component.ComponentType;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.util.Identifier;
+import com.mojang.serialization.Codec;
+
+public class ModComponents {
+	public static final ComponentType<Integer> CLICK_COUNT = Registry.register(
+		Registries.DATA_COMPONENT_TYPE,
+		Identifier.of(${MOD_CLASS}.MOD_ID, "click_count"),
+		ComponentType.<Integer>builder().persistent(Codec.INT).build()
+	);
+
+	public static void initialize() {}
+}
+Using Data Components
+// Get component value with default
+int count = stack.getOrDefault(ModComponents.CLICK_COUNT, 0);
+
+// Set component value
+stack.set(ModComponents.CLICK_COUNT, count + 1);
+
+// Check if component exists
+boolean hasComponent = stack.has(ModComponents.CLICK_COUNT);
+
+// Remove component
+int oldValue = stack.remove(ModComponents.CLICK_COUNT);
+Warning: Always handle null/missing components. Even if you set a default value, players can remove components via commands.
+
+---
+6. Block/Item Registration
+The registration pattern for blocks and items changed significantly in 1.21.2, requiring explicit registry keys.
+Item Registration (1.21.2+)
+// Exact imports
+import net.minecraft.item.Item;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.util.Identifier;
+
+public class ModItems {
+	// Example custom item
+	public static final Item SUSPICIOUS_SUBSTANCE = register(
+		"suspicious_substance",
+		Item::new,
+		new Item.Settings()
+			.maxCount(16)
+			.component(ModComponents.CLICK_COUNT, 0) // Default component value
+	);
+
+	private static <T extends Item> T register(String name, java.util.function.Function<Item.Settings, T> factory, Item.Settings settings) {
+		RegistryKey<Item> key = RegistryKey.of(Registries.ITEM, Identifier.of(${MOD_CLASS}.MOD_ID, name));
+		T item = factory.apply(settings.registryKey(key));
+		return Registry.register(Registries.ITEM, key, item);
+	}
+
+	public static void initialize() {
+		// Add to creative tab
+		ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS)
+			.register(entries -> entries.add(SUSPICIOUS_SUBSTANCE));
+	}
+}
+Block Registration (1.21.2+)
+// Exact imports
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.AbstractBlock;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.util.Identifier;
+
+public class ModBlocks {
+	// Example custom block
+	public static final Block CUSTOM_PLANKS = register(
+		"custom_planks",
+		new Block(AbstractBlock.Settings.create()
+			.hardness(2.0f)
+			.resistance(3.0f)
+			.registryKey(RegistryKey.of(Registries.BLOCK, Identifier.of(${MOD_CLASS}.MOD_ID, "custom_planks")))
+		)
+	);
+
+	private static <T extends Block> T register(String name, T block) {
+		RegistryKey<Block> key = RegistryKey.of(Registries.BLOCK, Identifier.of(${MOD_CLASS}.MOD_ID, name));
+		return Registry.register(Registries.BLOCK, key, block);
+	}
+
+	public static void initialize() {}
+}
+Critical Gotcha
+You must call .registryKey() on your block/item settings! Failing to do this will cause a NullPointerException: Block id not set or NullPointerException: Item id not set crash. This is the most common error for modders porting from 1.21.1.
+
+---
+7. Rendering
+Rendering received major changes across this version range, including model system overhauls and entity rendering refactors.
+Item Model Changes (1.21.4+)
+In 1.21.4, Mojang introduced new item model definition files that replace the old item model JSONs. These files control model selection, tinting, and conditions.
+Example Item Model Definition (assets/${MOD_ID}/items/suspicious_substance.json)
+{
+	"model": {
+		"type": "minecraft:model",
+		"model": "${MOD_ID}:item/suspicious_substance"
+	}
+}
+Old vs New Model Files
+Old Path
+New Path
+assets/modid/models/item/item_name.json
+assets/modid/items/item_name.json
+Warning: ItemColors and related tinting APIs were removed in 1.21.4. All item tinting is now handled via the new item model definition files.
+Entity Rendering Changes (1.21.2+)
+Entity rendering was refactored to use render states, decoupling the entity instance from rendering:
+// Exact imports
+import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.entity.Entity;
+import net.minecraft.client.render.entity.state.EntityRenderState;
+
+// 1. Create your render state class
+public class CustomEntityRenderState extends EntityRenderState {
+	public boolean isSaddled;
+}
+
+// 2. Update your renderer
+public class CustomEntityRenderer extends EntityRenderer<CustomEntity, CustomEntityRenderState> {
+	public CustomEntityRenderer(EntityRendererFactory.Context ctx) {
+		super(ctx);
+	}
+
+	// Create empty render state
+	@Override
+	public CustomEntityRenderState createRenderState() {
+		return new CustomEntityRenderState();
+	}
+
+	// Copy data from entity to render state
+	@Override
+	public void updateRenderState(CustomEntity entity, CustomEntityRenderState state, float tickDelta) {
+		super.updateRenderState(entity, state, tickDelta);
+		state.isSaddled = entity.isSaddled();
+	}
+
+	// Render using the render state (not the entity!)
+	@Override
+	public void render(CustomEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
+		super.render(state, matrices, vertexConsumers, light);
+
+		if (state.isSaddled) {
+			// Render saddle using state data
+		}
+	}
+}
+
+---
+8. Networking
+Fabric's networking API allows you to send custom packets between client and server, with changes to support the new payload system.
+Defining a Custom Payload
+// Exact imports
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.BlockPos;
+
+// Server-to-client payload
+public record SummonLightningS2CPayload(BlockPos pos) implements CustomPacketPayload {
+     ic static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "summon_lightning");
+        public final Type<SummonLightningS2CPayload> TYPE = new Type<>(ID);
+        public staticStreamCodec<RegistryFriendlyByteBuf, SummonLightningS2CPayload> CODEC = StreamCodec.composite(
+             REAM_CODEC, SummonLightningS2CPayload::pos,
+                SummonLioad::new
+
+
+        @Override
+        public TypketPayload> type() {
+    turn TYPE;
+        }
+}            ree<? extends CustomPac     );ghtningS2CPayl   BlockPos.ST final  static   publ
+Registering and Using Payloads
+// In common initializer
+// Register payload types
+PayloadTypeRegistry.playS2C().register(SummonLightningS2CPayload.TYPE, SummonLightningS2CPayload.CODEC);
+
+// Register server receiver for C2S packets
+ServerPlayNetworking.registerGlobalReceiver(GiveGlowingEffectC2SPayload.TYPE, (payload, context) -> {
+        // Validate packet data on server!
+        Entity entity = context.player().level().getEntity(payload.entityId());
+        if (entity instanceof LivingEntity livingEntity && livingEntity.closerThan(context.player(), 5)) {
+                livingEntity.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100));
+        }
+});
+// In client initializer
+// Register client receiver for S2C packets
+ClientPlayNetworking.registerGlobalReceiver(SummonLightningS2CPayload.TYPE, (payload, context) -> {
+	context.client().execute(() -> {
+		ClientLevel world = context.client().level;
+		if (world == null) return;
+
+		BlockPos pos = payload.pos();
+		LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(world, EntitySpawnReason.TRIGGERED);
+		if (bolt != null) {
+			bolt.setPos(pos.getX(), pos.getY(), pos.getZ());
+			world.addEntity(bolt);
+		}
+	});
+});
+Sending Packets
+// Client sending to server
+if (world.isClientSide()) {
+	GiveGlowingEffectC2SPayload payload = new GiveGlowingEffectC2SPayload(entity.getId());
+	ClientPlayNetworking.send(payload);
+}
+
+// Server sending to client
+if (!world.isClientSide()) {
+	SummonLightningS2CPayload payload = new SummonLightningS2CPayload(user.blockPosition());
+	for (ServerPlayer player : PlayerLookup.world((ServerLevel) world)) {
+		ServerPlayNetworking.send(player, payload);
+	}
+}
+
+---
+9. Events
+Fabric API events allow you to hook into game actions without using mixins, providing cross-mod compatibility.
+Basic Event Usage
+// Exact imports
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import net.minecraft.world.InteractionResult;
+
+// Register in your initializer
+AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+	// Damage player when they mine hard blocks without a tool
+	if (!player.isSpectator() && player.getMainHandItem().isEmpty()) {
+		BlockState state = world.getBlockState(pos);
+		if (state.requiresCorrectToolForDrops() && world instanceof ServerLevel serverWorld) {
+			player.hurtServer(serverWorld, world.damageSources().generic(), 1.0F);
+		}
+	}
+
+	return InteractionResult.PASS;
+});
+Important Event Changes
+- 1.21.4: The old client-side pick block events (ClientPickBlockApplyCallback, etc.) were removed. Use the new server-side PlayerPickItemEvents#BLOCK and PlayerPickItemEvents#ENTITY instead.
+- 1.21.6: The old HUD API was completely rewritten. Use HudElementRegistry instead of the old HudRenderCallback.
+
+---
+10. Common Pitfalls: Sub-Version Differences
+The 1.21.2-1.21.8 range contains several breaking changes between minor versions. Here's what to watch out for:
+Version
+Breaking Changes
+1.21.2
+- Added required registryKey for block/item settings
+- Merged TypedActionResult/ItemActionResult into ActionResult
+- Entity rendering refactor to use render states
+- Registry method name changes
+1.21.4
+- CustomIngredient#getMatchingStacks must return Stream instead of List
+- Removed BlockPickInteractionAware
+- New item model system, removed ItemColors
+- Moved data generation classes to client
+1.21.6-1.21.8
+- Removed deprecated modules: fabric-command-api-v1, fabric-keybindings-v0, fabric-rendering-data-attachment-v1
+- Merged fabric-client-tags-api-v1 into fabric-tag-api-v1
+- Moved BlockRenderLayerMap to net.fabricmc.fabric.api.client.rendering.v1
+- Removed many old RenderSystem methods as part of pipeline separation
+Warning: If you are targeting the entire version range, you need to use conditional logic or separate builds to handle these differences. A mod built for 1.21.8 will not work on 1.21.2 without changes.
+
+---
+11. Java Version
+Java 21 is required for all versions in this range.
+Common Java-Related Errors
+- Unsupported class file major version 67: You are using Java 23 compiled classes on a Java 21 JVM. Fix by setting your compile target to 21.
+- Unsupported class file major version 61: You are using Java 17 compiled classes. Fix by upgrading your JDK to 21.
+
+---
+12. Mixin
+Mixins allow you to modify vanilla code without modifying the original source files. Fabric Loader 0.16.0+ includes MixinExtras 0.4.0 with new features.
+Basic Mixin Pattern
+// Exact imports
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import net.minecraft.entity.passive.SheepEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+
+@Mixin(SheepEntity.class)
+public class SheepShearMixin {
+	@Inject(
+		at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/animal/sheep/Sheep;shear(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/sounds/SoundSource;Lnet/minecraft/world/item/ItemStack;)V"),
+		method = "mobInteract",
+		cancellable = true
+	)
+	private void onShear(PlayerEntity player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> info) {
+		InteractionResult result = SheepShearCallback.EVENT.invoker().interact(player, (SheepEntity) (Object) this);
+
+		if (result == InteractionResult.FAIL) {
+			info.setReturnValue(result);
+		}
+	}
+}
+New MixinExtras Features (0.4.0+)
+- @WrapMethod: Wrap an entire method to replace or modify its behavior.
+- @Cancellable: Allow cancellation from any injector, not just injectors at the head of a method.
+- namespace parameter for @Share: Share values between mixins across different namespaces.
+Mixin Gotchas
+- Target Method Signatures: Minor Minecraft versions often change method signatures. Always double-check your target method's descriptor.
+- Client/Server Mixins: Make sure to mark client-only mixins with @Environment(EnvType.CLIENT) to avoid server crashes.
+- Mixin Order: Use @Priority to control the order of mixin application if you have multiple mixins modifying the same method.
+
+---
+13. Common Errors and Fixes
+Here are the most frequently seen errors in this version range, and how to fix them:
+1. NullPointerException: Block id not set / NullPointerException: Item id not set
+- Cause: You forgot to call .registryKey() on your block/item settings.
+- Fix: Add the registry key to your settings, as shown in the Block/Item Registration section.
+2. CustomIngredient#getMatchingStacks()'s return type is incompatible
+- Cause: In 1.21.4+, this method must return a Stream instead of a List.
+- Fix: Change your return type and return stream() instead of stream().
+// Old (1.21.2 and earlier)
+@Override
+public List<ItemStack> getMatchingStacks() { return matchingStacks; }
+
+// New (1.21.4 and later)
+@Override
+public Stream<ItemStack> getMatchingStacks() { return matchingStacks.stream(); }
+3. Mixin apply failed / Mixin transformation failed
+- Cause: Usually a version mismatch, or your mixin is targeting a method that changed in a sub-version.
+- Fix:
+  1. Verify your target method's signature matches the Minecraft version you're targeting.
+  2. Ensure you're using the correct Mixin version (bundled with Loom, don't add it manually).
+  3. Check for conflicting mods that are modifying the same class.
+4. Could not find method ... in class ...
+- Cause: You're using the old registry method names from before 1.21.2.
+- Fix: Update your registry method calls to use the new names (see Registry System section).
+5. NoSuchMethodError: net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap.INSTANCE
+- Cause: In 1.21.6+, BlockRenderLayerMap was moved, and the old instance field was removed.
+- Fix: Update your import and usage:
+// Old
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+BlockRenderLayerMap.INSTANCE.putBlock(...);
+
+// New
+import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
+BlockRenderLayerMap.putBlock(...);
+6. Mod uses the version ... which isn't compatible with Loader's extended semantic version format
+- Cause: Your mod version string doesn't follow SemVer.
+- Fix: Use a proper SemVer version string, e.g., 1.0.0+1.21.8 instead of fabric-1.21-1.0.0.
+
+---
+Final Notes
+- Always test your mod on each sub-version you target, as there are breaking changes between them.
+- Use the Fabric API whenever possible instead of mixins, to ensure cross-mod compatibility.
+- Keep an eye on the Fabric Blog for update posts for each new Minecraft version, which list all modder-facing changes.

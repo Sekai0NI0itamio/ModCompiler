@@ -1,0 +1,475 @@
+NeoForge 1.21-1.21.1 Modding Comprehensive Guide
+This guide covers everything needed to develop a Minecraft mod for 1.21-1.21.1 using NeoForge, including exact versions, code patterns, API changes, and common pitfalls.
+
+---
+1. Modding Framework
+Core Versions
+Component
+Version
+Details
+NeoForge
+21.1.193
+Latest stable release for 1.21.1
+ModDevGradle (NeoGradle successor)
+2.0.141
+Official build plugin for NeoForge 1.21
+Mappings
+Parchment 2024.07.07-1.21.1
+Official community-mapped names (replaces official Mojang mappings for readability)
+Imports
+// No core imports needed for framework setup, these are defined in build configuration
+Warnings from 1.20
+- NeoGradle is replaced by ModDevGradle: The old NeoGradle plugin is no longer used; the new net.neoforged.moddev plugin is the official build tool.
+- Mapping changes: Parchment mappings are now the standard, ensure you use the 1.21.1-compatible version.
+
+---
+2. Build System
+The bundle workflow provides the build system setup — no changes needed. Use Java 21.
+
+---
+3. Key Changes from 1.20
+Vanilla Changes
+1. Data Components: Replaced NBT for item stack data, type-safe key-value storage instead of raw tag compounds.
+2. Depluralized Data Folders: All data pack folders are now singular:
+  - recipes/ → recipe/
+  - loot_tables/ → loot_table/
+  - advancements/ → advancement/
+  - tags/blocks/ → tags/block/
+  - tags/items/ → tags/item/
+3. ResourceLocation: Constructor is now private, use static factory methods instead.
+4. Enchantments: Now a datapack registry, no longer static hardcoded values.
+5. Trial Chambers: New world generation structure with trial spawners, new blocks/items.
+6. Vertex Rendering Overhaul: Complete rewrite of the vertex buffer system, old buffer methods are removed.
+NeoForge API Changes
+1. Damage Pipeline Rework: New DamageContainer system, renamed damage events for clarity.
+2. Config GUI Return: Built-in in-game config editor is now available by default.
+3. Networking Rework: New payload-based networking system, deprecated old SimpleChannel.
+4. Removed Deprecations: FMLJavaModLoadingContext, old item helper methods, and legacy plant type system are removed.
+5. Enum Extensions Rework: Now uses JSON files instead of runtime enum modification.
+6. ItemAbilities: Renamed from ToolActions to support non-tool items.
+Gotchas
+- Folder name changes: Using old plural folder names will cause your data to fail to load silently.
+- ResourceLocation constructor: new ResourceLocation(...) no longer works, will throw compile error.
+
+---
+4. Mod Entry Point
+The Main Mod Class
+This is the entry point for your mod, annotated with @Mod matching your mod ID.
+Imports
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.bus.api.IEventBus;
+Code Example
+// The value here must match the modId in neoforge.mods.toml
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+    public static ${MOD_CLASS} instance;
+
+    public ${MOD_CLASS}(IEventBus modEventBus, ModContainer container) {
+        instance = this;
+
+        // Register Deferred Registers to the mod event bus
+        ModBlocks.BLOCKS.register(modEventBus);
+        ModItems.ITEMS.register(modEventBus);
+        ModDataComponents.DATA_COMPONENTS.register(modEventBus);
+        ModMenus.MENUS.register(modEventBus);
+
+        // Register config
+        container.registerConfig(ModConfig.Type.COMMON, ExampleConfig.CONFIG_SPEC);
+
+        // Register networking payloads
+        modEventBus.register(NetworkingHandler.class);
+    }
+}
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+
+---
+5. Registry System
+NeoForge uses deferred registration to handle registry events safely, ensuring your content is registered at the correct time.
+DeferredRegister
+This class allows you to register your content before the registry event is fired, queueing up entries to be registered automatically.
+Imports
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.core.registries.Registries;
+Code Example
+// Deferred Register for Blocks
+public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Registries.BLOCK, MOD_ID);
+
+// Deferred Register for Items
+public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, MOD_ID);
+
+// Deferred Register for Data Components
+public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENTS =
+    DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MOD_ID);
+
+// Deferred Register for Menus
+public static final DeferredRegister<MenuType<?>> MENUS =
+    DeferredRegister.create(Registries.MENU, MOD_ID);
+Warnings from 1.20
+- Registry keys: Use the new Registries class constants instead of hardcoded registry names.
+- Registration order: Always register your deferred registers to the mod event bus in the mod constructor, not later.
+
+---
+6. Block/Item Registration
+Standard Registration Pattern
+Use the specialized DeferredRegister helpers to simplify block and item registration.
+Imports
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.resources.ResourceLocation;
+Code Example
+public class ModBlocks {
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Registries.BLOCK, ${MOD_CLASS}.MOD_ID);
+    public static final DeferredRegister<Item> ITEMS = ModItems.ITEMS;
+
+    // Example Block
+    public static final Supplier<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block",
+        () -> new Block(BlockBehaviour.Properties.of().strength(2.0f)));
+
+    // Register Block Item automatically
+    public static final Supplier<Item> EXAMPLE_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(EXAMPLE_BLOCK,
+        new Item.Properties());
+}
+
+public class ModItems {
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, ${MOD_CLASS}.MOD_ID);
+
+    // Example Item
+    public static final Supplier<Item> EXAMPLE_ITEM = ITEMS.register("example_item",
+        () -> new Item(new Item.Properties()
+            // Set default data components
+            .component(ModDataComponents.EXAMPLE_DATA.get(), new ExampleData(5, true))
+        ));
+}
+Warnings from 1.20
+- Block.Properties: The old Block.Properties is now BlockBehaviour.Properties.
+- Item properties: Item properties now require setting ID via setId when using custom constructors, handled automatically by DeferredRegister.
+- SimpleBlockItem: The new registerSimpleBlockItem helper replaces manual BlockItem registration.
+
+---
+7. Rendering: Model Changes
+Key Rendering Changes
+1. Vertex System Overhaul: Old BufferBuilder methods are replaced with new vertex writing APIs.
+2. Item Model Data Components: Item model overrides are now stored in data components instead of NBT.
+3. Depluralized Asset/Tag Folders:
+  - models/block (singular) instead of models/blocks
+  - textures/block instead of textures/blocks
+Vertex Code Example (New API)
+// Old code (1.20) no longer works!
+// buffer.vertex(mat, x, y, z).uv(u, v).endVertex();
+
+// New code (1.21)
+BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+buffer.addVertex(x0, y0, z0).setUv(u0, v0).setColor(-1);
+buffer.addVertex(x1, y0, z0).setUv(u1, v0).setColor(-1);
+buffer.addVertex(x1, y1, z0).setUv(u1, v1).setColor(-1);
+buffer.addVertex(x0, y1, z0).setUv(u0, v1).setColor(-1);
+
+BufferUploader.drawWithShader(buffer.buildOrThrow());
+Warnings from 1.20
+- Removed endVertex(): The old endVertex() method is completely removed, vertices are finalized automatically when calling addVertex.
+- Model folder names: Using old plural model folders will cause your models to fail to load.
+- Color format: Tint colors are now single ARGB integers instead of 4 separate float values.
+
+---
+8. GUI/Container: MenuType & Screen
+MenuType (Backend Logic)
+Menus handle the server-side logic for GUIs, syncing data between client and server.
+Imports
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.FriendlyByteBuf;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.SlotItemHandler;
+Code Example
+public class ExampleMenu extends AbstractContainerMenu {
+    public static final Supplier<MenuType<ExampleMenu>> TYPE = ModMenus.MENUS.register("example_menu",
+        () -> IMenuTypeExtension.create(ExampleMenu::new));
+
+    public final IItemHandler inventory;
+
+    // Client constructor
+    public ExampleMenu(int containerId, Inventory playerInv, FriendlyByteBuf extraData) {
+        this(containerId, playerInv, new ItemStackHandler(5));
+    }
+
+    // Server constructor
+    public ExampleMenu(int containerId, Inventory playerInv, IItemHandler inventory) {
+        super(TYPE.get(), containerId);
+        this.inventory = inventory;
+
+        // Add inventory slots
+        for (int i = 0; i < inventory.getSlots(); i++) {
+            this.addSlot(new SlotItemHandler(inventory, i, 44 + i * 18, 20));
+        }
+
+        // Add player inventory slots
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 9; j++) {
+                this.addSlot(new Slot(playerInv, j + i * 9 + 9, 8 + j * 18, 51 + i * 18));
+            }
+        }
+
+        // Add player hotbar slots
+        for (int j = 0; j < 9; j++) {
+            this.addSlot(new Slot(playerInv, j, 8 + j * 18, 109));
+        }
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return true;
+    }
+
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) {
+        // Implement shift-click logic here
+        return ItemStack.EMPTY;
+    }
+}
+Screen (Client Rendering)
+Screens handle the client-side rendering and user input for GUIs.
+Imports
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+Code Example
+public class ExampleScreen extends AbstractContainerScreen<ExampleMenu> {
+    private static final ResourceLocation TEXTURE =
+        ResourceLocation.fromNamespaceAndPath("${MOD_ID}", "textures/gui/example_gui.png");
+
+    public ExampleScreen(ExampleMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        renderTooltip(graphics, mouseX, mouseY);
+    }
+}
+Registering Screens
+@SubscribeEvent // On mod event bus, client-side only
+public static void registerScreens(RegisterMenuScreensEvent event) {
+    event.register(ExampleMenu.TYPE.get(), ExampleScreen::new);
+}
+Warnings from 1.20
+- Menu registration: Menus must be registered via DeferredRegister, not the old static registration.
+- Screen registration: Use RegisterMenuScreensEvent instead of the old ScreenManager.register.
+
+---
+9. Networking: NeoForge Payload System
+NeoForge 1.21 uses the new payload-based networking system, replacing the old SimpleChannel system.
+Custom Packet Payload
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import io.netty.buffer.ByteBuf;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+public record ExamplePayload(String message, int value) implements CustomPacketPayload {
+    public static final Type<ExamplePayload> TYPE =
+        new Type<>(ResourceLocation.fromNamespaceAndPath("${MOD_ID}", "example_payload"));
+
+    public static final StreamCodec<ByteBuf, ExamplePayload> STREAM_CODEC = StreamCodec.composite(
+        ByteBufCodecs.STRING_UTF8, ExamplePayload::message,
+        ByteBufCodecs.VAR_INT, ExamplePayload::value,
+        ExamplePayload::new
+    );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+}
+Registering Payloads
+@SubscribeEvent
+public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+    final PayloadRegistrar registrar = event.registrar("1");
+
+    registrar.playBidirectional(
+        ExamplePayload.TYPE,
+        ExamplePayload.STREAM_CODEC,
+        ExamplePayloadHandler::handlePayload
+    );
+}
+Handling & Sending Payloads
+public class ExamplePayloadHandler {
+    public static void handlePayload(ExamplePayload payload, IPayloadContext context) {
+        // Handle payload on main thread automatically
+        context.enqueueWork(() -> {
+            // Do something with the data
+            Player player = context.player();
+            player.sendSystemMessage(Component.literal(payload.message() + ": " + payload.value()));
+        });
+    }
+}
+
+// Sending from client to server
+ClientPacketDistributor.sendToServer(new ExamplePayload("Hello", 123));
+
+// Sending from server to player
+PacketDistributor.sendToPlayer(serverPlayer, new ExamplePayload("Hello", 123));
+Warnings from 1.20
+- Deprecated SimpleChannel: The old SimpleChannel networking system is deprecated and removed. Use payloads instead.
+- Payload size limits: Clientbound payloads have a 1MB limit, serverbound have a 32KB limit.
+
+---
+10. Events: NeoForge Event Bus
+NeoForge has two separate event busses:
+1. Mod Event Bus: For mod initialization, registration events, fired during startup.
+2. Game Event Bus: For in-game events, fired during gameplay.
+Basic Event Listening
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+
+// Automatic static subscriber
+@EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
+public class GameEvents {
+    @SubscribeEvent
+    public static void onPlayerRightClick(PlayerInteractEvent.RightClickBlock event) {
+        // Handle right click event
+    }
+}
+Manual Event Registration
+// In mod constructor
+public ${MOD_CLASS}(IEventBus modEventBus) {
+    // Register to mod bus
+    modEventBus.register(this);
+
+    // Register to game bus
+    NeoForge.EVENT_BUS.register(new GameEvents());
+}
+Warnings from 1.20
+- Event bus mixup: Registration events (like RegisterEvent) must be fired on the mod bus, not the game bus. Using the wrong bus will cause your content to not register.
+- Removed Event.Result: Most event results are removed, use cancelable events instead.
+
+---
+11. Config: NeoForge Config
+NeoForge uses NightConfig for config handling, with built-in in-game config GUI.
+Config Definition
+import net.neoforged.neoforge.common.ModConfigSpec;
+
+public class ExampleConfig {
+    public static final ExampleConfig CONFIG;
+    public static final ModConfigSpec CONFIG_SPEC;
+
+    static {
+        Pair<ExampleConfig, ModConfigSpec> pair =
+            new ModConfigSpec.Builder().configure(ExampleConfig::new);
+        CONFIG = pair.getLeft();
+        CONFIG_SPEC = pair.getRight();
+    }
+
+    public final ModConfigSpec.ConfigValue<String> welcomeMessage;
+    public final ModConfigSpec.IntValue maxValue;
+    public final ModConfigSpec.BooleanValue enableFeature;
+
+    private ExampleConfig(ModConfigSpec.Builder builder) {
+        builder.push("general");
+        welcomeMessage = builder
+            .comment("Welcome message sent to players on join")
+            .translation("${MOD_ID}.config.welcome_message")
+            .define("welcome_message", "Hello from ${MOD_DISPLAY_NAME}!");
+
+        maxValue = builder
+            .comment("Maximum value for the feature")
+            .translation("${MOD_ID}.config.max_value")
+            .defineInRange("max_value", 100, 1, 1000);
+
+        enableFeature = builder
+            .comment("Enable the example feature")
+            .translation("${MOD_ID}.config.enable_feature")
+            .define("enable_feature", true);
+        builder.pop();
+    }
+}
+Registering Config & GUI
+// In mod constructor
+container.registerConfig(ModConfig.Type.COMMON, ExampleConfig.CONFIG_SPEC);
+
+// Client-side only: Register built-in config GUI
+@EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public class ClientConfigSetup {
+    @SubscribeEvent
+    public static void registerConfigScreen(FMLClientSetupEvent event) {
+        ModContainer container = ModLoadingContext.get().getActiveContainer();
+        container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+    }
+}
+Warnings from 1.20
+- Config registration: Use ModContainer#registerConfig instead of the old ModLoadingContext#registerConfig.
+- Config types: Server configs are now per-world, stored in world/serverconfig instead of the global config folder.
+
+---
+12. Common Pitfalls
+Data Component System
+- Don't use NBT for item data: Data components are type-safe, sync automatically, and replace raw NBT. Using NBT will cause data loss or desync.
+- Immutable values: Component values must be immutable, always use stack.set() after modifying, don't mutate the value directly.
+- Default components: Set default components in Item.Properties instead of adding them to every stack.
+Java 21
+- Source compatibility: Set your IDE to use Java 21 language level, older features will cause compile errors.
+- JVM arguments: Don't use deprecated JVM arguments that were removed in Java 21.
+NeoForge-specific APIs
+- Removed deprecated methods: Many old helper methods are removed, use the new vanilla/NeoForge methods instead.
+- Mod bus vs Game bus: Never register game events on the mod bus, or registration events on the game bus.
+- ResourceLocation: Always use fromNamespaceAndPath or parse, never use the private constructor.
+
+---
+13. Java Version: Java 21
+Requirements
+Minecraft 1.21 requires Java 21 to run, both for the development environment and the end user.
+Common Issues
+- Wrong Java version: Gradle will fail with "Unsupported class file major version 65" if you use an older Java version.
+
+---
+14. Common Errors & Fixes
+Error
+Cause
+Fix
+Unsupported class file major version 65
+Using Java <21
+Use Java 21
+Cannot find symbol constructor ResourceLocation(String,String)
+Using old private ResourceLocation constructor
+Use ResourceLocation.fromNamespaceAndPath(namespace, path)
+Mod loading failed: Missing mod metadata
+Using old mods.toml instead of neoforge.mods.toml
+Rename the file to neoforge.mods.toml
+My items/blocks/recipes don't appear
+Using old plural data/asset folder names
+Rename folders to singular: recipe/, loot_table/, block/
+Failed to register event handler
+Trying to register mod events on the game bus
+Move the event listener to the mod event bus
+FMLJavaModLoadingContext not found
+Using removed old context class
+Use the mod bus passed to the mod constructor
+Networking failed: SimpleChannel not found
+Using deprecated old networking system
+Migrate to the new payload-based networking
+ItemStack NBT not saving
+Using NBT instead of data components
+Migrate your item data to use custom data components
+DeferredRegister entries not registered
+Forgot to register the DeferredRegister to the mod event bus
+Call deferredRegister.register(modEventBus) in the mod constructor
+Config file not found
+Wrong config type, or failed registration
+Use container.registerConfig in the mod constructor
+
+---
+This guide covers all core aspects of NeoForge modding for 1.21-1.21.1, ensuring you avoid common pitfalls and use the latest, supported APIs.

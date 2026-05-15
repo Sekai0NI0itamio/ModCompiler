@@ -1,0 +1,378 @@
+Comprehensive Minecraft Forge 1.17-1.17.1 Modding Guide
+This guide covers everything needed to develop a Forge mod for Minecraft 1.17-1.17.1, including exact API usage, code patterns, and critical changes from 1.16.
+
+---
+1. Modding Framework
+Modding Framework: Forge version, Mojang mappings.
+
+---
+3. Key Changes from 1.16
+Change
+Details
+Mojang Mappings Migration
+All class, method, and field names are now official Mojang names. Common renames: TileEntity → BlockEntity, World → Level, ServerWorld → ServerLevel, ItemStackHelper → ContainerHelper
+World Height Overhaul
+World height increased from 0-255 to -64-319. Hardcoded Y-level assumptions will break.
+Registry Overhaul
+Vanilla's new dynamic registry system requires all registration to happen during the dedicated registry phase. Direct registry modification is no longer allowed.
+Java 16 Requirement
+Minecraft 1.17 requires Java 16, older Java versions will fail to compile/run.
+OpenGL 3.2 Core
+Rendering now uses shader-based pipeline. Immediate mode rendering (glBegin/glEnd) no longer works.
+
+---
+4. Mod Entry Point
+Core Components
+- @Mod: The mod entry point annotation
+- mods.toml: Mod metadata file
+- FML Lifecycle Events: Mod initialization events
+Main Mod Class Example
+// Exact Imports
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.eventbus.api.IEventBus;
+
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}() {
+        // Get the mod-specific event bus
+        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        // Register all deferred registers here
+        DeferredBlocks.register(bus);
+        DeferredItems.register(bus);
+        DeferredMenuTypes.register(bus);
+
+        // Register config
+        FMLJavaModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+    }
+}
+mods.toml
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+
+---
+5. Registry System
+Core Components
+Class
+Import Path
+Purpose
+DeferredRegister
+net.minecraftforge.registries.DeferredRegister
+Safe deferred registration of objects
+ForgeRegistries
+net.minecraftforge.registries.ForgeRegistries
+All built-in Forge registries
+RegistryObject
+net.minecraftforge.registries.RegistryObject
+Lazy reference to registered objects
+IForgeRegistry
+net.minecraftforge.registries.IForgeRegistry
+Wrapped Forge registry interface
+Key Notes
+- All registration must use DeferredRegister or RegistryEvent.Register fired on the mod event bus
+- Registries are now fully dynamic, you cannot modify them outside the registration phase
+
+---
+6. Block/Item Registration
+DeferredRegister Pattern
+This is the recommended pattern for registering blocks and items.
+// Exact Imports
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.Material;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    // Deferred Register for Blocks
+    public static final DeferredRegister<Block> BLOCKS =
+        DeferredRegister.create(ForgeRegistries.BLOCKS, MOD_ID);
+
+    // Deferred Register for Items
+    public static final DeferredRegister<Item> ITEMS =
+        DeferredRegister.create(ForgeRegistries.ITEMS, MOD_ID);
+
+    // Register a block
+    public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register(
+        "example_block",
+        () -> new Block(BlockBehaviour.Properties.of(Material.STONE).strength(2.0f))
+    );
+
+    // Register the corresponding item for the block
+    public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register(
+        "example_block",
+        () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties())
+    );
+
+    // Register a standalone item
+    public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register(
+        "example_item",
+        () -> new Item(new Item.Properties().tab(ItemGroup.TAB_MATERIALS))
+    );
+}
+Warning for 1.16 Migrators
+You no longer need to call setRegistryName manually. DeferredRegister automatically handles this based on the name you pass.
+
+---
+7. Rendering
+Key Changes
+- Model System Overhaul: ModelRenderer is replaced with ModelPart for entity models
+- Shader-Based Rendering: All rendering now uses shaders. Legacy immediate mode calls will fail.
+- Render Types: Block render layers are set via RenderTypeLookup
+Block Render Type Example
+For blocks that need transparency/cutout:
+// Exact Imports
+import net.minecraft.client.renderer.RenderType;
+import net.minecraftforge.client.RenderTypeLookup;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+
+@SubscribeEvent
+public static void onClientSetup(FMLClientSetupEvent event) {
+    event.enqueueWork(() -> {
+        // Set cutout render type for blocks like glass, leaves, etc.
+        RenderTypeLookup.setRenderLayer(EXAMPLE_BLOCK.get(), RenderType.cutout());
+
+        // For translucent blocks like water
+        // RenderTypeLookup.setRenderLayer(TRANSLUCENT_BLOCK.get(), RenderType.translucent());
+    });
+}
+RenderSystem Changes
+Legacy RenderSystem.bindTexture() is replaced with:
+RenderSystem.setShaderTexture(0, textureLocation);
+RenderSystem.setShaderColor(r, g, b, a);
+
+---
+8. GUI/Container
+Core Components
+Class
+Import Path
+Purpose
+MenuType
+net.minecraft.world.inventory.MenuType
+Container menu type
+MenuScreens
+net.minecraft.client.gui.screens.MenuScreens
+Screen registration
+Menu Registration
+// Exact Imports
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+
+public class ${MOD_CLASS} {
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+        DeferredRegister.create(ForgeRegistries.MENU_TYPES, MOD_ID);
+
+    public static final RegistryObject<MenuType<ExampleMenu>> EXAMPLE_MENU =
+        MENU_TYPES.register("example_menu", () -> new MenuType<>(ExampleMenu::new));
+}
+Screen Registration
+Screens must be registered on the client during setup:
+// Exact Imports
+import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+
+@SubscribeEvent
+public static void onClientSetup(FMLClientSetupEvent event) {
+    event.enqueueWork(() -> {
+        // Register the screen factory for your menu
+        MenuScreens.register(${MOD_CLASS}.EXAMPLE_MENU.get(), ExampleScreen::new);
+    });
+}
+Warning
+You must wrap screen registration in event.enqueueWork() to ensure it runs on the correct thread.
+
+---
+9. Networking
+SimpleChannel Setup
+Forge's SimpleChannel is the recommended networking system.
+// Exact Imports
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
+
+public class ${MOD_CLASS} {
+    private static final String PROTOCOL_VERSION = "1";
+    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
+        new ResourceLocation(MOD_ID, "main"),
+        () -> PROTOCOL_VERSION,
+        PROTOCOL_VERSION::equals,
+        PROTOCOL_VERSION::equals
+    );
+
+    public static void registerPackets() {
+        int id = 0;
+        // Register your packets here
+        CHANNEL.registerMessage(id++, ExamplePacket.class,
+            ExamplePacket::encode,
+            ExamplePacket::decode,
+            ExamplePacket::handle
+        );
+    }
+}
+Packet Handling Example
+public class ExamplePacket {
+    public static void handle(ExamplePacket msg, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            // Thread-safe work here
+            ServerPlayer sender = ctx.get().getSender();
+            // Do work with the packet data
+        });
+        ctx.get().setPacketHandled(true);
+    }
+}
+
+---
+10. Events
+Forge has two separate event buses, using the wrong one is the most common event-related error.
+Bus
+Usage
+Events Handled
+Forge Event Bus
+MinecraftForge.EVENT_BUS
+Game runtime events: player ticks, block breaks, rendering, etc.
+Mod Event Bus
+FMLJavaModLoadingContext.get().getModEventBus()
+Mod lifecycle, registration, config, model events
+Event Subscriber Example
+// Exact Imports
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+
+@Mod.EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public class ClientEvents {
+    @SubscribeEvent
+    public static void onClientSetup(FMLClientSetupEvent event) {
+        // Client setup code
+    }
+}
+
+// For Forge bus events
+@Mod.EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public class GameEvents {
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        // Player tick handling
+    }
+}
+
+---
+11. Config
+ModConfig Setup
+Forge uses TOML configs with ForgeConfigSpec.
+// Exact Imports
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.config.ModConfig;
+
+public class Config {
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
+
+    // Config values
+    public static final ForgeConfigSpec.ConfigValue<Boolean> EXAMPLE_BOOL;
+    public static final ForgeConfigSpec.ConfigValue<Integer> EXAMPLE_INT;
+
+    static {
+        BUILDER.push("general");
+
+        EXAMPLE_BOOL = BUILDER.comment("Example boolean config")
+            .define("example_bool", true);
+
+        EXAMPLE_INT = BUILDER.comment("Example integer config")
+            .defineInRange("example_int", 10, 0, 100);
+
+        BUILDER.pop();
+        SPEC = BUILDER.build();
+    }
+}
+Registering Config
+Register the config in your mod constructor:
+public ${MOD_CLASS}() {
+    // ... other registration
+    FMLJavaModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+}
+
+---
+12. Common Pitfalls
+1. Mojang Mappings Confusion
+  - Old MCP names (like TileEntity, World) will not compile. Use the new official names.
+  - You cannot use MCP mapping channels for 1.17, they do not exist.
+2. Java Version Mismatch
+  - Using Java 11 or 17 will cause compile/runtime errors. You must use exactly Java 16.
+3. World Height Assumptions
+  - Any code that hardcodes y=0 as the world bottom or y=256 as the top will break. Use LevelHeightAccessor to get dynamic world bounds.
+4. Wrong Event Bus
+  - Registration events, lifecycle events, and config events must be registered to the mod event bus. Game events go to the Forge bus.
+5. Thread Safety in Client Setup
+  - Client-side registration (screens, render types) must be wrapped in event.enqueueWork() to run on the client thread.
+
+---
+13. Java Version
+Java 16 is strictly required for 1.17.1 modding. Java 17, 11, or 8 are not supported and will fail to build/run.
+
+---
+14. Mixin
+Mixin Setup
+Forge includes Mixin 0.8.5 by default, no extra dependencies are needed.
+1. Mixin Config File (src/main/resources/mixins.${MOD_ID}.json)
+{
+    "required": true,
+    "minVersion": "0.8",
+    "package": "${PACKAGE_PATH}.mixin",
+    "compatibilityLevel": "JAVA_16",
+    "mixins": [
+        "ExampleMixin"
+    ],
+    "client": [
+        "ClientExampleMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}
+2. Register in mods.toml
+Add the mixin config to your mods.toml as shown in the entry point section.
+Gotchas
+- Use compatibilityLevel": "JAVA_16" for 1.17, not Java 8 or 17
+- Mixins automatically use the same mappings as your mod, no manual remapping needed
+- Mixin target classes must use the mapped Mojang names, not obfuscated names
+
+---
+15. Common Errors & Fixes
+Error
+Cause
+Fix
+cannot find symbol class TileEntity
+Using old MCP name
+Rename to BlockEntity
+cannot find symbol class World
+Using old MCP name
+Rename to Level
+Events are not firing
+Registered to wrong event bus
+Move registration to the correct bus (mod vs Forge)
+Mixin apply failed
+Wrong Mixin compatibility level
+Set mixin json compatibility to JAVA_16
+java.lang.UnsupportedClassVersionError: Unsupported major.minor version 60.0
+Compiled with wrong Java version
+Recompile with Java 16
+Render system errors in custom rendering
+Using immediate mode OpenGL
+Migrate to shader-based rendering with ModelPart
+
+---
+Final Notes
+- Always use the latest recommended Forge version for 1.17.1 to get bug fixes
+- Test your mod on both dedicated server and client to catch side-only issues
+- Use @OnlyIn annotations to mark client-only code to prevent server crashes

@@ -1,0 +1,516 @@
+Comprehensive Minecraft 1.16.5 Fabric Modding Guide
+This guide covers everything you need to code a Minecraft 1.16.5 mod using the Fabric modding framework, with version-specific details, exact imports, code examples, and common pitfalls.
+
+---
+1. Modding Framework
+For 1.16.5, use these exact compatible versions to avoid build/run failures:
+Component
+Recommended Version
+Notes
+Fabric Loader
+0.11.3+
+Minimum compatible version; newer patch versions (up to 0.14.x) work for backward compatibility
+Yarn Mappings
+1.16.5+build.9
+Official Mojang mappings remapped to readable names; use v2 format
+Fabric Loom Plugin
+0.10.63
+Latest stable Loom version that supports 1.16.5 (Loom 0.11+ is for 1.17+)
+Fabric API
+0.34.2+1.16
+Core API library for extended functionality (optional but highly recommended)
+Warning: Do not use Loom 0.11+ or newer for 1.16.5, it will cause build failures due to incompatible Minecraft version support.
+
+---
+3. Mod Entry Point
+Fabric uses entry points to run your mod code at different stages of initialization.
+Core Interfaces
+Common Entry Point (ModInitializer)
+Runs on both client and server, for shared registration logic.
+import net.fabricmc.api.ModInitializer;
+
+public class ${MOD_CLASS} implements ModInitializer {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    @Override
+    public void onInitialize() {
+        // Shared registration logic here (blocks, items, recipes, etc.)
+    }
+}
+Client-Only Entry Point (ClientModInitializer)
+Runs only on the client, for client-side logic (rendering, client events, etc.)
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
+
+@Environment(EnvType.CLIENT)
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
+        // Client-only setup here
+    }
+}
+fabric.mod.json (Mod Metadata)
+This file tells Fabric how to load your mod. Place it in src/main/resources/:
+{
+  "schemaVersion": 1,
+  "id": "${MOD_ID}",
+  "version": "${version}",
+  "name": "${MOD_DISPLAY_NAME}",
+  "description": "Your mod description",
+  "authors": ["${AUTHOR_NAME}"],
+  "contact": {
+    "homepage": "https://yourwebsite.com",
+    "sources": "https://github.com/yourname/yourmod"
+  },
+  "license": "MIT",
+  "icon": "assets/${MOD_ID}/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["${PACKAGE_PATH}.${MOD_CLASS}"],
+    "client": ["${PACKAGE_PATH}.${MOD_CLIENT_CLASS}"]
+  },
+  "mixins": [
+    "${MOD_ID}.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.11.3",
+    "fabric": ">=0.34.2",
+    "minecraft": "1.16.x"
+  },
+  "suggests": {}
+}
+Warning: schemaVersion must be 1 for 1.16.5; newer schema versions are not supported in this version.
+
+---
+4. Registry System
+Fabric uses vanilla Minecraft's registry system to register new content.
+Core Imports
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.Identifier;
+Built-in Registries
+Common built-in registries you will use:
+- Registry.BLOCK - For blocks
+- Registry.ITEM - For items
+- Registry.ENTITY_TYPE - For entities
+- Registry.RECIPE_SERIALIZER - For recipe serializers
+- Registry.SOUND_EVENT - For sound events
+Identifiers
+All registered content uses an Identifier to uniquely identify it, formatted as modid:registry_name.
+// Create an identifier for your mod
+public static final Identifier EXAMPLE_ID = new Identifier(${MOD_CLASS}.MOD_ID, "example_block");
+Registration Pattern
+Use Registry.register to register your content during the mod initialization phase:
+// Registry.register(registry, identifier, contentInstance)
+Registry.register(Registry.BLOCK, EXAMPLE_ID, EXAMPLE_BLOCK);
+Warning: Never register content after the initialization phase! All registration must happen in onInitialize to avoid race conditions.
+
+---
+5. Block/Item Registration
+Standard Registration Pattern
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.block.FabricBlockSettings;
+import net.fabricmc.fabric.api.item.FabricItemSettings;
+import net.minecraft.block.Block;
+import net.minecraft.block.Material;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.Identifier;
+
+public class ${MOD_CLASS} implements ModInitializer {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    // Block instance
+    public static final Block EXAMPLE_BLOCK = new Block(
+        FabricBlockSettings.of(Material.METAL)
+            .strength(4.0f) // Hardness and blast resistance
+            .requiresTool() // Requires pickaxe to break
+    );
+
+    // Block Item instance (for placing the block)
+    public static final BlockItem EXAMPLE_BLOCK_ITEM = new BlockItem(
+        EXAMPLE_BLOCK,
+        new FabricItemSettings()
+            .group(ItemGroup.BUILDING_BLOCKS) // Creative tab
+    );
+
+    @Override
+    public void onInitialize() {
+        // Register block
+        Registry.register(
+            Registry.BLOCK,
+            new Identifier(MOD_ID, "example_block"),
+            EXAMPLE_BLOCK
+        );
+
+        // Register block item
+        Registry.register(
+            Registry.ITEM,
+            new Identifier(MOD_ID, "example_block"),
+            EXAMPLE_BLOCK_ITEM
+        );
+    }
+}
+Note: For custom block classes, extend Block and pass your custom settings the same way.
+
+---
+6. Rendering
+Resource Structure
+Rendering assets follow this standard structure in src/main/resources/assets/${MOD_ID}/:
+assets/
+  ${MOD_ID}/
+    blockstates/   # Block state definitions
+      example_block.json
+    models/
+      block/       # Block models
+        example_block.json
+      item/        # Item models
+        example_block.json
+    textures/
+      block/       # Block textures
+        example_block.png
+Blockstate JSON (blockstates/example_block.json)
+Defines which model to use for each block state:
+{
+  "variants": {
+    "": { "model": "${MOD_ID}:block/example_block" }
+  }
+}
+Block Model JSON (models/block/example_block.json)
+Defines the block's shape and textures:
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "${MOD_ID}:block/example_block"
+  }
+}
+Item Model JSON (models/item/example_block.json)
+Defines the item's appearance (usually inherits from the block model):
+{
+  "parent": "${MOD_ID}:block/example_block"
+}
+Render Layer Registration
+For translucent/cutout blocks, register the render layer client-side:
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+import net.minecraft.client.render.RenderLayer;
+
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
+        // For cutout blocks (e.g. leaves, glass)
+        BlockRenderLayerMap.INSTANCE.put(
+            ${MOD_CLASS}.EXAMPLE_BLOCK,
+            RenderLayer.getCutout()
+        );
+
+        // For translucent blocks
+        // BlockRenderLayerMap.INSTANCE.put(EXAMPLE_BLOCK, RenderLayer.getTranslucent());
+    }
+}
+
+---
+7. Networking
+Fabric's networking API allows client-server communication.
+Core Imports
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.util.Identifier;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+Packet Channel
+Define a channel identifier for your packets:
+public static final Identifier HIGHLIGHT_PACKET = new Identifier(MOD_ID, "highlight_block");
+Sending Packets (Server -> Client)
+// On the server, send a packet to a player
+PacketByteBuf buf = PacketByteBufs.create();
+buf.writeBlockPos(targetPos); // Write data to the buffer
+
+ServerPlayNetworking.send(serverPlayer, HIGHLIGHT_PACKET, buf);
+
+// Send to all players tracking a position
+for (ServerPlayerEntity player : PlayerLookup.tracking((ServerWorld) world, targetPos)) {
+    ServerPlayNetworking.send(player, HIGHLIGHT_PACKET, buf);
+}
+Receiving Packets (Client)
+Register the receiver in your client entry point:
+ClientPlayNetworking.registerGlobalReceiver(HIGHLIGHT_PACKET, (client, handler, buf, responseSender) -> {
+    // Read data FIRST on the network thread
+    BlockPos target = buf.readBlockPos();
+
+    // Schedule work on the client render thread
+    client.execute(() -> {
+        // Client-side logic here (e.g. render highlight)
+    });
+});
+Sending Packets (Client -> Server)
+// On the client, send to the server
+PacketByteBuf buf = PacketByteBufs.create();
+buf.writeString("Hello Server!");
+ClientPlayNetworking.send(HIGHLIGHT_PACKET, buf);
+Receiving Packets (Server)
+ServerPlayNetworking.registerGlobalReceiver(HIGHLIGHT_PACKET, (server, player, handler, buf, responseSender) -> {
+    String message = buf.readString();
+
+    server.execute(() -> {
+        // Server-side logic here
+    });
+});
+Warning: Always read packet data on the network thread, not the game thread! Never retain the buffer without releasing it.
+
+---
+8. Events
+Fabric API provides high-level events to hook into game logic without mixins.
+Fabric API Events
+Use these for most common use cases:
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+
+// Client tick event
+ClientTickEvents.END_CLIENT_TICK.register(client -> {
+    // Run every client tick
+});
+
+// Player use block event
+UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+    // Handle block interaction
+    return ActionResult.PASS;
+});
+Events vs Mixins
+Fabric Events
+Mixins
+High-level, safe, no conflicts
+Low-level, can modify any code
+No need to understand bytecode
+Requires understanding of injection points
+Version-stable
+Can break if vanilla code changes
+Use for most common hooks
+Use only when events don't exist
+
+---
+9. Config
+For 1.16.5, use Cloth Config + Auto Config for easy config management.
+Compatible Versions
+- Cloth Config: 4.17.101 (for 1.16.5)
+- Auto Config: 1.4.+ (compatible with Cloth Config 4.x)
+Config Code Example
+import me.shedaniel.autoconfig.AutoConfig;
+import me.shedaniel.autoconfig.ConfigData;
+import me.shedaniel.autoconfig.annotation.Config;
+import me.shedaniel.autoconfig.annotation.ConfigEntry;
+
+@Config(name = ${MOD_CLASS}.MOD_ID)
+public class ModConfig implements ConfigData {
+    @ConfigEntry.Gui.Tooltip
+    public boolean enableFeature = true;
+
+    @ConfigEntry.BoundedDiscrete(min = 1, max = 100)
+    public int featureValue = 10;
+
+    public String featureName = "Default";
+}
+
+// Register config in onInitialize
+@Override
+public void onInitialize() {
+    AutoConfig.register(ModConfig.class, AutoConfig::serializer);
+    ModConfig config = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
+}
+
+---
+10. Common Pitfalls
+Version-Specific Issues
+1. Java Version Mismatch: 1.16.5 requires Java 8; using Java 16+ will cause runtime crashes.
+2. Loom Version: Do not use Loom 0.11+ for 1.16.5, it only supports 1.17+.
+3. Registration Order: Always register blocks before their items, otherwise the item will fail to find the block.
+4. Client-only Code: Never reference client-only classes (like MinecraftClient) on the server, it will crash the dedicated server. Use @Environment(EnvType.CLIENT) to mark client-only code.
+5. Mixin Remapping: Always set remap = true for mixins targeting vanilla classes, otherwise they will fail to find the obfuscated methods.
+Deprecated APIs
+- FabricBlockSettings/FabricItemSettings: These are still valid in 1.16.5, but in newer versions they were replaced with vanilla settings. Do not use the newer vanilla-only settings in 1.16.5.
+- Old networking API: The old ClientSidePacketRegistry is deprecated in 1.16.5; use the new ServerPlayNetworking/ClientPlayNetworking API instead.
+
+---
+11. Java Version
+Java 8 is required for 1.16.5.
+Minecraft 1.16.5 and all Fabric tools for this version target Java 8. The java_rules for this version explicitly require Java 8, and:
+- sourceCompatibility and targetCompatibility must be set to 1.8
+- You can compile with a newer JDK, but you must target Java 8 bytecode
+- Running the game requires Java 8 installed (the launcher will automatically use it)
+Myth: You need Java 16 for 1.16.5. This is false! Java 16 is only required for Minecraft 1.17+.
+
+---
+12. Mixin
+Mixins allow you to modify vanilla code without modifying the original source.
+Core Imports
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+Mixin Configuration (modid.mixins.json)
+Place this in src/main/resources/:
+{
+  "required": true,
+  "package": "${PACKAGE_PATH}.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "ExampleServerMixin" // Common/server mixins
+  ],
+  "client": [
+    "ExampleClientMixin" // Client-only mixins
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
+@Inject Pattern
+Inject code into the start/end of a method:
+@Mixin(TitleScreen.class)
+public class TitleScreenMixin {
+    @Inject(method = "init()V", at = @At("HEAD"))
+    private void init(CallbackInfo info) {
+        // This code runs at the start of TitleScreen.init()
+        System.out.println("Title screen initialized!");
+    }
+}
+@Redirect Pattern
+Redirect a method call to your own code:
+@Mixin(PlayerEntity.class)
+public class PlayerEntityMixin {
+    @Redirect(
+        method = "tick()V",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/entity/PlayerEntity;getMovementSpeed()F"
+        )
+    )
+    private float redirectMovementSpeed(PlayerEntity player) {
+        // Replace the call to getMovementSpeed() with your own value
+        return player.getMovementSpeed() * 1.5f;
+    }
+}
+Warning: Mixins are powerful but dangerous. Overuse can cause conflicts with other mods. Always prefer Fabric API events when available.
+
+---
+13. Resource System
+The resource system loads assets (textures, models, sounds) and data (recipes, loot tables, advancements).
+Assets Structure
+src/main/resources/
+  assets/
+    ${MOD_ID}/
+      blockstates/   # Block state definitions
+      models/        # Block/item models
+      textures/      # PNG textures
+      lang/          # Language files
+      sounds.json    # Sound definitions
+Data Structure
+src/main/resources/
+  data/
+    modid/
+      recipes/       # JSON recipes
+      loot_tables/   # Loot tables
+      advancements/  # Advancements
+      tags/          # Tag definitions
+
+---
+14. Recipe System
+JSON Recipe
+Add a simple crafting recipe in data/modid/recipes/example_block.json:
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "###",
+    "# #",
+    "###"
+  ],
+  "key": {
+    "#": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "item": "${MOD_ID}:example_block",
+    "count": 1
+  }
+}
+Custom Recipe Serializer
+For custom recipes, register a serializer:
+import net.minecraft.recipe.RecipeSerializer;
+
+// Create your custom recipe serializer
+public static final RecipeSerializer<ExampleRecipe> EXAMPLE_RECIPE_SERIALIZER = new ExampleRecipeSerializer();
+
+@Override
+public void onInitialize() {
+    Registry.register(
+        Registry.RECIPE_SERIALIZER,
+        new Identifier(MOD_ID, "example_recipe"),
+        EXAMPLE_RECIPE_SERIALIZER
+    );
+}
+
+---
+15. Common Errors & Fixes
+Error
+Cause
+Fix
+Cannot load class net.minecraft.client.MinecraftClient
+Referenced client class on server
+Mark client-only code with @Environment(EnvType.CLIENT)
+Mixin apply failed
+Mixin target method not found
+Check method descriptor, ensure remap = true
+Incompatible mod set
+Wrong Fabric Loader/Fabric API version
+Use the exact versions listed in this guide
+Purple/black checkerboard block
+Missing model/texture files
+Check asset file paths and names
+Class not found: net.fabricmc.fabric.api...
+Missing Fabric API dependency
+Ensure you added the Fabric API mod dependency
+Network thread exception
+Read packet data on client thread
+Read buffer data on the network thread first
+
+---
+16. Fabric vs Forge Differences (for Porting)
+Feature
+Fabric
+Forge
+Metadata File
+fabric.mod.json
+mods.toml
+Entry Points
+ModInitializer/ClientModInitializer
+@Mod annotation class
+Registration
+Direct Registry.register in init
+DeferredRegister/RegistryObject
+Events
+Fabric API event callbacks
+Forge EventBus subscribers
+Networking
+ServerPlayNetworking/ClientPlayNetworking
+SimpleChannel/NetworkRegistry
+Mixins
+Built-in, standard
+Optional, uses same library
+Config
+ClothConfig/AutoConfig
+Forge Config API
+Dependencies
+Declared in fabric.mod.json
+Declared in mods.toml
+Key Porting Tips
+1. Replace all DeferredRegister calls with direct Registry.register in onInitialize
+2. Replace Forge events with equivalent Fabric API events
+3. Rewrite networking code to use Fabric's networking API
+4. Replace Forge config with Cloth Config
+5. Update metadata from mods.toml to fabric.mod.json
+
+---
+This guide covers all core aspects of 1.16.5 Fabric modding, with version-specific details to avoid common build and runtime errors.

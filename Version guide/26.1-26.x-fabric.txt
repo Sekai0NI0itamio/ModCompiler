@@ -1,0 +1,379 @@
+Comprehensive Fabric Modding Guide for Minecraft 26.1-26.x
+This guide covers everything you need to develop Fabric mods for Minecraft 26.1-26.x (the 2026 year-based release, previously known as 1.22), including critical changes from 1.21.x, correct code patterns, and common pitfalls.
+
+---
+1. Modding Framework
+Minecraft 26.x introduces a major shift to fully unobfuscated source code, replacing the legacy mapping system.
+Core Components
+Component
+Required Version
+Details
+Fabric Loader
+0.18.4+
+The mod loading core, updated to support unobfuscated code
+Mappings
+Mojang Official Mappings
+Yarn mappings are no longer officially supported — all development must use Mojang's official, unobfuscated names
+Fabric Loom
+1.15+
+The build plugin, rewritten to work without remapping for unobfuscated Minecraft
+Key Imports
+// Fabric core framework imports (unchanged)
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
+Warnings
+- ❌ Yarn mappings will not work — 26.x has no obfuscation, so intermediate mappings are unnecessary and unsupported
+- ❌ Legacy remapping tools are obsolete — there is no need to map between obfuscated and named identities
+- ✅ All class names now match Mojang's official documentation, no more name mismatches between mapping sets
+
+---
+3. Key Changes from 1.21.x
+26.x includes the largest set of breaking changes in recent Minecraft versions:
+1. New version numbering: Year-based system (26 = 2026, .1 = first drop of the year) replacing the old 1.xx format
+2. Fully unobfuscated code: No more intermediate mappings, all code uses official Mojang names
+3. Java 25 requirement: Dropped support for older Java versions
+4. New rendering backend foundation: Preparing for Vulkan support in 26.2, legacy raw OpenGL calls are deprecated
+5. Automatic render layers: Removed manual block render layer registration
+6. Early ItemStack restriction: ItemStack can no longer be created before world load, replaced with ItemStackTemplate
+7. Fabric API renames: All API classes updated to match official Mojang naming
+8. Removed deprecated APIs: Multiple legacy Fabric modules and events were removed
+
+---
+4. Mod Entry Point
+Entry points remain largely unchanged from 1.21.x, but the code running inside them has new restrictions.
+Main Entry Point (Common)
+Runs on both client and server.
+import net.fabricmc.api.ModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class ${MOD_CLASS} implements ModInitializer {
+    public static final String MOD_ID = "${MOD_ID}";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    @Override
+    public void onInitialize() {
+        // Run common registration code here
+        ModBlocks.register();
+        ModItems.register();
+
+        LOGGER.info("Hello Fabric world!");
+    }
+}
+Client Entry Point
+Runs only on the client, for client-only code like rendering.
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+
+@Environment(EnvType.CLIENT)
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
+        // Run client-only registration code here
+        BlockColorRegistry.registerClient();
+    }
+}
+fabric.mod.json Entry Point Configuration
+{
+  "entrypoints": {
+    "main": [
+      "${PACKAGE_PATH}.${MOD_CLASS}"
+    ],
+    "client": [
+      "${PACKAGE_PATH}.${MOD_CLIENT_CLASS}"
+    ]
+  }
+}
+Warnings
+- ✅ Entry point interfaces themselves are unchanged, but you must not create ItemStack instances inside entry point methods (see Section 5)
+
+---
+5. Registry System
+The registry system has had package name changes to match official Mojang naming, plus new restrictions on early item stack creation.
+Core Registry Imports
+// NEW: Registry is now in net.minecraft.core, not net.minecraft.registry
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+Data Components & ItemStackTemplate
+ItemStack can no longer be created before the world is loaded. Use ItemStackTemplate for early item stack representations.
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+
+// ❌ WRONG: Will crash during mod initialization
+// public static final ItemStack EXAMPLE_STACK = new ItemStack(EXAMPLE_ITEM);
+
+// ✅ CORRECT: Use ItemStackTemplate for early access
+public static final ItemStackTemplate EXAMPLE_TEMPLATE =
+    new ItemStackTemplate(EXAMPLE_ITEM, 1, DataComponentPatch.EMPTY);
+Warnings
+- ❌ Registry package changed: Old import net.minecraft.registry.Registry will not compile, use net.minecraft.core.Registry
+- ❌ Do not access data components on ItemStackTemplate early — components are not bound until world load, this will throw an exception
+- ✅ Registry.register pattern remains the same, only the import path changed
+
+---
+6. Block/Item Registration
+The registration pattern remains similar, but with updated imports and early creation restrictions.
+Block Registration Example
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+
+public class ModBlocks {
+    // Create block instance with properties
+    public static final Block EXAMPLE_BLOCK = new Block(
+        BlockBehaviour.Properties.ofFullCopy(Blocks.STONE)
+            .strength(2.0f)
+            .requiresCorrectToolForDrops()
+    );
+
+    public static void register() {
+        Registry.register(
+            BuiltInRegistries.BLOCK,
+            new ResourceLocation("${MOD_ID}", "example_block"),
+            EXAMPLE_BLOCK
+        );
+    }
+}
+Item Registration Example
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+
+public class ModItems {
+    // Block item for our example block
+    public static final BlockItem EXAMPLE_BLOCK_ITEM = new BlockItem(
+        ModBlocks.EXAMPLE_BLOCK,
+        new Item.Properties()
+            .creativeTab(CreativeModeTab.TAB_BUILDING_BLOCKS)
+    );
+
+    public static void register() {
+        Registry.register(
+            BuiltInRegistries.ITEM,
+            new ResourceLocation("${MOD_ID}", "example_block"),
+            EXAMPLE_BLOCK_ITEM
+        );
+    }
+}
+Recipe Serializer Registration (New Pattern)
+Recipe serializers are now simplified to use codecs, no more custom inner classes.
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+
+// NEW: Recipe serializers only require codecs
+Registry.register(
+    BuiltInRegistries.RECIPE_SERIALIZER,
+    new ResourceLocation("${MOD_ID}", "custom_recipe"),
+    new RecipeSerializer<>(CustomRecipe.CODEC, CustomRecipe.STREAM_CODEC)
+);
+Warnings
+- ❌ Do not create ItemStack during registration — use ItemStackTemplate instead for any early item representations
+- ✅ Creative mode tabs are now named CreativeModeTab (was ItemGroup in Yarn mappings)
+
+---
+7. Rendering
+Rendering has seen major changes to automate layer management and prepare for the Vulkan backend.
+Automatic Render Layers
+Manual block render layer registration is gone. Minecraft now automatically detects the correct layer based on your sprite's transparency.
+// ❌ WRONG: BlockRenderLayerMap no longer exists
+// BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.EXAMPLE_BLOCK, RenderLayer.TRANSLUCENT);
+
+// ✅ CORRECT: No registration needed, it's automatic based on your model's sprites
+Block Color Registry
+The color provider system was simplified:
+// OLD: 1.21.x code
+// ColorProviderRegistry.BLOCK.register((state, level, pos, tintIndex) -> 0x555555, ModBlocks.EXAMPLE_BLOCK);
+
+// NEW: 26.x code
+import net.fabricmc.fabric.api.client.render.BlockColorRegistry;
+import net.minecraft.client.color.block.BlockTintSource;
+
+BlockColorRegistry.register(
+    List.of(new BlockTintSource() {
+        @Override
+        public int getColor(BlockState state, BlockRenderView level, BlockPos pos, int tintIndex) {
+            return 0x555555;
+        }
+    }),
+    ModBlocks.EXAMPLE_BLOCK
+);
+Fluid Rendering
+Legacy FluidRenderHandler is replaced with the new FluidModel system:
+import net.fabricmc.fabric.api.client.render.fluid.FluidRenderingRegistry;
+import net.minecraft.client.render.block.entity.FluidModel;
+
+// Register your custom fluid model
+FluidRenderingRegistry.register(
+    ModFluids.CUSTOM_FLUID,
+    FluidModel.Unbaked.of(...)
+);
+Warnings
+- ❌ Raw OpenGL calls are deprecated — 26.2 will introduce Vulkan support, and raw GL calls will stop working. Use the Blaze3D API instead
+- ❌ BlockRenderLayerMap was removed — any code using it will fail to compile
+- ✅ Model json format remains largely compatible, with automatic layer detection
+
+---
+8. Networking
+Fabric API networking remains largely compatible with 1.21.x, with only package name updates to match official mappings.
+Example Packet Registration
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+
+// Register your payload type
+public static final CustomPacketPayload.Type<ExamplePacket> EXAMPLE_PACKET =
+    new CustomPacketPayload.Type<>(new ResourceLocation("${MOD_ID}", "example_packet"));
+
+static {
+    PayloadTypeRegistry.playC2S().register(EXAMPLE_PACKET, ExamplePacket.CODEC);
+}
+
+// Register receiver
+ServerPlayNetworking.registerReceiveCallback(EXAMPLE_PACKET, (payload, context) -> {
+    // Handle packet on server thread
+    context.player().sendSystemMessage(Component.literal("Received packet!"));
+});
+Warnings
+- ✅ Networking API is unchanged from 1.21.4+, only the underlying Minecraft class imports have updated package names
+- ❌ Always handle packets on the main thread — the packet is received on the network thread, use the context executor to run code on the main thread
+
+---
+9. Events
+Fabric API has added new events, renamed existing ones to match official names, and removed deprecated events.
+New Dimension Events
+Modify dimension attributes without iterating biomes:
+import net.fabricmc.fabric.api.event.world.DimensionEvents;
+import net.minecraft.world.dimension.BuiltInDimensionTypes;
+import net.minecraft.world.dimension.EnvironmentAttributes;
+
+DimensionEvents.MODIFY_ATTRIBUTES.register((dimension, attributes, registries) -> {
+    if (dimension.is(BuiltInDimensionTypes.OVERWORLD)) {
+        attributes.set(EnvironmentAttributes.CLOUD_COLOR, 0xAA55AA);
+    }
+});
+New Block/Item Use Events
+More precise interaction events:
+import net.fabricmc.fabric.api.event.world.BlockEvents;
+import net.fabricmc.fabric.api.event.world.ItemEvents;
+
+// Block use events
+BlockEvents.USE_ITEM_ON.register((state, world, pos, player, stack) -> {
+    // Handle item use on block
+    return ActionResult.SUCCESS;
+});
+
+// Item use events
+ItemEvents.USE.register((stack, world, player, hand) -> {
+    // Handle item use
+    return ActionResult.SUCCESS;
+});
+Renamed Events
+Old Name (1.21.x Yarn)
+New Name (26.x Official)
+ItemGroupEvents
+CreativeModeTabEvents
+Removed Events
+Removed Event
+Replacement
+HudRenderCallback
+HudElementRegistry
+Warnings
+- ❌ Old deprecated events will no longer compile — migrate to the new replacements
+- ✅ Most existing events remain, just with updated names to match official mappings
+
+---
+10. Common Pitfalls
+1. Using Yarn mappings: Yarn is no longer supported, you must use Mojang official mappings
+2. Creating ItemStack early: ItemStack can only be created after world load, use ItemStackTemplate during registration
+3. Depending on the fabric mod ID: The legacy fabric mod ID was removed, depend on fabric-api instead
+4. Using old Gradle/Loom versions: Older build tools do not support the unobfuscated environment
+5. Using Java 21: Java 21 is too old, you must use Java 25
+6. Using old IntelliJ versions: IntelliJ <2025.3 does not support Java 25 or the new mixin processing
+7. Manual render layer registration: BlockRenderLayerMap was removed, layers are automatic
+8. Using remapping configurations: modImplementation and remapJar are gone, use standard Gradle configurations
+
+---
+11. Java Version
+Minecraft 26.x requires Java 25 minimum, not Java 21.
+Warnings
+- ❌ Java 21 and older will fail to build or run — the game uses Java 25 language features
+- ✅ Java 25 is backwards compatible with most code, but you may need to update your IDE to support it
+
+---
+12. Mixin
+Mixins work the same way as before, but with updated class names and new requirements.
+Example Mixin
+import net.minecraft.world.entity.player.Player;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(Player.class)
+public class PlayerMixin {
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void tick(CallbackInfo ci) {
+        // Custom tick logic
+    }
+}
+Warnings
+- ❌ IntelliJ 2025.3+ is required — older versions will fail to process mixins correctly with Java 25
+- ❌ Update target class names/packages: Make sure your mixin targets use the new official class names and package paths (e.g., net.minecraft.core.Registry instead of net.minecraft.registry.Registry)
+- ✅ Mixin syntax and annotations remain unchanged
+
+---
+13. Common Errors & Fixes
+Error
+Cause
+Fix
+error: package net.minecraft.registry does not exist
+Using old Registry package
+Change import to net.minecraft.core.Registry
+error: cannot find symbol class ItemGroupEvents
+Using old renamed event
+Replace with CreativeModeTabEvents
+error: cannot find symbol class BlockRenderLayerMap
+Using removed render layer class
+Remove the code, layers are automatic
+Could not find method modImplementation()
+Using legacy remapping dependency configuration
+Replace modImplementation with implementation
+Unsupported class file major version 69
+Using Java 21 to build Java 25 code
+Update your JDK to Java 25
+Mixin transformation failed
+Old IntelliJ version
+Update IntelliJ to 2025.3+
+Failed to load mod config: Missing dependency 'fabric'
+Depending on legacy mod ID
+Change dependency to fabric-api
+Crash: ItemStack being created before world load
+Creating ItemStack during mod init
+Replace with ItemStackTemplate
+Could not find plugin 'net.fabricmc.loom'
+Using old Loom plugin
+Update to the new net.fabricmc.fabric-loom plugin
+error: cannot find symbol method remapJar()
+Using removed remap task
+Remove the task, use standard jar
+
+---
+Additional Resources
+- Official Fabric 26.1 Update Post
+- Fabric mod for 26.x
+- mcsrc.dev: Decompiled Minecraft Source Viewer

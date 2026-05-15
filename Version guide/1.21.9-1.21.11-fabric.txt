@@ -1,0 +1,522 @@
+Fabric 1.21.9-1.21.11 Modding Comprehensive Guide
+This guide covers everything needed to develop Fabric mods for the Minecraft 1.21.9-1.21.11 version range, including latest API changes, correct code patterns, and common pitfalls to avoid.
+
+---
+1. Modding Framework
+The Fabric modding ecosystem provides the core tools for modding these versions:
+Core Components
+Component
+Version Requirements
+Details
+Fabric Loader
+0.17.2 (1.21.9) / 0.18.1 (1.21.11)
+The mod loader that handles mod loading and mixin application
+Mappings
+Yarn (deprecated after 1.21.11) / Mojang Official Mappings
+Deobfuscation mappings for Minecraft code. Migrating to Mojang mappings is strongly recommended as Yarn will not be updated for future versions.
+Fabric Loom
+1.11 (1.21.9) / 1.14 (1.21.11)
+Gradle plugin that sets up the development environment, handles remapping, and build processing
+Key Framework Notes
+- 1.21.11 is the last obfuscated Minecraft version. Future versions will be unobfuscated, making Yarn/intermediary mappings obsolete.
+- MixinExtras 5.0.0 is now bundled with Fabric Loader, no need to add it as a separate dependency.
+
+---
+2. Build System
+The bundle workflow provides the build system setup — no changes needed.
+
+---
+3. Key Changes from 1.21.2-1.21.8
+This version range includes several breaking API changes that will break older mods:
+1. Entity World Accessor Rename: Entity#getWorld() → Entity#getEntityWorld() (affects almost all mods)
+2. Resource Loader Rework:
+  - Old IdentifiableResourceReloadListener and ResourceManagerHelper are deprecated/removed
+  - New ResourceLoader API with simpler registration and ordering
+3. Keybinding Overhaul:
+  - Keybinding categories are now KeyBinding.Category (registered with an Identifier) instead of plain strings
+4. Rendering Overhaul:
+  - Vanilla rendering now uses OrderedRenderCommandQueue instead of direct vertex consumers
+  - World Render Events were removed in 1.21.9, then reintroduced in 1.21.10 as Level Render Events (renamed to match Mojang mappings)
+5. Game Rule Refactor: Game rules are now registry-based, use the new GameRuleBuilder API
+6. Packet Splitter: New opt-in large packet support for oversized payloads
+7. Fabric API Renames: Many classes/methods were renamed to match Mojang official mappings (see Porting Guide for full list)
+
+---
+4. Mod Entry Point
+Entry points are the initialization hooks for your mod. They remain largely unchanged, but ensure you use the correct imports.
+Common Entry Points
+Common Entry Point (Server + Client)
+// Exact imports
+import net.fabricmc.api.ModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class ${MOD_CLASS} implements ModInitializer {
+	public static final String MOD_ID = "${MOD_ID}";
+	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+	@Override
+	public void onInitialize() {
+		// Register your blocks, items, commands, etc. here
+		LOGGER.info("${MOD_DISPLAY_NAME} initialized!");
+	}
+}
+Client-Only Entry Point
+// Exact imports
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+
+@Environment(EnvType.CLIENT)
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+	@Override
+	public void onInitializeClient() {
+		// Register client-only content: renderers, keybindings, etc.
+	}
+}
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+
+---
+5. Registry System
+The registry system has been updated to use explicit RegistryKey and data components instead of legacy NBT.
+Core Registry Registration
+// Exact imports
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.util.Identifier;
+
+// Register any registry object
+Registry.register(
+	Registries.BLOCK, // Target registry
+	RegistryKey.of(Registries.BLOCK, Identifier.of(MOD_ID, "example_block")), // Registry key
+	exampleBlockInstance // Your object
+);
+Data Components
+Data components replace legacy ItemStack NBT for structured, persistent data.
+Registering a Custom Data Component
+// Exact imports
+import net.minecraft.component.DataComponentType;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.util.Identifier;
+
+public class ModComponents {
+	// Define your component type
+	public static final DataComponentType<Integer> EXAMPLE_COUNTER =
+		DataComponentType.<Integer>builder()
+		.persistent(ByteBufCodecs.INT) // Make it persistent (saved to disk)
+		.networkSynchronized(ByteBufCodecs.INT) // Sync it over network
+		.build();
+
+	public static void register() {
+		Registry.register(
+			Registries.DATA_COMPONENT_TYPE,
+			Identifier.of(${MOD_CLASS}.MOD_ID, "example_counter"),
+			EXAMPLE_COUNTER
+		);
+	}
+}
+Using Data Components on ItemStack
+// Set component
+itemStack.set(ModComponents.EXAMPLE_COUNTER, 5);
+
+// Get component
+Integer counter = itemStack.get(ModComponents.EXAMPLE_COUNTER);
+
+// Check if component exists
+if (itemStack.contains(ModComponents.EXAMPLE_COUNTER)) {
+	// Component is present
+}
+Registry Warnings
+- ✅ Always register all content during your ModInitializer phase. Registry sync now freezes earlier, late registration will fail.
+- ❌ Do not use legacy ItemStack NBT for custom data. Use data components instead, as NBT is now reserved for internal vanilla use.
+
+---
+6. Block/Item Registration
+The correct registration pattern for this version range uses explicit RegistryKey and property initialization.
+Block Registration Example
+// Exact imports
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockBehaviour;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.util.Identifier;
+
+public class ModBlocks {
+	// Example block instance
+	public static final Block EXAMPLE_BLOCK = register(
+		"example_block",
+		settings -> new Block(settings),
+		BlockBehaviour.Properties.create()
+			.strength(2.0f)
+			.hardness(3.0f),
+		true // Register BlockItem for this block
+	);
+
+	private static Block register(
+		String name,
+		java.util.function.Function<BlockBehaviour.Properties, Block> blockFactory,
+		BlockBehaviour.Properties settings,
+		boolean shouldRegisterItem
+	) {
+		// Create registry key for the block
+		RegistryKey<Block> blockKey = RegistryKey.of(
+			RegistryKeys.BLOCK,
+			Identifier.of(${MOD_CLASS}.MOD_ID, name)
+		);
+
+		// Create block instance with the registry key
+		Block block = blockFactory.apply(settings.registryKey(blockKey));
+
+		// Register BlockItem if needed
+		if (shouldRegisterItem) {
+			RegistryKey<Item> itemKey = RegistryKey.of(
+				RegistryKeys.ITEM,
+				Identifier.of(${MOD_CLASS}.MOD_ID, name)
+			);
+
+			BlockItem blockItem = new BlockItem(
+				block,
+				new Item.Properties().registryKey(itemKey)
+			);
+			Registry.register(Registries.ITEM, itemKey, blockItem);
+		}
+
+		// Register the block
+		return Registry.register(Registries.BLOCK, blockKey, block);
+	}
+
+	public static void register() {
+		// Called from ModInitializer to load the class
+	}
+}
+Item Registration Example
+// Exact imports
+import net.minecraft.item.Item;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.util.Identifier;
+
+public class ModItems {
+	// Example custom item with default data component
+	public static final Item EXAMPLE_ITEM = register("example_item",
+		new Item(
+			new Item.Properties()
+				.registryKey(RegistryKey.of(
+					RegistryKeys.ITEM,
+					Identifier.of(${MOD_CLASS}.MOD_ID, "example_item")
+				))
+				// Add default data component
+				.component(ModComponents.EXAMPLE_COUNTER, 0)
+		)
+	);
+
+	private static Item register(String name, Item item) {
+		return Registry.register(
+			Registries.ITEM,
+			Identifier.of(${MOD_CLASS}.MOD_ID, name),
+			item
+		);
+	}
+
+	public static void register() {
+		// Called from ModInitializer
+	}
+}
+Registration Warnings
+- ❌ Do not forget to set registryKey: In 1.21+, all blocks/items require an explicit registry key set on their properties. Forgetting this will cause null pointer exceptions.
+- ✅ Load your registration classes in ModInitializer: This ensures the static fields are initialized before registration.
+
+---
+7. Rendering
+Rendering has undergone major changes in this version range, with vanilla moving to a command queue system.
+Block Entity Renderer Changes
+Block entity renderers now use OrderedRenderCommandQueue instead of direct vertex consumers.
+New Block Entity Renderer Pattern
+// Exact imports
+import net.minecraft.block.entity.BlockEntityRenderer;
+import net.minecraft.block.entity.BlockEntityRendererFactory;
+import net.minecraft.client.render.entity.state.BlockEntityRenderState;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.render.OrderedRenderCommandQueue;
+import net.minecraft.client.render.CameraRenderState;
+import net.minecraft.text.Text;
+import net.minecraft.util.Colors;
+
+public class ExampleBlockEntityRenderer implements BlockEntityRenderer<ExampleBlockEntity, ExampleBlockEntityRenderState> {
+
+	public ExampleBlockEntityRenderer(BlockEntityRendererFactory.Context context) {}
+
+	@Override
+	public ExampleBlockEntityRenderState createRenderState() {
+		return new ExampleBlockEntityRenderState();
+	}
+
+	@Override
+	public void render(
+		ExampleBlockEntityRenderState state,
+		MatrixStack matrices,
+		OrderedRenderCommandQueue queue,
+		CameraRenderState cameraRenderState
+	) {
+		// Submit text rendering to the queue
+		queue.submitText(
+			matrices,
+			0, 0,
+			Text.literal("Example Block").asOrderedText(),
+			false,
+			TextRenderer.TextLayerType.NORMAL,
+			state.lightmapCoordinates,
+			Colors.WHITE,
+			0,
+			Colors.BLACK
+		);
+	}
+}
+World/Level Render Events
+- In 1.21.9: World render events were temporarily removed. Use mixins for rendering hooks during this version.
+- In 1.21.10+: Events were reintroduced as Level Render Events (renamed from World to Level to match Mojang mappings):
+// Exact imports
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+
+// Register before entities render
+LevelRenderEvents.BEFORE_ENTITIES.register(context -> {
+	// Your rendering code here
+});
+Resource Loader Changes
+The old resource reload listener system has been replaced:
+// OLD (Deprecated/Removed)
+// ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new CustomReloader());
+
+// NEW (1.21.9+)
+import net.fabricmc.fabric.api.resource.ResourceLoader;
+import net.minecraft.resource.ResourceType;
+import net.minecraft.util.Identifier;
+
+ResourceLoader.get(ResourceType.SERVER_DATA).registerReloader(
+	Identifier.of(${MOD_CLASS}.MOD_ID, "custom_reloader"),
+	new CustomReloader()
+);
+
+// Add ordering
+ResourceLoader.get(ResourceType.SERVER_DATA).addReloaderOrdering(
+	Identifier.of("vanilla", "tags"),
+	Identifier.of(${MOD_CLASS}.MOD_ID, "custom_reloader")
+);
+
+---
+8. Networking
+Fabric API networking uses the new payload-based system, with new large packet support in 1.21.11.
+Custom Payload Example
+// Exact imports
+import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.util.Identifier;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+
+// Record-based payload
+public record ExampleC2SPayload(int value) implements CustomPayload {
+	// Payload identifier
+	public static final Identifier ID = Identifier.of(${MOD_CLASS}.MOD_ID, "example_payload");
+	// Payload type
+	public static final CustomPayload.Type<ExampleC2SPayload> TYPE = new CustomPayload.Type<>(ID);
+	// Stream codec for serialization
+	public static final StreamCodec<RegistryFriendlyByteBuf, ExampleC2SPayload> CODEC =
+		StreamCodec.composite(
+			ByteBufCodecs.INT,
+			ExampleC2SPayload::value,
+			ExampleC2SPayload::new
+		);
+
+	@Override
+	public Type<? extends CustomPayload> type() {
+		return TYPE;
+	}
+}
+Registering and Using Payloads
+// In your initializer, register the payload
+public void onInitialize() {
+	// Register C2S (Client to Server) payload
+	PayloadTypeRegistry.playC2S().register(
+		ExampleC2SPayload.TYPE,
+		ExampleC2SPayload.CODEC
+	);
+
+	// For large packets (>1MB) in 1.21.11+, use registerLarge
+	// PayloadTypeRegistry.playC2S().registerLarge(ExampleC2SPayload.TYPE, ExampleC2SPayload.CODEC, 2097152);
+
+	// Register server-side receiver
+	ServerPlayNetworking.registerGlobalReceiver(ExampleC2SPayload.TYPE, (payload, context) -> {
+		// Run on server thread
+		context.server().execute(() -> {
+			// Handle payload on server
+			context.player().sendMessage(Text.literal("Received value: " + payload.value()));
+		});
+	});
+}
+
+// Sending payload from client
+public void sendPayload(int value) {
+	ClientPlayNetworking.send(new ExampleC2SPayload(value));
+}
+Networking Warnings
+- ✅ Always handle payload data on the correct thread: Payload receivers are called on the netty thread, use server.execute() or client.execute() to run game logic on the server/client thread.
+- ❌ Do not read buffer data on the game thread: This will cause ref count errors. Read all data first on the netty thread.
+
+---
+9. Events
+Fabric API events have been updated to match Mojang mappings, with many renames from "World" to "Level".
+Common Event Examples
+// Exact imports
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+
+// Server tick event
+ServerTickEvents.END_SERVER_TICK.register(server -> {
+	// Run every server tick
+});
+
+// Client tick event
+ClientTickEvents.END_CLIENT_TICK.register(client -> {
+	// Run every client tick
+});
+
+// Entity death event
+ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, amount) -> {
+	// Cancel death if needed
+	return true;
+});
+Game Rule Change Events (New in 1.21.11)
+// Exact imports
+import net.fabricmc.fabric.api.gamerule.v1.GameRuleEvents;
+import net.minecraft.world.GameRules;
+
+// Listen for game rule changes
+GameRuleEvents.changeCallback(GameRules.FIRE_DAMAGE).register((newValue, server) -> {
+	// Handle fire damage rule change
+});
+Event Renames (From Older Versions)
+Old Name (Yarn)
+New Name (Mojang)
+WorldRenderEvents
+LevelRenderEvents
+ClientWorldEvents
+ClientLevelEvents
+ClientTickEvents#START_WORLD_TICK
+ClientTickEvents#START_LEVEL_TICK
+ClientTickEvents#END_WORLD_TICK
+ClientTickEvents#END_LEVEL_TICK
+
+---
+10. Common Pitfalls
+1. Legacy Method Renames
+- ❌ Entity.getWorld() → Use Entity.getEntityWorld() instead. This is the most common compile error in this version range.
+- ❌ ResourceManagerHelper → Use ResourceLoader instead.
+- ❌ String keybinding categories → Use KeyBinding.Category.create(Identifier) instead.
+2. Mapping Migration
+- If you are using Yarn mappings, many method/class names have changed to match Mojang mappings. Use the official migration map to update your code.
+- Start migrating to Mojang mappings now, as Yarn will not be supported after 1.21.11.
+3. Registration Order
+- All registration must happen during ModInitializer. Late registration after this phase will fail, as registries are now frozen earlier.
+- Always set the registryKey on block/item properties. Forgetting this will cause null pointer exceptions.
+4. Rendering Compatibility
+- In 1.21.9, world render events are not available. If you need to support this version, use mixins for rendering hooks, or conditional code.
+- All custom renderers must be updated to use OrderedRenderCommandQueue instead of direct vertex consumers.
+
+---
+11. Java Version
+Java 21 is mandatory for this version range:
+- Minecraft 1.21+ requires Java 21 to run.
+- Using older Java versions will cause:
+  - Build failures with class version errors
+  - Runtime crashes with unsupported class version errors
+
+---
+12. Mixin
+Mixin patterns have been updated with the new bundled MixinExtras 5.0, and new best practices.
+Basic Mixin Example
+// Exact imports
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.Shadow;
+import net.minecraft.entity.player.PlayerEntity;
+
+@Mixin(PlayerEntity.class)
+public abstract class PlayerEntityMixin {
+	// Shadow field to access private field
+	@Shadow
+	private int experienceLevel;
+
+	// Inject at the start of the tick method
+	@Inject(method = "tick", at = @At("TAIL"))
+	private void onTick(CallbackInfo ci) {
+		// Your custom code here
+		PlayerEntity self = (PlayerEntity) (Object) this;
+		if (this.experienceLevel > 10) {
+			// Do something
+		}
+	}
+}
+Mixin Best Practices
+1. Use abstract mixin classes: This prevents accidental instantiation and removes the need to implement interface methods:
+@Mixin(PlayerEntity.class)
+public abstract class PlayerEntityMixin { // Abstract class
+    // No need to implement PlayerEntity interface methods
+}
+2. Abstract shadow methods: For shadow methods, use abstract methods instead of dummy bodies:
+@Shadow
+protected abstract void updateExhaustion(float exhaustion); // No dummy body needed
+3. Accessing this: Cast to Object first to avoid generics issues:
+PlayerEntity self = (PlayerEntity) (Object) this;
+4. Use MixinExtras: MixinExtras 5.0 is bundled, use its new expression injection for more powerful, maintainable mixins.
+Mixin Warnings
+- ❌ Avoid @Overwrite: Overwriting methods will cause conflicts with other mods. Use injectors instead.
+- ❌ Avoid @Redirect: Redirectors can only be applied once per target, causing hard conflicts. Use injectors or wrap operations instead.
+- ✅ Always use a refMap: Configure Loom to generate a refMap to avoid mixin failures when changing mappings.
+
+---
+13. Common Errors & Fixes
+Error
+Cause
+Fix
+cannot find symbol method getWorld()
+Using the old renamed method
+Replace entity.getWorld() with entity.getEntityWorld()
+You are using an outdated version of Gradle. Gradle 8.8 or higher is required.
+Old Gradle version
+The bundle workflow provides the correct Gradle version
+Unsupported class version error
+Wrong Java version
+Use Java 21
+Critical injection failure: @Inject annotation could not find any targets
+Wrong method name in mixin, usually from mapping changes
+Update your mixin target method names to match the new mappings
+No refMap loaded.
+Missing mixin refMap configuration
+Ensure Loom is configured to generate and load the refMap
+NullPointerException: Cannot invoke "net.minecraft.world.item.ItemLike.asItem()" because "itemLike" is null
+Forgetting to set registry key on item/block properties
+Add .registryKey() to your item/block properties
+Duplicate key binding category
+Registering the same keybinding category twice
+Register your KeyBinding.Category only once
+Could not find method ResourceManagerHelper.registerReloadListener
+Using deprecated resource loader API
+Replace with the new ResourceLoader API
+
+---
+Final Notes
+- 1.21.11 is the last obfuscated Minecraft version. Plan to migrate to Mojang mappings to prepare for future unobfuscated versions.
+- Always test your mod against all versions in the range, as there are breaking changes between 1.21.9 and 1.21.11.
+- Refer to the Fabric Documentation for the latest updates.

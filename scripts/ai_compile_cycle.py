@@ -38,7 +38,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
-from _key_manager import KeyManager
 
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -55,8 +54,8 @@ MAX_GH_RETRIES = 4
 GH_RETRY_DELAY = 3.0
 
 # --- AI Provider Config ---
-AI_NVIDIA_BASE = "https://api.deepseek.com/v1"
-AI_MODEL = "deepseek-v4-flash"
+AI_C05_BASE = "http://localhost:8129"
+AI_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 class CycleError(Exception):
     pass
@@ -105,15 +104,6 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
             if attempt < retries:
                 time.sleep(GH_RETRY_DELAY * attempt)
     raise CycleError(f"gh {' '.join(args)} failed: {last_err}")
-
-
-def _create_key_manager() -> KeyManager:
-    return KeyManager(
-        key_path="C05LocalAi/keys/deepseek.txt",
-        env_vars=("DEEPSEEK_API_KEY", "DEEPSEEK_KEY"),
-    )
-
-
 
 
 # ── Phase A: Extract files from AI responses and create build zip ───────────
@@ -209,91 +199,182 @@ def _is_valid_filepath(candidate: str) -> bool:
 def _extract_ai_files(airesponse_text: str) -> dict[str, str]:
     """Parse AI response into a dict of filepath -> content.
 
-    Uses simple line-by-line parsing (no regex).
+    Uses a multi-strategy approach to handle various AI output formats:
 
-    The AI response structure is:
-      ```                      ← open block
-      filepath                 ← content
-      ```json / ```java / ```  ← close block (the 3 backticks close)
-      code                     ← MORE content (next block starts here implicitly)
-      ```                      ← close second block
+    Strategy 1 (Primary): Pair consecutive ``` blocks.
+      ```filepath
+      path/to/file.java
+      ```
+      ```java
+      code here
+      ```
 
-    Every PAIR of consecutive ``` markers defines one block.
-    Instead of assuming strict [path, code, path, code] ordering (which can
-    break if the AI puts extra text between blocks), we scan forward through
-    blocks and pair the NEXT valid-looking path with the block after it.
+    Strategy 2 (Fallback): Backtick-wrapped filepath on its own line,
+    followed by a code block:
+      `path/to/file.java`
+      ```java
+      code here
+      ```
+
+    Strategy 3 (Regex): Find any filepath-like string near a code block
+    and pair them intelligently.
     """
-    # Find the line number of every ``` marker
-    marker_lines: list[int] = []
-    for idx, line in enumerate(airesponse_text.splitlines()):
-        if "```" in line:
-            marker_lines.append(idx)
-
-    if len(marker_lines) < 2:
-        return {}  # need at least one complete pair
-
     all_lines = airesponse_text.splitlines()
-    blocks: list[str] = []
 
-    for i in range(len(marker_lines) - 1):
-        start = marker_lines[i] + 1
-        end = marker_lines[i + 1]
-        if start >= end:
-            # Adjacent markers → empty block, skip
-            continue
-        content_lines = all_lines[start:end]
-        content = "\n".join(content_lines).strip()
-        if content:
-            blocks.append(content)
+    # ── Strategy 1: Pair consecutive ``` blocks ────────────────────────
+    markers: list[tuple[int, str]] = []
+    for idx, line in enumerate(all_lines):
+        if "```" in line:
+            lang = line[line.index("```") + 3:].strip()
+            markers.append((idx, lang))
 
-    # Scan forward through blocks: find path → next block is its code
+    blocks: list[tuple[str, str]] = []
+    if len(markers) >= 2:
+        for i in range(len(markers) - 1):
+            start = markers[i][0] + 1
+            end = markers[i + 1][0]
+            if start >= end:
+                continue
+            content_lines = all_lines[start:end]
+            content = "\n".join(content_lines).strip()
+            if content:
+                blocks.append((content, markers[i][1]))
+
     files: dict[str, str] = {}
+
+    # Scan forward through blocks: find path → next block is its code/status
     i = 0
     while i < len(blocks) - 1:
-        raw_path = blocks[i].strip()
-        raw_code = blocks[i + 1].strip()
+        raw_path = blocks[i][0].strip()
+        raw_code = blocks[i + 1][0].strip()
+        code_lang = blocks[i + 1][1]
 
         if not raw_path or not raw_code:
             i += 1
             continue
 
-        # Check if raw_path looks like a valid filepath
         filepath = raw_path.strip("`*[]'\"")
         if not _is_valid_filepath(filepath):
-            # This might be code content that leaked into the path slot.
-            # Try skipping ahead to find a real path.
             i += 1
             continue
 
-        stripe = filepath
-
-        # Strip known prefixes
-        for prefix in ("bundle/", "./"):
-            if stripe.startswith(prefix):
-                stripe = stripe[len(prefix):]
-
-        # Strip leading target-name prefix ("1.12-forge/src/..." → "src/...")
-        if "/" in stripe and not stripe.startswith("src/"):
-            parts = stripe.split("/", 1)
-            if len(parts) == 2:
-                stripe = parts[1]
-
-        # Skip build files — provided by the build workflow
-        build_files = {
-            "build.gradle", "build.gradle.kts",
-            "settings.gradle", "settings.gradle.kts",
-            "gradle.properties", "gradlew", "gradlew.bat",
-        }
-        if stripe.lower() in build_files or "/gradle/" in stripe.lower():
+        cleaned = _normalize_filepath(filepath)
+        if _is_build_file(cleaned):
             i += 2
             continue
 
-        if stripe not in files:
-            files[stripe] = raw_code
+        if code_lang == "status" and raw_code.lower() == "unchanged":
+            i += 2
+            continue
 
+        if cleaned not in files:
+            files[cleaned] = raw_code
         i += 2
 
+    # ── Strategy 2: Backtick-wrapped filepaths ────────────────────────
+    # Look for lines like: `path/to/file.java` followed by a ``` code block
+    if not files or not any(fp.endswith(".java") for fp in files):
+        i = 0
+        while i < len(all_lines):
+            line = all_lines[i].strip()
+            # Check if this line is a backtick-wrapped filepath
+            if line.startswith("`") and line.endswith("`") and not line.startswith("```"):
+                candidate = line.strip("`").strip()
+                if _is_valid_filepath(candidate):
+                    # Look ahead for the next ``` code block
+                    for j in range(i + 1, min(i + 10, len(all_lines))):
+                        if all_lines[j].strip().startswith("```"):
+                            lang = all_lines[j].strip()[3:].strip()
+                            if lang and lang not in ("filepath", "status", ""):
+                                # Found a code block — extract its content
+                                code_start = j + 1
+                                code_end = len(all_lines)
+                                for k in range(j + 1, len(all_lines)):
+                                    if all_lines[k].strip().startswith("```"):
+                                        code_end = k
+                                        break
+                                code_content = "\n".join(all_lines[code_start:code_end]).strip()
+                                if code_content:
+                                    cleaned = _normalize_filepath(candidate)
+                                    if not _is_build_file(cleaned) and cleaned not in files:
+                                        files[cleaned] = code_content
+                                break
+            i += 1
+
+    # ── Strategy 3: Regex-based fallback ──────────────────────────────
+    # Find any filepath-like pattern near a code block, even if the
+    # filepath is embedded in text (e.g. "File: path/to/file.java")
+    if not files or not any(fp.endswith(".java") for fp in files):
+        # Find all code blocks (```...```) and their surrounding context
+        code_blocks: list[tuple[int, int, str]] = []
+        for idx, line in enumerate(all_lines):
+            if line.strip().startswith("```"):
+                lang = line.strip()[3:].strip()
+                end_idx = -1
+                for j in range(idx + 1, len(all_lines)):
+                    if all_lines[j].strip().startswith("```"):
+                        end_idx = j
+                        break
+                if end_idx > idx:
+                    code_blocks.append((idx, end_idx, lang))
+
+        for cb_start, cb_end, lang in code_blocks:
+            if lang in ("filepath", "status", ""):
+                continue
+            code_content = "\n".join(all_lines[cb_start + 1:cb_end]).strip()
+            if not code_content:
+                continue
+
+            # Look backwards from the code block for a filepath
+            search_start = max(0, cb_start - 5)
+            for j in range(cb_start - 1, search_start - 1, -1):
+                line = all_lines[j].strip()
+                # Try various formats
+                for prefix_to_strip in ("`", "File:", "file:", "-", "*"):
+                    candidate = line
+                    if candidate.startswith(prefix_to_strip):
+                        candidate = candidate[len(prefix_to_strip):].strip()
+                    if candidate.endswith("`"):
+                        candidate = candidate.rstrip("`").strip()
+                    if _is_valid_filepath(candidate):
+                        cleaned = _normalize_filepath(candidate)
+                        if not _is_build_file(cleaned) and cleaned not in files:
+                            files[cleaned] = code_content
+                        break
+
     return files
+
+
+def _normalize_filepath(filepath: str) -> str:
+    """Normalize a filepath by stripping prefixes and ensuring proper structure."""
+    result = filepath.strip()
+
+    # Strip known prefixes
+    for prefix in ("bundle/", "./"):
+        if result.startswith(prefix):
+            result = result[len(prefix):]
+
+    # Strip leading target-name prefix ("1.12-forge/src/..." → "src/...")
+    if "/" in result and not result.startswith("src/"):
+        parts = result.split("/", 1)
+        if len(parts) == 2:
+            result = parts[1]
+
+    # Ensure .java files are under src/main/java/
+    if result.endswith(".java") and not result.startswith("src/"):
+        result = "src/main/java/" + result
+
+    return result
+
+
+def _is_build_file(filepath: str) -> bool:
+    """Check if a filepath is a build system file that should be skipped."""
+    build_files = {
+        "build.gradle", "build.gradle.kts",
+        "settings.gradle", "settings.gradle.kts",
+        "gradle.properties", "gradlew", "gradlew.bat",
+    }
+    return filepath.lower() in build_files or "/gradle/" in filepath.lower()
 def _get_expected_build_dir(target_name: str) -> str:
     """Get the expected build source directory for a target.
 
@@ -456,7 +537,7 @@ def _create_build_bundle(
         if mod_group:
             mod_txt_lines.append(f"group={mod_group}")
         else:
-            mod_txt_lines.append("group=com.example")
+            mod_txt_lines.append("group=net.itamio.skypvp")
         mod_txt_lines.append("entrypoint_class=Main")
         if mod_description:
             mod_txt_lines.append(f"description={mod_description}")
@@ -660,6 +741,9 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
         # Each per-mod artifact goes into its own subdirectory
         slug = art_name[len("mod-"):]
         slug_dir = per_mod_artifact_dir / slug
+        # Clean and recreate directory to avoid "file exists" errors
+        if slug_dir.exists():
+            shutil.rmtree(str(slug_dir))
         slug_dir.mkdir(parents=True, exist_ok=True)
         for attempt in range(1, 4):
             try:
@@ -680,10 +764,13 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
 
     # Fallback: try the combined bundle if no per-mod artifacts were available
     all_artifact_dir = artifacts_dir / BUILD_ARTIFACT_ALL
-    all_artifact_dir.mkdir(parents=True, exist_ok=True)
     if not artifact_downloaded:
         _log("  No per-mod artifacts found, trying combined bundle...")
         for attempt in range(1, 4):
+            # Clean and recreate to avoid "file exists" errors from stale extractions
+            if all_artifact_dir.exists():
+                shutil.rmtree(str(all_artifact_dir))
+            all_artifact_dir.mkdir(parents=True, exist_ok=True)
             try:
                 _gh([
                     "run", "download", str(run_id),
@@ -699,6 +786,8 @@ def _download_build_results(run_id: int, repo: str, token: str, dest_dir: Path) 
 
     # ── Download publish artifact ────────────────────────────────────
     publish_artifact_dir = artifacts_dir / BUILD_ARTIFACT_PUBLISH
+    if publish_artifact_dir.exists():
+        shutil.rmtree(str(publish_artifact_dir))
     publish_artifact_dir.mkdir(parents=True, exist_ok=True)
     publish_available = BUILD_ARTIFACT_PUBLISH in artifact_names
 
@@ -962,11 +1051,21 @@ You are tasked with FIXING a mod version that failed to build.
 
 {mod_info}
 
-## Current Source Code
+## Original Coding Prompt (Full Context)
 
-Below is the current source code that failed to build:
+Below is the original prompt that was used to create this mod version.
+It contains the full specification: mod name, mod ID, author, package, main class,
+required files, and loader-specific API patterns. Read it carefully to understand
+what the mod is supposed to do.
 
-{source_code}
+{original_prompt}
+
+## Previous AI Response (Code That Failed)
+
+Below is the AI's previous response — the code that was generated and failed to build.
+Review it to understand what was attempted and what needs to be fixed.
+
+{previous_ai_response}
 
 ## Build Error Log
 
@@ -987,29 +1086,52 @@ The build failed with the following error(s):
 ## Instructions
 
 1. Analyze the build errors and identify what needs to be fixed.
-2. Output ONLY the files that need to be changed/replaced.
-3. For each file, you MUST follow this EXACT format — two code blocks per file:
+2. You MUST list ALL source files in the project. For each file, indicate
+   whether it is MODIFIED (provide full code) or UNCHANGED (provide status only).
+3. For each file, you MUST follow this EXACT format — two code blocks per file.
+   This is the ONLY accepted format. The parser strictly reads blocks in pairs:
 
+   ### FOR MODIFIED FILES (full code required) — CORRECT EXAMPLE:
    ```filepath
-   bundle/{target_name}/src/main/java/com/example/MyMod.java
+   bundle/{target_name}/src/main/java/net/itamio/skypvp/SkypvpMod.java
    ```
    ```java
-   package com.example;
-   public class MyMod {{
+   package net.itamio.skypvp;
+
+   public class SkypvpMod {{
        // ...
    }}
    ```
 
-The FIRST backtick block has the language `filepath` and contains ONLY the path.
-The SECOND backtick block contains the actual code with the correct language
-(e.g. `java`, `json`, `toml`).  The parser reads both blocks in pairs.
+   ### FOR UNCHANGED FILES (status only) — CORRECT EXAMPLE:
+   ```filepath
+   bundle/{target_name}/src/main/resources/pack.mcmeta
+   ```
+   ```status
+   unchanged
+   ```
+
+   The FIRST backtick block always has the language `filepath` and contains ONLY the path.
+   The SECOND backtick block contains either:
+     - The full source code with the correct language (e.g. `java`, `json`, `toml`)
+       for MODIFIED files, OR
+     - `status` with content `unchanged` for UNCHANGED files.
+   The parser reads both blocks in pairs.
+
+   ### ❌ COMMON MISTAKES — DO NOT do any of these:
+   - DO NOT wrap the filepath in single backticks: `path/to/file.java` ← WRONG
+   - DO NOT put the filepath on a line without a ```filepath block: path/to/file.java ← WRONG
+   - DO NOT add extra text between the filepath block and the code block
+   - DO NOT use `filepath` as the language for the code block — use `java`, `json`, `toml`, etc.
+   - DO NOT forget to include ALL files — every file must be listed (modified or unchanged)
+   - DO NOT create build files (build.gradle, settings.gradle, etc.)
 {source_code_note}
 
 ### IMPORTANT FILEPATH RULES
 
 - **Java source files MUST be placed under `src/main/java/`**.  For example:
   ```filepath
-  bundle/{target_name}/src/main/java/com/example/MyMod.java
+  bundle/{target_name}/src/main/java/net/itamio/skypvp/SkypvpMod.java
   ```
   ```java
   package com.example;
@@ -1021,7 +1143,8 @@ The SECOND backtick block contains the actual code with the correct language
 4. Provide COMPLETE file contents — no stubs, no TODOs, no placeholders.
 5. If the build error is about missing methods/classes, check the provided
    Minecraft source code and DIF entries for the correct API to use.
-6. Output ALL files that need changes, even if only small changes are needed.
+6. You MUST include EVERY source file in the project output. Files that do not
+   need changes must still be listed with a `status: unchanged` marker.
 7. **CRITICAL: DO NOT create build files** — The build system already provides:
    - build.gradle / build.gradle.kts
    - settings.gradle / settings.gradle.kts
@@ -1204,9 +1327,23 @@ def _recompose_fix_prompt(
     build_error_log: str,
     dif_entries: list[dict],
     mc_source_files: dict[str, str],
+    original_prompt_text: str = "",
+    previous_ai_response: str = "",
 ) -> str:
     """Create a fix prompt for a failed version."""
     mc_ver, loader = target_name.rsplit("-", 1)
+
+    # Format original prompt — cap at 8KB
+    MAX_ORIGINAL_PROMPT = 8000
+    original_prompt_trimmed = original_prompt_text[:MAX_ORIGINAL_PROMPT] if original_prompt_text else "(no original prompt available)"
+    if original_prompt_text and len(original_prompt_text) > MAX_ORIGINAL_PROMPT:
+        original_prompt_trimmed += "\n\n(... original prompt truncated ...)"
+
+    # Format previous AI response — cap at 8KB
+    MAX_PREV_RESPONSE = 8000
+    prev_response_trimmed = previous_ai_response[:MAX_PREV_RESPONSE] if previous_ai_response else "(no previous AI response available)"
+    if previous_ai_response and len(previous_ai_response) > MAX_PREV_RESPONSE:
+        prev_response_trimmed += "\n\n(... previous AI response truncated ...)"
 
     # Format source code — cap each file to 3KB and total to 15KB
     MAX_SRC_PER_FILE = 3000
@@ -1246,13 +1383,15 @@ def _recompose_fix_prompt(
     # AI response didn't produce valid code, which requires a special note.
     has_java_sources = any(fp.endswith(".java") for fp in source_code)
     if not has_java_sources:
+        # Try to extract the main class name from the original prompt
+        main_class = _extract_main_class_name(original_prompt_text) or "ModClass"
         source_code_note = (
             "\n### ❌ NO JAVA SOURCE FILES FOUND\n"
             "The current source code contains NO Java files at all. "
             "This is why the build produced empty jars.\n"
             "You MUST create the complete Java source files for this mod. "
             f"Begin by writing the main mod class at:\n"
-            f"  `bundle/{target_name}/src/main/java/.../ModClass.java`\n"
+            f"  `bundle/{target_name}/src/main/java/.../{main_class}.java`\n"
             "Refer to the Mod Information section above for the package path.\n"
             "Create ALL necessary classes (main mod, mixins, config, storage, etc.) "
             "with FULL implementations — no stubs or TODOs."
@@ -1271,6 +1410,8 @@ def _recompose_fix_prompt(
 
     prompt = FIX_PROMPT_TEMPLATE.format(
         mod_info=mod_info_text[:2000] if mod_info_text else "(no mod info)",
+        original_prompt=original_prompt_trimmed,
+        previous_ai_response=prev_response_trimmed,
         source_code=src_text,
         mc_source=mc_text,
         build_log=build_log_truncated,
@@ -1280,6 +1421,27 @@ def _recompose_fix_prompt(
     )
 
     return prompt
+
+
+def _extract_main_class_name(prompt_text: str) -> str | None:
+    """Extract the main class name from a prompt text.
+
+    Looks for patterns like:
+      - "The main class name is `ClassName`"
+      - "main class name is ClassName"
+      - "`ClassName.java`"
+    """
+    if not prompt_text:
+        return None
+    # Pattern: "main class name is `ClassName`" or "main class name is ClassName"
+    m = re.search(r'main\s+class\s+name\s+is\s+`?(\w+)`?', prompt_text, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    # Pattern: "`ClassName.java`" near "main class"
+    m = re.search(r'main\s+class.*?`(\w+)\.java`', prompt_text, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    return None
 
 
 DIF_GENERATION_TEMPLATE = """You are a documentation expert for Minecraft mod development.
@@ -1359,7 +1521,6 @@ def _generate_dif_entry(
     source_before: dict[str, str],
     source_after: dict[str, str],
     fixed_on_attempt: int,
-    api_key: str,
     dif_dir: Path,
 ) -> None:
     """Generate a DIF document from build history and save to dif/ directory."""
@@ -1387,9 +1548,20 @@ def _generate_dif_entry(
         fixed_on_attempt=fixed_on_attempt,
     )
 
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a documentation expert for Minecraft mod development. "
+                "You analyze build successes and failures to create DIF entries."
+            )
+        },
+        {"role": "user", "content": prompt},
+    ]
+
     _log(f"  Generating DIF entry for {target_name}...")
     try:
-        dif_content = _send_fix_prompt_to_ai(prompt, api_key, target_name)
+        dif_content = _send_fix_prompt_to_ai(messages, target_name)
     except CycleError as e:
         _log(f"  ⚠ DIF generation failed for {target_name}: {e}")
         return
@@ -1420,40 +1592,52 @@ def _generate_dif_entry(
     _log(f"  ✓ DIF entry saved: {dif_path.name}")
 
 
-def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
-    """Send a fix prompt to the NVIDIA API and return the full response."""
+def _send_fix_prompt_to_ai(
+    messages: list[dict],
+    target_name: str,
+) -> str:
+    """Send messages to the AI via C05LocalAI (Groq llama) and return the full response.
+
+    Args:
+        messages: List of message dicts with 'role' and 'content' keys.
+                  The first should be the system message.
+        target_name: Target name for logging.
+    """
     import urllib.request
     import urllib.error
 
-    url = f"{AI_NVIDIA_BASE}/chat/completions"
+    url = f"{AI_C05_BASE}/chat"
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are an excellent and professional Minecraft mod developer. "
-                "You are expert at reading build error logs and fixing compilation issues. "
-                "You write clean, correct, and well-structured Java code. "
-                "Provide ONLY the files that need to be changed, with complete implementations."
-            )
-        },
-        {"role": "user", "content": prompt},
-    ]
+    system_prompt = ""
+    user_parts: list[str] = []
 
-    payload = {
+    for msg in messages:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+        if role == "system":
+            system_prompt = content
+        elif role == "user":
+            user_parts.append(f"[User]:\n{content}")
+        elif role == "assistant":
+            user_parts.append(f"[Assistant]:\n{content}")
+
+    user_prompt = "\n\n".join(user_parts)
+
+    payload: dict[str, Any] = {
+        "hoster": "groq",
         "model": AI_MODEL,
-        "messages": messages,
-        "temperature": 0.2,
-        "stream": True,
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+        "extra_body": {
+            "temperature": 0.2,
+        },
         "reasoning_effort": "high",
     }
 
-
     body_bytes = json.dumps(payload).encode("utf-8")
     headers = {
-        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "Accept": "text/event-stream",
+        "Accept": "application/json",
     }
 
     req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
@@ -1468,28 +1652,34 @@ def _send_fix_prompt_to_ai(prompt: str, api_key: str, target_name: str) -> str:
                 if not chunk:
                     break
                 buffer += chunk.decode("utf-8", errors="replace")
+
                 while "\n" in buffer:
                     line, buffer = buffer.split("\n", 1)
                     line = line.strip()
                     if not line:
                         continue
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str.strip() == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            choices = data.get("choices", [])
-                            if choices:
-                                delta = choices[0].get("delta", {})
-                                content = delta.get("content", "") or ""
-                                if content:
-                                    full_response += content
-                                    accumulated += len(content)
-                                    if accumulated > 100000:
-                                        raise CycleError(f"Response exceeded 100KB ({accumulated:,} bytes)")
-                        except json.JSONDecodeError:
-                            pass
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
+                    if "error" in data:
+                        raise CycleError(str(data["error"]))
+
+                    if data.get("event") == "content":
+                        content = data.get("content", "") or ""
+                        if content:
+                            full_response += content
+                            accumulated += len(content)
+                            if accumulated > 100000:
+                                raise CycleError(f"Response exceeded 100KB ({accumulated:,} bytes)")
+
+                    if data.get("status") == "end":
+                        end_content = data.get("content", "") or ""
+                        if end_content and not full_response:
+                            full_response = end_content
+                            accumulated = len(end_content)
+                        break
     except urllib.error.HTTPError as e:
         error_detail = e.read().decode("utf-8", errors="replace")[:500]
         raise CycleError(f"AI HTTP {e.code}: {error_detail}")
@@ -1530,7 +1720,6 @@ def run_compile_cycle(
     slug: str,
     modrinth_url: str,
     token: str,
-    key_mgr: KeyManager,
     repo: str,
     max_retries: int = MAX_RETRIES,
     continuefrom: bool = False,
@@ -1674,7 +1863,85 @@ def run_compile_cycle(
             "fixed": False,
         }
 
+    # Multi-round conversation tracking for AI retries.
+    # Each target gets a conversation history:
+    #   [system_msg, initial_user_msg, assistant_resp, retry_user_msg, ...]
+    # The first request builds the cache prefix (system + initial user).
+    # Subsequent requests reuse the cached prefix — only the new
+    # assistant + user tokens are charged at full rate (saves money).
+    SYSTEM_PROMPT = (
+        "You are an excellent and professional Minecraft mod developer. "
+        "You are expert at reading build error logs and fixing compilation issues. "
+        "You write clean, correct, and well-structured Java code. "
+        "Provide ONLY the files that need to be changed, with complete implementations."
+    )
+    conversations: dict[str, list[dict]] = {}
+
+    # ── Load retry progress for continuefrom ────────────────────────────
+    retry_progress_path = bundle_dir / "retry_progress.json"
+    saved_retry_progress: dict = {}
+    if continuefrom and retry_progress_path.exists():
+        try:
+            saved_retry_progress = json.loads(retry_progress_path.read_text(encoding="utf-8"))
+            _log(f"  Loaded retry progress from {retry_progress_path}")
+            _log(f"  Completed attempts: {saved_retry_progress.get('completed_attempts', [])}")
+        except (json.JSONDecodeError, Exception) as exc:
+            _log(f"  ⚠ Failed to load retry progress: {exc}")
+            saved_retry_progress = {}
+
+    completed_attempts: list[int] = saved_retry_progress.get("completed_attempts", [])
+
+    # Restore the remaining failed targets from saved progress (if resuming)
+    saved_remaining = saved_retry_progress.get("remaining_failed", [])
+    if continuefrom and saved_remaining:
+        # Use the saved remaining_failed as the authoritative list
+        # (targets that were fixed in earlier attempts are removed)
+        old_count = len(current_targets)
+        current_targets = [t for t in current_targets if t in saved_remaining]
+        _log(f"  Restored {len(current_targets)} remaining failed target(s) from saved progress")
+        _log(f"  (was {old_count} before, {old_count - len(current_targets)} already fixed)")
+        # Also update active_failed tracking
+        for tname in current_targets:
+            if tname not in active_failed:
+                active_failed[tname] = 0
+
+    def _is_attempt_completed(tname: str, attempt_num: int) -> bool:
+        """Check if a specific retry attempt was already completed for this target."""
+        fix_resp = bundle_dir / tname / f"airesponse_fix_{attempt_num}.txt"
+        fix_prompt = bundle_dir / tname / f"fix_prompt_{attempt_num}.txt"
+        return fix_resp.exists() and fix_prompt.exists()
+
+    # Load conversation histories from disk if resuming
+    if continuefrom:
+        for tname in current_targets:
+            conv_path = bundle_dir / tname / "conversation.json"
+            if conv_path.exists():
+                try:
+                    loaded_conv = json.loads(conv_path.read_text(encoding="utf-8"))
+                    if loaded_conv:
+                        conversations[tname] = loaded_conv
+                        _log(f"  Loaded conversation for {tname} ({len(loaded_conv)} messages)")
+                except (json.JSONDecodeError, Exception) as exc:
+                    _log(f"  ⚠ Failed to load conversation for {tname}: {exc}")
+
+    def _save_retry_progress() -> None:
+        """Save the current retry progress to disk."""
+        progress_data = {
+            "completed_attempts": sorted(completed_attempts),
+            "current_targets": current_targets,
+            "remaining_failed": [t for t in current_targets],
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            retry_progress_path.write_text(json.dumps(progress_data, indent=2), encoding="utf-8")
+        except Exception as exc:
+            _log(f"  ⚠ Failed to save retry progress: {exc}")
+
     for attempt in range(1, max_retries + 1):
+        # ── continuefrom: skip fully-completed attempts ─────────────────
+        if continuefrom and attempt in completed_attempts:
+            _log(f"  Skipping already-completed attempt {attempt}/{max_retries}")
+            continue
         if not current_targets:
             _log("All versions built successfully!")
             break
@@ -1764,18 +2031,161 @@ def run_compile_cycle(
             _log(f"  Sending {len(context_list_ai)} AI fix prompt(s) in parallel...")
             ai_responses = [None] * len(target_data)
 
+        def _build_retry_context(
+            tname: str,
+            build_log: str,
+            dif_entries: list[dict],
+            mc_source: dict[str, str],
+        ) -> str:
+            """Build a concise retry context to append to the existing conversation.
+
+            The conversation already has the original prompt and AI's response,
+            so we only need to send the build errors and reinforced instructions.
+            """
+            parts: list[str] = []
+
+            parts.append("## Build Failed — Fix the Errors Below")
+            parts.append("")
+            parts.append("The build failed with compilation errors. Fix the code and return ALL files")
+            parts.append("(both modified and unchanged) using the EXACT format specified below.")
+            parts.append("")
+
+            # Build error log
+            build_log_truncated = build_log[:5000] if build_log else "(no build log)"
+            if build_log and len(build_log) > 5000:
+                build_log_truncated += "\n\n(... build log truncated ...)"
+            parts.append("### Build Error Log")
+            parts.append("```")
+            parts.append(build_log_truncated)
+            parts.append("```")
+            parts.append("")
+
+            # DIF entries
+            if dif_entries:
+                parts.append("### DIF Entries for This Target")
+                for entry in dif_entries[:4]:
+                    fix_text = entry.get("fix", "")[:1500]
+                    parts.append(f"- [{entry['id']}] {entry['title']}")
+                    parts.append(f"  {fix_text}")
+                parts.append("")
+
+            # MC source code
+            if mc_source:
+                parts.append("### Minecraft Source Code (relevant)")
+                for filepath in sorted(mc_source.keys())[:4]:
+                    content = mc_source[filepath][:1000]
+                    parts.append(f"#### DecompiledMinecraftSourceCode/{filepath}")
+                    parts.append(f"```java\n{content}\n```")
+                    parts.append("")
+
+            # Reinforced format instructions
+            parts.append("## CRITICAL — You MUST Follow This EXACT Output Format")
+            parts.append("")
+            parts.append("Every file MUST be in this EXACT two-block format. The parser strictly reads blocks in pairs:")
+            parts.append("")
+            parts.append("### FOR MODIFIED FILES (full code required) — CORRECT EXAMPLE:")
+            parts.append("```filepath")
+            parts.append(f"bundle/{tname}/src/main/java/net/itamio/skypvp/SkypvpMod.java")
+            parts.append("```")
+            parts.append("```java")
+            parts.append("package net.itamio.skypvp;")
+            parts.append("")
+            parts.append("public class SkypvpMod {")
+            parts.append("    // ...")
+            parts.append("}")
+            parts.append("```")
+            parts.append("")
+            parts.append("### FOR UNCHANGED FILES (status only) — CORRECT EXAMPLE:")
+            parts.append("```filepath")
+            parts.append(f"bundle/{tname}/src/main/resources/pack.mcmeta")
+            parts.append("```")
+            parts.append("```status")
+            parts.append("unchanged")
+            parts.append("```")
+            parts.append("")
+            parts.append("### ❌ COMMON MISTAKES — DO NOT do any of these:")
+            parts.append("- DO NOT wrap the filepath in single backticks: `path/to/file.java` ← WRONG")
+            parts.append("- DO NOT put the filepath on a bare line without a ```filepath block")
+            parts.append("- DO NOT add extra text between the filepath block and the code block")
+            parts.append("- DO NOT use `filepath` as the language for the code block — use `java`, `json`, `toml`, etc.")
+            parts.append("- DO NOT forget to include ALL files — every file must be listed (modified or unchanged)")
+            parts.append("- DO NOT create build files (build.gradle, settings.gradle, etc.)")
+            parts.append("")
+            parts.append("### FILEPATH RULES")
+            parts.append("- Java source files MUST be under `src/main/java/`")
+            parts.append("- Resource files go under `src/main/resources/`")
+            parts.append("- Every filepath MUST have an extension (.java, .json, .toml, etc.)")
+            parts.append("")
+            parts.append("Provide COMPLETE file contents — no stubs, no TODOs, no placeholders.")
+            parts.append("You MUST include EVERY source file. Unchanged files get `status: unchanged`.")
+
+            return "\n".join(parts)
+
         def _send_ai(idx, tname, mcver, loader, scode, build_log, dif_entries, mc_source):
             try:
                 target_dir = bundle_dir / tname
-                projectinfo_path = target_dir / "projectinfo.txt"
-                mod_info = projectinfo_path.read_text(encoding="utf-8") if projectinfo_path.exists() else ""
-                fix_prompt = _recompose_fix_prompt(tname, mod_info, scode, build_log, dif_entries, mc_source)
-                _log(f"    AI: {tname} ({len(fix_prompt):,} chars)...")
-                worker_key = key_mgr.acquire()
+
+                # ── Load saved conversation from initial AI coding ─────
+                conv_path = target_dir / "conversation.json"
+                if conv_path.exists():
+                    try:
+                        saved_conv = json.loads(conv_path.read_text(encoding="utf-8"))
+                        if isinstance(saved_conv, list) and len(saved_conv) >= 2:
+                            conversations[tname] = saved_conv
+                    except (json.JSONDecodeError, OSError):
+                        pass
+
+                if tname in conversations and conversations[tname]:
+                    # ── REUSE existing conversation ─────────────────────
+                    # The conversation already has: system prompt, original user prompt,
+                    # and the AI's previous response. We just append the error context.
+                    retry_context = _build_retry_context(
+                        tname, build_log, dif_entries, mc_source,
+                    )
+                    conversations[tname].append({"role": "user", "content": retry_context})
+                    msg_count = len(retry_context)
+                    prompt_path = target_dir / f"fix_prompt_{attempt}.txt"
+                    prompt_path.write_text(retry_context, encoding="utf-8")
+                else:
+                    # ── FALLBACK: No saved conversation — create fix prompt from scratch
+                    projectinfo_path = target_dir / "projectinfo.txt"
+                    mod_info = projectinfo_path.read_text(encoding="utf-8") if projectinfo_path.exists() else ""
+                    prompt_path = target_dir / "prompt.txt"
+                    original_prompt = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
+                    airesponse_path = target_dir / "airesponse.txt"
+                    previous_response = airesponse_path.read_text(encoding="utf-8") if airesponse_path.exists() else ""
+
+                    fix_prompt = _recompose_fix_prompt(
+                        tname, mod_info, scode, build_log, dif_entries, mc_source,
+                        original_prompt_text=original_prompt,
+                        previous_ai_response=previous_response,
+                    )
+                    conversations[tname] = [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": fix_prompt},
+                    ]
+                    msg_count = len(fix_prompt)
+                    prompt_path = target_dir / f"fix_prompt_{attempt}.txt"
+                    prompt_path.write_text(fix_prompt, encoding="utf-8")
+
+                # ── Save the conversation to disk ───────────────────────
                 try:
-                    ai_response = _send_fix_prompt_to_ai(fix_prompt, worker_key, tname)
-                finally:
-                    key_mgr.release(worker_key)
+                    conv_path.write_text(json.dumps(conversations[tname], indent=2), encoding="utf-8")
+                except Exception as conv_exc:
+                    _log(f"    ⚠ Failed to save conversation for {tname}: {conv_exc}")
+
+                _log(f"    AI: {tname} (round {len(conversations[tname])//2}, new msg {msg_count:,} chars, conv total ~{sum(len(m.get('content','')) for m in conversations[tname]):,} chars)...")
+                ai_response = _send_fix_prompt_to_ai(conversations[tname], tname)
+
+                # Append the AI's response to the conversation for cache continuity
+                conversations[tname].append({"role": "assistant", "content": ai_response})
+
+                # ── Save updated conversation to disk ───────────────────
+                try:
+                    conv_path.write_text(json.dumps(conversations[tname], indent=2), encoding="utf-8")
+                except Exception as conv_exc:
+                    _log(f"    ⚠ Failed to save conversation for {tname}: {conv_exc}")
+
                 return (idx, tname, ai_response, None)
             except Exception as exc:
                 import traceback
@@ -1828,7 +2238,7 @@ def run_compile_cycle(
             for fp in sorted(merged_source.keys()):
                 c = merged_source[fp]
                 lang = "java" if fp.endswith(".java") else ""
-                merged_text += f"`bundle/{tname}/{fp}`\n```{lang}\n{c}\n```\n\n"
+                merged_text += f"```filepath\nbundle/{tname}/{fp}\n```\n```{lang}\n{c}\n```\n\n"
             (bundle_dir / tname / "airesponse.txt").write_text(merged_text, encoding="utf-8")
 
             # Track the fix for DIF generation
@@ -1840,6 +2250,9 @@ def run_compile_cycle(
 
         if not fixed_this_round:
             _log("No versions could be fixed this round. Aborting retry cycle.")
+            # Save progress before aborting
+            completed_attempts.append(attempt)
+            _save_retry_progress()
             break
 
         # Rebuild the zip with fixed versions
@@ -1890,7 +2303,7 @@ def run_compile_cycle(
 
         # After a successful retry, generate DIF entries for newly-fixed targets
         newly_fixed = [t for t in new_success if t in build_history and not build_history[t]["fixed"]]
-        if newly_fixed and key_mgr is not None:
+        if newly_fixed:
             _log(f"  Generating DIF entries for {len(newly_fixed)} newly-fixed target(s)...")
             dif_dir = Path("dif")
             dif_dir.mkdir(parents=True, exist_ok=True)
@@ -1899,27 +2312,26 @@ def run_compile_cycle(
                 hist["fixed"] = True
                 if not hist["source_after"] or not hist["errors"]:
                     continue
-                # Combine all error logs
                 combined_log = "\n---\n".join(hist["errors"][-3:])
-                ai_key = key_mgr.acquire()
-                try:
-                    _generate_dif_entry(
-                        mc_version=hist["mc_version"],
-                        loader=hist["loader"],
-                        target_name=tname,
-                        slug=slug,
-                        build_log=combined_log,
-                        source_before=hist["source_before"],
-                        source_after=hist["source_after"],
-                        fixed_on_attempt=hist["fixed_on_attempt"],
-                        api_key=ai_key,
-                        dif_dir=dif_dir,
-                    )
-                finally:
-                    key_mgr.release(ai_key)
+                _generate_dif_entry(
+                    mc_version=hist["mc_version"],
+                    loader=hist["loader"],
+                    target_name=tname,
+                    slug=slug,
+                    build_log=combined_log,
+                    source_before=hist["source_before"],
+                    source_after=hist["source_after"],
+                    fixed_on_attempt=hist["fixed_on_attempt"],
+                    dif_dir=dif_dir,
+                )
 
         # Update the current targets for next iteration
         current_targets = [t for t in current_targets if t in new_failed]
+
+        # ── Save retry progress to disk ────────────────────────────────
+        completed_attempts.append(attempt)
+        _save_retry_progress()
+        _log(f"  Saved retry progress (attempt {attempt} complete, {len(current_targets)} remaining)")
 
     # ── Final Summary ─────────────────────────────────────────────────────
     print()
@@ -1986,7 +2398,6 @@ def main() -> int:
 
     repo = args.repo or _detect_repo()
     token = _detect_token()
-    key_mgr = _create_key_manager()
 
     try:
 
@@ -1995,7 +2406,6 @@ def main() -> int:
             slug=args.slug,
             modrinth_url=args.modrinth_url,
             token=token,
-            key_mgr=key_mgr,
             repo=repo,
             max_retries=args.max_retries,
             continuefrom=args.continuefrom,

@@ -1,0 +1,757 @@
+Comprehensive Minecraft 1.16.5 Forge Modding Guide
+This guide covers everything you need to code a Minecraft mod for 1.16.5 using Forge, including exact code patterns, import paths, deprecation warnings, Fabric comparisons, and common gotchas.
+
+---
+1. Modding Framework
+Required Versions
+- Forge Version: 36.2.x+ (latest recommended build for 1.16.5)
+- Official Mojang mappings are the default
+- MCP mappings are also available but deprecated
+- Fabric's Loom tool handles mapping generation automatically, while Forge uses pre-configured mappings
+
+---
+3. Mod Entry Point
+Core Components
+- @Mod annotation: Marks the main mod class
+- mods.toml: Mod metadata file
+- FML Lifecycle Events: Mod loading lifecycle hooks
+Main Mod Class
+package ${PACKAGE_PATH};
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+
+// The value here should match the modId in mods.toml
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS}
+{
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}() {
+        // Get the event bus for this mod
+        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        // Register lifecycle events
+        bus.addListener(this::setup);
+
+        // Register deferred registries here (see Registry section)
+    }
+
+    private void setup(final FMLCommonSetupEvent event)
+    {
+        // Common setup code, runs on both client and server
+        event.enqueueWork(() -> {
+            // Thread-safe work here
+        });
+    }
+}
+Exact Imports
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.eventbus.api.IEventBus;
+mods.toml File
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+FML Lifecycle Events
+All lifecycle events fire on the mod event bus:
+Event
+Purpose
+FMLCommonSetupEvent
+Common client/server setup, capabilities registration
+FMLClientSetupEvent
+Client-only setup: renderers, screens, keybinds
+FMLDedicatedServerSetupEvent
+Server-only setup
+InterModEnqueueEvent
+Send IMC messages to other mods
+InterModProcessEvent
+Process received IMC messages
+GatherDataEvent
+Register data generators
+Warnings
+- All lifecycle events are fired in parallel! Use event.enqueueWork() for thread-safe operations
+- Never register lifecycle events on the global Forge event bus
+Fabric Comparison
+- Fabric uses entrypoints instead of a single @Mod class: main, client, server entrypoints
+- Fabric lifecycle events are registered via Fabric API hooks, not event busses
+
+---
+4. Registry System
+Forge uses a deferred registration system to handle mod loading order correctly.
+Core Components
+- DeferredRegister: The recommended way to register objects, delays registration until the correct event
+- RegisterEvent: The raw event for manual registration (legacy)
+- IForgeRegistry: The base registry interface for all registries
+- ForgeRegistries: The static registry instances for all vanilla types
+DeferredRegister
+// Create a deferred register for Blocks
+public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, MOD_ID);
+
+// Create one for Items
+public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MOD_ID);
+Exact Imports
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
+import net.minecraftforge.registries.RegistryObject;
+import net.minecraftforge.fml.event.lifecycle.RegistryEvent;
+Warnings
+- Deprecated: Manual registration via RegistryEvent.Register is no longer recommended. Use DeferredRegister instead.
+- Never call register on a registry directly outside the registry event
+Fabric Comparison
+- Fabric uses direct registration: Registry.register(registry, id, object) during initialization
+- Fabric does not have deferred registration, as it loads mods synchronously during initialization
+
+---
+5. Block/Item Registration
+DeferredRegister Pattern
+// In your DeferredRegister class
+public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block",
+    () -> new Block(AbstractBlock.Properties.of(Material.STONE)
+        .strength(2.0f)
+        .sound(SoundType.STONE))
+);
+
+public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item",
+    () -> new Item(new Item.Properties().tab(ItemGroup.TAB_MATERIALS))
+);
+
+// Also register the block's item form automatically
+public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block",
+    () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties().tab(ItemGroup.TAB_BUILDING_BLOCKS))
+);
+RegistryObject Usage
+RegistryObject is a lazy wrapper that holds the reference to your registered object. Always use .get() to access the actual object:
+// Get the block
+Block block = EXAMPLE_BLOCK.get();
+
+// Use it in code
+world.setBlockAndUpdate(pos, EXAMPLE_BLOCK.get().defaultBlockState());
+Registration in Mod Constructor
+public ${MOD_CLASS}() {
+    IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+
+    // Register all deferred registers to the mod event bus
+    BLOCKS.register(bus);
+    ITEMS.register(bus);
+}
+Gotchas
+- If you forget to register the DeferredRegister to the mod event bus, your objects will never be registered!
+- RegistryObject fields must be public static final
+- Never store the raw object in a static field, always use RegistryObject
+
+---
+6. Rendering
+Resource Locations
+All models and textures are loaded from the assets/modid/ folder.
+Block Model JSON
+Located at src/main/resources/assets/modid/models/block/example_block.json:
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "modid:block/example_block"
+  }
+}
+Item Model JSON
+Located at src/main/resources/assets/modid/models/item/example_item.json:
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "modid:item/example_item"
+  }
+}
+Blockstate JSON
+Located at src/main/resources/assets/modid/blockstates/example_block.json:
+{
+  "variants": {
+    "": { "model": "modid:block/example_block" }
+  }
+}
+Custom IBakedModel
+For advanced custom models:
+public class CustomBakedModel implements IBakedModel {
+    // Override methods for custom rendering
+    @Override
+    public List<BakedQuad> getQuads(BlockState state, Direction side, Random rand) {
+        // Custom quads
+    }
+}
+
+// Register the model loader
+@SubscribeEvent
+public void onModelBake(ModelBakeEvent event) {
+    ResourceLocation id = new ResourceLocation(MOD_ID, "custom_model");
+    event.getModelRegistry().put(id, new CustomBakedModel());
+}
+Exact Imports
+import net.minecraft.client.renderer.model.IBakedModel;
+import net.minecraft.client.renderer.model.ModelBakery;
+import net.minecraftforge.client.event.ModelBakeEvent;
+Fabric Comparison
+- The model JSON format is identical between Forge and Fabric, as it's vanilla code
+- Custom model registration works the same way, with the same event
+
+---
+7. GUI/Container
+Core Components
+- ContainerMenu: The server-side logic for the container
+- MenuType: The registry type for menus
+- AbstractContainerScreen: The client-side screen rendering
+Menu Registration
+// Deferred Register for Menus
+public static final DeferredRegister<MenuType<?>> MENUS =
+    DeferredRegister.create(ForgeRegistries.CONTAINERS, MOD_ID);
+
+public static final RegistryObject<MenuType<ExampleMenu>> EXAMPLE_MENU =
+    MENUS.register("example_menu", () -> new MenuType<>(ExampleMenu::new));
+ContainerMenu Implementation
+public class ExampleMenu extends ContainerMenu {
+    public ExampleMenu(int containerId, Inventory playerInventory) {
+        super(EXAMPLE_MENU.get(), containerId);
+
+        // Add your slots here
+        this.addSlot(new Slot(tileEntity, 0, 80, 35));
+
+        // Add player inventory slots
+        for(int i = 0; i < 3; i++) {
+            for(int j = 0; j < 9; j++) {
+                this.addSlot(new Slot(playerInventory, j + i * 9 + 9, 8 + j * 18, 84 + i * 18));
+            }
+        }
+
+        // Add player hotbar
+        for(int k = 0; k < 9; k++) {
+            this.addSlot(new Slot(playerInventory, k, 8 + k * 18, 142));
+        }
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return true; // Your validation logic
+    }
+}
+Screen Registration
+Register the screen during client setup:
+@SubscribeEvent
+public void clientSetup(FMLClientSetupEvent event) {
+    event.enqueueWork(() -> {
+        MenuScreens.register(EXAMPLE_MENU.get(), ExampleScreen::new);
+    });
+}
+Screen Implementation
+public class ExampleScreen extends AbstractContainerScreen<ExampleMenu> {
+    private static final ResourceLocation TEXTURE =
+        new ResourceLocation(MOD_ID, "textures/gui/example_gui.png");
+
+    public ExampleScreen(ExampleMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+    }
+
+    @Override
+    protected void renderBg(PoseStack stack, float partialTicks, int mouseX, int mouseY) {
+        this.minecraft.getTextureManager().bindForSetup(TEXTURE);
+        this.blit(stack, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight);
+    }
+}
+Exact Imports
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraftforge.fmlclient.event.FMLClientSetupEvent;
+import net.minecraftforge.client.extensions.common.IClientMenuSupplier;
+import net.minecraft.client.gui.screens.MenuScreens;
+Gotchas
+- You must register screens during FMLClientSetupEvent, not in the mod constructor
+- Use event.enqueueWork() to ensure thread safety
+- Never register client-only code on the common side!
+Fabric Comparison
+- Fabric calls menus ScreenHandler instead of ContainerMenu
+- Fabric uses ScreenRegistry.register instead of MenuScreens.register
+- The rest of the structure is nearly identical
+
+---
+8. Networking
+Forge's SimpleChannel is the recommended networking system for 1.16.5.
+SimpleChannel Setup
+public static class PacketHandler {
+    private static final String PROTOCOL_VERSION = "1";
+    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
+        new ResourceLocation(MOD_ID, "main"),
+        () -> PROTOCOL_VERSION,
+        PROTOCOL_VERSION::equals,
+        PROTOCOL_VERSION::equals
+    );
+
+    public static void register() {
+        int id = 0;
+        // Register packets
+        INSTANCE.registerMessage(id++, ExamplePacket.class,
+            ExamplePacket::encode,
+            ExamplePacket::decode,
+            ExamplePacket::handle
+        );
+    }
+}
+Packet Implementation
+public class ExamplePacket {
+    private int data;
+
+    // Empty constructor for decoding
+    public ExamplePacket() {}
+
+    public ExamplePacket(int data) {
+        this.data = data;
+    }
+
+    // Encode to buffer
+    public void encode(PacketBuffer buffer) {
+        buffer.writeInt(data);
+    }
+
+    // Decode from buffer
+    public static ExamplePacket decode(PacketBuffer buffer) {
+        return new ExamplePacket(buffer.readInt());
+    }
+
+    // Handle the packet
+    public static void handle(ExamplePacket msg, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            // Thread-safe work here
+            if(ctx.get().getDirection().getReceptionSide().isServer()) {
+                // Server-side handling
+                ServerPlayerEntity player = ctx.get().getSender();
+                // Do something with the data
+            } else {
+                // Client-side handling
+                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                    // Client-only code
+                });
+            }
+        });
+        ctx.get().setPacketHandled(true);
+    }
+}
+Sending Packets
+// Send to server
+PacketHandler.INSTANCE.sendToServer(new ExamplePacket(123));
+
+// Send to a specific player
+PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(player), new ExamplePacket(123));
+
+// Send to all players tracking a chunk
+PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(chunk), new ExamplePacket(123));
+
+// Send to all players
+PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new ExamplePacket(123));
+Exact Imports
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.util.thread.DistExecutor;
+Warnings
+- Packets are handled on the network thread! Always use enqueueWork() to run code on the main thread
+- Validate all incoming packet data to prevent exploits
+- Check if the chunk is loaded before accessing block positions to avoid chunk generation exploits
+Fabric Comparison
+- Fabric uses PacketByteBuf instead of PacketBuffer
+- Fabric's networking API uses channel registration via NetworkingRegistry
+- Fabric has built-in client-to-server and server-to-client packet registration
+
+---
+9. Events
+Forge has two separate event busses:
+Event Busses
+1. Mod Event Bus: For mod lifecycle events, registration events, fired per-mod
+2. Global Forge Event Bus: For game events, like player join, block break, etc.
+@SubscribeEvent Pattern
+// For global game events
+@SubscribeEvent
+public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+    PlayerEntity player = event.getPlayer();
+    // Send a welcome message
+}
+Class-based Subscription
+@Mod.EventBusSubscriber(modid = MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public class ModEvents {
+    @SubscribeEvent
+    public static void onBlockBreak(BlockEvent.BreakEvent event) {
+        // Handle block break
+    }
+}
+
+// For mod bus events
+@Mod.EventBusSubscriber(modid = MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
+public class ModLifecycleEvents {
+    @SubscribeEvent
+    public static void onCommonSetup(FMLCommonSetupEvent event) {
+        // Setup code
+    }
+}
+Exact Imports
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.common.MinecraftForge;
+Gotchas
+- The #1 common mistake: registering mod lifecycle events on the global Forge bus, or game events on the mod bus
+- Only use static methods for class-based event subscribers
+- Event methods must be public and take exactly one parameter (the event)
+Fabric Comparison
+- Fabric uses callback interfaces instead of annotation-based event subscription
+- Fabric events are registered directly, e.g. PlayerEvents.LOGIN.register(player -> {})
+- Fabric does not have separate event busses, events are self-contained
+
+---
+10. Config
+Forge uses NightConfig with a builder pattern for configs.
+Config Class
+public class ModConfig {
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
+
+    public static final ConfigValue<Integer> exampleInt;
+    public static final ConfigValue<Boolean> exampleBool;
+
+    static {
+        BUILDER.push("Example Config");
+
+        exampleInt = BUILDER.comment("An example integer config")
+            .defineInRange("exampleInt", 10, 0, 100);
+
+        exampleBool = BUILDER.comment("An example boolean config")
+            .define("exampleBool", true);
+
+        BUILDER.pop();
+        SPEC = BUILDER.build();
+    }
+}
+Register Config
+In your mod constructor:
+public ${MOD_CLASS}() {
+    // Register the config
+    ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ModConfig.SPEC);
+}
+Config Events
+@SubscribeEvent
+public void onConfigLoad(ModConfigEvent.Loading event) {
+    if(event.getConfig().getType() == ModConfig.Type.COMMON) {
+        // Handle config loading
+    }
+}
+
+@SubscribeEvent
+public void onConfigReload(ModConfigEvent.Reloading event) {
+    // Handle config reloading
+}
+Config Types
+Type
+Location
+Synced?
+Purpose
+CLIENT
+.minecraft/config/
+No
+Client-only settings
+COMMON
+.minecraft/config/
+No
+Common settings for both sides
+SERVER
+world/serverconfig/
+Yes
+Server settings, synced to clients
+Exact Imports
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.loading.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.config.ModConfigEvent;
+Fabric Comparison
+- Fabric uses Fabric Config API, which has a similar builder pattern
+- Fabric configs are not automatically synced, you have to handle that manually
+
+---
+11. Common Pitfalls
+Version-specific Issues
+1. Java Version: 1.16.5 requires Java 8. Using Java 11+ will cause compile errors.
+2. Forge Version: Use 36.2.x+. Older versions have bugs in the registry system.
+3. Gradle Version: ForgeGradle 4.x requires Gradle 6.9.x. Newer versions are incompatible.
+Deprecations
+- Deprecated: GameRegistry - Use DeferredRegister instead
+- Deprecated: NetworkRegistry old packet system - Use SimpleChannel instead
+- Deprecated: FMLCommonHandler - Use event busses instead
+- Deprecated: Manual RegisterEvent registration - Use DeferredRegister
+Gotchas
+- Case Sensitivity: Resource locations are case-sensitive! Example_Block is not the same as example_block
+- Sided Code: Never reference client-only classes on the server, this will cause crashes
+- Thread Safety: Most lifecycle events are parallel, use enqueueWork()
+- Mod ID: Mod IDs must be lowercase, no spaces or special characters
+
+---
+12. Java Version
+Required: Java 8
+- Minecraft 1.16.5 and Forge 36.x are compiled against Java 8
+- Using any newer Java version will cause:
+  - Compile errors: class file has wrong version 55.0, should be 52.0
+  - Runtime crashes: UnsupportedClassVersionError
+
+---
+13. Mixin
+For 1.16.5, Forge has built-in Mixin support, no extra booter is required.
+Built-in Mixin Support
+Forge 1.16.5 (1.15.2+) includes Mixin out of the box. You don't need MixinBooter for basic use cases.
+Mixin Setup
+1. Create a mixins.modid.json file:
+{
+  "required": true,
+  "package": "${PACKAGE_PATH}.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "${MOD_ID}.refmap.json",
+  "client": [
+    "ExampleClientMixin"
+  ],
+  "mixins": [
+    "ExampleCommonMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
+2. Add this to your mods.toml:
+mixins=["mixins.${MOD_ID}.json"]
+MixinBooter
+MixinBooter is only required for:
+- Older Minecraft versions (before 1.15.2)
+- Early mixins that need to load before the mod constructor
+- Legacy coremod compatibility
+For 1.16.5, you almost never need MixinBooter. Forge's built-in Mixin support is sufficient.
+Coremods
+Coremods are the legacy way to modify bytecode using raw ASM. They are deprecated in favor of Mixins.
+Fabric Comparison
+- Fabric relies heavily on Mixins, they are the primary way to modify vanilla code
+- Fabric automatically loads mixins from the fabric.mod.json file
+- Forge allows Mixins but also supports coremods for legacy code
+
+---
+14. Data Generation
+Data generators let you programmatically generate JSON assets and data instead of writing them by hand.
+Register Data Generators
+@SubscribeEvent
+public void gatherData(GatherDataEvent event) {
+    DataGenerator gen = event.getGenerator();
+
+    if(event.includeServer()) {
+        // Server data: recipes, loot, tags, advancements
+        gen.addProvider(new RecipeProvider(gen));
+        gen.addProvider(new LootTableProvider(gen));
+        gen.addProvider(new BlockTagsProvider(gen, MOD_ID, event.getExistingFileHelper()));
+    }
+
+    if(event.includeClient()) {
+        // Client assets: models, blockstates, language
+        gen.addProvider(new BlockStateProvider(gen, MOD_ID, event.getExistingFileHelper()));
+        gen.addProvider(new ItemModelProvider(gen, MOD_ID, event.getExistingFileHelper()));
+        gen.addProvider(new LanguageProvider(gen, MOD_ID, "en_us") {
+            @Override
+            protected void addTranslations() {
+                addBlock(EXAMPLE_BLOCK, "Example Block");
+                addItem(EXAMPLE_ITEM, "Example Item");
+            }
+        });
+    }
+}
+Example Recipe Provider
+public class ModRecipeProvider extends RecipeProvider {
+    public ModRecipeProvider(DataGenerator gen) {
+        super(gen);
+    }
+
+    @Override
+    protected void buildRecipes(Consumer<FinishedRecipe> consumer) {
+        // Shaped recipe
+        ShapedRecipeBuilder.shaped(RecipeCategory.BUILDING, EXAMPLE_BLOCK_ITEM.get())
+            .define('X', Items.DIAMOND)
+            .pattern("XX")
+            .pattern("XX")
+            .unlockedBy("has_diamond", has(Items.DIAMOND))
+            .save(consumer);
+    }
+}
+Exact Imports
+import net.minecraft.data.DataGenerator;
+import net.minecraftforge.forge.event.lifecycle.GatherDataEvent;
+import net.minecraftforge.common.data.BlockTagsProvider;
+import net.minecraftforge.common.data.LanguageProvider;
+
+---
+15. Resource System
+The standard resource folder structure for 1.16.5:
+src/main/resources/
+├── META-INF/
+│   └── mods.toml
+├── assets/
+│   └── ${MOD_ID}/
+│       ├── blockstates/
+│       │   └── example_block.json
+│       ├── lang/
+│       │   └── en_us.json
+│       ├── models/
+│       │   ├── block/
+│       │   │   └── example_block.json
+│       │   └── item/
+│       │       ├── example_item.json
+│       │       └── example_block.json
+│       ├── textures/
+│       │   ├── block/
+│       │   │   └── example_block.png
+│       │   ├── item/
+│       │   │   └── example_item.png
+│       │   └── gui/
+│       │       └── example_gui.png
+│       └── sounds.json
+└── data/
+    └── ${MOD_ID}/
+        ├── advancements/
+        ├── loot_tables/
+        │   └── blocks/
+        │       └── example_block.json
+        ├── recipes/
+        │   └── example_recipe.json
+        └── tags/
+            ├── blocks/
+            ├── items/
+            └── fluids/
+Gotchas
+- Folder names are case-sensitive! textures not Textures or texture
+- All resource names must be lowercase, use underscores for spaces
+- Generated resources go into src/generated/resources
+
+---
+16. Recipe System
+JSON Recipe Example
+Located at data/${MOD_ID}/recipes/example_recipe.json:
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "XX",
+    "XX"
+  ],
+  "key": {
+    "X": { "item": "minecraft:diamond" }
+  },
+  "result": {
+    "item": "${MOD_ID}:example_block",
+    "count": 4
+  }
+}
+Custom Recipe Type
+// Register the recipe type
+public static final DeferredRegister<IRecipeType<?>> RECIPE_TYPES =
+    DeferredRegister.create(ForgeRegistries.RECIPE_TYPES, MOD_ID);
+
+public static final RegistryObject<IRecipeType<ExampleRecipe>> EXAMPLE_RECIPE_TYPE =
+    RECIPE_TYPES.register("example_type", () -> new IRecipeType<ExampleRecipe>() {});
+
+// Register the serializer
+public static final DeferredRegister<RecipeSerializer<?>> SERIALIZERS =
+    DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, MOD_ID);
+
+public static final RegistryObject<RecipeSerializer<ExampleRecipe>> EXAMPLE_SERIALIZER =
+    SERIALIZERS.register("example_serializer", ExampleSerializer::new);
+Custom Recipe Implementation
+public class ExampleRecipe implements IRecipe<ICraftingInventory> {
+    @Override
+    public boolean matches(ICraftingInventory inv, World world) {
+        // Match logic
+    }
+
+    @Override
+    public ItemStack assemble(ICraftingInventory inv) {
+        // Result
+    }
+
+    @Override
+    public IRecipeType<?> getType() {
+        return EXAMPLE_RECIPE_TYPE.get();
+    }
+}
+
+---
+17. Common Errors & Fixes
+1. class file has wrong version 55.0, should be 52.0
+- Cause: Using Java 11+ instead of Java 8
+- Fix: Use Java 8
+2. Failed to register object... it already exists!
+- Cause: Duplicate registry name, or registering the same object twice
+- Fix: Check your DeferredRegister entries for duplicate names
+3. Trying to open invalid screen with name
+- Cause: Forgot to register the screen, or registered it too early
+- Fix: Register the screen in FMLClientSetupEvent with enqueueWork()
+4. Missing texture/ model
+- Cause: Wrong file path, case sensitivity, or typo in the resource location
+- Fix: Check your file names and paths, ensure they are all lowercase
+5. This feature is not available in the demo mode
+- Cause: Unlicensed Minecraft account, the game can't download assets
+- Fix: Log into your Minecraft account in the launcher
+6. RegistryObject is null
+- Cause: Accessing the RegistryObject before registration is complete
+- Fix: Only access .get() after the registry events, during or after FMLCommonSetupEvent
+
+---
+18. Tags
+Tags are used to group blocks, items, and fluids together for recipes, loot, etc.
+Block Tag JSON
+Located at data/${MOD_ID}/tags/blocks/example_tag.json:
+{
+  "values": [
+    "${MOD_ID}:example_block",
+    "minecraft:stone"
+  ]
+}
+Using Tags
+// Check if a block has a tag
+if(state.is(ModTags.Blocks.EXAMPLE_TAG)) {
+    // Do something
+}
+
+// Recipe ingredient from tag
+Ingredient.of(ModTags.Items.EXAMPLE_ITEM_TAG);
+Tag Registration via Data Generation
+public class ModBlockTagsProvider extends BlockTagsProvider {
+    public ModBlockTagsProvider(DataGenerator gen, ExistingFileHelper helper) {
+        super(gen, MOD_ID, helper);
+    }
+
+    @Override
+    protected void addTags() {
+        this.tag(ModTags.Blocks.EXAMPLE_TAG)
+            .add(EXAMPLE_BLOCK.get())
+            .addTags(BlockTags.STONE_BLOCKS);
+    }
+}
+Custom Tags
+public class ModTags {
+    public static class Blocks {
+        public static final TagKey<Block> EXAMPLE_TAG =
+            TagKey.create(Registry.BLOCK_REGISTRY, new ResourceLocation(MOD_ID, "example_tag"));
+    }
+
+    public static class Items {
+        public static final TagKey<Item> EXAMPLE_ITEM_TAG =
+            TagKey.create(Registry.ITEM_REGISTRY, new ResourceLocation(MOD_ID, "example_item_tag"));
+    }
+
+    public static class Fluids {
+        public static final TagKey<Fluid> EXAMPLE_FLUID_TAG =
+            TagKey.create(Registry.FLUID_REGISTRY, new ResourceLocation(MOD_ID, "example_fluid_tag"));
+    }
+}
+Fabric Comparison
+- Tags work exactly the same way between Forge and Fabric, as they are vanilla code
+- The only difference is the package for custom tag classes, which is identical
+
+---
+Final Notes
+This guide covers all the standard patterns for 1.16.5 Forge modding. Always refer to the official Forge documentation for more details, and check the Forge forums for help with common issues.

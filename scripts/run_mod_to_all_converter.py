@@ -7,7 +7,7 @@ Actions, waits for completion, and downloads all artifacts and logs.
 
 After the workflow completes, the script **always** enters the second stage
 (mode="prompt-and-code" by default) that sends each generated
-prompt to an AI (via C05LocalAi / NVIDIA) and saves the response as
+prompt to an AI (via C05LocalAI / Groq) and saves the response as
 airesponse.txt in each version folder.
 
 Pass --mode prompt-creation to skip the AI coding stage.
@@ -63,9 +63,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from _key_manager import KeyManager
-
-
 WORKFLOW_FILE = "auto-mod-to-all-version-converter.yml"
 ANALYSIS_ARTIFACT = "mod-to-all-analysis-bundle"
 DEFAULT_OUTPUT_DIR = "ModToAllRuns"
@@ -184,22 +181,16 @@ _STATUS_LABELS = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AI Coding Stage — sends prompts to C05LocalAi / NVIDIA
+# AI Coding Stage — sends prompts to C05LocalAI / Groq
 # ─────────────────────────────────────────────────────────────────────────────
 
 # --- AI Provider Config ---
-AI_NVIDIA_BASE = "https://api.deepseek.com/v1"
-AI_MODEL = "deepseek-v4-flash"
+AI_C05_BASE = "http://localhost:8129"
+AI_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 # Maximum retries when the AI response contains no Java source files
 AI_JAVA_RETRIES = 3
 
-
-def _create_key_manager() -> KeyManager:
-    return KeyManager(
-        key_path="C05LocalAi/keys/deepseek.txt",
-        env_vars=("DEEPSEEK_API_KEY", "DEEPSEEK_KEY"),
-    )
 
 def _response_has_java_files(response_text: str) -> bool:
     """Quick check whether an AI response contains any .java source paths."""
@@ -234,15 +225,185 @@ def _read_author_info(target_dir: Path) -> tuple[str, str]:
     return author, mod_path
 
 
-def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
-    """Execute the AI coding stage: send prompts to NVIDIA and save responses."""
+def _read_mod_description(target_dir: Path) -> tuple[str, str, str, str]:
+    """Read mod name, summary, description, and H1 title from projectinfo.txt.
+
+    Returns (mod_name, summary, description, h1_title).
+    h1_title is extracted from the first '# Title' line in the description.
+    """
+    projectinfo_path = target_dir / "projectinfo.txt"
+    if not projectinfo_path.exists():
+        return "", "", "", ""
+
+    mod_name = ""
+    summary = ""
+    description = ""
+    h1_title = ""
+
+    content = projectinfo_path.read_text(encoding="utf-8")
+
+    for line in content.split("\n"):
+        s = line.strip()
+        if s.startswith("Mod Name:"):
+            mod_name = s.split(":", 1)[1].strip()
+
+    summary_match = re.search(r"Mod Summary:\s*\n(.*?)(?:\n\n|\n(?:Mod Description|Source|$))", content, re.DOTALL)
+    if summary_match:
+        summary = summary_match.group(1).strip()
+
+    desc_match = re.search(r"Mod Description[^:]*:\s*\n(.*?)(?:\n\n|\n(?:Source|$))", content, re.DOTALL)
+    if desc_match:
+        description = desc_match.group(1).strip()
+
+    # Extract H1 title from description: first line starting with "# " (single #)
+    if description:
+        for line in description.split("\n"):
+            s = line.strip()
+            if re.match(r"^# [^#]", s):
+                h1_title = s[2:].strip()
+                break
+
+    return mod_name, summary, description, h1_title
+
+
+def _generate_metadata_with_ai(
+    raw_name: str,
+    status_callback: callable | None = None,
+) -> dict[str, str]:
+    """Send a raw mod name to Groq AI to format into proper metadata fields.
+
+    The AI formats the name WITHOUT changing, renaming, or inventing anything.
+    It only converts to the required field formats (mod_id, mod_class, etc.).
+
+    Returns dict with keys: mod_id, mod_class, mod_client_class,
+    mod_display_name, package_path, author_name.
+    """
+    import urllib.request
+    import urllib.error
+
+    url = f"{AI_C05_BASE}/chat"
+
+    prompt_dir = Path(__file__).resolve().parent.parent / "prompts"
+    prompt_path = prompt_dir / "metadata_generation.txt"
+    if prompt_path.exists():
+        system_prompt = prompt_path.read_text(encoding="utf-8")
+    else:
+        system_prompt = (
+            "You are a Minecraft mod metadata formatter. "
+            "Format the given mod name into metadata fields WITHOUT changing it. "
+            "author_name is always 'Itamio'. package_path is always 'asd.itamio.{mod_id}'. "
+            "Return ONLY a JSON object."
+        )
+
+    user_prompt = f"Mod name: {raw_name}\n\nFormat this name into the metadata JSON. Do NOT change the name."
+
+    payload: dict[str, Any] = {
+        "hoster": "groq",
+        "model": AI_MODEL,
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+        "extra_body": {
+            "temperature": 0.1,
+            "max_tokens": 1024,
+        },
+    }
+
+    body_bytes = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
+
+    full_response = ""
+    buffer = ""
+
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            while True:
+                chunk = resp.read(4096)
+                if not chunk:
+                    break
+                buffer += chunk.decode("utf-8", errors="replace")
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if "error" in data:
+                        raise RuntimeError(str(data["error"]))
+                    if data.get("event") == "content":
+                        full_response += data.get("content", "")
+    except urllib.error.HTTPError as e:
+        error_body = ""
+        try:
+            error_body = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"Metadata AI request failed: HTTP {e.code} - {error_body}"
+        ) from e
+    except Exception:
+        raise
+
+    full_response = full_response.strip()
+
+    json_match = re.search(r"\{[\s\S]*\}", full_response)
+    if json_match:
+        full_response = json_match.group(0)
+
+    try:
+        metadata = json.loads(full_response)
+    except json.JSONDecodeError:
+        print(f"  WARNING: Could not parse metadata JSON from AI response: {full_response[:200]}")
+        return {}
+
+    required_keys = {"mod_id", "mod_class", "mod_client_class", "mod_display_name", "package_path", "author_name"}
+    if not required_keys.issubset(metadata.keys()):
+        missing = required_keys - metadata.keys()
+        print(f"  WARNING: Metadata response missing keys: {missing}")
+        return {}
+
+    return metadata
+
+
+def _substitute_prompt_variables(prompt_text: str, metadata: dict[str, str]) -> str:
+    """Replace ${...} template variables in prompt with AI-generated metadata."""
+    var_map = {
+        "${MOD_ID}": metadata.get("mod_id", ""),
+        "${MOD_CLASS}": metadata.get("mod_class", ""),
+        "${MOD_CLIENT_CLASS}": metadata.get("mod_client_class", ""),
+        "${MOD_DISPLAY_NAME}": metadata.get("mod_display_name", ""),
+        "${PACKAGE_PATH}": metadata.get("package_path", ""),
+        "${AUTHOR_NAME}": metadata.get("author_name", ""),
+    }
+    for var, value in var_map.items():
+        if value:
+            prompt_text = prompt_text.replace(var, value)
+    return prompt_text
+
+
+def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | None = None) -> int:
+    """Execute the AI coding stage: send prompts to AI and save responses.
+
+    Args:
+        bundle_dir: Path to the analysis bundle directory.
+        previous_progress: Dict mapping target_name -> status ("complete" or "failed")
+                           from a previous partial run. Targets already marked complete
+                           will be skipped.
+    """
     import threading
 
     print()
     print("=" * 72)
     print("  PHASE 2 — AI MOD CODING (Local)")
     print(f"  Model: {AI_MODEL} (reasoning=high)")
-    print(f"  Provider: DeepSeek API")
+    print(f"  Provider: C05LocalAI / Groq")
     print(f"  Auto-retry on missing Java code: up to {AI_JAVA_RETRIES} retries per target")
     print("=" * 72)
     print()
@@ -257,15 +418,39 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
         print("ERROR: No target directories found in bundle.", file=sys.stderr)
         return 1
 
-    # Filter to those with prompt.txt
+    # Filter to those with prompt.txt (skip if already completed from previous run)
+    previous_progress = previous_progress or {}
     prompt_targets = []
+    skipped_targets = []
     for td in target_dirs:
         prompt_path = td / "prompt.txt"
-        if prompt_path.exists():
-            prompt_targets.append(td)
+        if not prompt_path.exists():
+            continue
+        # Skip targets that already have airesponse.txt AND are marked complete/failed in progress
+        prev_status = previous_progress.get(td.name, "")
+        if prev_status in ("complete", "failed") and (td / "airesponse.txt").exists():
+            skipped_targets.append(td.name)
+            _log(f"  Skipping already-processed target: {td.name} (status: {prev_status})")
+            continue
+        prompt_targets.append(td)
+
+    if skipped_targets:
+        print(f"\n  Skipping {len(skipped_targets)} already-processed target(s): {', '.join(skipped_targets)}")
+        print()
 
     if not prompt_targets:
-        print("No prompt.txt files found. Skipping AI coding stage.")
+        print("All targets already processed. Skipping AI coding stage.")
+        return 0
+
+    # Also drop any target that has airesponse.txt even without progress file
+    already_done = [td for td in prompt_targets if (td / "airesponse.txt").exists()]
+    if already_done:
+        for td in already_done:
+            _log(f"  Target already has airesponse.txt: {td.name} — skipping")
+        prompt_targets = [td for td in prompt_targets if not (td / "airesponse.txt").exists()]
+
+    if not prompt_targets:
+        print("All targets already processed. Skipping AI coding stage.")
         return 0
 
     target_names = sorted(td.name for td in prompt_targets)
@@ -332,7 +517,6 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
     # ── Execute ────────────────────────────────────────────────────────────
     success_count = 0
     fail_count = 0
-    key_mgr.reset_stress()
 
     # Pre-read author info for every target so we can pass it with each request
     target_author_info: dict[str, tuple[str, str]] = {}
@@ -344,19 +528,15 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
         for td in prompt_targets:
             prompt_path = td / "prompt.txt"
             author_info = target_author_info.get(td.name, ("", ""))
-            # Acquire a key from the pool (stress-aware)
-            worker_key = key_mgr.acquire()
             fut = pool.submit(
-                _send_prompt_to_nvidia,
+                _send_prompt_to_c05,
                 td.name,
                 prompt_path.read_text(encoding="utf-8"),
-                worker_key,
                 _update_line,
                 author_info,
                 "",
             )
-            # Store the key so we can release it after completion
-            fut_to_target[fut] = (td, worker_key)
+            fut_to_target[fut] = td
             _update_line(td.name, "request_sent")
             time.sleep(2)  # Stagger requests 2s apart to avoid API rate limits
 
@@ -365,16 +545,15 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
             prompt_text: str,
             retry_context: str,
             author_info: tuple[str, str],
-            key: str,
         ) -> str:
             """Helper: send prompt and return response, handling HTTP errors."""
-            return _send_prompt_to_nvidia(
-                td.name, prompt_text, key, _update_line,
+            return _send_prompt_to_c05(
+                td.name, prompt_text, _update_line,
                 author_info=author_info, retry_context=retry_context,
             )
 
         for fut in as_completed(fut_to_target):
-            td, used_key = fut_to_target[fut]
+            td = fut_to_target[fut]
             author_info = target_author_info.get(td.name, ("", ""))
             prompt_text = (td / "prompt.txt").read_text(encoding="utf-8")
 
@@ -386,18 +565,13 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
                 _log(f"  Retrying {td.name} after 30s (503 ResourceExhausted)...")
                 time.sleep(30)
                 try:
-                    retry_key = key_mgr.acquire()
-                    try:
-                        response_text = _do_send(td, prompt_text, "", author_info, retry_key)
-                    finally:
-                        key_mgr.release(retry_key)
+                    response_text = _do_send(td, prompt_text, "", author_info)
                 except Exception as exc2:
                     error_msg = str(exc2)
                     _update_line(td.name, "failed", error_msg[:80])
                     fail_count += 1
                     fail_path = td / "airesponse.txt"
                     fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
-                    key_mgr.release(used_key)
                     continue
             except Exception as exc:
                 error_msg = str(exc)
@@ -405,7 +579,6 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
                 fail_count += 1
                 fail_path = td / "airesponse.txt"
                 fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
-                key_mgr.release(used_key)
                 continue
 
             # ── Save initial response ──────────────────────────────────
@@ -449,18 +622,45 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
                         "Output each file under `src/main/java/` with the correct package path."
                     )
 
-                retry_key = key_mgr.acquire()
                 try:
                     final_response = _do_send(
-                        td, prompt_text, retry_context, author_info, retry_key,
+                        td, prompt_text, retry_context, author_info,
                     )
-                finally:
-                    key_mgr.release(retry_key)
+                except Exception as exc2:
+                    error_msg = str(exc2)
+                    _update_line(td.name, "failed", error_msg[:80])
+                    fail_count += 1
+                    fail_path = td / "airesponse.txt"
+                    fail_path.write_text(f"AI CODING FAILED\n\nError: {error_msg}\n", encoding="utf-8")
+                    continue
 
             # ── Save final response ────────────────────────────────────
             try:
                 resp_path = td / "airesponse.txt"
                 resp_path.write_text(final_response, encoding="utf-8")
+
+                # ── Save conversation for fix cycle reuse ──────────────
+                author, mod_path = author_info
+                system_parts = [
+                    "You are an excellent and professional Minecraft mod developer.",
+                    "You are expert at reading and following technical instructions precisely.",
+                    "You write clean, correct, and well-structured Java code.",
+                    "Provide ALL files requested with complete implementations — no stubs, no TODOs, no placeholders.",
+                ]
+                if author:
+                    system_parts.append(f"The mod author is: {author}")
+                    system_parts.append("You should keep the package path and style consistent with this author's work.")
+                if mod_path:
+                    system_parts.append(f"The preferred package path for the mod is: {mod_path}")
+                    system_parts.append("Use this Java package path for all source files.")
+                system_prompt = "\n".join(system_parts)
+                conversation = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt_text},
+                    {"role": "assistant", "content": final_response},
+                ]
+                conv_path = td / "conversation.json"
+                conv_path.write_text(json.dumps(conversation, indent=2), encoding="utf-8")
 
                 if _response_has_java_files(final_response):
                     _update_line(td.name, "complete", f"{len(final_response):,} chars")
@@ -469,8 +669,44 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
                     _update_line(td.name, "failed", "no Java code after retries")
                     _log(f"  {td.name}: FAILED — no Java code after {AI_JAVA_RETRIES} retries")
                     fail_count += 1
-            finally:
-                key_mgr.release(used_key)
+            except Exception as exc:
+                _log(f"  {td.name}: Error saving response: {exc}")
+                fail_count += 1
+
+    # ── Save progress to ai_stage_progress.json ────────────────────────
+    # Determine the run output root: bundle_dir = out_root/artifacts/ANALYSIS_ARTIFACT
+    ai_progress: dict[str, str] = {}
+    for td in prompt_targets:
+        resp_path = td / "airesponse.txt"
+        if resp_path.exists():
+            content = resp_path.read_text(encoding="utf-8")
+            if _response_has_java_files(content):
+                ai_progress[td.name] = "complete"
+            else:
+                ai_progress[td.name] = "failed"
+        else:
+            ai_progress[td.name] = "failed"
+    # Also include skipped targets from previous progress
+    for tname in skipped_targets:
+        if tname not in ai_progress:
+            ai_progress[tname] = previous_progress.get(tname, "skipped")
+    # Add targets that were already done (found airesponse.txt without progress file)
+    for td in already_done:
+        if td.name not in ai_progress:
+            resp_path = td / "airesponse.txt"
+            if resp_path.exists():
+                content = resp_path.read_text(encoding="utf-8")
+                ai_progress[td.name] = "complete" if _response_has_java_files(content) else "failed"
+            else:
+                ai_progress[td.name] = "failed"
+
+    out_root = bundle_dir.parent.parent
+    ai_progress_path = out_root / "ai_stage_progress.json"
+    try:
+        ai_progress_path.write_text(json.dumps(ai_progress, indent=2), encoding="utf-8")
+        _log(f"  Saved AI stage progress to {ai_progress_path}")
+    except Exception as exc:
+        _log(f"  ⚠ Failed to save AI stage progress: {exc}")
 
     print()
     print(f"{'─' * 72}")
@@ -480,20 +716,18 @@ def _run_ai_coding_stage(bundle_dir: Path, key_mgr: KeyManager) -> int:
     return 0 if fail_count == 0 else 1
 
 
-def _send_prompt_to_nvidia(
+def _send_prompt_to_c05(
     target_name: str,
     prompt_text: str,
-    api_key: str,
     status_callback: callable,
     author_info: tuple[str, str] = ("", ""),
     retry_context: str = "",
 ) -> str:
-    """Send a single prompt to the NVIDIA API and return the full response.
+    """Send a single prompt to C05LocalAI / Groq and return the full response.
 
     Args:
         target_name: The name of the target (e.g. "1.20.5-fabric").
         prompt_text: The prompt to send.
-        api_key: The API key.
         status_callback: Callback for status updates.
         author_info: (author_name, mod_path) tuple from projectinfo.txt.
         retry_context: If non-empty, this is a retry — the text explains what
@@ -502,7 +736,7 @@ def _send_prompt_to_nvidia(
     import urllib.request
     import urllib.error
 
-    url = f"{AI_NVIDIA_BASE}/chat/completions"
+    url = f"{AI_C05_BASE}/chat"
 
     author, mod_path = author_info
 
@@ -521,33 +755,25 @@ def _send_prompt_to_nvidia(
         system_parts.append(f"The preferred package path for the mod is: {mod_path}")
         system_parts.append(f"Use this Java package path for all source files.")
 
-    messages = []
-    messages.append({
-        "role": "system",
-        "content": "\n".join(system_parts),
-    })
-
+    user_content = prompt_text
     if retry_context:
-        # Prepend the retry explanation so the AI sees it first
-        augmented_prompt = f"{retry_context}\n\n---\n\n{prompt_text}"
-        messages.append({"role": "user", "content": augmented_prompt})
-    else:
-        messages.append({"role": "user", "content": prompt_text})
+        user_content = f"{retry_context}\n\n---\n\n{prompt_text}"
 
     payload: dict[str, Any] = {
+        "hoster": "groq",
         "model": AI_MODEL,
-        "messages": messages,
-        "temperature": 0.2,
-        "stream": True,
+        "system_prompt": "\n".join(system_parts),
+        "user_prompt": user_content,
+        "extra_body": {
+            "temperature": 0.2,
+        },
         "reasoning_effort": "high",
     }
 
-
     body_bytes = json.dumps(payload).encode("utf-8")
     headers = {
-        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "Accept": "text/event-stream",
+        "Accept": "application/json",
     }
 
     status_callback(target_name, "waiting")
@@ -566,44 +792,49 @@ def _send_prompt_to_nvidia(
                     break
                 buffer += chunk.decode("utf-8", errors="replace")
 
-                # Process SSE events
+                # Process NDJSON lines (each line is a complete JSON object)
                 while "\n" in buffer:
                     line, buffer = buffer.split("\n", 1)
                     line = line.strip()
                     if not line:
                         continue
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str.strip() == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            choices = data.get("choices", [])
-                            if choices:
-                                delta = choices[0].get("delta", {})
-                                content = delta.get("content", "") or ""
-                                if content:
-                                    full_response += content
-                                    accumulated += len(content)
-                                    # Hard limit: if response exceeds 100KB, abort
-                                    if accumulated > 100000:
-                                        raise ResponseTooLarge(f"Response exceeded 100KB ({accumulated:,} bytes)")
-                                    if accumulated % 500 < 100:
-                                        status_callback(
-                                            target_name, "streaming",
-                                            f"{accumulated:,} bytes received"
-                                        )
-                        except json.JSONDecodeError:
-                            pass
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
+                    # Error event
+                    if "error" in data:
+                        raise RuntimeError(str(data["error"]))
+
+                    # Content event
+                    if data.get("event") == "content":
+                        content = data.get("content", "") or ""
+                        if content:
+                            full_response += content
+                            accumulated += len(content)
+                            if accumulated > 100000:
+                                raise ResponseTooLarge(f"Response exceeded 100KB ({accumulated:,} bytes)")
+                            if accumulated % 500 < 100:
+                                status_callback(
+                                    target_name, "streaming",
+                                    f"{accumulated:,} bytes received"
+                                )
+
+                    # End event — contains the full accumulated content
+                    if data.get("status") == "end":
+                        end_content = data.get("content", "") or ""
+                        if end_content and not full_response:
+                            full_response = end_content
+                            accumulated = len(end_content)
+                        break
     except urllib.error.HTTPError as e:
         error_code = e.code
         error_detail = e.read().decode("utf-8", errors="replace")[:500]
-        # Retry on 429 (rate limit) and 503 (service busy / ResourceExhausted)
         if error_code in (429, 503):
             status_callback(target_name, "retrying", f"HTTP {error_code}: {error_detail}")
             import time as _time
             _time.sleep(30)
-            # Tell caller to retry via a special signal
             raise RetryableHTTPError(f"HTTP {error_code}: {error_detail}")
         raise RuntimeError(f"HTTP {error_code}: {error_detail}")
     except Exception as e:
@@ -696,26 +927,49 @@ class Runner:
         artifacts_dir = self.out_root / "artifacts"
         bundle_dir = artifacts_dir / ANALYSIS_ARTIFACT if artifacts_dir.exists() else None
         build_results_dir = artifacts_dir / ".build_results" if artifacts_dir.exists() else None
+        incoming_dir = self.out_root / "incoming"
+
+        # Load AI stage progress file if it exists
+        ai_progress_path = self.out_root / "ai_stage_progress.json"
+        ai_stage_progress: dict[str, str] = {}
+        if ai_progress_path.exists():
+            try:
+                ai_stage_progress = json.loads(ai_progress_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, Exception):
+                pass
+
         progress = {
             "workflow_completed": (self.out_root / "result.json").exists(),
             "artifacts_downloaded": bundle_dir is not None and bundle_dir.exists(),
             "has_prompt_txt": False,
             "has_airesponse_txt": False,
+            "airesponse_count": 0,
+            "prompt_target_count": 0,
             "has_build_zip": False,
             "has_build_results": False,
             "compile_started": False,
             "compile_complete": False,
+            "ai_stage_progress": ai_stage_progress,
         }
         if bundle_dir and bundle_dir.exists():
+            prompt_targets = []
+            airesponse_targets = []
             for target_dir in bundle_dir.iterdir():
-                if target_dir.is_dir() and (target_dir / "prompt.txt").exists():
+                if not target_dir.is_dir() or target_dir.name.startswith("."):
+                    continue
+                if (target_dir / "prompt.txt").exists():
                     progress["has_prompt_txt"] = True
-                    break
-            for target_dir in bundle_dir.iterdir():
-                if target_dir.is_dir() and (target_dir / "airesponse.txt").exists():
-                    progress["has_airesponse_txt"] = True
-                    break
-        incoming_dir = self.out_root / "incoming"
+                    prompt_targets.append(target_dir.name)
+                if (target_dir / "airesponse.txt").exists():
+                    airesponse_targets.append(target_dir.name)
+            progress["airesponse_count"] = len(airesponse_targets)
+            progress["prompt_target_count"] = len(prompt_targets)
+            # has_airesponse_txt is True only when ALL targets with prompts have responses
+            if prompt_targets and len(airesponse_targets) >= len(prompt_targets):
+                progress["has_airesponse_txt"] = True
+            elif airesponse_targets:
+                progress["has_airesponse_txt"] = False  # partial
+
         if incoming_dir.exists():
             for f in incoming_dir.iterdir():
                 if f.is_file() and f.suffix == ".zip" and "all-versions" in f.name:
@@ -752,7 +1006,10 @@ class Runner:
             print(f"  Workflow:        {'✓ completed' if progress['workflow_completed'] else '✗ not done'}")
             print(f"  Artifacts:       {'✓ downloaded' if progress['artifacts_downloaded'] else '✗ not downloaded'}")
             print(f"  Prompt files:    {'✓ present' if progress['has_prompt_txt'] else '✗ missing'}")
-            print(f"  AI responses:    {'✓ present' if progress['has_airesponse_txt'] else '✗ missing'}")
+            if progress['prompt_target_count'] > 0 and progress['airesponse_count'] < progress['prompt_target_count']:
+                print(f"  AI responses:    ⏳ partial ({progress['airesponse_count']}/{progress['prompt_target_count']} targets)")
+            else:
+                print(f"  AI responses:    {'✓ present' if progress['has_airesponse_txt'] else '✗ missing'}")
             print(f"  Build zip:       {'✓ present' if progress['has_build_zip'] else '✗ missing'}")
             print(f"  Build results:   {'✓ present' if progress['has_build_results'] else '✗ missing'}")
             print()
@@ -802,16 +1059,71 @@ class Runner:
                   file=sys.stderr)
             return 1
 
+        # ── Generate mod metadata with AI before coding ──────────────────
+        print()
+        print("=" * 72)
+        print("  METADATA — Generating mod metadata via AI")
+        print("=" * 72)
+        print()
+
+        target_dirs = sorted([
+            d for d in bundle_dir.iterdir()
+            if d.is_dir() and not d.name.startswith(".")
+            and (d / "prompt.txt").exists()
+        ])
+
+        # Determine mod name for metadata generation
+        # Priority: H1 title from description > Modrinth title from projectinfo
+        mod_name_for_metadata = ""
+        h1_title = ""
+        for td in target_dirs:
+            _, _, _, h1 = _read_mod_description(td)
+            if h1:
+                h1_title = h1
+                break
+
+        if h1_title:
+            mod_name_for_metadata = h1_title
+            print(f"  Using H1 title from description: \"{h1_title}\"")
+        else:
+            for td in target_dirs:
+                mn, _, _, _ = _read_mod_description(td)
+                if mn:
+                    mod_name_for_metadata = mn
+                    break
+            if mod_name_for_metadata:
+                print(f"  Using Modrinth title: \"{mod_name_for_metadata}\"")
+            else:
+                print(f"  WARNING: No mod name found in description or projectinfo")
+
+        if mod_name_for_metadata:
+            from generate_prompts_in_bundle import _get_fallback_mod_values
+            metadata = _get_fallback_mod_values({"mod_name": mod_name_for_metadata})
+            print(f"  Metadata:")
+            for k, v in metadata.items():
+                print(f"    {k}: {v}")
+
+            for td in target_dirs:
+                prompt_path = td / "prompt.txt"
+                if prompt_path.exists():
+                    prompt_text = prompt_path.read_text(encoding="utf-8")
+                    updated = _substitute_prompt_variables(prompt_text, metadata)
+                    prompt_path.write_text(updated, encoding="utf-8")
+            print(f"  ✓ Substituted variables in {len(target_dirs)} prompt files")
+        else:
+            print(f"  WARNING: No mod name available, prompts will have raw variable names")
+        print()
+
+        # Run AI coding stage if not ALL targets have responses yet
         if not progress["has_airesponse_txt"]:
-            key_mgr = _create_key_manager()
-            ai_result = _run_ai_coding_stage(bundle_dir, key_mgr)
+            ai_result = _run_ai_coding_stage(bundle_dir, progress.get("ai_stage_progress", {}))
 
             self._append_ai_summary(self.out_root / "artifacts")
 
             if ai_result != 0:
                 print("\n⚠ AI coding stage had failures. Proceeding to compile cycle anyway...")
         else:
-            print("Skipping AI coding stage (airesponse.txt files already present)")
+            print(f"Skipping AI coding stage (all {progress['prompt_target_count']} target(s) already have airesponse.txt)")
 
         _log("Validating AI responses before compile cycle...")
         targets_no_java: list[str] = []

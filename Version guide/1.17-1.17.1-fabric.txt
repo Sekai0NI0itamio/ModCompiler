@@ -1,0 +1,469 @@
+Comprehensive Fabric Modding Guide for 1.17-1.17.1
+This guide covers everything you need to code a Fabric mod for Minecraft 1.17 and 1.17.1, including exact imports, code examples, API changes, and common pitfalls.
+
+---
+1. Modding Framework: Fabric Loader, Yarn mappings, Loom
+The Fabric modding ecosystem for 1.17 relies on three core components:
+Components
+Component
+Purpose
+Recommended Version for 1.17.1
+Fabric Loader
+The core mod loader that handles mod discovery, entry points, and mixin application.
+0.11.3
+Yarn Mappings
+Community-provided, open-source mappings for Minecraft's obfuscated code, providing readable names for classes, methods, and fields.
+1.17.1+build.38
+Fabric Loom
+Gradle plugin that sets up the development environment, handles deobfuscation, and builds your mod.
+0.8.18
+Key Notes
+- Unlike 1.16, Loom 0.8+ only runs on Java 16, you cannot use older Java versions.
+- Yarn mappings for 1.17 include new mappings for the blocks, items, and world generation changes introduced in the Caves & Cliffs part 1 update.
+
+---
+3. Key Changes from 1.16
+World Height Changes
+- The default world build height expanded from 0-255 to -64-319.
+- Many world generation methods now take a LevelHeightAccessor parameter to handle dynamic world height.
+- Hardcoding y-level limits (e.g., if (y < 0)) will break in 1.17.
+New Blocks/Items
+1.17 introduced over 30 new blocks and items, including:
+- Copper blocks and variants
+- Amethyst blocks, buds, and clusters
+- Calcite, Tuff, Dripstone blocks
+- Spyglass, Bundle, Lightning Rod
+- New building blocks: Candles, Powder Snow, etc.
+Data Pack Format
+- Data pack format changed to version 7 (from 6 in 1.16).
+- Resource pack format also changed to version 7.
+Other Changes
+- TileEntity was renamed to BlockEntity (this change was already present in Yarn for 1.16, but vanilla class names changed in 1.17).
+- ITickable for block entities was removed, replaced with BlockEntityTicker.
+- OpenGL was updated to 3.2 Core, changing rendering pipeline behavior.
+
+---
+4. Mod Entry Point: ModInitializer, ClientModInitializer, fabric.mod.json
+Entry Point Interfaces
+Common Entry Point: ModInitializer
+Runs on both client and server, used for common registration logic.
+// Exact import: net.fabricmc.api.ModInitializer
+public class ${MOD_CLASS} implements ModInitializer {
+	public static final String MOD_ID = "${MOD_ID}";
+
+	@Override
+	public void onInitialize() {
+		// Register blocks, items, etc. here
+		ModItems.register();
+		ModBlocks.register();
+	}
+}
+Client Entry Point: ClientModInitializer
+Runs only on the client, used for client-only registration (rendering, etc.).
+// Exact imports:
+// net.fabricmc.api.ClientModInitializer
+// net.fabricmc.api.Environment
+// net.fabricmc.api.EnvType
+@Environment(EnvType.CLIENT)
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+	@Override
+	public void onInitializeClient() {
+		// Register render layers, client events, etc. here
+		ModRendering.register();
+	}
+}
+fabric.mod.json Example
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+Warnings
+- In 1.17, the Fabric API mod ID is still fabric (it changed to fabric-api in 1.19+).
+- The java: ">=16" dependency ensures the game refuses to load your mod on older Java versions.
+
+---
+5. Registry System: Registry.register, new registries in 1.17
+The registry system in 1.17 works similarly to 1.16, but with new registries added for world generation features.
+Basic Registration
+// Exact imports:
+// net.minecraft.util.registry.Registry
+// net.minecraft.util.Identifier
+public static <T> T register(Registry<? super T> registry, String name, T entry) {
+	return Registry.register(registry, new Identifier(MOD_ID, name), entry);
+}
+New Registries in 1.17
+1.17 added several new registries for the updated world generation system:
+- Registries.NOISE_SETTINGS
+- Registries.WORLD_PRESET
+- Registries.CHUNK_GENERATOR
+- Registries.BIOME_SOURCE
+Key Notes
+- All registration must happen during the initial mod initialization, before the server/client starts.
+- Unlike Forge, Fabric does not have registry events; you register objects directly using Registry.register.
+
+---
+6. Block/Item Registration: Correct patterns
+Item Registration
+// Exact imports:
+// net.minecraft.item.Item
+// net.minecraft.item.Item.Settings
+// net.minecraft.util.registry.Registry
+// net.minecraft.util.Identifier
+public class ModItems {
+	public static final Item EXAMPLE_ITEM = register(
+		"example_item",
+		new Item(new Item.Settings().group(ItemGroup.MATERIALS))
+	);
+
+	public static void register() {
+		// Registration happens automatically via the initializer
+	}
+
+	private static <T extends Item> T register(String name, T item) {
+		return Registry.register(Registries.ITEM, new Identifier(${MOD_CLASS}.MOD_ID, name), item);
+	}
+}
+Block Registration
+// Exact imports:
+// net.minecraft.block.Block
+// net.minecraft.block.Block.Settings
+// net.minecraft.item.BlockItem
+// net.minecraft.item.Item.Settings
+// net.minecraft.util.registry.Registry
+// net.minecraft.util.Identifier
+public class ModBlocks {
+	public static final Block EXAMPLE_BLOCK = register(
+		"example_block",
+		new Block(Block.Settings.of(Material.STONE).strength(2.0f))
+	);
+
+	public static void register() {
+		// Registration happens automatically via the initializer
+	}
+
+	private static <T extends Block> T register(String name, T block) {
+		// Register the block
+		Registry.register(Registries.BLOCK, new Identifier(${MOD_CLASS}.MOD_ID, name), block);
+		// Register the block item
+		Registry.register(Registries.ITEM, new Identifier(${MOD_CLASS}.MOD_ID, name), new BlockItem(block, new Item.Settings().group(ItemGroup.BUILDING_BLOCKS)));
+		return block;
+	}
+}
+Block Entity Registration (Important Change from 1.16)
+In 1.17, BlockEntityType.Builder has a private factory, so you must use FabricBlockEntityTypeBuilder instead:
+// Exact imports:
+// net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder
+// net.minecraft.block.entity.BlockEntityType
+// net.minecraft.util.registry.Registry
+public class ModBlockEntities {
+	public static BlockEntityType<ExampleBlockEntity> EXAMPLE_BLOCK_ENTITY;
+
+	public static void register() {
+		EXAMPLE_BLOCK_ENTITY = Registry.register(
+			Registries.BLOCK_ENTITY_TYPE,
+			new Identifier(${MOD_CLASS}.MOD_ID, "example_block_entity"),
+			FabricBlockEntityTypeBuilder.create(ExampleBlockEntity::new, ModBlocks.EXAMPLE_BLOCK).build(null)
+		);
+	}
+}
+Ticking Block Entities
+The old Tickable interface is gone. Use BlockEntityTicker instead:
+// In your Block class
+@Override
+@Nullable
+public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+	// Return different tickers for client/server
+	return level.isClientSide() ?
+		null :
+		BaseEntityBlock.createTickerHelper(type, ModBlockEntities.EXAMPLE_BLOCK_ENTITY, ExampleBlockEntity::serverTick);
+}
+
+---
+7. Rendering: Model changes, RenderLayer, new block model formats
+RenderLayer Registration
+For blocks with transparent or cutout textures, you need to register the render layer:
+// Exact imports:
+// net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
+// net.minecraft.client.render.RenderLayer
+// net.fabricmc.api.Environment
+// net.fabricmc.api.EnvType
+@Environment(EnvType.CLIENT)
+public class ModRendering {
+	public static void register() {
+		// For cutout textures (e.g., leaves, glass panes)
+		BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.EXAMPLE_CUTOUT_BLOCK, RenderLayer.getCutout());
+
+		// For translucent textures (e.g., water, ice)
+		BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.EXAMPLE_TRANSLUCENT_BLOCK, RenderLayer.getTranslucent());
+	}
+}
+Model Changes
+1.17 introduced new block model formats for the new blocks:
+- Cross models: For amethyst buds and dripstone
+- Orientable models: For copper blocks that face directions
+- Multipart models: Updated to support the new block states
+OpenGL Changes
+- Minecraft 1.17 moved to OpenGL 3.2 Core, which means you can no longer use immediate mode rendering.
+- All custom rendering must use BufferBuilder and shaders.
+- Replace old RenderSystem.color() with RenderSystem.setShaderColor().
+- Replace old RenderSystem.bindTexture() with RenderSystem.setShaderTexture(0, textureId).
+
+---
+8. Networking: PacketByteBuf, Fabric API networking
+Fabric's networking API for 1.17 uses the v1 networking system.
+Example: Sending a C2S Packet
+// Exact imports:
+// net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
+// net.fabricmc.fabric.api.networking.v1.PacketByteBufs
+// net.minecraft.network.PacketByteBuf
+// net.minecraft.util.Identifier
+public static final Identifier EXAMPLE_PACKET_ID = new Identifier("${MOD_ID}", "example_packet");
+
+public void sendPacket() {
+	PacketByteBuf buf = PacketByteBufs.create();
+	buf.writeInt(123);
+	buf.writeString("Hello World");
+
+	ClientPlayNetworking.send(EXAMPLE_PACKET_ID, buf);
+}
+Example: Receiving a S2C Packet
+// Client side
+@Environment(EnvType.CLIENT)
+public void registerPacketReceiver() {
+	ClientPlayNetworking.registerReceiver(EXAMPLE_PACKET_ID, (client, handler, buf, responseSender) -> {
+		int data = buf.readInt();
+		String message = buf.readString();
+
+		// Run on the main thread
+		client.execute(() -> {
+			// Handle the packet data
+			MinecraftClient.getInstance().player.sendMessage(Text.literal(message), false);
+		});
+	});
+}
+Server Side Receiving
+// Server side
+public void registerServerPacketReceiver() {
+	ServerPlayNetworking.registerReceiver(EXAMPLE_PACKET_ID, (server, player, handler, buf, responseSender) -> {
+		int data = buf.readInt();
+		String message = buf.readString();
+
+		server.execute(() -> {
+			// Handle the packet on the main server thread
+			player.sendMessage(Text.literal("Received: " + message), false);
+		});
+	});
+}
+
+---
+9. Events: Fabric API events
+Fabric API provides a wide range of events to hook into game behavior.
+Example: Server Tick Event
+// Exact imports:
+// net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
+public void registerEvents() {
+	ServerTickEvents.END_SERVER_TICK.register(server -> {
+		// Runs at the end of every server tick
+		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+			// Do something per player
+		}
+	});
+}
+Example: Block Break Event
+// Exact imports:
+// net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents
+public void registerBreakEvents() {
+	PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, entity) -> {
+		// Runs after a block is broken
+		player.sendMessage(Text.literal("You broke a block!"), true);
+	});
+}
+Common Events Available in 1.17
+- ServerTickEvents, ClientTickEvents
+- PlayerBlockBreakEvents, AttackBlockCallback
+- ServerWorldEvents.Load, ServerWorldEvents.Unload
+- ServerPlayConnectionEvents.Join, ServerPlayConnectionEvents.Disconnect
+
+---
+10. Common Pitfalls
+Java 16 Features
+- Records: Java 16 introduced records. You can use them in your mod, but you must compile with Java 16 (older versions will fail).
+- Text Blocks: Java 15+ text blocks are also available, but again, require Java 16 to compile/run.
+Module System
+Java 16's module system has stronger encapsulation. If you use reflection to access internal JDK classes, you may need to add JVM arguments to open the modules:
+--add-opens java.base/java.lang=ALL-UNNAMED
+--add-opens java.base/java.util=ALL-UNNAMED
+World Height
+- Never hardcode y=0 or y=255. Use level.getHeight() or level.getMinY() to get dynamic world height.
+- Chunk section storage changed to support the new height, so any code that accesses chunk sections directly needs to be updated.
+Block Entity Changes
+- Don't use the old Tickable interface, it's removed.
+- Don't use BlockEntityType.Builder, use FabricBlockEntityTypeBuilder instead.
+
+---
+11. Java Version: Java 16 required
+Warning
+If you try to compile or run your mod with Java 11 or older, you will get:
+- Unsupported class file major version 60 error
+- Gradle build failures
+- Game startup crashes
+
+---
+12. Mixin: Mixin patterns, @Accessor, @Invoker
+Mixins allow you to modify vanilla code without modifying the source directly.
+Basic Mixin Example
+// Exact imports:
+// org.spongepowered.asm.mixin.Mixin
+// org.spongepowered.asm.mixin.injection.Inject
+// org.spongepowered.asm.mixin.injection.callback.CallbackInfo
+// net.minecraft.entity.player.PlayerEntity
+@Mixin(PlayerEntity.class)
+public class PlayerEntityMixin {
+        @Inject(method = "tick", at = @At("TAIL"))
+        private void tick(CallbackInfo ci) {
+          the player tick method
+                PlayerEntity player = (PlayerEntity) (Object) this;
+                // Do something
+        }
+}      // Runs at the end of
+@Accessor: Access Private Fields
+Access private fields from vanilla classes:
+// Exact imports:
+// org.spongepowered.asm.mixin.Mixin
+// org.spongepowered.asm.mixin.gen.Accessor
+// net.minecraft.client.MinecraftClient
+@Mixin(MinecraftClient.class)
+public interface MinecraftClientAccessor {
+	@Accessor("itemUseCooldown")
+	int getItemUseCooldown();
+
+	@Accessor("itemUseCooldown")
+	void setItemUseCooldown(int cooldown);
+}
+Usage:
+int cooldown = ((MinecraftClientAccessor) MinecraftClient.getInstance()).getItemUseCooldown();
+@Invoker: Call Private Methods
+Call private methods from vanilla classes:
+// Exact imports:
+// org.spongepowered.asm.mixin.Mixin
+// org.spongepowered.asm.mixin.gen.Invoker
+// net.minecraft.entity.player.PlayerEntity
+@Mixin(PlayerEntity.class)
+public interface PlayerEntityAccessor {
+	@Invoker("getAttackCooldownProgress")
+	float invokeGetAttackCooldownProgress(float baseTime);
+}
+Usage:
+float cooldown = ((PlayerEntityAccessor) player).invokeGetAttackCooldownProgress(0.5f);
+Mixin Gotchas for 1.17
+- Loom 0.8 uses Mixin 0.8.3, which supports all the standard mixin annotations.
+- Make sure your mixin JSON file is correctly registered in fabric.mod.json.
+- Mixin apply failures are usually caused by outdated mappings or conflicting mods.
+
+---
+13. Resource System: assets/ structure
+The resource system in 1.17 has the following structure:
+src/main/resources/
+├── assets/
+│   └── ${MOD_ID}/
+│       ├── blockstates/
+│       │   └── example_block.json
+│       ├── models/
+│       │   ├── block/
+│       │   │   └── example_block.json
+│       │   └── item/
+│       │       └── example_item.json
+│       ├── textures/
+│       │   ├── block/
+│       │   │   └── example_block.png
+│       │   └── item/
+│       │       └── example_item.png
+│       ├── lang/
+│       │   └── en_us.json
+│       └── icon.png
+├── data/
+│   └── ${MOD_ID}/
+│       ├── recipes/
+│       │   └── example_item.json
+│       ├── advancements/
+│       ├── loot_tables/
+│       └── tags/
+└── fabric.mod.json
+pack.mcmeta
+For 1.17, the resource pack format is 7:
+{
+	"pack": {
+		"pack_format": 7,
+		"description": "${MOD_DISPLAY_NAME} Resources"
+	}
+}
+Changes from 1.16
+- The pack format increased from 6 to 7.
+- New asset types for the new blocks (copper oxidation states, amethyst models, etc.).
+
+---
+14. Recipe System: JSON recipes
+In 1.17, recipes are stored in data/modid/recipes/ (the rename to recipe/ happened in 1.21).
+Example Shaped Crafting Recipe
+// data/${MOD_ID}/recipes/example_item.json
+{
+	"type": "minecraft:crafting_shaped",
+	"pattern": [
+		"XXX",
+		"X X",
+		"XXX"
+	],
+	"key": {
+		"X": { "item": "minecraft:iron_ingot" }
+	},
+	"result": {
+		"item": "${MOD_ID}:example_item",
+		"count": 1
+	}
+}
+Example Smelting Recipe
+// data/${MOD_ID}/recipes/example_item_smelting.json
+{
+	"type": "minecraft:smelting",
+	"ingredient": {
+		"item": "${MOD_ID}:example_block"
+	},
+	"result": "${MOD_ID}:example_item",
+	"experience": 0.7,
+	"cookingTime": 200
+}
+New Recipe Types in 1.17
+- No new recipe types were added in 1.17, but existing recipes were updated to support the new items.
+
+---
+15. Common Errors: Frequently seen compile errors and their fixes
+Error
+Cause
+Fix
+Unsupported class file major version 60
+You are using an older Java version to run Gradle.
+Use Java 16.
+Could not find method modCompile()
+You are using the old deprecated configuration.
+Replace modCompile with modImplementation.
+BlockEntityType$Builder is private
+You are trying to use vanilla's BlockEntityType.Builder.
+Use FabricBlockEntityTypeBuilder instead.
+Cannot resolve method 'getTickable()'
+You are using the old Tickable interface.
+Remove it, use BlockEntityTicker and getTicker() instead.
+Mixin apply failed
+Mixin conflict, or outdated mappings.
+Refresh your Gradle project, run genSources, check for conflicting mods.
+java.lang.IllegalAccessError: class ... cannot access class ...
+Java 9+ module system encapsulation.
+Add the appropriate --add-opens JVM arguments.
+World height out of range
+You are hardcoding y-levels outside the new -64-319 range.
+Use dynamic methods like level.getMinY() and level.getHeight().
+RenderSystem.color() is deprecated
+You are using old OpenGL immediate mode methods.
+Replace with RenderSystem.setShaderColor().
+
+---
+Final Notes
+- Always test your mod on a dedicated server to catch client-only code leaks.
+- Use the official Fabric Discord for help with 1.17-specific issues.
+- Backwards compatibility: This guide is only for 1.17-1.17.1, many of these APIs changed in 1.18+.

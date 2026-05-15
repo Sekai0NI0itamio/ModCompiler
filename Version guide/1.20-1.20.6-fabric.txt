@@ -1,0 +1,409 @@
+Fabric Modding Guide 1.20-1.20.6
+This guide covers everything needed to develop Fabric mods for the 1.20.x version range, including critical differences between 1.20-1.20.4 and 1.20.5-1.20.6, server-only build compatibility, and common pitfalls.
+
+---
+1. Modding Framework
+Core Versions
+Minecraft Version
+Fabric Loader
+Fabric Loom
+Mappings
+1.20 - 1.20.4
+0.14.19+
+1.5.x
+Yarn 1.20.x+ / Mojang Mappings
+1.20.5 - 1.20.6
+0.15.10+
+1.6.x
+Yarn 1.20.5+ / Mojang Mappings
+Key Framework Components
+- Fabric Loader: Core mod loading system that handles mod discovery, classloading, and mixin application.
+- Mappings:
+  - Yarn: Community-maintained, open-source mappings for development (default for Fabric)
+  - Mojang Mappings: Official Mojang mappings, available for production/obfuscated environments
+- Fabric Loom: Gradle plugin that sets up the development environment, handles remapping, and manages dependencies.
+
+---
+3. Key Changes within 1.20.x
+The 1.20.5 update introduced massive breaking changes that affect nearly all mods:
+3.1 Item Component System Overhaul
+- Replaces NBT-based item data: Item stacks no longer use raw NBT for runtime data storage. Instead, they use structured, typed components.
+- New system components: All item properties (custom name, damage, enchantments, etc.) are now components.
+- Custom components: Modders can register their own typed components instead of using raw NBT tags.
+3.2 Networking Overhaul
+- Payload-based networking: The old packet/channel system was replaced with vanilla's CustomPacketPayload system.
+- Codec-based serialization: Packets now use StreamCodec instead of manual PacketByteBuf reading/writing.
+- Old Fabric networking APIs removed: The legacy SimpleChannel and FabricPacket systems were removed.
+3.3 Java 21 Requirement
+- 1.20.5+ requires Java 21, ending support for Java 17 and 32-bit systems.
+- This enables use of newer Java features like records, pattern matching, and virtual threads.
+3.4 Package & Class Restructures
+- ResourceLocation renamed to Identifier (moved to net.minecraft.resources.Identifier)
+- Registries split into BuiltInRegistries for built-in registry entries
+- Network packet classes moved to new protocol packages
+- Many internal classes were repackaged to support the new component system
+3.5 Removed Fabric APIs
+The following deprecated APIs were removed in 1.20.5+:
+- fabric-containers-v0
+- fabric-events-lifecycle-v0
+- fabric-mining-level-api-v1
+- ScreenRegistry and ScreenHandlerRegistry
+- FabricItemSettings / FabricBlockSettings (use vanilla settings instead)
+
+---
+4. Mod Entry Point
+Entry points are used to initialize your mod code, separated by environment to avoid client class leakage.
+Core Entry Point Interfaces
+// Common (both client and server) entry point
+import net.fabricmc.api.ModInitializer;
+
+public class ${MOD_CLASS} implements ModInitializer {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    @Override
+    public void onInitialize() {
+        // Common initialization code (runs on both client and server)
+        // Register blocks, items, components, networking payloads here
+    }
+}
+// Client-only entry point
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
+
+@Environment(EnvType.CLIENT)
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
+        // Client-only initialization code (runs only on client)
+        // Register renderers, keybinds, client events here
+    }
+}
+The bundle workflow provides the fabric.mod.json template — no changes needed. Ensure your mod ID is consistent and entry points are correctly defined.
+
+---
+5. Registry System
+The registry system was updated in 1.20.5 to support the new component system.
+Core Imports (1.20.5+)
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+Core Imports (1.20-1.20.4)
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+Registering Content
+// 1.20.5+ example
+public static final Item CUSTOM_ITEM = Registry.register(
+    BuiltInRegistries.ITEM,
+    Identifier.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "custom_item"),
+    new CustomItem(new Item.Settings())
+);
+
+// 1.20-1.20.4 example
+public static final Item CUSTOM_ITEM = Registry.register(
+    Registries.ITEM,
+    new ResourceLocation(${MOD_CLASS}.MOD_ID, "custom_item"),
+    new CustomItem(new Item.Settings())
+);
+Data Component Registries
+For 1.20.5+, custom data components are registered in the data component type registry:
+import net.minecraft.component.DataComponentType;
+import net.minecraft.codec.Codec;
+
+// Register a custom integer component
+public static final DataComponentType<Integer> CLICK_COUNT_COMPONENT = Registry.register(
+    BuiltInRegistries.DATA_COMPONENT_TYPE,
+    Identifier.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "click_count"),
+    DataComponentType.<Integer>builder()
+        .persistent(Codec.INT)
+        .build()
+);
+
+---
+6. Block/Item Registration
+Correct Registration Pattern
+In 1.20.5+, FabricItemSettings was removed. Use vanilla Item.Settings instead, and attach default components directly.
+import net.minecraft.item.Item;
+import net.minecraft.item.BlockItem;
+import net.minecraft.block.Block;
+import net.minecraft.block.AbstractBlock;
+
+// Block registration
+public static final Block CUSTOM_BLOCK = Registry.register(
+    BuiltInRegistries.BLOCK,
+    Identifier.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "custom_block"),
+    new CustomBlock(AbstractBlock.Settings.create().strength(2.0f))
+);
+
+// Block Item registration with default components
+public static final BlockItem CUSTOM_BLOCK_ITEM = Registry.register(
+    BuiltInRegistries.ITEM,
+    Identifier.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "custom_block"),
+    new BlockItem(CUSTOM_BLOCK, new Item.Settings()
+        // Attach default component values
+        .component(ModComponents.CLICK_COUNT_COMPONENT, 0)
+        .maxCount(16)
+    )
+);
+Item Component Usage
+// Get component value
+int clickCount = stack.getOrDefault(ModComponents.CLICK_COUNT_COMPONENT, 0);
+
+// Set component value
+int oldCount = stack.set(ModComponents.CLICK_COUNT_COMPONENT, clickCount + 1);
+
+// Check if component exists
+boolean hasComponent = stack.has(ModComponents.CLICK_COUNT_COMPONENT);
+
+// Remove component
+Integer removedCount = stack.remove(ModComponents.CLICK_COUNT_COMPONENT);
+Warning: Component values must be immutable. Always use records or immutable objects for component values. Never modify a component value directly - always create a new instance and use stack.set().
+
+---
+7. Rendering
+Rendering code is always client-only, so it must be properly isolated to avoid breaking server builds.
+Key Changes in 1.20.5+
+- Vanilla removed unused shaders: position_color_normal, position_tex_lightmap_color
+- Fabric Rendering API added AtlasSourceTypeRegistry for custom atlas sources
+- ColorResolver support was added for custom color handling
+- Model baking system remains largely unchanged, but custom models must still be client-only
+Client-Only Rendering Initialization
+All rendering setup must be done in the client entry point:
+@Environment(EnvType.CLIENT)
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
+        // Register block entity renderers
+        BlockEntityRendererFactories.register(
+            ModBlockEntities.CUSTOM_BLOCK_ENTITY,
+            CustomBlockEntityRenderer::new
+        );
+
+        // Register color providers
+        ColorProviderRegistry.ITEM.register(
+            (stack, tintIndex) -> 0xFF00FF,
+            ModItems.CUSTOM_ITEM
+        );
+    }
+}
+Critical: Never reference rendering classes (like BlockEntityRenderer, RenderSystem, MinecraftClient) in common code. This will cause NoClassDefFoundError on dedicated servers.
+
+---
+8. Networking
+1.20.5+ uses payload-based networking, replacing the old channel system.
+Step 1: Define a Payload
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.core.BlockPos;
+
+// Server-to-Client payload
+public record SummonLightningS2CPayload(BlockPos pos) implements CustomPacketPayload {
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "summon_lightning");
+    public static final Type<SummonLightningS2CPayload> TYPE = new Type<>(ID);
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, SummonLightningS2CPayload> CODEC =
+        StreamCodec.composite(
+            BlockPos.STREAM_CODEC,
+            SummonLightningS2CPayload::pos,
+            SummonLightningS2CPayload::new
+        );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+}
+Step 2: Register the Payload
+Do this in your common initializer:
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+
+@Override
+public void onInitialize() {
+    // Register S2C payload
+    PayloadTypeRegistry.playS2C().register(
+        SummonLightningS2CPayload.TYPE,
+        SummonLightningS2CPayload.CODEC
+    );
+
+    // Register C2S payload similarly
+}
+Step 3: Send and Receive Payloads
+// Server side: send payload to client
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+
+// In your item use method
+if (!world.isClientSide) {
+    SummonLightningS2CPayload payload = new SummonLightningS2CPayload(user.getBlockPos());
+    ServerPlayNetworking.send((ServerPlayer) user, payload);
+}
+// Client side: receive payload
+import net.fabricmc.fabric.api.networking.v1.ClientPlayNetworking;
+
+@Environment(EnvType.CLIENT)
+@Override
+public void onInitializeClient() {
+    ClientPlayNetworking.registerGlobalReceiver(SummonLightningS2CPayload.TYPE, (payload, context) -> {
+        // Client-only handling code
+        BlockPos pos = payload.pos();
+        LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(context.client().level);
+        bolt.moveTo(pos.getCenter());
+        context.client().level.addFreshEntity(bolt);
+    });
+}
+
+---
+9. Events
+Fabric API events work the same way across the 1.20.x range, with some deprecated events removed in 1.20.5+.
+Example Event Usage
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEvents;
+
+// Common event (works on both sides)
+@Override
+public void onInitialize() {
+    ServerLivingEvents.PLAYER_DEATH.register((player, source) -> {
+        ${MOD_CLASS}.LOGGER.info("Player {} died!", player.getName().getString());
+    });
+}
+Client-Only Events
+Client events must be registered in the client entry point:
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+
+@Environment(EnvType.CLIENT)
+@Override
+public void onInitializeClient() {
+    ClientTickEvents.END_CLIENT_TICK.register(client -> {
+        // Client tick handling
+    });
+}
+
+---
+10. Common Pitfalls
+10.1 Critical: Server-Only Build Issues
+The #1 cause of server crashes is client class leakage. Dedicated servers do NOT have any client-side classes.
+- Never reference net.minecraft.client.MinecraftClient or any client-only class in common code
+- Never reference client-only classes in static initializers of common classes
+- Never put client-only fields in common classes (even if you never use them on server)
+10.2 Data Component System Migration
+- Do NOT use raw NBT for item data in 1.20.5+. Use custom data components instead.
+- The old ItemStack.getNbt() and setNbt() methods are deprecated and will not work with components.
+- ItemStack.fromNbt() now returns Optional<ItemStack> and requires a registry lookup.
+10.3 Java Version Mismatch
+- Using Java 17 for 1.20.5+ will cause build failures.
+- Using Java 21 for 1.20-1.20.4 will cause compatibility issues.
+10.4 Package Changes
+- ResourceLocation → Identifier: All old references to ResourceLocation need to be updated.
+- Registries → BuiltInRegistries: Built-in registry entries moved to this new class.
+- Network packet classes: Many were moved to new protocol packages.
+
+---
+11. Java Version
+Minecraft Version
+Required Java Version
+Gradle Version
+1.20 - 1.20.4
+Java 17
+8.5+
+1.20.5 - 1.20.6
+Java 21
+8.6+
+Warning: Java 21 drops 32-bit support. Mods built for 1.20.5+ will not run on 32-bit systems.
+
+---
+12. Mixin
+Mixins are used to modify vanilla code. They must be properly separated by environment to avoid server build failures.
+Client-Only Mixins
+To avoid "Mixin has no targets" errors, mark client mixins properly:
+Option 1: Use @Environment annotation
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import net.minecraft.client.MinecraftClient;
+
+@Environment(EnvType.CLIENT)
+@Mixin(MinecraftClient.class)
+public class MinecraftClientMixin {
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void onTick(CallbackInfo ci) {
+        // Client-only mixin code
+    }
+}
+Option 2: Mark in fabric.mod.json
+As shown in the fabric.mod.json example earlier, mark the mixin's environment so it's only loaded on client.
+Server-Only Mixins
+Similarly, you can mark server-only mixins:
+@Environment(EnvType.SERVER)
+@Mixin(DedicatedServer.class)
+public class DedicatedServerMixin {
+    // Server-only mixin code
+}
+
+---
+13. Common Errors
+13.1 "Mixin has no targets"
+Cause: You have a client-only mixin that is being loaded on the server. The server cannot find the target client class.
+Fix:
+- Mark the mixin with @Environment(EnvType.CLIENT)
+- Or mark the mixin as client-only in fabric.mod.json
+- Never put client mixins in the common mixin list without environment markers.
+13.2 Package not found errors
+Cause: You haven't updated your imports for the 1.20.5 package restructures.
+Common Fixes:
+- Replace import net.minecraft.resources.ResourceLocation; with import net.minecraft.resources.Identifier;
+- Replace import net.minecraft.core.registries.Registries; with import net.minecraft.core.registries.BuiltInRegistries;
+- Update network packet imports to the new net.minecraft.network.protocol packages.
+13.3 Data Component API migration issues
+Cause: You're still using NBT-based item data instead of components.
+Fix:
+- Migrate your custom item data to custom DataComponentTypes
+- Use stack.get(), stack.set(), and stack.remove() instead of NBT methods
+- Add default components to your item's Item.Settings during registration.
+13.4 NoClassDefFoundError: net/minecraft/client/MinecraftClient
+Cause: You referenced a client-only class in common code. The server tried to load the class but it doesn't exist.
+Fix:
+- Move all client-only code to client-only classes
+- Use DistExecutor to safely run client code from common code if needed.
+
+---
+14. Server-Only Build Considerations
+Key Facts
+- Dedicated server environments do NOT include any client-side classes. Any reference to these classes will crash the server.
+- The same mod jar must run on both client and server. You cannot ship separate jars.
+How to Avoid Issues
+1. Separate Entry Points: Use ModInitializer for common code and ClientModInitializer for client code.
+2. Conditional Mixin Loading: Mark client/server mixins with environment markers.
+3. Isolate Client Code: Put all client-only code in client-only classes annotated with @Environment(EnvType.CLIENT).
+4. Use DistExecutor for Cross-Side Code:
+import net.fabricmc.loader.api.DistExecutor;
+
+// Safely run client code from common code
+DistExecutor.runForDist(
+    () -> () -> {
+        // Client-only code, only loaded on client
+        MinecraftClient.getInstance().setScreen(new CustomScreen());
+        return null;
+    },
+    () -> () -> {
+        // Server-only code, only loaded on server
+        return null;
+    }
+);
+  This ensures the client code is only loaded when running on the client, avoiding classloading errors.
+5. Avoid Static Client References: Never have static fields in common classes that reference client classes. The static initializer will run on server and try to load the client class.
+
+---
+Final Checklist for Cross-Version Compatibility
+[] Use the correct Java version for your target Minecraft version
+[] Separate client and common code properly
+[] Mark client mixins with environment markers
+[] Migrate item NBT data to custom data components (for 1.20.5+)
+[] Update all imports for package changes
+[] Use the new payload-based networking system (for 1.20.5+)
+[] Test your mod on a dedicated server to catch client class leakage

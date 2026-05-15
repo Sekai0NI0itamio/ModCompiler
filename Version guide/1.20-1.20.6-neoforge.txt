@@ -1,0 +1,424 @@
+NeoForge 1.20-1.20.6 Modding Comprehensive Guide
+This guide covers everything you need to code a Minecraft mod for 1.20-1.20.6 using NeoForge, including key differences from Forge, exact import paths, code examples, and common pitfalls.
+
+---
+1. Modding Framework
+Core Versions
+Minecraft Version
+NeoForge Version Range
+NeoGradle Version
+Mappings
+1.20-1.20.4
+20.0.x - 20.4.x
+6.x.x
+Mojang (official)
+1.20.5-1.20.6
+20.5.x - 20.6.x
+7.0.105+
+Mojang (official)
+Warning: NeoForge no longer supports SRG mappings. All development uses Mojang official mappings by default, matching production environments.
+Key Framework Notes
+- NeoForge is the official successor to Forge for modern Minecraft versions
+- All core API classes are now under the net.neoforged namespace
+- The framework uses MIT license instead of LGPL, allowing more flexible mod licensing
+
+---
+3. Key Differences from Forge
+Package Restructuring
+This is the most common source of errors when porting from Forge. Do NOT use a simple find/replace of net.minecraftforge to net.neoforged - this will break almost all imports.
+The correct mapping is:
+Old Forge Package
+New NeoForge Package
+net.minecraftforge.api
+net.neoforged.api
+net.minecraftforge.bus
+net.neoforged.bus
+net.minecraftforge.eventbus.api
+net.neoforged.bus.api
+net.minecraftforge.fml
+net.neoforged.fml
+net.minecraftforge.forgespi
+net.neoforged.neoforgespi
+All other net.minecraftforge.* packages
+net.neoforged.neoforge.*
+Major Class Renames
+Old Forge Class
+New NeoForge Class
+MinecraftForge
+NeoForge
+ForgeRegistries
+NeoForgeRegistries
+ForgeConfigSpec
+ModConfigSpec
+ForgeMod
+NeoForgeMod
+ForgeSpawnEggItem
+DeferredSpawnEggItem
+ForgeTier
+SimpleTier
+IForgeShearable
+IShearable
+ForgeCapabilities
+Capabilities
+ForgeSoundType
+DeferredSoundType
+ForgeGui
+ExtendedGui
+ForgeSlider
+ExtendedSlider
+All IForge* extension interfaces
+I*Extension (e.g. IForgeItem → IItemExtension)
+Critical Warning: The most common mistake is missing the extra neoforge subpackage. For example:
+- ❌ Wrong: net.neoforged.registries.DeferredRegister
+- ✅ Correct: net.neoforged.neoforge.registries.DeferredRegister
+
+---
+4. Mod Entry Point
+The @Mod Annotation
+The mod entry point uses the @Mod annotation, similar to Forge but with a different import.
+Exact Imports
+import net.neoforged.fml.common.Mod;
+Code Example
+// The value here must match the modId in neoforge.mods.toml
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}() {
+        // Mod initialization code goes here
+        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        // Register registries, configs, etc. here
+    }
+}
+The bundle workflow provides the neoforge.mods.toml template — no changes needed. Ensure your mod ID is consistent.
+
+---
+5. Registry System
+NeoForge uses a similar deferred registration system to Forge, but with updated imports and class names.
+Core Registry Classes
+Exact Imports
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import net.neoforged.neoforge.registries.RegistryObject;
+import net.neoforged.bus.api.IEventBus;
+Key Changes
+- ForgeRegistries is now NeoForgeRegistries - this contains all the built-in registries for blocks, items, etc.
+- Deferred registration works the same way, but all classes are under the new package structure.
+
+---
+6. Block/Item Registration
+DeferredRegister Pattern
+This is the standard pattern for registering blocks, items, and other registry objects in NeoForge.
+Code Example
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.Material;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    // Create DeferredRegisters for Blocks and Items
+    public static final DeferredRegister<Block> BLOCKS =
+        DeferredRegister.create(NeoForgeRegistries.BLOCKS, MOD_ID);
+    public static final DeferredRegister<Item> ITEMS =
+        DeferredRegister.create(NeoForgeRegistries.ITEMS, MOD_ID);
+
+    // Register a custom block
+    public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block",
+        () -> new Block(BlockBehaviour.Properties.of(Material.STONE)
+            .strength(2.0f, 3.0f)
+            .requiresCorrectToolForDrops()));
+
+    // Register the corresponding block item
+    public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block",
+        () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
+
+    // Register a custom item
+    public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item",
+        () -> new Item(new Item.Properties()));
+}
+Registration in Mod Constructor
+import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+
+public ${MOD_CLASS}() {
+    IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+
+    // Register the DeferredRegisters to the mod event bus
+    BLOCKS.register(bus);
+    ITEMS.register(bus);
+}
+Warning: Make sure you use NeoForgeRegistries not the old ForgeRegistries class. Using the old class name will cause compile errors.
+
+---
+7. Rendering: Model Changes
+NeoForge has updated several rendering and model related classes:
+Key Class Changes
+Old Forge Class
+New NeoForge Class
+Import Path
+ForgeRenderTypes
+NeoForgeRenderTypes
+net.neoforged.neoforge.client.NeoForgeRenderTypes
+ForgeFaceData
+ExtraFaceData
+net.neoforged.neoforge.client.model.ExtraFaceData
+IForgeBakedModel
+IBakedModelExtension
+net.neoforged.neoforge.client.extensions.IBakedModelExtension
+RegisterGuiOverlaysEvent
+RegisterGuiLayersEvent
+net.neoforged.neoforge.client.event.RegisterGuiLayersEvent
+VanillaGuiOverlay
+VanillaGuiLayers
+net.neoforged.neoforge.client.gui.VanillaGuiLayers
+Example Model Registration
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
+
+public class ClientModEvents {
+    @SubscribeEvent
+    public static void onModelRegister(ModelEvent.RegisterAdditional event) {
+        // Register custom model locations
+        event.register(new ResourceLocation(${MOD_CLASS}.MOD_ID, "item/example_item"));
+    }
+}
+
+---
+8. GUI/Container: MenuType, Screen
+NeoForge uses the same basic GUI/Container system as modern Minecraft, with updated registration.
+MenuType Registration
+MenuTypes are registered the same way as blocks/items using DeferredRegister:
+import net.minecraft.world.inventory.MenuType;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
+// Create DeferredRegister for MenuTypes
+public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+    DeferredRegister.create(NeoForgeRegistries.MENU_TYPES, MOD_ID);
+
+// Register your custom menu
+public static final RegistryObject<MenuType<ExampleMenu>> EXAMPLE_MENU =
+    MENU_TYPES.register("example_menu", () -> new MenuType<>(ExampleMenu::new));
+Screen Registration
+Screens are registered client-side using the RegisterMenuScreensEvent:
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+
+@SubscribeEvent
+public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
+    event.register(EXAMPLE_MENU.get(), ExampleScreen::new);
+}
+Exact Imports
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
+Note: The old IForgeMenuType is now IMenuTypeExtension following the extension naming convention.
+
+---
+9. Networking: NeoForge Payload System
+NeoForge has replaced the old SimpleChannel system with a new payload-based networking system using StreamCodec for serialization.
+Core Networking Classes
+Exact Imports
+import net.neoforged.neoforge.network.CustomPacketPayload;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceLocation;
+Example Custom Payload
+public record ExamplePayload(int data, String message) implements CustomPacketPayload {
+    // Payload type identifier
+    public static final Type<ExamplePayload> TYPE =
+        new Type<>(new ResourceLocation(${MOD_CLASS}.MOD_ID, "example_payload"));
+
+    // Stream codec for serialization/deserialization
+    public static final StreamCodec<FriendlyByteBuf, ExamplePayload> STREAM_CODEC =
+        StreamCodec.composite(
+            FriendlyByteBuf::readInt, FriendlyByteBuf::writeInt,
+            ExamplePayload::data,
+            FriendlyByteBuf::readUtf, FriendlyByteBuf::writeUtf,
+            ExamplePayload::message,
+            ExamplePayload::new
+        );
+
+    @Override
+    public Type<ExamplePayload> type() {
+        return TYPE;
+    }
+}
+Payload Registration
+@SubscribeEvent
+public static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
+    PayloadRegistrar registrar = event.registrar("1"); // Version for compatibility
+
+    // Register bidirectional payload
+    registrar.playBidirectional(
+        ExamplePayload.TYPE,
+        ExamplePayload.STREAM_CODEC,
+        ExamplePayload::handle
+    );
+}
+
+// Payload handler
+private static void handle(ExamplePayload payload, IPayloadContext context) {
+    // Handle the payload on the main thread
+    context.enqueueWork(() -> {
+        // Process your data here
+        System.out.println("Received data: " + payload.data() + ", message: " + payload.message());
+    });
+}
+Sending Packets
+// Send to server
+PacketDistributor.sendToServer(new ExamplePayload(123, "Hello from client!"));
+
+// Send to specific client
+PacketDistributor.sendToClient(player, new ExamplePayload(456, "Hello from server!"));
+Warning: The old Forge SimpleChannel system is deprecated and removed in NeoForge. You must migrate to the new payload system.
+
+---
+10. Events: NeoForge Event Bus
+NeoForge has two separate event buses, similar to Forge, but with updated imports and naming.
+Core Event Classes
+Exact Imports
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.bus.api.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
+Key Changes
+- MinecraftForge.EVENT_BUS is now NeoForge.EVENT_BUS (the game event bus)
+- @Mod.EventBusSubscriber is now a top-level annotation @EventBusSubscriber
+- Mod.EventBusSubscriber.Bus.FORGE is now EventBusSubscriber.Bus.GAME
+- The mod event bus is still retrieved from FMLJavaModLoadingContext
+Example Event Subscription
+// Static event subscriber
+@EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
+public class GameEvents {
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        // Handle player join event
+        event.getEntity().sendSystemMessage(Component.literal("Welcome to the server!"));
+    }
+}
+Mod Event Bus Example
+// For mod loading events (registries, config, etc.)
+@EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
+public class ModEvents {
+    @SubscribeEvent
+    public static void onCommonSetup(FMLCommonSetupEvent event) {
+        // Common setup code
+    }
+}
+Common Mistake: Registering game events on the mod event bus, or vice versa. This will cause your events to never fire.
+
+---
+11. Config: NeoForge Config
+NeoForge's config system is similar to Forge's, but with updated class names.
+Core Config Classes
+Exact Imports
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
+Example Config Setup
+public class ${MOD_CLASS}Config {
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
+
+    // Config values
+    public static final ModConfigSpec.ConfigValue<Integer> EXAMPLE_INT;
+    public static final ModConfigSpec.ConfigValue<Boolean> EXAMPLE_BOOL;
+
+    static {
+        BUILDER.push("Example Mod Config");
+
+        EXAMPLE_INT = BUILDER.comment("An example integer config")
+            .defineInRange("exampleInt", 10, 0, 100);
+        EXAMPLE_BOOL = BUILDER.comment("An example boolean config")
+            .define("exampleBool", true);
+
+        BUILDER.pop();
+        SPEC = BUILDER.build();
+    }
+}
+Registering the Config
+public ${MOD_CLASS}() {
+    // Register config
+    FMLJavaModLoadingContext.get().getModEventBus().register(this);
+    FMLJavaModLoadingContext.get().registerConfig(
+        ModConfig.Type.COMMON,
+        ${MOD_CLASS}Config.SPEC
+    );
+}
+Note: The old ForgeConfigSpec is now ModConfigSpec. This is another common source of compile errors.
+
+---
+12. Common Pitfalls
+1. Incorrect Package Renaming
+The #1 mistake is doing a simple find/replace of net.minecraftforge to net.neoforged. This will miss the extra neoforge subpackage for most API classes.
+Bad:
+import net.neoforged.registries.DeferredRegister; // Missing the extra neoforge!
+Good:
+import net.neoforged.neoforge.registries.DeferredRegister;
+2. Forgetting to Rename mods.toml
+NeoForge will not load your mod if you leave the file named mods.toml. You must rename it to neoforge.mods.toml.
+3. Wrong Java Version
+Using Java 17 for 1.20.5+ or Java 21 for older versions will cause build and runtime errors.
+4. Old Class Names
+Forgetting to rename classes like:
+- ForgeRegistries → NeoForgeRegistries
+- MinecraftForge → NeoForge
+- ForgeConfigSpec → ModConfigSpec
+- IForge* → I*Extension
+5. Wrong Event Bus
+Registering events on the wrong bus will cause them to never fire. Use:
+- Bus.MOD for mod loading events
+- Bus.GAME for game events
+6. Legacy Networking
+Trying to use the old SimpleChannel system from Forge. NeoForge uses the new payload-based system.
+
+---
+13. Java Version
+Version Requirements
+Minecraft Version
+Required Java Version
+1.20 - 1.20.4
+Java 17
+1.20.5 - 1.20.6
+Java 21
+
+---
+14. Common Errors & Fixes
+1. Unsupported class file major version 65
+Cause: You're using Java 17 to build a 1.20.5+ mod (class file version 65 = Java 21).
+Fix: Use Java 21 for 1.20.5+ builds.
+2. Unsupported class file major version 61
+Cause: You're using Java 21 to build a 1.20-1.20.4 mod (class file version 61 = Java 17).
+Fix: Use Java 17 for 1.20-1.20.4 builds.
+3. Mod XXX is missing a metadata file, it will not be loaded!
+Cause: You forgot to rename mods.toml to neoforge.mods.toml, or the file is in the wrong location.
+Fix: Rename the file and ensure it's in src/main/resources/META-INF/.
+4. cannot find symbol: class ForgeRegistries
+Cause: You're using the old Forge class name.
+Fix: Replace with NeoForgeRegistries and update the import to net.neoforged.neoforge.registries.NeoForgeRegistries.
+5. cannot find symbol: class MinecraftForge
+Cause: You're using the old Forge class name.
+Fix: Replace with NeoForge and update the import to net.neoforged.neoforge.common.NeoForge.
+6. Event never fires
+Cause: You registered the event on the wrong bus, or used the wrong annotation.
+Fix: Check that you're using the correct bus (MOD vs GAME) and that your @SubscribeEvent import is from net.neoforged.bus.api.
+7. Could not find method playBidirectional() for arguments
+Cause: You're using the old networking API.
+Fix: Migrate to the new payload-based networking system instead of SimpleChannel.
+
+---
+Additional Resources
+- Official NeoForge Documentation
+- NeoForge GitHub Repository
+- 1.20.5 Migration Primer

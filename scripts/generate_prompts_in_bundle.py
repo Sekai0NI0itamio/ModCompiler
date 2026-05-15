@@ -35,6 +35,88 @@ _REPO_ROOT = _HERE.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+_VERSION_GUIDE_DIR = _REPO_ROOT / "Version guide"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Version Guide Helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_version_range_for_version(minecraft_version: str, manifest: Dict) -> str:
+    for rng in manifest.get("ranges", []):
+        folder = rng.get("folder", "")
+        for loader_cfg in rng.get("loaders", {}).values():
+            supported = loader_cfg.get("supported_versions", [])
+            if supported and minecraft_version in supported:
+                return folder
+        min_v = rng.get("min_version", "")
+        max_v = rng.get("max_version", "")
+        if min_v and max_v:
+            try:
+                from packaging.version import Version, InvalidVersion
+                target = Version(minecraft_version)
+                if Version(min_v) <= target <= Version(max_v):
+                    return folder
+            except (ImportError, InvalidVersion):
+                pass
+    return ""
+
+
+def _find_guide_file(range_folder: str, loader: str) -> Path | None:
+    guide_path = _VERSION_GUIDE_DIR / f"{range_folder}-{loader}.txt"
+    if guide_path.exists():
+        return guide_path
+    return None
+
+
+def _get_fallback_mod_values(meta: Dict) -> Dict[str, str]:
+    mod_name = meta.get("mod_name", "").strip()
+
+    if not mod_name:
+        mod_name = "Example Mod"
+
+    mod_id = re.sub(r"[^a-z0-9]", "", mod_name.lower())
+    mod_class = "".join(w.capitalize() for w in re.split(r"[^a-zA-Z0-9]", mod_name)) + "Mod"
+    mod_client_class = mod_class + "Client"
+    mod_display_name = mod_name
+    package_path = f"asd.itamio.{mod_id}"
+    author_name = "Itamio"
+
+    return {
+        "${MOD_ID}": mod_id,
+        "${MOD_CLASS}": mod_class,
+        "${MOD_CLIENT_CLASS}": mod_client_class,
+        "${MOD_DISPLAY_NAME}": mod_display_name,
+        "${PACKAGE_PATH}": package_path,
+        "${AUTHOR_NAME}": author_name,
+    }
+
+
+def _load_version_guide(
+    minecraft_version: str,
+    loader: str,
+    manifest: Dict,
+    meta: Dict,
+    *,
+    substitute: bool = False,
+) -> str:
+    range_folder = _get_version_range_for_version(minecraft_version, manifest)
+    if not range_folder:
+        return ""
+
+    guide_path = _find_guide_file(range_folder, loader)
+    if not guide_path:
+        return ""
+
+    guide = guide_path.read_text(encoding="utf-8")
+
+    if substitute:
+        subs = _get_fallback_mod_values(meta)
+        for var, value in subs.items():
+            guide = guide.replace(var, value)
+
+    return guide
+
 # ─────────────────────────────────────────────────────────────────────────────
 # DIF Helpers (same as prompt_generator.py)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -401,6 +483,9 @@ def generate_prompt(
     background_info: str,
     template_dir: Path,
     repo_root: Path,
+    manifest: Dict | None = None,
+    *,
+    substitute_guide: bool = False,
 ) -> str:
     """Generate a complete prompt.txt for one target."""
     meta = _parse_projectinfo(projectinfo_text)
@@ -435,6 +520,22 @@ def generate_prompt(
     lines.append(background_info)
     lines.append("")
 
+    # ── Part 2.5: Version Guide ─────────────────────────────────────────
+    if manifest is not None:
+        version_guide = _load_version_guide(minecraft_version, loader, manifest, meta, substitute=substitute_guide)
+        if version_guide:
+            lines.append("─" * 60)
+            lines.append(f"VERSION GUIDE — {minecraft_version} ({loader})")
+            lines.append("─" * 60)
+            lines.append("")
+            lines.append("This section contains version-specific coding guidelines, API patterns,")
+            lines.append("common pitfalls, import paths, and best practices for this exact")
+            lines.append("Minecraft version + loader combination. Study this carefully — it")
+            lines.append("contains crucial information that will prevent build failures.")
+            lines.append("")
+            lines.append(version_guide)
+            lines.append("")
+
     # ── Part 3: AI Instructions ─────────────────────────────────────────
     lines.append("=" * 70)
     lines.append("PART 3: AI CODING INSTRUCTIONS")
@@ -448,30 +549,31 @@ def generate_prompt(
     lines.append("1. **YOU MUST OUTPUT ALL FILES** — Every single file must be provided.")
     lines.append("   Missing a single file will cause the build to fail.")
     lines.append("")
-    lines.append("2. **EXACT OUTPUT FORMAT** — Each file must be in this format, with NO extra text:")
+    lines.append("2. **EXACT OUTPUT FORMAT** — Each file MUST be in this EXACT two-block format.")
+    lines.append("   This is the ONLY accepted format. The parser strictly reads blocks in pairs:")
     lines.append("")
-    lines.append("```")
-    lines.append("filepath (relative, not full)")
-    lines.append("```")
-    lines.append("```language")
-    lines.append("code_here_")
-    lines.append("```")
-    lines.append("```")
+    lines.append("   ```filepath")
+    lines.append(f"   bundle/{minecraft_version}-{loader}/src/main/java/{pkg_path}/{main_class_name}.java")
+    lines.append("   ```")
+    lines.append("   ```java")
+    lines.append("   package net.itamio.skypvp;")
+
     lines.append("")
-    lines.append("   Example:")
-    lines.append("```")
-    lines.append(f"bundle/{minecraft_version}-{loader}/src/main/java/{pkg_path}/{main_class_name}.java")
-    lines.append("```")
-    lines.append("```java")
-    lines.append("package asd.itamio.mod;")
+    lines.append("   public class SkypvpMod {")
+    lines.append("       // ...")
+    lines.append("   }")
+    lines.append("   ```")
     lines.append("")
-    lines.append("public class MyMod {")
-    lines.append("    // ...")
-    lines.append("}")
-    lines.append("```")
-    lines.append("```")
+    lines.append("   The FIRST backtick block (language `filepath`) contains ONLY the file path.")
+    lines.append("   The SECOND backtick block contains the actual source code.")
     lines.append("")
-    lines.append("3. **DO NOT wrap filepaths in backticks or quotes** — just the path, then the code block.")
+    lines.append("3. **❌ COMMON MISTAKES — DO NOT do any of these:**")
+    lines.append("   - DO NOT wrap the filepath in single backticks: `path/to/file.java` ← WRONG")
+    lines.append("   - DO NOT put the filepath on a bare line without a ```filepath block")
+    lines.append("   - DO NOT add extra text between the filepath block and the code block")
+    lines.append("   - DO NOT use `filepath` as the language for the code block — use `java`, `json`, `toml`, etc.")
+    lines.append("   - DO NOT forget to include ALL files — every file must be listed")
+    lines.append("   - DO NOT create build files (build.gradle, settings.gradle, etc.)")
     lines.append("")
     lines.append("4. **ALL filepaths must be relative** — no full system paths.")
     lines.append("")
@@ -617,6 +719,7 @@ def add_prompts_to_bundle(
             background_info=bg_content,
             template_dir=template_dir,
             repo_root=repo_root,
+            manifest=manifest,
         )
         prompt_path = target_dir / "prompt.txt"
         prompt_path.write_text(prompt_content, encoding="utf-8")

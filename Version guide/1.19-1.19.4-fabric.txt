@@ -1,0 +1,397 @@
+Comprehensive Fabric Modding Guide for 1.19-1.19.4
+This guide covers everything you need to code a Fabric mod for the 1.19.x version range, including critical API changes, code patterns, and common pitfalls.
+
+---
+1. Modding Framework
+The Fabric modding ecosystem consists of three core components:
+Fabric Loader
+The core mod loader that handles mod loading, entry points, and mixin application.
+- Version Requirement: >=0.14.0 for 1.19.3+, >=0.13.0 for 1.19.0-1.19.2
+Mappings
+Yarn (the official Fabric mappings) or Mojang's official mappings are used to deobfuscate Minecraft code.
+- Yarn Mappings: For 1.19.4, use 1.19.4+build.1
+- Mojang Mappings: Official mappings from Mojang, available via Loom
+Fabric Loom
+The Gradle plugin that processes mappings, sets up the development environment, and builds your mod.
+- Version Requirements:
+  - 1.19.0-1.19.2: 0.12.x
+  - 1.19.3-1.19.4: 1.0.x / 1.1.x
+
+---
+3. Key Changes from 1.18
+Chat Signing
+Mojang introduced cryptographic chat signing to prevent message tampering. This is the largest breaking change from 1.18:
+- All player chat messages are signed with the player's private key
+- Servers/mods that modify messages without updating signatures will cause clients to hide messages
+- New enforce-secure-profile server property that requires players to have signed profiles
+New Content
+- Sculk Blocks: New sculk family of blocks (sensor, catalyst, shrieker, vein)
+- Ancient City: New structure in the Deep Dark
+- Deep Dark Biome: New biome with unique generation
+- Warden: New boss mob
+- New Game Events: Vibration-based events for sculk sensors
+API Breaking Changes
+1. Command API: Fabric Command API v2 is now required (replaces v1)
+2. Registry Refactor: 1.19.3+ moved registry classes to a new package
+3. Item Group API: The entries callback now uses a context object instead of separate parameters
+
+---
+4. Mod Entry Point
+Entry points are used to run initialization code on the common and client sides.
+Common Entry Point (ModInitializer)
+Runs on both client and server, used for registering blocks, items, etc.
+package ${PACKAGE_PATH};
+
+import net.fabricmc.api.ModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class ${MOD_CLASS} implements ModInitializer {
+    public static final String MOD_ID = "${MOD_ID}";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    @Override
+    public void onInitialize() {
+        LOGGER.info("Initializing ${MOD_DISPLAY_NAME}!");
+
+        // Register blocks, items, etc. here
+        ModBlocks.register();
+        ModItems.register();
+    }
+}
+Imports:
+- net.fabricmc.api.ModInitializer
+Client Entry Point (ClientModInitializer)
+Runs only on the client, used for rendering, keybinds, client-only registration.
+package ${PACKAGE_PATH};
+
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+
+@Environment(EnvType.CLIENT)
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
+        // Register renderers, keybinds, client events here
+    }
+}
+Imports:
+- net.fabricmc.api.ClientModInitializer
+- net.fabricmc.api.EnvType
+- net.fabricmc.api.Environment
+Warning: Never put client-only code in the common entry point. This will cause class loading crashes on dedicated servers.
+
+---
+5. Registry System
+The registry system is used to register new content to the game. Critical Note: There is a major package change between 1.19.2 and 1.19.3.
+For 1.19.0-1.19.2
+// Old package for pre-1.19.3
+import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.Registry;
+
+// Usage
+Registry.register(Registry.BLOCK, new Identifier(MOD_ID, "example_block"), EXAMPLE_BLOCK);
+For 1.19.3-1.19.4
+// New package for 1.19.3+
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
+
+// Usage
+Registry.register(Registries.BLOCK, new Identifier(MOD_ID, "example_block"), EXAMPLE_BLOCK);
+Breaking Change: In 1.19.3+, the Registry class was split into:
+- Registry: The interface for registry operations
+- Registries: Contains static instances of all built-in registries
+- RegistryKeys: Contains static registry keys
+The KEY suffix was removed from registry fields (e.g., BLOCK_KEY → BLOCK)
+
+---
+6. Block/Item Registration
+Correct Registration Pattern
+For 1.19.0-1.19.2
+package ${PACKAGE_PATH};
+
+import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
+import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
+import net.minecraft.block.Block;
+import net.minecraft.block.Material;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.registry.Registry;
+
+public class ModBlocks {
+    // Create block instance
+    public static final Block EXAMPLE_BLOCK = new Block(
+        FabricBlockSettings.of(Material.METAL)
+            .strength(4.0f)
+            .hardness(3.0f)
+    );
+
+    public static void register() {
+        // Register block
+        Registry.register(
+            Registry.BLOCK,
+            new Identifier(${MOD_CLASS}.MOD_ID, "example_block"),
+            EXAMPLE_BLOCK
+        );
+
+        // Register corresponding block item
+        Registry.register(
+            Registry.ITEM,
+            new Identifier(${MOD_CLASS}.MOD_ID, "example_block"),
+            new BlockItem(EXAMPLE_BLOCK, new FabricItemSettings().group(ItemGroup.MISC))
+        );
+    }
+}
+For 1.19.3-1.19.4
+package ${PACKAGE_PATH};
+
+import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
+import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
+import net.minecraft.block.Block;
+import net.minecraft.block.Material;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
+
+public class ModBlocks {
+    public static final Block EXAMPLE_BLOCK = new Block(
+        FabricBlockSettings.of(Material.METAL)
+            .strength(4.0f)
+            .hardness(3.0f)
+    );
+
+    public static void register() {
+        Registry.register(
+            Registries.BLOCK,
+            new Identifier(${MOD_CLASS}.MOD_ID, "example_block"),
+            EXAMPLE_BLOCK
+        );
+
+        Registry.register(
+            Registries.ITEM,
+            new Identifier(${MOD_CLASS}.MOD_ID, "example_block"),
+            new BlockItem(EXAMPLE_BLOCK, new FabricItemSettings().group(ItemGroup.MISC))
+        );
+    }
+}
+Imports:
+- net.fabricmc.fabric.api.item.v1.FabricItemSettings
+- net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings
+- net.minecraft.block.Block
+- net.minecraft.item.BlockItem
+Warning: Always register both the block and the block item. Forgetting the block item will cause the block to be unobtainable in survival.
+
+---
+7. Rendering: Model Changes
+Model JSON Format
+The model format remains largely the same as 1.18, but there are a few new features:
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "${MOD_ID}:block/example_block"
+  }
+}
+Common Rendering Setup
+For custom blocks with special rendering, register your renderer in the client entry point:
+@Environment(EnvType.CLIENT)
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
+        // Register block entity renderer
+        BlockEntityRendererFactories.register(
+            ModBlockEntities.EXAMPLE_BLOCK_ENTITY,
+            ExampleBlockEntityRenderer::new
+        );
+    }
+}
+Gotcha: For 1.19.3+, the Widget class was renamed to Renderable. If you're porting code, update your references.
+
+---
+8. Networking
+Fabric API Networking
+Fabric's payload-based networking system is used for custom client-server communication.
+Custom Payload Example
+// Custom payload class
+public record ExampleC2SPayload(int entityId) implements CustomPayload {
+    public static final CustomPayload.Id<ExampleC2SPayload> ID =
+        new CustomPayload.Id<>(new Identifier(${MOD_CLASS}.MOD_ID, "example"));
+
+    @Override
+    public void write(FriendlyByteBuf buf) {
+        buf.writeVarInt(entityId);
+    }
+
+    @Override
+    public CustomPayload.Id<? extends CustomPayload> getId() {
+        return ID;
+    }
+
+    public static ExampleC2SPayload read(FriendlyByteBuf buf) {
+        return new ExampleC2SPayload(buf.readVarInt());
+    }
+}
+Sending from Client
+// In client code
+ExampleC2SPayload payload = new ExampleC2SPayload(entity.getId());
+ClientPlayNetworking.send(payload);
+Receiving on Server
+// In common initialization
+ServerPlayNetworking.registerGlobalReceiver(ExampleC2SPayload.ID, (payload, context) -> {
+    context.player().server().execute(() -> {
+        Entity entity = context.player().world.getEntityById(payload.entityId());
+        // Handle payload
+    });
+});
+Chat Packet Changes
+Due to chat signing, the chat packet system was completely rewritten:
+- Old ClientboundChatPacket is replaced with ClientboundPlayerChatPacket
+- Old ServerboundChatPacket is replaced with ServerboundChatCommandPacket and ServerboundChatPacket (for signed messages)
+Warning: Never modify the signed chat packet directly. Use Fabric's chat events instead to avoid breaking signature validation.
+
+---
+9. Events
+Fabric API events allow you to hook into game events without mixins.
+Example Event Registration
+// Server tick event
+ServerTickEvents.END_SERVER_TICK.register(server -> {
+    // Run code every server tick
+});
+
+// Attack event
+AttackEntityCallback.EVENT.register((player, world, hand, target, hitResult) -> {
+    // Handle entity attack
+    return InteractionResult.PASS;
+});
+
+// Chat event (for 1.19+)
+ServerPlayEvents.CHAT.register((player, message, signature, timestamp, salt, index, messages, lastSeen) -> {
+    // Handle chat message, modify if needed
+    return InteractionResult.PASS;
+});
+Imports:
+- net.fabricmc.fabric.api.event.player.AttackEntityCallback
+- net.fabricmc.fabric.api.event.lifecycle.ServerTickEvents
+- net.fabricmc.fabric.api.networking.v1.ServerPlayEvents
+Breaking Change: Command registration events changed in 1.19. Use Command API v2:
+// OLD (1.18): import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
+// NEW (1.19): import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+
+CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+    dispatcher.register(CommandManager.literal("example")
+        .executes(context -> {
+            // Command logic
+            return 1;
+        })
+    );
+});
+
+---
+10. Common Pitfalls
+Chat Signing Interference
+- Problem: Modifying chat messages without updating the signature causes clients to hide messages or kick players.
+- Fix: Use Fabric's ServerPlayEvents.CHAT event instead of modifying packets directly. If you need to modify the message, use the provided context to update the signature.
+- Workaround: For servers that want to disable chat signing entirely, use the enforce-secure-profile=false server property, or use a mod like No Chat Reports.
+Sculk Sensor Custom Events
+- Problem: Custom blocks don't trigger sculk sensors by default.
+- Fix: Register a custom vibration frequency for your block using Fabric's Content Registry:
+// For 1.19.3+
+SculkSensorFrequencyRegistry.INSTANCE.register(
+    ModBlocks.EXAMPLE_BLOCK,
+    15 // Vibration frequency (0-31)
+);
+- Gotcha: Make sure your block implements the correct game event listener if you want to emit vibrations.
+Registry Freezing
+- Problem: Trying to register content after the registry is frozen causes crashes.
+- Fix: Always register content during the mod initialization phase (onInitialize), never later.
+
+---
+11. Java Version
+Java 17 is required for 1.19.x. This is a hard requirement from Mojang.
+
+---
+12. Mixin: Mixin Patterns
+Mixins are used to modify vanilla code. Here are the correct patterns for 1.19.x.
+Basic Mixin Example
+package ${PACKAGE_PATH}.mixin;
+
+import net.minecraft.server.MinecraftServer;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(MinecraftServer.class)
+public class MinecraftServerMixin {
+    @Inject(method = "loadWorld", at = @At("HEAD"))
+    private void onLoadWorld(CallbackInfo ci) {
+        ${MOD_CLASS}.LOGGER.info("Server is loading world!");
+    }
+}
+Mixin Configuration
+Add your mixin to src/main/resources/${MOD_ID}.mixins.json:
+{
+  "required": true,
+  "package": "${PACKAGE_PATH}.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "MinecraftServerMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
+Imports:
+- org.spongepowered.asm.mixin.Mixin
+- org.spongepowered.asm.mixin.injection.At
+- org.spongepowered.asm.mixin.injection.Inject
+- org.spongepowered.asm.mixin.injection.callback.CallbackInfo
+Warning: When adding custom fields/methods to a mixin, prefix them with your mod ID to avoid conflicts:
+@Unique
+private int ${MOD_ID}_customField = 0;
+
+---
+13. Common Errors and Fixes
+Error
+Cause
+Fix
+cannot find symbol: class Registry
+Wrong registry package (using 1.18 package on 1.19.3+)
+Update imports to net.minecraft.registry.Registry and net.minecraft.registry.Registries
+cannot find symbol: method register(net.minecraft.util.registry.Registry<...>
+Using old registry syntax
+Update to use Registries.BLOCK instead of Registry.BLOCK
+Mixin apply failed: @Shadow method not found
+Mismatched mappings, or method was renamed
+Update your mappings version, check if the method name changed in 1.19
+ClassNotFoundException: net.fabricmc.loader.impl.launch.knot.KnotClient
+Project path has non-ASCII characters
+Move your project to a path without special characters
+Mod resolution failed: missing fabric
+Wrong Fabric API mod ID for 1.19.3+
+Update your depends to use fabric-api instead of fabric
+Chat messages are not showing up for clients
+Modified chat message broke signature
+Use Fabric chat events instead of packet modification
+Custom block doesn't trigger sculk sensor
+Didn't register vibration frequency
+Use SculkSensorFrequencyRegistry to register your block's frequency
+
+---
+Version Specific Notes
+1.19.0-1.19.2
+- Use old registry package: net.minecraft.util.registry
+- Fabric API mod ID: fabric
+1.19.3-1.19.4
+- Use new registry package: net.minecraft.registry
+- Fabric API mod ID: fabric-api (recommended)
+- New Sculk Sensor Frequency Registry
+- Command API v2 is required

@@ -1,0 +1,425 @@
+Comprehensive NeoForge 1.21.2-1.21.8 Modding Guide
+This guide covers everything you need to code a Minecraft mod for the 1.21.2 to 1.21.8 version range using NeoForge, including exact imports, code examples, and critical API changes between sub-versions.
+
+---
+1. Modding Framework
+Core Versions
+Component
+Version/Details
+NeoForge
+Corresponding minor versions:
+- 1.21.2: 21.2.x
+- 1.21.3: 21.3.x
+- 1.21.4: 21.4.x
+- 1.21.5: 21.5.x
+- 1.21.6: 21.6.x
+- 1.21.7: 21.7.x
+- 1.21.8: 21.8.x
+NeoGradle
+7.0.190+ (matches NeoForge version)
+Mojang Mappings
+Official Mojang mappings, versioned per Minecraft release:
+- 1.21.2: 1.21.2-20241022.143301
+- 1.21.8: 1.21.8-20250709.133752
+Warning: Always use the matching NeoForge version for your target Minecraft version. Mixing versions will cause build or runtime crashes.
+
+---
+2. Build System
+The bundle workflow provides the build system setup — no changes needed. Use Java 21.
+
+---
+3. Key Changes from 1.21.1
+Bundle Changes
+1. Nesting Support: Bundles can now be placed inside other bundles, consuming 4 slots + the inner bundle's used slots.
+2. Model Updates: BundleItem now accepts a ResourceLocation for its model instead of raw strings.
+3. Tooltip Overhaul: Bundles now have dynamic tooltips that show all contained items, with scrolling for large bundles.
+Game Rule Changes
+A new game rule was added in 1.21.2:
+- disablePlayerMovementCheck: When enabled, disables the vanilla player movement speed limit, allowing for faster movement without anti-cheat triggers. Defaults to false.
+
+---
+4. Mod Entry Point
+@Mod Annotation
+The main mod class is annotated with @Mod, which links to your mod ID from the metadata file.
+Imports:
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.neoforge.eventbus.IEventBus;
+Code Example:
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}(IEventBus modBus, ModContainer container) {
+        // Registration logic here
+        // Register Deferred Registers, configs, etc.
+    }
+}
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+
+---
+5. Registry System
+NeoForge uses a deferred registration system to handle parallel mod loading safely.
+Core Imports
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+Deferred Register Basics
+DeferredRegister is the recommended way to register content, as it automatically handles the correct registration events.
+Specialized variants are available for common content types:
+- DeferredRegister.Blocks: For blocks, automatically handles ID setting for block properties
+- DeferredRegister.Items: For items, automatically handles ID setting for item properties
+- DeferredRegister.Entities: For entities
+- DeferredRegister.DataComponents: For data components
+Registration Example:
+// Create a deferred register for blocks
+public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.Blocks.createRegistry(${MOD_CLASS}.MOD_ID);
+
+// Create a deferred register for items
+public static final DeferredRegister.Items ITEMS = DeferredRegister.Items.createRegistry(${MOD_CLASS}.MOD_ID);
+
+// In your mod constructor:
+public ${MOD_CLASS}(IEventBus modBus) {
+    // Register all deferred registers to the mod event bus
+    BLOCKS.register(modBus);
+    ITEMS.register(modBus);
+}
+
+---
+6. Block/Item Registration
+Using the specialized DeferredRegister variants eliminates the need to manually set the required ID on properties, which was a breaking change from 1.21.1.
+Block Registration
+Imports:
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.item.BlockItem;
+Code Example:
+// Register a custom block, with automatic ID setting
+public static final DeferredHolder<Block, ExampleBlock> EXAMPLE_BLOCK = BLOCKS.registerBlock(
+    "example_block",
+    ExampleBlock::new,
+    BlockBehaviour.Properties.of()
+        .strength(2.0f)
+        .requiresCorrectToolForDrops()
+);
+
+// Automatically register the corresponding BlockItem
+public static final DeferredHolder<Item, BlockItem> EXAMPLE_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(EXAMPLE_BLOCK);
+Item Registration
+Imports:
+import net.minecraft.world.item.Item;
+Code Example:
+// Register a custom item, with automatic ID setting
+public static final DeferredHolder<Item, ExampleItem> EXAMPLE_ITEM = ITEMS.registerItem(
+    "example_item",
+    ExampleItem::new,
+    new Item.Properties()
+);
+Warning from 1.21.1: In 1.21.2+, BlockBehaviour.Properties and Item.Properties require an ID to be set. Using the specialized DeferredRegister variants does this automatically. Manually creating blocks/items without this will cause a crash.
+
+---
+7. Rendering: Model Changes
+Several breaking changes to model rendering were introduced in 1.21.2:
+Key Model Changes
+1. Unbaked Model Resolution: UnbakedModel now uses resolveDependencies instead of separate getDependencies and resolveParents methods.
+// Old (1.21.1):
+@Override
+public Collection<ResourceLocation> getDependencies() { ... }
+@Override
+public void resolveParents(Consumer<UnbakedModel> resolver) { ... }
+
+// New (1.21.2+):
+@Override
+public void resolveDependencies(Resolver resolver) {
+    if (this.parentLocation != null) {
+        this.parent = resolver.resolve(this.parentLocation);
+    }
+}
+2. SimpleBakedModel: The constructor no longer accepts ItemOverrides as a parameter.
+3. Entity Render States: All entity renderers now use EntityRenderState instead of passing the entity directly to render methods. This is a major change for custom entity renderers.
+
+---
+8. GUI/Container: MenuType & Screen
+MenuType Registration
+Imports:
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
+Code Example:
+// Register the MenuType
+public static final DeferredRegister<MenuType<?>, MenuType<ExampleMenu>> EXAMPLE_MENU =
+    DeferredRegister.create(BuiltInRegistries.MENU, ${MOD_CLASS}.MOD_ID)
+    .register("example_menu", () -> new MenuType<>(ExampleMenu::new, FeatureFlagSet.EMPTY));
+
+// The Menu class
+public class ExampleMenu extends AbstractContainerMenu {
+    public ExampleMenu(int containerId, Inventory playerInventory) {
+        super(EXAMPLE_MENU.get(), containerId);
+        // Add slots here
+    }
+
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) {
+        // Handle shift-click
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return true;
+    }
+}
+Screen Implementation
+Imports:
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+Code Example:
+public class ExampleScreen extends AbstractContainerScreen<ExampleMenu> {
+    private static final ResourceLocation BACKGROUND =
+        ResourceLocation.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "textures/gui/example_screen.png");
+
+    public ExampleScreen(ExampleMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+        this.imageWidth = 176;
+        this.imageHeight = 166;
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        // Updated blit method (changed in 1.21.2)
+        graphics.blit(RenderType::guiTextured, BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+        renderTooltip(graphics, mouseX, mouseY);
+    }
+}
+Gotcha: The GuiGraphics#blit method signature changed in 1.21.2. It now requires a RenderType function as the first parameter. Use RenderType::guiTextured for standard GUI textures.
+
+---
+9. Networking: NeoForge Payload System
+NeoForge uses the new vanilla custom payload system for networking, replacing the old SimpleChannel system.
+Core Imports
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadHandler;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+Payload Implementation
+// Custom payload record
+public record ExamplePayload(int data, String message) implements CustomPacketPayload {
+    // Payload type ID
+    public static final Type<ExamplePayload> TYPE =
+        new Type<>(ResourceLocation.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "example_payload"));
+
+    // Stream codec for serialization/deserialization
+    public static final StreamCodec<ByteBuf, ExamplePayload> CODEC = StreamCodec.composite(
+        StreamCodec.of(ByteBuf::writeInt, ByteBuf::readInt),
+        ExamplePayload::data,
+        StreamCodec.of(ByteBuf::writeUtf, ByteBuf::readUtf),
+        ExamplePayload::message,
+        ExamplePayload::new
+    );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+}
+Payload Registration
+Register your payloads in the RegisterPayloadHandlersEvent on the mod event bus:
+@SubscribeEvent
+public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+    PayloadRegistrar registrar = event.registrar("1"); // Network version
+
+    // Register bidirectional payload
+    registrar.playBidirectional(
+        ExamplePayload.TYPE,
+        ExamplePayload.CODEC,
+        (payload, context) -> {
+            // Handle the payload on the receiving thread
+            context.enqueueWork(() -> {
+                // Process payload on the main thread
+                if (context.isClientSide()) {
+                    // Client-side handling
+                } else {
+                    // Server-side handling
+                }
+            });
+        }
+    );
+}
+
+---
+10. Events: NeoForge Event Bus
+NeoForge has two separate event buses:
+1. Mod Event Bus: For mod lifecycle and registration events (passed to your mod constructor)
+2. Game Event Bus: For in-game events, accessed via NeoForge.EVENT_BUS
+Core Imports
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.eventbus.IEventBus;
+import net.neoforged.neoforge.eventbus.SubscribeEvent;
+import net.neoforged.neoforge.eventbus.EventBusSubscriber;
+Event Registration Examples
+1. Using addListener
+public ${MOD_CLASS}(IEventBus modBus) {
+    // Register a game event
+    NeoForge.EVENT_BUS.addListener(LivingEvent.LivingJumpEvent.class, event -> {
+        if (!event.getEntity().level().isClientSide()) {
+            event.getEntity().heal(1);
+        }
+    });
+}
+2. Using @SubscribeEvent
+public class EventHandler {
+    @SubscribeEvent
+    public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
+        if (!event.getEntity().level().isClientSide()) {
+            event.getEntity().heal(1);
+        }
+    }
+}
+
+// In your mod constructor:
+public ${MOD_CLASS}(IEventBus modBus) {
+    NeoForge.EVENT_BUS.register(EventHandler.class);
+}
+3. Using @EventBusSubscriber
+Automatic registration, no code needed in your mod constructor:
+@EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID)
+public class EventHandler {
+    @SubscribeEvent
+    public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
+        if (!event.getEntity().level().isClientSide()) {
+            event.getEntity().heal(1);
+        }
+    }
+}
+Warning: Always register mod lifecycle events to the mod event bus, and game events to the game event bus. Registering to the wrong bus will cause the event to never fire.
+
+---
+11. Config: NeoForge Config System
+NeoForge uses TOML config files with ModConfigSpec to handle mod configuration.
+Core Imports
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import org.apache.commons.lang3.tuple.Pair;
+Config Definition
+public class ExampleConfig {
+    public static final ExampleConfig CONFIG;
+    public static final ModConfigSpec CONFIG_SPEC;
+
+    // Config values
+    public final ModConfigSpec.ConfigValue<String> welcomeMessage;
+    public final ModConfigSpec.IntValue maxExampleValue;
+    public final ModConfigSpec.BooleanValue enableFeature;
+
+    static {
+        Pair<ExampleConfig, ModConfigSpec> pair =
+            new ModConfigSpec.Builder().configure(ExampleConfig::new);
+        CONFIG = pair.getLeft();
+        CONFIG_SPEC = pair.getRight();
+    }
+
+    private ExampleConfig(ModConfigSpec.Builder builder) {
+        builder.push("general");
+        welcomeMessage = builder
+            .comment("The welcome message sent when a player joins")
+            .translation("${MOD_ID}.config.welcome_message")
+            .define("welcome_message", "Hello from ${MOD_DISPLAY_NAME}!");
+
+        maxExampleValue = builder
+            .comment("Maximum value for the example feature")
+            .defineInRange("max_example_value", 10, 0, 100);
+
+        enableFeature = builder
+            .comment("Enable the example feature")
+            .define("enable_feature", true);
+        builder.pop();
+    }
+}
+Config Registration
+Register your config in the mod constructor:
+public ${MOD_CLASS}(ModContainer container) {
+    // Register common config (loaded on both client and server)
+    container.registerConfig(ModConfig.Type.COMMON, ExampleConfig.CONFIG_SPEC);
+}
+Config Types
+Type
+Description
+STARTUP
+Loaded immediately on startup, not synced. Use for content registration settings.
+CLIENT
+Client-only config, not synced.
+COMMON
+Loaded on both sides, not synced. Use for general settings.
+SERVER
+Server-side config, synced to clients. Use for world-specific settings.
+
+---
+12. Common Pitfalls: Sub-Version Differences
+The 1.21.2-1.21.8 range has several breaking changes between minor versions:
+1.21.2 → 1.21.4
+- Entity layer renderers no longer take ItemRenderer as a constructor parameter
+- ItemInHandLayer now uses ItemStackRenderState instead of raw item stacks
+- GUI scroll widgets were renamed: AbstractScrollWidget → AbstractScrollArea
+- Gui#clear → clearTitles
+1.21.4 → 1.21.5
+- Major Tool Overhaul: PickaxeItem, SwordItem, Unbreakable classes were removed, replaced with data components
+- Tool materials now use Tool and Weapon data components instead of item subclasses
+- Entity variants are now stored as data components, not separate entity fields
+- VariantHolder interface was removed
+1.21.5 → 1.21.6
+- Major rendering backend changes: OpenGL uniform system was rewritten
+- FogParameters was removed, fog data is now stored in GPU buffers
+- RenderSystem uniform methods were replaced with buffer-based uploads
+1.21.6 → 1.21.7
+- Item stack render state was updated to use TrackingItemRenderState
+- ItemStackRenderState#clearModelIdentity was removed
+1.21.7 → 1.21.8
+- Minor rendering additions, no major breaking API changes
+Warning: If you are targeting the full version range, you need to use reflection or conditional logic to handle changes like the tool class removals in 1.21.5.
+
+---
+13. Java Version: Java 21
+Java 21 is required for all 1.21.x NeoForge versions. Older Java versions will not work.
+Common Java 21 Gotchas
+- Virtual threads are enabled by default, but most mod code works without changes
+- The new Pattern API is available, but vanilla still uses the old one
+- Some older mods may have issues with the new module system, but NeoForge handles most of this automatically
+
+---
+14. Common Errors & Fixes
+1. "Unsupported class file major version 65"
+Cause: Using the wrong Java version. Java 21 produces class file version 65.
+Fix: Use Java 21.
+2. "Could not find or load main class @user_jvm_args.txt"
+Cause: Outdated Java version, or PATH pointing to an older Java version.
+Fix: Ensure your system's default Java is 21.
+3. "The method registryOrThrow is undefined for RegistryAccess"
+Cause: Using the old method name from 1.21.1.
+Fix: Rename to lookupOrThrow:
+// Old: registryAccess.registryOrThrow(Registries.DAMAGE_TYPE)
+// New:
+registryAccess.lookupOrThrow(Registries.DAMAGE_TYPE);
+4. "No suitable constructor found for BlockBehaviour.Properties"
+Cause: Forgetting to set the required ID on block/item properties in 1.21.2+.
+Fix: Use the specialized DeferredRegister.Blocks/Items variants, which automatically set the ID.
+5. "blit method has incorrect signature"
+Cause: Using the old blit method before the 1.21.2 signature change.
+Fix: Add the RenderType::guiTextured parameter as the first argument.
+6. "Event never fires"
+Cause: Registering the event to the wrong event bus.
+Fix: Register lifecycle/registration events to the mod bus, game events to NeoForge.EVENT_BUS.
+
+---
+This guide covers all the core aspects of modding for NeoForge 1.21.2-1.21.8. Always test your mod on each target version to ensure compatibility, as minor changes can break functionality between sub-versions.

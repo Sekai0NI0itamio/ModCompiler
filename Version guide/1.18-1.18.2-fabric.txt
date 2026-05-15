@@ -1,0 +1,287 @@
+Comprehensive Fabric 1.18-1.18.2 Modding Guide
+This guide covers everything you need to develop a Fabric mod for Minecraft 1.18-1.18.2, including API changes from 1.17, correct code patterns, common pitfalls, and fixes for frequent errors.
+
+---
+1. Modding Framework
+The Fabric modding ecosystem consists of three core components:
+Fabric Loader
+The mod loader that handles mod discovery, class loading, and entry point management. It provides the core modding API without changing vanilla behavior.
+Mappings
+Two mapping options are available for 1.18:
+- Yarn Mappings: Community-maintained, open-source mappings with descriptive names
+- Mojang Mappings: Official mappings provided by Mojang, available via Loom
+Fabric Loom
+A Gradle plugin that sets up your development environment, handles source remapping, and manages Minecraft dependencies. It bridges the gap between vanilla Minecraft and the modding toolchain.
+
+---
+3. Key Changes from 1.17
+1.18 introduced the Caves & Cliffs Part II update, which included major breaking changes to world generation:
+World Generation Overhaul
+- Completely rewritten terrain generation to support the new world height
+- New noise generation algorithms that create larger caves and taller mountains
+- Removal of the old world height limit (0-255) replaced with -64 to 319
+New Biome System
+- Replaced the old biome provider system with MultiNoiseBiomeSource
+- Biome placement now uses 6 noise parameters: temperature, humidity, continentalness, erosion, depth, weirdness
+- Removed most variant biomes (e.g. Forest Hills merged into the main Forest biome)
+Noise Settings Changes
+- The NoiseSettings class was updated to support the new world height
+- Old constructors from 1.17 no longer work, as they lack parameters for the extended world bounds
+- New random source: Xoroshiro128++ replaced the old legacy random for world generation
+Warning: Any 1.17 world generation/biome code will need to be rewritten to work with the new 1.18 API. The old system is completely incompatible.
+
+---
+4. Mod Entry Points
+Entry points are the initialization classes that Fabric runs when loading your mod.
+Common Entry Point (Runs on both client and server)
+// Exact import path
+import net.fabricmc.api.ModInitializer;
+
+public class ${MOD_CLASS} implements ModInitializer {
+	public static final String MOD_ID = "${MOD_ID}";
+
+	@Override
+	public void onInitialize() {
+		// Register your content here: blocks, items, events, etc.
+	}
+}
+Client Entry Point (Runs only on the client)
+// Exact import path
+import net.fabricmc.api.ClientModInitializer;
+
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+	@Override
+	public void onInitializeClient() {
+		// Register client-only content: rendering, packet receivers, etc.
+	}
+}
+Register Entry Points in fabric.mod.json
+{
+	"entrypoints": {
+		"main": [
+			"${PACKAGE_PATH}.${MOD_CLASS}"
+		],
+		"client": [
+			"${PACKAGE_PATH}.${MOD_CLIENT_CLASS}"
+		]
+	}
+}
+
+---
+5. Registry System
+The registry system is how Minecraft registers and manages game content (blocks, items, entities, etc.).
+Exact Imports for 1.18
+// WARNING: These packages changed in 1.19! Do not use imports from newer versions.
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.Registries;
+import net.minecraft.util.Identifier;
+Core Registry Method
+// Generic method to register any content
+public static <T> T register(Registry<? super T> registry, String name, T entry) {
+	return Registry.register(registry, new Identifier(MOD_ID, name), entry);
+}
+Built-in Registries
+Use these built-in registries for common content types:
+- Registries.BLOCK - For blocks
+- Registries.ITEM - For items
+- Registries.ENTITY_TYPE - For entities
+- Registries.BIOME - For biomes
+- Registries.DIMENSION_TYPE - For dimension types
+Gotcha: Registries are frozen after the initialization phase. Trying to register content after onInitialize will throw a Registry is frozen error.
+
+---
+6. Block/Item Registration
+The recommended pattern for 1.18 uses Deferred Register to handle registration safely, though direct Registry.register also works.
+Deferred Register (Recommended Pattern)
+// Exact import for 1.18 (package changed in 1.19!)
+import net.fabricmc.fabric.api.event.registry.DeferredRegister;
+
+public class ModBlocks {
+	// Create a deferred register for blocks
+	public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Registries.BLOCK, MOD_ID);
+	public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, MOD_ID);
+
+	// Register your block
+	public static final Block CUSTOM_BLOCK = BLOCKS.register("custom_block",
+		() -> new Block(AbstractBlock.Settings.of(Material.STONE).strength(2.0f)));
+
+	// Register the corresponding block item
+	public static final Item CUSTOM_BLOCK_ITEM = ITEMS.register("custom_block",
+		() -> new BlockItem(CUSTOM_BLOCK, new FabricItemSettings().group(ItemGroup.BUILDING_BLOCKS)));
+
+	// Call this in your ModInitializer
+	public static void register() {
+		BLOCKS.register();
+		ITEMS.register();
+	}
+}
+Direct Registration (Legacy Pattern)
+// In your ModInitializer's onInitialize method
+public static final Block CUSTOM_BLOCK = new Block(AbstractBlock.Settings.of(Material.STONE).strength(2.0f));
+public static final Item CUSTOM_BLOCK_ITEM = new BlockItem(CUSTOM_BLOCK, new FabricItemSettings().group(ItemGroup.BUILDING_BLOCKS));
+
+@Override
+public void onInitialize() {
+	Registry.register(Registries.BLOCK, new Identifier(MOD_ID, "custom_block"), CUSTOM_BLOCK);
+	Registry.register(Registries.ITEM, new Identifier(MOD_ID, "custom_block"), CUSTOM_BLOCK_ITEM);
+}
+Warning: In 1.18, DeferredRegister is in net.fabricmc.fabric.api.event.registry. In newer versions it moved to net.fabricmc.fabric.api.registry. Using the wrong import will cause compile failures.
+
+---
+7. Rendering
+The rendering and model system had no major breaking changes from 1.17, but there are some minor considerations.
+Model Changes
+- The block/item JSON model format remains identical to 1.17
+- Custom baked models using FabricBakedModel work the same way
+- No changes to the rendering pipeline for basic content
+Example Custom Baked Model
+// Exact imports
+import net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel;
+import net.minecraft.client.render.model.BakedModel;
+
+@Environment(EnvType.CLIENT)
+public class CustomBakedModel implements FabricBakedModel, BakedModel {
+	// Implement your model logic here
+}
+Pitfall: If your rendering code hardcoded world height limits (e.g. assuming y=0 is the bottom), update it to use dynamic world height values instead.
+
+---
+8. Networking
+Fabric's v1 Networking API is used for 1.18, which allows safe client-server communication.
+Exact Imports
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import io.netty.buffer.Unpooled;
+Example: Send a Packet from Client to Server
+// Define your packet ID
+public static final Identifier CUSTOM_PACKET_ID = new Identifier(MOD_ID, "custom_packet");
+
+// Client side: send the packet
+public void sendPacket() {
+	// Create a buffer to hold your data
+	PacketByteBuf buf = PacketByteBufs.create();
+	buf.writeInt(123); // Write your data
+	buf.writeString("Hello from client!");
+
+	// Send to server
+	ClientPlayNetworking.send(CUSTOM_PACKET_ID, buf);
+}
+
+// Server side: receive the packet
+// Register this in your ModInitializer
+ServerPlayNetworking.registerGlobalReceiver(CUSTOM_PACKET_ID, (server, player, handler, buf, responseSender) -> {
+	// Read your data
+	int data = buf.readInt();
+	String message = buf.readString();
+
+	// Execute on the server thread
+	server.execute(() -> {
+		// Handle your packet logic here
+	});
+});
+Warning: This is the legacy v1 packet system. Newer Minecraft versions use a payload-based system. Do not copy code from 1.20+ networking tutorials, as it will not compile in 1.18.
+
+---
+9. Events
+Fabric API events allow you to hook into vanilla behavior without using mixins, for better compatibility.
+Example: Use a Tick Event
+// Exact import
+import net.fabricmc.fabric.api.event.player.PlayerTickCallback;
+
+// Register this in your ModInitializer
+PlayerTickCallback.EVENT.register(player -> {
+	// Runs every tick for every player
+	if (player.world.isClient()) return;
+
+	// Your tick logic here
+});
+Example: World Gen Event
+// Exact import for 1.18 biome loading
+import net.fabricmc.fabric.api.world.biome.v1.BiomeLoadingEvent;
+
+BiomeLoadingEvent.EVENT.register(event -> {
+	// Modify biomes as they load, compatible with the new 1.18 biome system
+});
+Change from 1.17: Old world gen events from 1.17 are deprecated. Use the new Fabric world gen events designed for the 1.18 overhaul.
+
+---
+10. Common Pitfalls
+World Height Changes
+- Hardcoded Y Values: Many mods hardcoded y=0 as the world bottom or y=255 as the top. In 1.18, the world runs from -64 to 319.
+- Fix: Use world.getHeight() or ChunkGenerator.getWorldHeight() to get dynamic height values instead of hardcoding.
+Biome API Changes
+- Old Biome Registration: The 1.17 way of adding biomes to the biome list no longer works.
+- Fix: Use the new BiomeLoadingEvent and register biomes for the multi-noise source.
+Java 17 Mismatch
+- Using Java 16 (the requirement for 1.17) will cause compile/runtime errors.
+- Ensure your IDE and Gradle are both configured to use Java 17.
+Wrong Imports from Newer Versions
+- Many developers copy code from newer tutorials, which have different package names:
+  - Registry moved from net.minecraft.util.registry to net.minecraft.registry in 1.19
+  - DeferredRegister moved from event.registry to registry in newer versions
+- Always use the 1.18-specific imports listed in this guide.
+
+---
+11. Java Version
+Java 17 is strictly required for Minecraft 1.18-1.18.2. Minecraft 1.17 used Java 16, but 1.18 requires Java 17.
+
+---
+12. Mixin
+Mixins allow you to modify vanilla classes without editing them directly.
+Basic Mixin Pattern
+// Exact imports
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import net.minecraft.entity.player.PlayerEntity;
+
+// Mix into the PlayerEntity class
+@Mixin(PlayerEntity.class)
+public class PlayerEntityMixin {
+	// Inject into the tick method
+	@Inject(method = "tick", at = @At("TAIL"))
+	private void tick(CallbackInfo ci) {
+		// Your custom tick logic for players
+	}
+}
+Mixin Configuration
+Create src/main/resources/${MOD_ID}.mixins.json:
+{
+	"required": true,
+	"package": "${PACKAGE_PATH}.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"mixins": [
+		"PlayerEntityMixin"
+	],
+	"client": [
+		// Client-only mixins here
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
+Register it in fabric.mod.json:
+{
+	"mixins": [
+		"${MOD_ID}.mixins.json"
+	]
+}
+Common Mixin Gotchas:
+- Make sure your mixin package matches the one in the mixin json
+- Use intermediary names or yarn mappings correctly, avoid obfuscated names
+- Do not mix into client classes in the common mixin list
+
+---
+13. Common Errors & Fixes
+1. Registry is frozen
+- Cause: You tried to register content after the initialization phase
+- Fix: Move all registration code into your ModInitializer or ClientModInitializer entry points.
+2. Failed to apply mixins <class>: Cannot find target
+- Cause: Wrong target class name, or mixin not registered
+- Fix: Verify your mixin target class name, and ensure the mixin json is registered in fabric.mod.json.
+3. Purple/Black Checkerboard Textures
+- Cause: Missing texture or model file, or wrong resource location
+- Fix: Verify your texture/model files are in the correct assets/modid/ folder, and the resource names match.

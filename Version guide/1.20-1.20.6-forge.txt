@@ -1,0 +1,447 @@
+Comprehensive Forge 1.20-1.20.6 Modding Guide
+This guide covers everything you need to develop Minecraft mods using Forge for the 1.20.x version range, including critical API changes, version-specific requirements, and common pitfalls.
+
+---
+1. Modding Framework
+Version Compatibility Matrix
+Minecraft Version
+Minimum Forge Version
+Java Version
+1.20 - 1.20.1
+46.0.0+
+17
+1.20.2 - 1.20.3
+47.0.0 - 48.0.0
+17
+1.20.4
+49.0.0+
+17
+1.20.5 - 1.20.6
+50.0.0+
+21
+Warning: The initial assumption of 51.x+ for 1.20.6 is incorrect. 1.20.6 uses the 50.x Forge version line.
+Mappings
+Forge uses Mojang Mappings as the default mapping set for all 1.20.x versions. This means:
+- All code uses the official, Mojang-named classes/methods
+- No need to use intermediary or searge names directly
+- Mappings are automatically downloaded by the Gradle plugin
+
+---
+3. Key Changes within 1.20.x
+The 1.20.5/1.20.6 updates introduced massive breaking changes that affect nearly all mods:
+3.1 Data Component Overhaul
+The biggest change is the replacement of ItemStack NBT with Data Components. This system replaces the unstructured CompoundTag with typed, versioned components.
+Key points:
+- ItemStack.getTag()/setTag() are removed
+- All vanilla item data (enchantments, name, damage, etc.) is now stored as components
+- Custom data must be registered as a DataComponentType
+- Legacy custom NBT is temporarily stored in the minecraft:custom_data fallback component
+3.2 Java 21 Requirement
+Minecraft 1.20.5+ is compiled with Java 21. This means:
+- You must use JDK 21 to compile/run mods for these versions
+- Java 21 language features (records, pattern matching, virtual threads) are available
+- Older Java versions will throw UnsupportedClassVersionError
+3.3 Payload Networking
+The old custom packet system was replaced with the new Custom Payload system. This removes the old SimpleChannel API in favor of a more structured, codec-based system.
+3.4 Stream Codecs
+Most network serialization now uses StreamCodec instead of manual FriendlyByteBuf read/write methods. This standardizes serialization and reduces boilerplate.
+
+---
+4. Mod Entry Point
+The Mod Class
+The main mod entry point uses the @Mod annotation. For 1.20.6+, you can use the new constructor injection pattern to avoid static context lookups.
+// Exact imports
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+// Replace "${MOD_ID}" with your mod ID
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    // New recommended constructor (1.20.6+)
+    public ${MOD_CLASS}(FMLJavaModLoadingContext context) {
+        // Get the mod event bus directly from the context, no static calls
+        var bus = context.getModEventBus();
+
+        // Register deferred registries
+        DeferredRegistries.BLOCKS.register(bus);
+        DeferredRegistries.ITEMS.register(bus);
+        DeferredRegistries.DATA_COMPONENTS.register(bus);
+
+        // Register configs
+        context.registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
+    }
+
+    // Legacy constructor (works for all versions)
+    // public ${MOD_CLASS}() {
+    //     var bus = FMLJavaModLoadingContext.get().getModEventBus();
+    //     // ... same registration
+    // }
+}
+The bundle workflow provides the mods.toml template — no changes needed. Ensure your mod ID is consistent.
+FML Lifecycle
+The lifecycle events remain largely the same, but note that most setup work should be done via deferred registration instead of manual setup events:
+- FMLCommonSetupEvent: For common cross-side setup
+- FMLClientSetupEvent: For client-only setup
+- InterModProcessEvent: For inter-mod communication
+
+---
+5. Registry System
+DeferredRegister
+DeferredRegister is still the recommended way to register registry objects, and it now supports the new data component registry.
+// Exact imports
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+
+public class DeferredRegistries {
+    // Blocks
+    public static final DeferredRegister<Block> BLOCKS =
+        DeferredRegister.create(ForgeRegistries.BLOCKS, ${MOD_CLASS}.MOD_ID);
+
+    // Items
+    public static final DeferredRegister<Item> ITEMS =
+        DeferredRegister.create(ForgeRegistries.ITEMS, ${MOD_CLASS}.MOD_ID);
+
+    // Data Components (NEW for 1.20.5+)
+    public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENTS =
+        DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, ${MOD_CLASS}.MOD_ID);
+}
+Custom Data Component Registration
+To create custom data for items, register a custom component:
+// Exact imports
+import com.mojang.serialization.Codec;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+
+// In your DeferredRegistries class
+public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENTS =
+    DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, ${MOD_CLASS}.MOD_ID);
+
+// Example custom component for storing an integer value
+public static final DataComponentType<Integer> EXAMPLE_DATA =
+    DATA_COMPONENTS.register("example_data", () ->
+        DataComponentType.<Integer>builder()
+            .persistent(Codec.INT) // Serialize to disk/NBT
+            .networkSynchronized(ByteBufCodecs.INT) // Sync over network
+            .build()
+    );
+
+---
+6. Block/Item Registration
+Basic Registration
+The basic registration pattern remains the same, but item properties now support component defaults.
+// Block registration
+public static final Block EXAMPLE_BLOCK = DeferredRegistries.BLOCKS.register("example_block",
+    () -> new Block(BlockBehaviour.Properties.of()
+        .strength(2f)
+        .requiresCorrectToolForDrops()
+    )
+);
+
+// Item registration (with block item)
+public static final Item EXAMPLE_BLOCK_ITEM = DeferredRegistries.ITEMS.register("example_block",
+    () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties())
+);
+
+// Custom item with default components (1.20.5+)
+public static final Item FIRE_RESISTANT_ITEM = DeferredRegistries.ITEMS.register("fire_resistant_item",
+    () -> new Item(new Item.Properties()
+        // Old way: .fireResistant()
+        // New way: Set the fire resistant component as default
+        .component(DataComponents.FIRE_RESISTANT, true)
+    )
+);
+Using Data Components on ItemStacks
+// Set a component
+stack.set(DeferredRegistries.EXAMPLE_DATA, 123);
+
+// Get a component
+Integer data = stack.get(DeferredRegistries.EXAMPLE_DATA);
+
+// Update a component
+stack.update(DeferredRegistries.EXAMPLE_DATA, 0, current -> current + 1);
+
+// Remove a component
+stack.remove(DeferredRegistries.EXAMPLE_DATA);
+
+// Check if a component exists
+boolean hasData = stack.has(DeferredRegistries.EXAMPLE_DATA);
+Warning: Component values are immutable. Never modify the value object directly; always use set() or update() to replace it.
+
+---
+7. Rendering
+Model Changes
+The 1.20.x versions introduced minor model changes:
+- Added fast_graphics render type for blocks, which allows blocks to render faster when fast graphics is enabled
+- PoseStack parameters were removed from many rendering methods (see the migration primer for details)
+- Item model loading remains largely the same, but custom models now need to handle component-based data instead of NBT
+Example Custom Item Model
+For custom models that depend on item data, you now read components instead of NBT:
+// Old way: read from stack.getTag()
+// New way: read from components
+public boolean useCustomModel(ItemStack stack) {
+    return stack.has(DeferredRegistries.EXAMPLE_DATA);
+}
+
+---
+8. GUI/Container
+MenuType & Screen
+The core menu/screen system remains the same, but the networking for opening screens now uses the new payload system.
+// Exact imports
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+
+// Register MenuType
+public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+    DeferredRegister.create(ForgeRegistries.MENU_TYPES, ${MOD_CLASS}.MOD_ID);
+
+public static final MenuType<ExampleMenu> EXAMPLE_MENU =
+    MENU_TYPES.register("example_menu", () -> new MenuType<>(ExampleMenu::new));
+Opening a Screen
+For 1.20.5+, use the payload system to sync the screen open event instead of the old packet system.
+
+---
+9. Networking
+Legacy: SimpleChannel (1.20-1.20.4)
+For older 1.20 versions, you can still use the legacy SimpleChannel API:
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
+
+public class NetworkHandler {
+    private static final String PROTOCOL_VERSION = "1";
+    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
+        new ResourceLocation(${MOD_CLASS}.MOD_ID, "main"),
+        () -> PROTOCOL_VERSION,
+        PROTOCOL_VERSION::equals,
+        PROTOCOL_VERSION::equals
+    );
+
+    public static void register() {
+        int id = 0;
+        INSTANCE.registerMessage(id++, ExamplePacket.class, ExamplePacket::write, ExamplePacket::new, ExamplePacket::handle);
+    }
+}
+Warning: This API is deprecated in 1.20.5+ and will be removed in future versions.
+New: Payload Networking (1.20.5+)
+For 1.20.5+, use the new payload system with stream codecs:
+Step 1: Create the Payload Record
+// Exact imports
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.ByteBufCodecs;
+
+public record ExamplePayload(String message, int value) implements CustomPacketPayload {
+    // Unique payload ID
+    public static final Type<ExamplePayload> TYPE = new Type<>(
+        new ResourceLocation(${MOD_CLASS}.MOD_ID, "example_payload")
+    );
+
+    // Stream codec for serialization
+    public static final StreamCodec<ByteBuf, ExamplePayload> STREAM_CODEC = StreamCodec.composite(
+        ByteBufCodecs.STRING_UTF8, ExamplePayload::message,
+        ByteBufCodecs.VAR_INT, ExamplePayload::value,
+        ExamplePayload::new
+    );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+}
+Step 2: Register the Payload
+// Exact imports
+import net.minecraftforge.network.PayloadRegistrar;
+import net.minecraftforge.network.event.RegisterPayloadHandlersEvent;
+import net.minecraftforge.network.DirectionalPayloadHandler;
+import net.minecraftforge.network.IPayloadContext;
+
+@SubscribeEvent
+public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+    PayloadRegistrar registrar = event.registrar("1"); // Network version
+
+    // Register bidirectional payload (can be sent client->server and server->client)
+    registrar.playBidirectional(
+        ExamplePayload.TYPE,
+        ExamplePayload.STREAM_CODEC,
+        new DirectionalPayloadHandler<>(
+            ClientPayloadHandler::handleExamplePayload, // Client-side handler
+            ServerPayloadHandler::handleExamplePayload  // Server-side handler
+        )
+    );
+}
+Step 3: Handle the Payload
+public class ServerPayloadHandler {
+    public static void handleExamplePayload(ExamplePayload payload, IPayloadContext context) {
+        // Run on network thread first
+        String message = payload.message();
+        int value = payload.value();
+
+        // Enqueue work to run on the main server thread
+        context.enqueueWork(() -> {
+            // Do your work here, e.g. update server data
+            ${MOD_CLASS}.LOGGER.info("Received payload: {} {}", message, value);
+        }).exceptionally(ex -> {
+            // Handle errors
+            context.disconnect(Component.translatable("${MOD_ID}.network.error", ex.getMessage()));
+            return null;
+        });
+    }
+}
+Step 4: Send the Payload
+// Send from client to server
+PacketDistributor.sendToServer(new ExamplePayload("Hello", 123));
+
+// Send from server to a specific player
+PacketDistributor.sendToPlayer(serverPlayer, new ExamplePayload("Hello", 123));
+
+// Send to all players tracking a chunk
+PacketDistributor.sendToPlayersTrackingChunk(level, pos, new ExamplePayload("Hello", 123));
+
+---
+10. Events
+Forge Event Bus
+The event system remains largely the same, with minor performance improvements in 1.20.6.
+// Exact imports
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+// Subscribe to the Forge event bus
+@Mod.EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public class ForgeEventHandlers {
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        ${MOD_CLASS}.LOGGER.info("Player joined: {}", event.getEntity().getName());
+    }
+}
+
+// Subscribe to the mod event bus (for startup events)
+@Mod.EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
+public class ModEventHandlers {
+    @SubscribeEvent
+    public static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
+        // Register payloads here
+    }
+}
+Note: @ObjectHolder is deprecated in 1.20.6. Use DeferredRegister instead for all registration.
+
+---
+11. Config
+The config system remains unchanged across the 1.20.x range.
+// Exact imports
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.common.Mod;
+
+@Mod.EventBusSubscriber
+public class Config {
+    public static final ForgeConfigSpec COMMON_SPEC;
+    public static final CommonConfig COMMON;
+
+    static {
+        var pair = new ForgeConfigSpec.Builder().configure(CommonConfig::new);
+        COMMON_SPEC = pair.getRight();
+        COMMON = pair.getLeft();
+    }
+
+    public static class CommonConfig {
+        public final ForgeConfigSpec.ConfigValue<Integer> exampleValue;
+
+        public CommonConfig(ForgeConfigSpec.Builder builder) {
+            builder.push("general");
+            exampleValue = builder.comment("Example config value")
+                .defineInRange("exampleValue", 10, 0, 100);
+            builder.pop();
+        }
+    }
+}
+Register the config in your mod constructor:
+context.registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
+
+---
+12. Common Pitfalls
+1. Data Component Migration
+- Problem: Trying to use ItemStack.getTag() which no longer exists.
+- Fix: Migrate all custom item data to registered data components. For temporary migration, use DataComponents.CUSTOM_DATA to access legacy NBT.
+2. Java Version Mismatch
+- Problem: Trying to run 1.20.6 with Java 17, or 1.20.4 with Java 21.
+- Fix: Use the correct Java version for your target Minecraft version.
+3. Legacy Networking Code
+- Problem: Using SimpleChannel or custom Packet classes in 1.20.5+.
+- Fix: Migrate to the new payload system with CustomPacketPayload and StreamCodec.
+4. Recipe JSON Changes
+- Problem: Recipe JSON files fail to parse with "missing id" error.
+- Fix: In 1.20.5+, the recipe result field changed from:
+"result": "${MOD_ID}:example_item"
+  To:
+"result": {
+  "id": "${MOD_ID}:example_item",
+  "count": 1
+}
+5. ItemStack Capabilities
+- Problem: ICapabilitySerializable no longer works for ItemStacks.
+- Fix: Save capability persistent data using data components instead of NBT.
+6. Gradle Version Mismatch
+- Problem: Gradle fails to build with Java 21.
+- Fix: Use Gradle 8.12.1+ for 1.20.5+ versions. Older Gradle versions do not support Java 21.
+
+---
+13. Java Version Reference
+Minecraft Version
+Minimum Java Version
+1.20
+17
+1.20.1
+17
+1.20.2
+17
+1.20.3
+17
+1.20.4
+17
+1.20.5
+21
+1.20.6
+21
+
+---
+14. Common Errors & Fixes
+1. error: package net.minecraftforge does not exist
+- Cause: Incorrect Forge version, or corrupted dependencies.
+- Fix: Verify you are using the correct Forge version.
+2. UnsupportedClassVersionError: Unsupported major.minor version 65.0
+- Cause: Compiled with Java 21 but running with Java 17.
+- Fix: Use Java 21 and update your run configuration.
+3. Cannot find method getTag() in ItemStack
+- Cause: Using legacy NBT code in 1.20.5+.
+- Fix: Migrate to data components, as described earlier.
+4. Parsing error loading recipe
+- Cause: Old recipe JSON format.
+- Fix: Update your recipe JSON to use the new id field in the result.
+5. Mod rejected, wrong Java version
+- Cause: User is running the wrong Java version.
+- Fix: Add the javaVersion=">=21" entry to your mods.toml to let the loader catch this early.
+6. fg.deobf has an error
+- Cause: Corrupted Gradle cache or dependency issue.
+- Fix: Rebuild the project.
+7. @ObjectHolder is deprecated
+- Cause: Using the old @ObjectHolder system in 1.20.6.
+- Fix: Migrate all registration to DeferredRegister.
+
+---
+Additional Resources
+- Official Forge Documentation
+- 1.20.4 -> 1.20.5 Migration Primer
+- Payload Networking Documentation
+- Data Component Format (Minecraft Wiki)

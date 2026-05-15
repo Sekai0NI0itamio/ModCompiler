@@ -1,0 +1,399 @@
+Comprehensive Minecraft Forge 1.18-1.18.2 Modding Guide
+This guide covers everything needed to code a Minecraft Forge mod for version 1.18-1.18.2, including exact API patterns, import paths, and critical changes from 1.17.
+
+---
+1. Modding Framework
+Forge 1.18.2 uses the 40.x+ version line, with official Mojang mappings.
+
+Recommended Setup
+- Forge Version: 40.2.21 (stable)
+- Mappings: Official Mojang mappings (bundled with Forge)
+- Forge for 1.18 is not compatible with 1.17 projects; you must reinitialize your project structure
+
+---
+3. Key Changes from 1.17
+1.18 introduced a complete overhaul of world generation, plus many API renames and behavioral changes.
+World Generation Overhaul
+- Height Range Expansion: World height changed from 0-255 to -64-319
+- Noise System Rewrite: Replaced old Simplex noise with multi-layer Perlin noise for terrain
+- 3D Biomes: Biomes can now exist vertically (cave biomes under surface biomes)
+- New Noise Caves: Cheese, Spaghetti, and Noodle cave generation replaced old cave systems
+- Biome Source Overhaul: MultiNoiseBiomeSource now uses 6 noise parameters (continentalness, erosion, temperature, humidity, weirdness, depth)
+- ChunkGenerator Changes: Old chunk generator APIs were completely rewritten; NoiseBasedChunkGenerator is the new base
+API Renames & Changes
+1.17 API
+1.18 Replacement
+ContainerType
+MenuType
+IForgeContainerType
+IForgeMenuType
+RenderWorldLastEvent
+RenderLevelLastEvent
+getMatrixStack()
+getPoseStack()
+BlockEntity.save()
+BlockEntity.saveAdditional()
+fmllegacy package
+Removed (moved to core FML packages)
+@CapabilityInject
+Removed (use RegisterCapabilitiesEvent)
+RenderTooltipEvent.Pre
+RenderTooltipEvent.GatherComponents
+
+---
+4. Mod Entry Point
+The mod entry point uses the @Mod annotation and mods.toml metadata file.
+Exact Imports
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+Main Mod Class Example
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}() {
+        // Register deferred registers, config, etc. here
+        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        // Register blocks/items
+        ModBlocks.BLOCKS.register(bus);
+        ModItems.ITEMS.register(bus);
+
+        // Register config
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+    }
+}
+mods.toml
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+Warnings
+- The license field is mandatory - omitting it will cause mod loading failure
+- loaderVersion must be set to [38,) for 1.18, matching the FML version
+- The modId in @Mod must exactly match the one in mods.toml
+
+---
+5. Registry System
+Forge 1.18 uses DeferredRegister as the standard registration pattern, with IForgeRegistry for type-safe registry access.
+Exact Imports
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
+import net.minecraftforge.registries.RegistryObject;
+Core Registry Pattern
+// DeferredRegister holds entries until the registry event fires
+public static final DeferredRegister<Block> BLOCKS =
+    DeferredRegister.create(ForgeRegistries.BLOCKS, MOD_ID);
+
+// RegistryObject is a lazy reference that updates once the object is registered
+public static final RegistryObject<Block> EXAMPLE_BLOCK =
+    BLOCKS.register("example_block", () -> new Block(...));
+Warnings from 1.17
+- Never store direct references to registered objects - always use RegistryObject to support dynamic loading
+- Registry events must be fired on the mod event bus, not the main Forge event bus
+
+---
+6. Block/Item Registration
+The standard pattern uses DeferredRegister to register blocks and items in bulk.
+Example Registration Class
+// Imports
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.Material;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+
+public class ModBlocks {
+    public static final DeferredRegister<Block> BLOCKS =
+        DeferredRegister.create(ForgeRegistries.BLOCKS, ${MOD_CLASS}.MOD_ID);
+    public static final DeferredRegister<Item> ITEMS =
+        DeferredRegister.create(ForgeRegistries.ITEMS, ${MOD_CLASS}.MOD_ID);
+
+    // Example block with automatic item block
+    public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block",
+        () -> new Block(BlockBehaviour.Properties.of(Material.STONE)
+            .strength(2f)
+            .requiresCorrectToolForDrops()));
+
+    // Register the block item automatically
+    public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block",
+        () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
+
+    // Example standalone item
+    public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item",
+        () -> new Item(new Item.Properties()
+            .tab(CreativeModeTab.TAB_MISC)));
+}
+Gotchas
+- Always register block items separately unless you use data generation
+- Block properties must match the material and hardness requirements, otherwise rendering will break
+- Never register items/blocks outside of DeferredRegister - this will cause race conditions
+
+---
+7. Rendering
+1.18 introduced minor changes to the rendering pipeline, mostly method renames.
+Key Model & Rendering Changes
+- Pose Stack: All rendering methods now use PoseStack instead of the old MatrixStack
+- Separate Perspective Models: Forge added support for forge:separate-perspective models to fix first/third person item model differences
+- Vertex Format: Minor updates to vertex formats for better lighting
+Example Rendering Method
+// Imports
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.MultiBufferSource;
+
+@Override
+public void render(MyEntity entity, float yaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, int light) {
+    // Old 1.17 code: getMatrixStack() -> replaced with poseStack parameter
+    poseStack.pushPose();
+    // Render logic here
+    poseStack.popPose();
+}
+Warnings from 1.17
+- Any code that used MatrixStack must be updated to use PoseStack
+- The method getMatrixStack() no longer exists - this is one of the most common compile errors when porting
+
+---
+8. GUI/Container
+1.18 renamed the container system to menus, with corresponding type changes.
+Exact Imports
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraftforge.common.extensions.IForgeMenuType;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+Menu Registration Example
+// Register MenuType
+public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+    DeferredRegister.create(ForgeRegistries.MENU_TYPES, MOD_ID);
+
+public static final RegistryObject<MenuType<ExampleMenu>> EXAMPLE_MENU =
+    MENU_TYPES.register("example_menu",
+        () -> IForgeMenuType.create(ExampleMenu::new));
+Menu Class Example
+public class ExampleMenu extends AbstractContainerMenu {
+    public ExampleMenu(int id, Inventory playerInventory) {
+        super(EXAMPLE_MENU.get(), id);
+        // Add slots to the container
+        this.addSlot(new Slot(...) );
+    }
+}
+Screen Class Example
+public class ExampleScreen extends AbstractContainerScreen<ExampleMenu> {
+    public ExampleScreen(ExampleMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+    }
+
+    @Override
+    protected void renderBg(PoseStack poseStack, float partialTick, int mouseX, int mouseY) {
+        // Render background texture
+    }
+
+    @Override
+    public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(poseStack);
+        super.render(poseStack, mouseX, mouseY, partialTick);
+        this.renderTooltip(poseStack, mouseX, mouseY);
+    }
+}
+Warnings from 1.17
+- ContainerType was renamed to MenuType - this is the #1 cause of "Failed to create screen" errors
+- IForgeContainerType is now IForgeMenuType
+- Screen initialization now requires PoseStack instead of MatrixStack for all rendering methods
+
+---
+9. Networking
+Forge 1.18 uses SimpleChannel as the standard networking system, with minimal changes from 1.17.
+Exact Imports
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraftforge.network.PacketDistributor;
+Channel Setup Example
+public class PacketHandler {
+    private static final String PROTOCOL_VERSION = "1";
+    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
+        new ResourceLocation(${MOD_CLASS}.MOD_ID, "main"),
+        () -> PROTOCOL_VERSION,
+        PROTOCOL_VERSION::equals,
+        PROTOCOL_VERSION::equals
+    );
+
+    public static void register() {
+        int id = 0;
+        // Register your packets here
+        INSTANCE.registerMessage(id++, ExamplePacket.class,
+            ExamplePacket::encode,
+            ExamplePacket::decode,
+            ExamplePacket::handle);
+    }
+}
+Packet Example
+public class ExamplePacket {
+    private final int data;
+
+    // Encode: Write data to buffer
+    public void encode(FriendlyByteBuf buf) {
+        buf.writeInt(data);
+    }
+
+    // Decode: Read data from buffer
+    public static ExamplePacket decode(FriendlyByteBuf buf) {
+        return new ExamplePacket(buf.readInt());
+    }
+
+    // Handle: Process the packet on the main thread
+    public static void handle(ExamplePacket msg, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            // Thread-safe work here
+            ServerPlayer player = ctx.get().getSender();
+            // Process data
+        });
+        ctx.get().setPacketHandled(true);
+    }
+}
+Sending Packets
+// Send to server
+PacketHandler.INSTANCE.sendToServer(new ExamplePacket(data));
+
+// Send to specific player
+PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(player), new ExamplePacket(data));
+
+// Send to all players tracking a chunk
+PacketHandler.INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(chunk), new ExamplePacket(data));
+Gotchas
+- Packets are handled on the network thread by default - always use enqueueWork to run game logic on the main thread
+- Never access chunk data without checking Level#hasChunkAt first to avoid chunk generation exploits
+
+---
+10. Events
+Forge uses two separate event buses: the main Forge bus for game events, and the mod bus for mod lifecycle events.
+Exact Imports
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+Event Handling Example
+// Auto-register static event handlers
+@Mod.EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public class ModEvents {
+
+    // Game event (Forge bus)
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        // Handle player join
+    }
+
+    // Lifecycle event (Mod bus)
+    @SubscribeEvent
+    public static void commonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            // Register packets after setup
+            PacketHandler.register();
+        });
+    }
+}
+Critical Bus Rules
+Event Type
+Bus
+Registry events
+Mod Event Bus
+Lifecycle setup events
+Mod Event Bus
+Config events
+Mod Event Bus
+Game play events (player join, render, etc.)
+Main Forge Event Bus
+Warnings
+- Registering registry events on the wrong bus is the most common cause of "items not registering" issues
+- Parallel lifecycle events require enqueueWork to run code on the main thread
+
+---
+11. Config
+Forge 1.18 uses the new NightConfig-based config system, with ModConfig for side-specific configs.
+Exact Imports
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.config.ModConfig;
+Config Class Example
+public class Config {
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
+
+    // Config values
+    public static final ForgeConfigSpec.ConfigValue<Integer> EXAMPLE_INT;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> EXAMPLE_BOOL;
+
+    static {
+        BUILDER.push("Example Mod Config");
+
+        EXAMPLE_INT = BUILDER.comment("Example integer config")
+            .defineInRange("example_int", 10, 0, 100);
+
+        EXAMPLE_BOOL = BUILDER.comment("Example boolean config")
+            .define("example_bool", true);
+
+        BUILDER.pop();
+        SPEC = BUILDER.build();
+    }
+}
+Registering Config
+// In your mod constructor
+ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+Config Types
+Type
+Description
+CLIENT
+Client-side only, not synced
+COMMON
+Loaded on both sides, not synced
+SERVER
+Server-side, synced to clients, per-world
+
+---
+12. Common Pitfalls
+World Gen API Changes
+- Old world generation code from 1.17 will not work in 1.18 - the entire pipeline was rewritten
+- Biome placement now uses 6 noise parameters instead of the old 2D temperature/humidity
+- Ore generation now works with the new height range, so you need to update your placement ranges
+Java 17 Records
+- Java 17 introduced records, but some modders run into issues with obfuscation when using records for data classes
+- Avoid using records for network packets or saved data, as they can cause serialization issues
+Mojang Mappings
+- Mojang mappings do not include parameter names or javadocs by default - use Parchment mappings if you need better parameter names
+- Mapping names changed between 1.17 and 1.18, so many method names will need to be updated
+- Mappings are case-sensitive, and use lowercase snake_case for fields/methods
+Other Gotchas
+- Block entities: Never override save() - override saveAdditional() instead, otherwise your data will not save
+- Capabilities: @CapabilityInject is removed, use RegisterCapabilitiesEvent to register capabilities
+- Tags: Tag registration changed in 1.18, use the new Tags event system
+
+---
+13. Java Version
+Java 17 is mandatory for 1.18.2 modding. Java 16 or lower will cause compile errors and JVM crashes.
+
+---
+14. Common Errors & Fixes
+Error
+Cause
+Fix
+Cannot resolve method getMatrixStack()
+Old rendering method name
+Replace with getPoseStack()
+Cannot find symbol class ContainerType
+Old class name
+Replace with MenuType
+Mod missing mandatory license field
+Missing license in mods.toml
+Add the license field to your mods.toml
+My items/blocks don't show up in game
+Registered events on wrong bus
+Register deferred registers on the mod event bus
+Block entity data not saving
+Overrode save() instead of saveAdditional()
+Override saveAdditional() instead
+Failed to create screen for menu type
+Used old ContainerType or wrong registration
+Use MenuType and register it correctly
+Obfuscation error: cannot find mapping
+Wrong mappings version
+Update mappings to official:1.18.2

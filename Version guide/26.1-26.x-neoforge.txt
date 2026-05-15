@@ -1,0 +1,276 @@
+Comprehensive NeoForge 26.1-26.x Modding Guide
+This guide covers everything you need to code a Minecraft mod for the 26.1-26.x version range using NeoForge, including key changes from 1.21.x, code patterns, and common pitfalls.
+
+---
+1. Modding Framework
+Core Versions
+Component
+Version Requirement
+Notes
+NeoForge
+26.1.x
+Matches the Minecraft version, e.g., 26.1.2.10-beta
+Build Plugin
+ModDevGradle (MDG) 2.0.134+
+Replaces legacy NeoGradle, which is not supported for 26.x
+Mappings
+None required
+Minecraft 26.x is fully deobfuscated using Mojang's official names
+Parchment
+Optional
+Can be kept for additional Javadocs, but no longer required
+Key Framework Changes from 1.21.x
+⚠️ Warning: The entire mapping/remapping system is gone! Minecraft 26.x ships with deobfuscated code, so you no longer need to download mappings or run remapping tasks.
+
+---
+3. Key Changes from 1.21.x
+This is a major breaking release, with the following foundational changes:
+1. Full Deobfuscation: Minecraft is no longer obfuscated, eliminating the need for mappings/remapping
+2. Java 25 Requirement: Dropped support for older Java versions
+3. Gradle 9+ Requirement: New build system requirements
+4. Event Package Refactoring: Nested events moved to top-level classes in subpackages
+5. Early ItemStack Restrictions: ItemStack can no longer be created before the world loads
+6. Automatic Render Layers: Terrain render layers are now automatically detected from sprites
+7. Recipe Serializer Overhaul: Custom recipe serializers are now simplified to codecs
+8. No Backwards Compatibility: All mods from 1.21.x require full recompilation
+
+---
+4. Mod Entry Point
+The mod entry point system remains unchanged from 1.21.x.
+@Mod Annotation
+// Exact Imports
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}(IEventBus modEventBus) {
+        // Registration code here
+        ModItems.register(modEventBus);
+        ModBlocks.register(modEventBus);
+    }
+}
+neoforge.mods.toml
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+
+---
+5. Registry System
+The DeferredRegister registry system remains unchanged from 1.21.x.
+Exact Imports
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+Core Pattern
+// Create a deferred register for your mod
+public static final DeferredRegister<Block> BLOCKS =
+    DeferredRegister.create(BuiltInRegistries.BLOCK, MOD_ID);
+
+// Register your objects
+public static final DeferredHolder<Block, ExampleBlock> EXAMPLE_BLOCK =
+    BLOCKS.register("example_block", () -> new ExampleBlock(BlockBehaviour.Properties.of()));
+
+// Attach to the event bus in your mod constructor
+BLOCKS.register(modEventBus);
+
+---
+6. Block/Item Registration
+The registration patterns are identical to 1.21.x, with one critical gotcha.
+Item Registration Example
+// Exact Imports
+import net.minecraft.world.item.Item;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+public class ModItems {
+    public static final DeferredRegister.Items ITEMS =
+        DeferredRegister.createItems(${MOD_CLASS}.MOD_ID);
+
+    public static final DeferredItem<Item> EXAMPLE_ITEM =
+        ITEMS.register("example_item", () -> new Item(new Item.Properties()));
+
+    public static void register(IEventBus bus) {
+        ITEMS.register(bus);
+    }
+}
+Block Registration Example
+// Exact Imports
+import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.registries.DeferredBlock;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+public class ModBlocks {
+    public static final DeferredRegister.Blocks BLOCKS =
+        DeferredRegister.createBlocks(${MOD_CLASS}.MOD_ID);
+
+    public static final DeferredBlock<Block> EXAMPLE_BLOCK =
+        BLOCKS.register("example_block", () -> new Block(BlockBehaviour.Properties.of()));
+
+    public static void register(IEventBus bus) {
+        BLOCKS.register(bus);
+    }
+}
+⚠️ Critical Gotcha: You can no longer create ItemStack instances during registration! Before the world loads, this will crash. Use ItemStackTemplate instead:
+// Wrong (1.21.x pattern, crashes in 26.x)
+public static final ItemStack EXAMPLE_STACK = new ItemStack(EXAMPLE_ITEM);
+
+// Correct (26.x pattern)
+public static final ItemStackTemplate EXAMPLE_TEMPLATE = ItemStackTemplate.of(EXAMPLE_ITEM);
+
+---
+7. Rendering
+Rendering has seen significant changes in 26.x.
+Key Changes
+1. Automatic Render Layers: Terrain render layers are now automatically detected from your sprite's alpha properties. You no longer need to register them manually.
+2. ChunkSectionLayer: Replaces BlockRenderLayer/RenderType for terrain rendering.
+3. Fluid Rendering: The new FluidModel system replaces the old FluidRenderHandler API.
+Old vs New Render Layer Code
+// Old (1.21.x, unnecessary and deprecated in 26.x)
+import net.minecraft.client.renderer.RenderType;
+import net.neoforged.neoforge.client.RenderTypeLookup;
+
+RenderTypeLookup.setRenderLayer(ModBlocks.GLASS_BLOCK, RenderType.translucent());
+
+// New (26.x)
+// Remove this code entirely! The game will automatically detect translucency from your sprite.
+Model Changes
+- The model loading system is mostly unchanged, but the Fabric/NeoForge extended model loading API is still in development for the initial 26.1 release.
+- Fluid models now use the built-in FluidModel.Unbaked system instead of custom render handlers.
+
+---
+8. GUI/Container
+The GUI/Container system remains unchanged from 1.21.x.
+Exact Imports
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+Core Pattern
+// Menu registration (same as 1.21.x)
+public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+    DeferredRegister.create(BuiltInRegistries.MENU, MOD_ID);
+
+public static final DeferredHolder<MenuType<?>, MenuType<ExampleMenu>> EXAMPLE_MENU =
+    MENU_TYPES.register("example_menu", () -> new MenuType<>(ExampleMenu::new));
+Screen registration and factory patterns work exactly as they did in 1.21.x.
+
+---
+9. Networking
+The NeoForge networking system remains unchanged from 1.21.x. The payload-based system introduced in 20.4 is still the standard.
+Exact Imports
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+Core Pattern
+@SubscribeEvent
+public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+    var registrar = event.registrar(MOD_ID);
+    registrar.playToServer(EXAMPLE_PAYLOAD_ID, ExamplePayload.STREAM_CODEC, ExamplePayload::handle);
+}
+Note: The legacy SimpleChannel system is still supported but deprecated, same as in 1.21.x.
+
+---
+10. Events
+The event bus system works the same, but events have been refactored! Nested event classes have been moved to top-level classes in subpackages.
+Key Event Refactoring Example
+// Old (1.21.x)
+import net.neoforged.neoforge.event.level.BlockEvent;
+
+@SubscribeEvent
+public void onBlockBreak(BlockEvent.BreakEvent event) {
+    // Handle break event
+}
+
+// New (26.x)
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+
+@SubscribeEvent
+public void onBlockBreak(BreakBlockEvent event) {
+    // Handle break event
+}
+Common Event Mappings
+Old (1.21.x)
+New (26.x)
+BlockEvent.BreakEvent
+net.neoforged.neoforge.event.level.block.BreakBlockEvent
+BlockEvent.PlaceEvent
+net.neoforged.neoforge.event.level.block.PlaceBlockEvent
+PlayerEvent.BreakSpeed
+net.neoforged.neoforge.event.entity.player.PlayerBreakSpeedEvent
+All other event registration patterns remain the same: @SubscribeEvent, bus registration, etc.
+
+---
+11. Config
+The NeoForge config system remains unchanged from 1.21.x.
+Exact Imports
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.config.ModConfig;
+Core Pattern
+public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+public static final ModConfigSpec SPEC;
+
+public static final boolean EXAMPLE_CONFIG;
+
+static {
+    BUILDER.push("example_section");
+    EXAMPLE_CONFIG = BUILDER.comment("Example config option").define("example_option", true);
+    BUILDER.pop();
+    SPEC = BUILDER.build();
+}
+
+// In your mod constructor
+ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+
+---
+12. Common Pitfalls
+1. Using Legacy NeoGradle: NeoGradle does not support 26.x. You must use ModDevGradle.
+2. Wrong Java Version: Using Java 21 will cause build failures. You must use Java 25.
+3. Wrong Gradle Version: Gradle <9.1 will not work with ModDevGradle.
+4. Early ItemStack Creation: Creating ItemStack before the world loads will crash. Use ItemStackTemplate.
+5. Old Event Classes: Using nested event classes like BlockEvent.BreakEvent will cause compile errors. Use the new top-level classes.
+6. Unnecessary Render Layer Registration: Registering render layers manually is no longer needed, and will have no effect.
+7. Keeping Parchment Config: Parchment is not required, and leaving old configuration may cause build warnings.
+8. Trying to Use Remapping Tasks: Remapping tasks no longer exist, since there's no obfuscation.
+
+---
+13. Java Version
+⚠️ Important: While the user mentioned Java 21+, Java 25 is the minimum required version for Minecraft 26.x and NeoForge 26.x.
+You must configure your build to use Java 25:
+- Set the Gradle toolchain to Java 25
+- Use JDK 25 for your project SDK in your IDE
+- Ensure your runtime environment uses Java 25
+
+---
+14. Common Errors & Fixes
+Error
+Cause
+Fix
+Unsupported class file major version
+Wrong Java version
+Update your project SDK and Gradle toolchain to Java 25
+Could not find method neoForge() for arguments
+Using legacy NeoGradle instead of ModDevGradle
+Migrate your build plugin to ModDevGradle
+Cannot find symbol BlockEvent.BreakEvent
+Using old nested event class
+Replace with the new top-level BreakBlockEvent
+Failed to create mod instance. Could not initialize class X
+Trying to create ItemStack during static initialization
+Replace with ItemStackTemplate
+Could not resolve dependencies for project
+Outdated Gradle version
+Use Gradle 9.1+
+Mod requires NeoForge version [26.1.2.21,)
+Outdated NeoForge dependency
+Update your NeoForge version and dependency range
+Could not find or load main class @user_jvm_args.txt
+Outdated Gradle wrapper
+Use Gradle 9.1+
+
+---
+Additional Resources
+- Official NeoForge 26.1 Snapshot Announcement
+- Fabric 26.1 Changes Post
+- Minecraft Source Browser (mcsrc.dev)

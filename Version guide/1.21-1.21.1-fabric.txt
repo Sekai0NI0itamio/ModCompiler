@@ -1,0 +1,415 @@
+Comprehensive Fabric Modding Guide for 1.21-1.21.1
+This guide covers everything you need to code a Fabric mod for Minecraft 1.21 and 1.21.1, including all API changes, code patterns, and common pitfalls to avoid.
+
+---
+1. Modding Framework
+The Fabric modding ecosystem consists of three core components for this version:
+Fabric Loader
+The core mod loader that handles mod discovery, entrypoint execution, mixin application, and classpath management.
+- Required Version: 0.15.11+ (first version with full Java 21 support for 1.21)
+- Package: net.fabricmc:fabric-loader
+Yarn/Mojang Mappings
+Deobfuscation mappings to turn Minecraft's obfuscated code into human-readable names.
+- Yarn Mappings: The default open-source mappings used by Fabric. For 1.21.1, use 1.21.1+build.1
+- Mojang Mappings: Official mappings from Mojang, also supported by Loom.
+- Key Change: Mappings for 1.21 include full support for the new data component system and Java 21 features.
+Fabric Loom
+The Gradle plugin that handles deobfuscation, remapping, run configuration generation, and mixin processing.
+- Required Version: 1.9.x (Do not use 1.10+, that is for 1.21.2 and above)
+- Core Features: Automatically handles mapping of your mod's code to Minecraft's obfuscated names, generates run configurations for client/server testing.
+
+---
+3. Key Changes from 1.20
+1.21 introduces several breaking and functional changes from 1.20:
+Feature
+Description
+Data Component System (Finalized)
+Replaces the old NBT-based item data system with a structured, type-safe component system. All item properties are now stored as components.
+Trial Chamber Structures
+New procedurally generated underground dungeon structure, with custom trial spawners, loot, and arena combat.
+Mace Weapon
+New melee/ranged weapon with custom enchantments (Density, Breach, Wind Burst).
+Breeze Mob
+New hostile mob that spawns in trial chambers, with wind charge attacks.
+Crafter Block
+New redstone-powered auto-crafting block that can craft items automatically.
+Java 21 Requirement
+Minimum Java version increased from 17 to 21.
+
+---
+4. Mod Entry Point
+Fabric uses two standard entry points to initialize your mod:
+Common Entry Point (ModInitializer)
+Runs on both the client and server, used to register shared content (items, blocks, components, networking payloads).
+Exact Imports:
+import net.fabricmc.api.ModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+Code Example:
+public class ${MOD_CLASS} implements ModInitializer {
+	public static final String MOD_ID = "${MOD_ID}";
+	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+	@Override
+	public void onInitialize() {
+		LOGGER.info("Initializing Example Mod!");
+
+		// Register common content
+		ModItems.initialize();
+		ModBlocks.initialize();
+		ModComponents.initialize();
+		ModNetworking.initialize();
+	}
+}
+Client Entry Point (ClientModInitializer)
+Runs only on the client, used to register client-only content (renderers, keybinds, client networking handlers).
+Exact Imports:
+import net.fabricmc.api.ClientModInitializer;
+Code Example:
+public class ${MOD_CLIENT_CLASS} implements ClientModInitializer {
+	@Override
+	public void onInitializeClient() {
+		// Register client-only content
+		ModClientNetworking.initialize();
+		ModRenderers.initialize();
+	}
+}
+Entrypoint Configuration (fabric.mod.json)
+"entrypoints": {
+	"main": ["${PACKAGE_PATH}.${MOD_CLASS}"],
+	"client": ["${PACKAGE_PATH}.${MOD_CLIENT_CLASS}"]
+}
+Warning
+- Never put client-only code in the main entrypoint: It will crash the dedicated server, as client classes do not exist on the server.
+
+---
+5. Registry System
+The registry system is used to register your custom content into the game. The core pattern remains similar to 1.20, with changes to identifier creation.
+Exact Imports
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
+Core Registration Pattern
+/**
+ * Generic method to register any registry object
+ */
+public static <T> T register(T entry, String name, Registry<T> registry) {
+	// ✅ Use Identifier.of() instead of new Identifier()!
+	Identifier id = Identifier.of(${MOD_CLASS}.MOD_ID, name);
+	return Registry.register(registry, id, entry);
+}
+Data Component System Integration
+The registry system now includes a dedicated registry for data components:
+// Register a custom data component
+public static final ComponentType<Integer> CLICK_COUNT_COMPONENT = register(
+	ComponentType.<Integer>builder().codec(Codec.INT).build(),
+	"click_count",
+	Registries.DATA_COMPONENT_TYPE
+);
+API Change Warning
+- Identifier Creation: In 1.21, new Identifier() is deprecated. Use Identifier.of(namespace, path) instead. This is one of the most common migration errors from 1.20.
+
+---
+6. Block/Item Registration
+Block and item registration has been updated to support the new data component system.
+Exact Imports
+import net.minecraft.block.Block;
+import net.minecraft.block.AbstractBlock;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
+import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.minecraft.item.ItemGroups;
+Block Registration Example
+public class ModBlocks {
+	// Example block: Condensed Dirt
+	public static final Block CONDENSED_DIRT = register(
+		new Block(AbstractBlock.Settings.copy(Blocks.DIRT).strength(4.0f)),
+		"condensed_dirt",
+		true
+	);
+
+	private static Block register(Block block, String name, boolean registerItem) {
+		Identifier id = Identifier.of(${MOD_CLASS}.MOD_ID, name);
+		Block registeredBlock = Registry.register(Registries.BLOCK, id, block);
+
+		// Register the BlockItem if needed
+		if (registerItem) {
+			// Item settings with default components
+			Item.Settings itemSettings = new Item.Settings()
+				// Attach default custom component
+				.component(ModComponents.CLICK_COUNT, 0);
+
+			BlockItem blockItem = new BlockItem(registeredBlock, itemSettings);
+			Registry.register(Registries.ITEM, id, blockItem);
+		}
+
+		return registeredBlock;
+	}
+
+	public static void initialize() {
+		// Add to creative inventory tab
+		ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS)
+			.register(entries -> entries.add(CONDENSED_DIRT));
+	}
+}
+Item Registration Example
+public class ModItems {
+	// Basic item
+	public static final Item SUSPICIOUS_SUBSTANCE = register(
+		new Item(new Item.Settings()
+			.maxCount(16) // Convenience method, wraps MaxCountComponent
+			.component(ModComponents.CLICK_COUNT, 0) // Default component
+		),
+		"suspicious_substance"
+	);
+
+	// Custom item with logic
+	public static final Item COUNTER = register(
+		new CounterItem(new Item.Settings()
+			.component(ModComponents.CLICK_COUNT, 0)
+		),
+		"counter"
+	);
+
+	private static Item register(Item item, String name) {
+		Identifier id = Identifier.of(${MOD_CLASS}.MOD_ID, name);
+		return Registry.register(Registries.ITEM, id, item);
+	}
+
+	public static void initialize() {
+		ItemGroupEvents.modifyEntriesEvent(ItemGroups.INGREDIENTS)
+			.register(entries -> entries.add(SUSPICIOUS_SUBSTANCE));
+	}
+}
+Component Attachment
+You can attach default components to your items during registration, or modify them on item stacks:
+// On item stack: get component value
+int count = stack.getOrDefault(ModComponents.CLICK_COUNT, 0);
+
+// On item stack: set component value
+stack.set(ModComponents.CLICK_COUNT, count + 1);
+
+// Check if component exists
+if (stack.contains(ModComponents.CLICK_COUNT)) {
+	// Safe to access
+}
+Critical Gotcha
+- Item ID Not Set: In 1.21, all items must have their registry key set in Item.Settings. The Registry.register method does this automatically, but if you create items manually, you must call settings.registryKey(...) otherwise you will get:
+java.lang.NullPointerException: Item id not set
+
+---
+7. Rendering: Model Changes
+For 1.21-1.21.1, the rendering and model system has minor changes from 1.20:
+Key Changes
+1. Default Item Name Component: All items now have the minecraft:item_name component by default, which is used for model and translation lookup.
+2. Entity Model Root Transform: All entity models are now rendered directly from their root part, so custom entity models should ensure their root transform is correctly configured.
+3. No New Model Format: The new item definition model format was added in 1.21.4, so the standard JSON model format still works for 1.21.1.
+Example Item Model
+{
+	"parent": "item/generated",
+	"textures": {
+		"layer0": "${MOD_ID}:item/suspicious_substance"
+	}
+}
+Example Block Model
+{
+	"parent": "block/cube_all",
+	"textures": {
+		"all": "${MOD_ID}:block/condensed_dirt"
+	}
+}
+Gotcha
+- Ensure your model files are in the correct namespace: assets/mod_id/models/ - the game will not load models from the wrong namespace.
+
+---
+8. Networking: Payload-Based Networking
+Fabric's networking system has been fully updated to use vanilla's new payload-based system, replacing the old packet system.
+Exact Imports
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.packet.CustomPayload;
+import net.fabricmc.fabric.api.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.payload.PayloadTypeRegistry;
+import net.minecraft.block.BlockPos;
+Step 1: Define the Payload
+// Server-to-Client payload to summon lightning
+public record SummonLightningS2CPayload(BlockPos pos) implements CustomPayload {
+	// Unique payload ID
+	public static final Identifier ID = Identifier.of(${MOD_CLASS}.MOD_ID, "summon_lightning");
+	public static final CustomPayload.Id<SummonLightningS2CPayload> TYPE = new CustomPayload.Id<>(ID);
+
+	// Serialization codec
+	public static final PacketCodec<RegistryByteBuf, SummonLightningS2CPayload> CODEC =
+		PacketCodec.tuple(
+			BlockPos.PACKET_CODEC,
+			SummonLightningS2CPayload::pos,
+			SummonLightningS2CPayload::new
+		);
+
+	@Override
+	public CustomPayload.Id<? extends CustomPayload> getId() {
+		return TYPE;
+	}
+}
+Step 2: Register the Payload (Common Initializer)
+public static void registerPayloads() {
+	// Register S2C payload
+	PayloadTypeRegistry.playS2C().register(
+		SummonLightningS2CPayload.TYPE,
+		SummonLightningS2CPayload.CODEC
+	);
+}
+Step 3: Send the Payload (Server)
+// Send to a specific player
+public void sendLightningPacket(ServerPlayerEntity player, BlockPos pos) {
+	ServerPlayNetworking.send(player, new SummonLightningS2CPayload(pos));
+}
+Step 4: Receive the Payload (Client)
+public static void registerClientHandlers() {
+	ClientPlayNetworking.registerGlobalReceiver(SummonLightningS2CPayload.TYPE, (payload, context) -> {
+		// Run on client thread to avoid concurrency issues
+		context.client().execute(() -> {
+			ClientWorld world = context.client().world;
+			if (world == null) return;
+
+			LightningEntity lightning = EntityType.LIGHTNING_BOLT.create(world);
+			lightning.setPosition(payload.pos().toCenterPos());
+			world.spawnEntity(lightning);
+		});
+	});
+}
+API Change Warning
+- The old Fabric networking API (FabricNetworking, registerPacket) is deprecated in 1.21. Use the new payload-based system instead.
+- Always register payloads on both sides, otherwise you will get a "Received unknown custom payload" error.
+
+---
+9. Events: Fabric API Events
+Fabric API provides events to hook into game actions without needing to use mixins.
+Exact Imports
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import net.fabricmc.fabric.api.loot.v2.LootTableEvents;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.item.Items;
+Example 1: Attack Block Event
+// Damage player when they punch blocks with their hand that need a tool
+AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+	if (!player.isSpectator() && player.getMainHandStack().isEmpty()) {
+		BlockState state = world.getBlockState(pos);
+		if (state.requiresCorrectToolForDrops()) {
+			player.hurt(world.damageSources().generic(), 1.0f);
+		}
+	}
+	return InteractionResult.PASS;
+});
+Example 2: Loot Table Modification
+// Add eggs to coal ore loot
+LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
+	// Only modify built-in vanilla loot tables
+	if (source.isBuiltin() && key.equals(Identifier.of("minecraft", "blocks/coal_ore"))) {
+		LootPool.Builder pool = LootPool.lootPool()
+			.add(LootItem.lootTableItem(Items.EGG));
+		tableBuilder.withPool(pool);
+	}
+});
+Event Best Practices
+- Use InteractionResult.PASS to allow other mods to process the event.
+- Only return SUCCESS or FAIL if you want to cancel the default behavior.
+- Prefer events over mixins where possible, as they are more compatible between mods.
+
+---
+10. Common Pitfalls
+Data Component API Pitfalls
+1. Avoid NBT for Item Data: The old NBT tag system for item data is deprecated. Use data components instead, they are type-safe and network-friendly.
+2. Check for Component Existence: Always check if a component exists before accessing it, or use getOrDefault() to avoid NullPointerExceptions.
+3. Default Components: Always set default components in Item.Settings if your item requires custom components, to avoid missing component errors.
+Java 21 Feature Pitfalls
+1. Supported Features: You can use Java 21 features like records, pattern matching, and virtual threads.
+2. Avoid Preview Features: Minecraft does not support preview Java features, so don't use them in your mod.
+3. Mixin Compatibility: Ensure you use the latest Mixin version to support Java 21 class features.
+Trial Chamber World Gen Pitfalls
+1. Use Tags, Not Direct Modification: To add your own content to trial chambers, use tags:
+  - #minecraft:trial_chamber_possible_mobs to add mobs to trial spawners
+  - #minecraft:trial_chamber_structures to add your own structures to the trial chamber generation set
+2. Don't Override World Gen: Directly modifying trial chamber world gen will conflict with other mods. Use data-driven tags instead.
+
+---
+11. Java Version: Java 21 Required
+Minecraft 1.21 requires Java 21, this is a hard requirement.
+Java 17 or older will not work, and will throw version errors.
+
+---
+12. Mixin: Mixin Patterns
+Mixins are used to modify vanilla code when events are not available. The pattern remains similar to 1.20, with support for Java 21 features.
+Exact Imports
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import net.minecraft.entity.passive.SheepEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+Example Mixin: Hook into Sheep Shearing
+@Mixin(SheepEntity.class)
+public class SheepEntityMixin {
+	@Inject(
+		at = @At(
+			value = "INVOKE",
+			target = "Lnet/minecraft/entity/passive/SheepEntity;shear(Lnet/minecraft/server/world/ServerWorld;Lnet/minecraft/sound/SoundCategory;Lnet/minecraft/item/ItemStack;)V"
+		),
+		method = "mobInteract",
+		cancellable = true
+	)
+	private void onShear(PlayerEntity player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> ci) {
+		// Trigger our custom event
+		InteractionResult result = SheepShearCallback.EVENT.invoker().interact(player, (SheepEntity) (Object) this);
+
+		if (result == InteractionResult.FAIL) {
+			ci.setReturnValue(result);
+		}
+	}
+}
+Mixin Configuration
+Add this to your fabric.mod.json to register your mixins:
+"mixins": [
+	"${MOD_ID}.mixin.SheepEntityMixin"
+]
+Mixin Best Practices
+- Use @Inject for most cases, avoid @Redirect unless absolutely necessary, as it causes more mod conflicts.
+- Keep mixins small and focused, only modify the code you need to.
+- Always use the correct priority if you need to order your mixin.
+
+---
+13. Common Errors and Fixes
+Error Message
+Cause
+Fix
+UnsupportedClassVersionError: net/minecraft/bundler/Main has been compiled by a more recent version of the Java Runtime (class file version 65.0)
+You are using Java <21
+Use Java 21.
+error: invalid source release: 21
+Your JDK is not 21, or your Gradle configuration is wrong
+Use Java 21.
+java.lang.NullPointerException: Item id not set
+You created an item without setting its registry key
+Use the standard Registry.register method, which automatically sets the key, or manually call settings.registryKey(...).
+java.lang.NullPointerException: Cannot invoke "java.lang.Integer.intValue()" because the return value of "net.minecraft.item.ItemStack.get(net.minecraft.component.ComponentType)" is null
+You accessed a data component that does not exist on the stack
+Use stack.contains(componentType) to check if it exists, or use stack.getOrDefault(componentType, defaultValue).
+Deprecated: The constructor Identifier(String, String) has been deprecated
+You used new Identifier() instead of the new factory method
+Replace new Identifier(modId, name) with Identifier.of(modId, name).
+Received unknown custom payload
+You did not register your payload on both sides
+Register your payload in the common initializer, and ensure the ID matches on both client and server.
+Could not resolve io.fabricmc:fabric-loom:1.10.0
+You used the wrong Loom version
+For 1.21-1.21.1, use Loom 1.9.x, not 1.10+.
+Could not initialize class org.gradle.api.tasks.compile.JavaCompile
+You used an old Gradle version that does not support Java 21
+Use Gradle 8.7 or higher.
+
+---
+Final Notes
+This guide is specific to Minecraft 1.21-1.21.1. For newer versions (1.21.2+), some APIs may change, especially the model system and Loom version. Always refer to the official Fabric documentation for the latest updates.

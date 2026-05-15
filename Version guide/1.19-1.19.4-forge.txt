@@ -1,0 +1,444 @@
+Comprehensive Forge 1.19-1.19.4 Modding Guide
+This guide covers everything needed to develop a Minecraft Forge mod for the 1.19.x version range, including exact API usage, code patterns, and critical changes from 1.18.
+
+---
+1. Modding Framework
+Core Versions
+Minecraft Version
+Minimum Forge Version
+1.19
+41.0.0
+1.19.1
+42.0.0
+1.19.2
+43.0.0
+1.19.3
+44.0.0
+1.19.4
+45.0.0
+Mappings
+Forge 1.19.x uses Mojang Official Mappings (MojMaps) as the default. This replaces the old MCP mappings, meaning all class/method/field names match the official Mojang names.
+
+---
+3. Key Changes from 1.18
+Critical API Changes
+1. Chat Signing: Mojang added secure chat signing, which changes how chat events and messages work.
+2. Component Interface: Component is now an interface, replacing the old concrete classes like TranslatableComponent/TextComponent.
+3. Random Source: Random was replaced with RandomSource interface for world randomness.
+4. Sculk API: New sculk block API for spreading and vibration detection.
+5. New Biomes: Added Deep Dark, Mangrove Swamp biomes with new registry entries.
+6. Message Methods: Player.sendMessage() was replaced with Player.sendSystemMessage().
+
+---
+4. Mod Entry Point
+@Mod Annotation
+This is your mod's main entry point. The value must match your mod ID from mods.toml.
+Imports
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+Code Example
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}() {
+        // Get the mod-specific event bus
+        var eventBus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        // Register deferred registers, event handlers, etc. here
+        DeferredBlocks.register(eventBus);
+        DeferredItems.register(eventBus);
+        ModNetworking.register();
+
+        // Register config
+        eventBus.register(ModConfig.class);
+    }
+}
+mods.toml
+The bundle workflow provides the mod metadata file template — no changes needed. Ensure your mod ID is consistent.
+Warning: The loaderVersion must match the major version of your Forge version. For 1.19.4, use [45,).
+
+---
+5. Registry System
+DeferredRegister
+The recommended way to register objects. It handles lazy registration to avoid classloading issues.
+Imports
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+Core Pattern
+// Create a deferred register for a specific registry
+public static final DeferredRegister<Block> BLOCKS =
+    DeferredRegister.create(ForgeRegistries.BLOCKS, ${MOD_CLASS}.MOD_ID);
+
+// Register objects, get a RegistryObject to reference them later
+public static final RegistryObject<Block> EXAMPLE_BLOCK =
+    BLOCKS.register("example_block", () -> new Block(BlockBehaviour.Properties.of(Material.STONE)));
+
+// Register the deferred register to the mod event bus
+public static void register(IEventBus bus) {
+    BLOCKS.register(bus);
+}
+Warning from 1.18: Never store the raw registered object in a static field. Always use RegistryObject#get() to retrieve it, as it will be populated after registration.
+
+---
+6. Block/Item Registration
+Standard Registration Pattern
+You can group blocks and items into separate registration classes for organization.
+Block Registration
+// DeferredBlocks.java
+public class DeferredBlocks {
+    public static final DeferredRegister<Block> BLOCKS =
+        DeferredRegister.create(ForgeRegistries.BLOCKS, ${MOD_CLASS}.MOD_ID);
+
+    // Simple block
+    public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block",
+        () -> new Block(BlockBehaviour.Properties.of(Material.METAL)
+            .strength(3.0F)
+            .requiresCorrectToolForDrops()));
+
+    // Block with custom behavior
+    public static final RegistryObject<ExampleBlock> CUSTOM_BLOCK = BLOCKS.register("custom_block",
+        ExampleBlock::new);
+
+    public static void register(IEventBus bus) {
+        BLOCKS.register(bus);
+    }
+}
+Item Registration
+// DeferredItems.java
+public class DeferredItems {
+    public static final DeferredRegister<Item> ITEMS =
+        DeferredRegister.create(ForgeRegistries.ITEMS, ${MOD_CLASS}.MOD_ID);
+
+    // Simple item
+    public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register("example_item",
+        () -> new Item(new Item.Properties()));
+
+    // Item for a block (automatically creates block item)
+    public static final RegistryObject<BlockItem> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block",
+        () -> new BlockItem(DeferredBlocks.EXAMPLE_BLOCK.get(), new Item.Properties()));
+
+    public static void register(IEventBus bus) {
+        ITEMS.register(bus);
+    }
+}
+
+---
+7. Rendering: Model Changes
+Key Model Changes from 1.18
+1. Renderable Renames: SimpleRenderable was renamed to CompositeRenderable
+2. Removed Classes: IMultipartRenderValues was removed
+3. Sprite Registration: New SpriteSourceManager for custom sprite loading
+4. Model Baking: ModelEvent.BakingCompleted now has updated parameters
+Custom Model Registration
+// Client-side only event handler
+@Mod.EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public class ClientSetupEvents {
+    @SubscribeEvent
+    public static void onModelBake(ModelEvent.BakingCompleted event) {
+        // Register custom baked models here
+    }
+
+    @SubscribeEvent
+    public static void onTextureStitch(TextureStitchEvent.Pre event) {
+        // Register custom sprites here
+        event.addSprite(new ResourceLocation(${MOD_CLASS}.MOD_ID, "block/example_block"));
+    }
+}
+
+---
+8. GUI/Container: MenuType, Screen
+MenuType
+Used to register your custom container menu.
+Imports
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraftforge.common.extensions.IForgeMenuType;
+Registration
+// Add to your deferred registers
+public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+    DeferredRegister.create(ForgeRegistries.MENU_TYPES, ${MOD_CLASS}.MOD_ID);
+
+// Register your menu type
+public static final RegistryObject<MenuType<ExampleMenu>> EXAMPLE_MENU =
+    MENU_TYPES.register("example_menu", () -> IForgeMenuType.create(ExampleMenu::new));
+Menu (Container) Logic
+public class ExampleMenu extends AbstractContainerMenu {
+    // Client constructor
+    public ExampleMenu(int containerId, Inventory playerInventory) {
+        this(containerId, playerInventory, ContainerLevelAccess.NULL);
+    }
+
+    // Server constructor
+    public ExampleMenu(int containerId, Inventory playerInventory, ContainerLevelAccess access) {
+        super(EXAMPLE_MENU.get(), containerId);
+
+        // Add slots here
+        this.addSlot(new SlotItemHandler(handler, 0, 50, 50));
+
+        // Add player inventory slots
+        // ...
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return true; // Server should check player distance
+    }
+
+    @Override
+    public ItemStack quickMoveStack(Player player, int index) {
+        // Implement shift-click logic
+        ItemStack stack = ItemStack.EMPTY;
+        Slot slot = this.slots.get(index);
+
+        if (slot != null && slot.hasItem()) {
+            ItemStack slotStack = slot.getItem();
+            stack = slotStack.copy();
+
+            // Move stack between inventories
+            if (!this.moveItemStackTo(slotStack, 9, 36, true)) {
+                return ItemStack.EMPTY;
+            }
+
+            if (slotStack.isEmpty()) {
+                slot.set(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
+        }
+        return stack;
+    }
+}
+Screen Implementation
+public class ExampleScreen extends AbstractContainerScreen<ExampleMenu> {
+    public ExampleScreen(ExampleMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+    }
+
+    @Override
+    protected void renderBg(PoseStack poseStack, float partialTick, int mouseX, int mouseY) {
+        // Render background texture
+        Minecraft.getInstance().getTextureManager().bindForSetup(EXAMPLE_GUI_TEXTURE);
+        blit(poseStack, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+    }
+
+    @Override
+    protected void renderLabels(PoseStack poseStack, int mouseX, int mouseY) {
+        // Render title and labels
+        this.font.draw(poseStack, this.title, 8, 6, 4210752);
+    }
+}
+Opening the Menu
+// In your block's use method
+@Override
+public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    if (!level.isClientSide) {
+        NetworkHooks.openScreen((ServerPlayer) player, new SimpleMenuProvider(
+            (containerId, playerInventory, p) -> new ExampleMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos)),
+            Component.translatable("gui.${MOD_ID}.example_menu")
+        ), buf -> buf.writeBlockPos(pos));
+    }
+    return InteractionResult.sidedSuccess(level.isClientSide);
+}
+
+---
+9. Networking: SimpleChannel
+SimpleChannel is Forge's simplified networking system for client-server communication.
+Imports
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
+Setup
+public class ModNetworking {
+    private static final String PROTOCOL_VERSION = "1";
+    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
+        new ResourceLocation(${MOD_CLASS}.MOD_ID, "main"),
+        () -> PROTOCOL_VERSION,
+        PROTOCOL_VERSION::equals,
+        PROTOCOL_VERSION::equals
+    );
+
+    public static void register() {
+        int id = 0;
+        // Register packets here
+        INSTANCE.registerMessage(id++, ExamplePacket.class,
+            ExamplePacket::encode,
+            ExamplePacket::decode,
+            ExamplePacket::handle);
+    }
+}
+Packet Example
+public class ExamplePacket {
+    private final int data;
+
+    public ExamplePacket(int data) {
+        this.data = data;
+    }
+
+    // Encode to buffer
+    public void encode(FriendlyByteBuf buf) {
+        buf.writeInt(data);
+    }
+
+    // Decode from buffer
+    public static ExamplePacket decode(FriendlyByteBuf buf) {
+        return new ExamplePacket(buf.readInt());
+    }
+
+    // Handle packet
+    public static void handle(ExamplePacket msg, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            // Work on main thread
+            ServerPlayer sender = ctx.get().getSender();
+            // Do something with the data
+        });
+        ctx.get().setPacketHandled(true);
+    }
+}
+Sending Packets
+// Send to server
+ModNetworking.INSTANCE.sendToServer(new ExamplePacket(123));
+
+// Send to specific player
+ModNetworking.INSTANCE.send(PacketDistributor.PLAYER.with(player), new ExamplePacket(123));
+
+// Send to all players tracking a chunk
+ModNetworking.INSTANCE.send(PacketDistributor.TRACKING_CHUNK.with(chunk), new ExamplePacket(123));
+
+---
+10. Events: Forge Event Bus
+Forge has two event buses:
+1. Forge Event Bus (MinecraftForge.EVENT_BUS): For game-wide events (player join, world tick, etc.)
+2. Mod Event Bus: For mod lifecycle events (registration, setup, etc.)
+Event Handler Example
+Imports
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.api.distmarker.Dist;
+Static Event Handler
+@Mod.EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID)
+public class CommonEvents {
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        Player player = event.getEntity();
+        player.sendSystemMessage(Component.translatable("message.${MOD_ID}.welcome"));
+    }
+}
+Client-Side Only Handler
+@Mod.EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, value = Dist.CLIENT)
+public class ClientEvents {
+    @SubscribeEvent
+    public static void onRenderWorld(RenderLevelStageEvent event) {
+        // Client-side rendering logic
+    }
+}
+Warning: Always specify the correct bus! Mod lifecycle events go to the mod event bus, game events go to the Forge bus.
+
+---
+11. Config: ModConfig
+Forge uses ForgeConfigSpec to handle configuration.
+Imports
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.common.Mod;
+Config Class
+@Mod.EventBusSubscriber
+public class ModConfig {
+    public static final ForgeConfigSpec COMMON_SPEC;
+    public static final CommonConfig COMMON;
+
+    public static final ForgeConfigSpec CLIENT_SPEC;
+    public static final ClientConfig CLIENT;
+
+    static {
+        // Common config (shared between client and server)
+        var commonBuilder = new ForgeConfigSpec.Builder();
+        commonBuilder.push("general");
+        COMMON = new CommonConfig(commonBuilder);
+        COMMON_SPEC = commonBuilder.build();
+
+        // Client config (client-only)
+        var clientBuilder = new ForgeConfigSpec.Builder();
+        clientBuilder.push("client");
+        CLIENT = new ClientConfig(clientBuilder);
+        CLIENT_SPEC = clientBuilder.build();
+    }
+
+    public static class CommonConfig {
+        public final ForgeConfigSpec.IntValue exampleInt;
+        public final ForgeConfigSpec.BooleanValue exampleBoolean;
+
+        public CommonConfig(ForgeConfigSpec.Builder builder) {
+            exampleInt = builder.comment("Example integer config")
+                .defineInRange("example_int", 10, 0, 100);
+            exampleBoolean = builder.comment("Example boolean config")
+                .define("example_boolean", true);
+        }
+    }
+
+    public static class ClientConfig {
+        public final ForgeConfigSpec.BooleanValue renderParticles;
+
+        public ClientConfig(ForgeConfigSpec.Builder builder) {
+            renderParticles = builder.comment("Render custom particles")
+                .define("render_particles", true);
+        }
+    }
+}
+Register Config in Mod Constructor
+public ${MOD_CLASS}() {
+    // ... other registration
+    FMLJavaModLoadingContext.get().getModEventBus().register(ModConfig.class);
+}
+
+---
+12. Common Pitfalls
+1. Chat Component Changes
+Bad (1.18 code, broken in 1.19):
+Component msg = new TranslatableComponent("message.${MOD_ID}.test");
+Component text = new TextComponent("Hello");
+player.sendMessage(msg, player.getUUID());
+Good (1.19 code):
+Component msg = Component.translatable("message.${MOD_ID}.test");
+Component text = Component.literal("Hello");
+player.sendSystemMessage(msg);
+2. Chat Signing
+- The old PlayerChatEvent was removed. Use ServerChatEvent instead.
+- System messages sent via sendSystemMessage are automatically unsigned and won't trigger security warnings.
+- If you need to modify player chat messages, you must handle the signed chat data properly.
+3. Sculk API
+- New SculkSpreader class to control sculk block spreading.
+- SculkSpreadable interface for blocks that can be converted to sculk.
+- Sculk sensors have new vibration frequency filtering in 1.19.1+.
+Gotcha: Sculk catalysts can only spread sculk to valid blocks. Use SculkSpreader#canSpreadTo to check if a block can be converted.
+4. Random to RandomSource
+Methods that used to take Random now take RandomSource. Random implements RandomSource, so you can pass your existing Random instances, but you should update your method signatures.
+
+---
+13. Java Version
+Java 17 is mandatory. Any older Java version will cause compile errors, JVM crash on launch, or unsupported class file major version errors.
+
+---
+14. Common Errors & Fixes
+1. "Cannot find symbol class TranslatableComponent"
+Cause: Using old 1.18 component code.
+Fix: Replace with Component.translatable().
+2. "Registry Object not present"
+Cause: Calling RegistryObject#get() before registration is complete.
+Fix: Only access registered objects after the mod constructor, during events or game runtime.
+3. "Mod ID '${MOD_ID}' is not valid!"
+Cause: Invalid mod ID format.
+Fix: Mod IDs must be lowercase, start with a letter, and only contain a-z0-9_.
+4. "The requested mod did not have a mod constructor"
+Cause: Missing @Mod annotation, or wrong mod ID in the annotation.
+Fix: Ensure your main mod class has @Mod("${MOD_ID}") matching the ID in mods.toml.
+5. "NetworkEvent already handled"
+Cause: Forgetting to call ctx.get().setPacketHandled(true) in your packet handler.
+Fix: Add that line at the end of your packet handling method.
+
+---
+Final Notes
+- Always test your mod on both client and dedicated server.
+- Use the official Forge docs for the latest updates: https://docs.minecraftforge.net/en/1.19.x/
+- For porting from 1.18, refer to the official porting gist

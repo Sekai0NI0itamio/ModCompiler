@@ -1,0 +1,310 @@
+Comprehensive Minecraft 26.1-26.x Forge/NeoForge Modding Guide
+This guide covers everything needed to develop mods for Minecraft version range 26.1-26.x using the NeoForge modding framework (the official successor to Minecraft Forge, commonly referred to as "Forge" by the community). This version represents a major update from 1.21.x, with significant breaking changes and new APIs.
+Important Note: Minecraft 26.1 is the first fully unobfuscated Minecraft release, meaning all vanilla code uses official Mojang names directly. No remapping is required, and legacy mapping systems are obsolete.
+
+---
+1. Modding Framework
+Versions & Mappings
+Component
+Version/Details
+NeoForge
+26.1.0.0-alpha.1+snapshot-1 to 26.x.x.x
+Mappings
+No external mappings required - Minecraft is fully unobfuscated. Parchment is optional for additional javadocs.
+Minecraft
+26.1 snapshot series
+Key Changes from 1.21.x
+- Full Deobfuscation: All vanilla classes, fields, and methods use official Mojang names. Legacy searge/MCP mappings are no longer used.
+- Parchment Optional: Mojang now provides official parameter names, so Parchment is only needed for extra community javadocs.
+
+---
+3. Key Changes from 1.21.x
+This is a major version bump with extensive breaking changes:
+1. Registry Renaming: All built-in registries changed from plural to singular names (e.g., BLOCKS → BLOCK, ITEMS → ITEM)
+2. ItemStack Restrictions: ItemStack can no longer be created before a world is loaded. Use ItemStackTemplate instead.
+3. Rendering Overhaul: Block render layers are now automatic, BlockRenderLayer replaced with ChunkSectionLayer
+4. Color Providers: Replaced with BlockTintSource/ItemTintSource
+5. Recipe Serializers: Simplified to just codecs, no need for custom serializer classes
+6. Villager Trades: Fully data-driven, no more code-based trade registration
+
+---
+4. Mod Entry Point
+@Mod Annotation
+The main mod class annotation remains similar, but with updated imports.
+Exact Imports
+import net.neoforged.fml.common.Mod;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.loading.FMLPaths;
+Code Example
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}(IEventBus modEventBus) {
+        // Register deferred registers
+        ModBlocks.BLOCKS.register(modEventBus);
+        ModItems.ITEMS.register(modEventBus);
+
+        // Register config
+        ModConfig.register(modEventBus);
+
+        // Register other events
+        modEventBus.register(this);
+    }
+}
+mods.toml → neoforge.mods.toml
+The mod metadata file was renamed to neoforge.mods.toml (in src/main/resources):
+modLoader="javafml"
+loaderVersion="[49,)"
+
+[[mods]]
+modId="${MOD_ID}"
+version="1.0.0"
+displayName="${MOD_DISPLAY_NAME}"
+authors="Your Name"
+description="A sample mod for 26.1"
+
+issueTrackerURL="https://yourissueurl.com"
+displayURL="https://yourmodurl.com"
+updateJSONURL="https://yourupdateurl.com"
+Warnings
+- ❌ Do not use the old mods.toml filename: The loader now looks for neoforge.mods.toml
+- ✅ The @Mod value must exactly match the modId in the metadata file
+
+---
+5. Registry System
+DeferredRegister
+DeferredRegister is still the recommended registration pattern, but with critical changes to registry references.
+Exact Imports
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.core.registries.BuiltInRegistries;
+Key Change: Registry Names
+In 1.21.x, you used plural registry names (BLOCKS, ITEMS). In 26.x, these are singular:
+// ❌ OLD (1.21.x) - DO NOT USE
+DeferredRegister<Block> BLOCKS = DeferredRegister.create(BuiltInRegistries.BLOCKS, MOD_ID);
+
+// ✅ NEW (26.x)
+DeferredRegister<Block> BLOCKS = DeferredRegister.create(BuiltInRegistries.BLOCK, MOD_ID);
+DeferredRegister<Item> ITEMS = DeferredRegister.create(BuiltInRegistries.ITEM, MOD_ID);
+Warnings
+- This is the #1 cause of compile errors! All built-in registries follow this pattern:
+  - BuiltInRegistries.BLOCK (was BLOCKS)
+  - BuiltInRegistries.ITEM (was ITEMS)
+  - BuiltInRegistries.ENTITY_TYPE (was ENTITY_TYPES)
+  - BuiltInRegistries.SOUND_EVENT (was SOUND_EVENTS)
+  - And so on for all other registries.
+
+---
+6. Block/Item Registration
+DeferredRegister Pattern
+The registration pattern remains similar, but with the updated registry references.
+Code Example
+public class ModBlocks {
+    // Create the deferred register with the NEW singular registry
+    public static final DeferredRegister<Block> BLOCKS =
+        DeferredRegister.create(BuiltInRegistries.BLOCK, ${MOD_CLASS}.MOD_ID);
+
+    // Register your block
+    public static final DeferredBlock<Block> EXAMPLE_BLOCK = BLOCKS.register("example_block",
+        () -> new Block(BlockBehaviour.Properties.of().strength(2f)));
+}
+
+public class ModItems {
+    public static final DeferredRegister<Item> ITEMS =
+        DeferredRegister.create(BuiltInRegistries.ITEM, ${MOD_CLASS}.MOD_ID);
+
+    // Register the item block
+    public static final DeferredItem<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block",
+        () -> new BlockItem(ModBlocks.EXAMPLE_BLOCK.get(), new Item.Properties()));
+
+    // Register a normal item
+    public static final DeferredItem<Item> EXAMPLE_ITEM = ITEMS.register("example_item",
+        () -> new Item(new Item.Properties()));
+}
+Early ItemStack Warning
+// ❌ ILLEGAL IN 26.x - Cannot create ItemStack before world load!
+public static final ItemStack EXAMPLE_STACK = new ItemStack(ModItems.EXAMPLE_ITEM.get());
+
+// ✅ NEW - Use ItemStackTemplate instead
+public static final ItemStackTemplate EXAMPLE_TEMPLATE =
+    new ItemStackTemplate(ModItems.EXAMPLE_ITEM.get(), 1, DataComponentPatch.EMPTY);
+
+---
+7. Rendering
+Model & Render Layer Changes
+Minecraft 26.1 overhauled the rendering system:
+1. Automatic Render Layers: The game now automatically detects the correct render layer based on your sprite's transparency. You no longer need to manually register blocks to render layers.
+2. ChunkSectionLayer: Replaced BlockRenderLayer/RenderType for terrain rendering.
+3. Fluid Rendering: New FluidModel system replaces custom fluid render handlers.
+Block Tint Sources
+Color providers were replaced with tint sources:
+// ❌ OLD (1.21.x)
+@SubscribeEvent
+public void registerColorHandlers(RegisterColorHandlersEvent.Block event) {
+    event.register((state, level, pos, tint) -> 0xFF0000, ModBlocks.EXAMPLE_BLOCK.get());
+}
+
+// ✅ NEW (26.x)
+@SubscribeEvent
+public void registerColorHandlers(RegisterColorHandlersEvent.BlockTintSources event) {
+    event.register(List.of(new BlockTintSource() {
+        @Override
+        public int getTint(BlockState state, @Nullable Level level, @Nullable BlockPos pos, int tintIndex) {
+            return 0xFF0000;
+        }
+    }), ModBlocks.EXAMPLE_BLOCK.get());
+}
+Warnings
+- ❌ Do not use BlockRenderLayerMap: It no longer exists. Render layers are automatic.
+- ✅ If you need to override the automatic layer, you can do it via your block model or quad data.
+
+---
+8. GUI/Container
+MenuType & Screen
+The GUI system remains largely unchanged from 1.21.x, with minor updates.
+Exact Imports
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+Code Example
+// Registration
+public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+    DeferredRegister.create(BuiltInRegistries.MENU, ${MOD_CLASS}.MOD_ID);
+
+public static final DeferredHolder<MenuType<?>, MenuType<ExampleMenu>> EXAMPLE_MENU =
+    MENU_TYPES.register("example_menu", () -> new MenuType<>(ExampleMenu::new));
+
+// Screen registration (client-side)
+@SubscribeEvent
+public void registerScreens(RegisterMenuScreensEvent event) {
+    event.register(EXAMPLE_MENU.get(), ExampleScreen::new);
+}
+
+---
+9. Networking
+SimpleChannel
+The NeoForge SimpleChannel API remains fully functional, with no breaking changes.
+Exact Imports
+import net.neoforged.neoforge.network.simple.SimpleChannel;
+import net.neoforged.neoforge.network.NetworkRegistry;
+Code Example
+public class ModNetworking {
+    private static final String PROTOCOL_VERSION = "1";
+    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
+        new Identifier(${MOD_CLASS}.MOD_ID, "main"),
+        () -> PROTOCOL_VERSION,
+        PROTOCOL_VERSION::equals,
+        PROTOCOL_VERSION::equals
+    );
+
+    public static void register() {
+        int id = 0;
+        CHANNEL.registerMessage(id++, ExamplePacket.class, ExamplePacket::encode, ExamplePacket::decode, ExamplePacket::handle);
+    }
+}
+
+---
+10. Events
+Forge Event Bus
+The event system remains the same, with some event renames.
+Exact Imports
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.bus.api.IEventBus;
+Updated Events
+Old Event (1.21.x)
+New Event (26.x)
+RegisterColorHandlersEvent.Block
+RegisterColorHandlersEvent.BlockTintSources
+RegisterColorHandlersEvent.Item
+RegisterColorHandlersEvent.ItemTintSources
+Code Example
+// On the mod event bus
+@SubscribeEvent
+public void onPlayerJoin(PlayerLoggedInEvent event) {
+    // Handle player join
+}
+Warnings
+- ✅ Make sure to register your event handlers to the correct bus (mod bus for mod events, forge bus for world events)
+
+---
+11. Config
+ModConfig
+The config system remains unchanged, but with the same common pitfalls.
+Exact Imports
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.fml.config.ModConfig;
+Code Example
+public class ModConfig {
+    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
+
+    public static final ModConfigSpec.ConfigValue<Integer> EXAMPLE_VALUE;
+
+    static {
+        BUILDER.push("Example Config");
+
+        EXAMPLE_VALUE = BUILDER.comment("An example config value")
+            .defineInRange("exampleValue", 10, 0, 100);
+
+        BUILDER.pop();
+        SPEC = BUILDER.build();
+    }
+
+    public static void register(IEventBus bus) {
+        bus.register(ModConfig.class);
+        // Register the config
+        FMLPaths.getMinecraftDir().resolve("config").toFile().mkdirs();
+        net.neoforged.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+    }
+}
+
+---
+12. Common Pitfalls
+1. Creating ItemStack Too Early: Never create ItemStack instances in static initializers or mod constructors. Use ItemStackTemplate instead.
+2. Plural Registry Names: Accidentally using BuiltInRegistries.BLOCKS instead of BLOCK will cause compile errors.
+3. Old Java Version: Using Java 21 will cause the JVM to fail to launch. Use Java 25.
+4. Old Gradle Version: Gradle <9.1 will fail to resolve dependencies.
+5. Manual Render Layer Registration: The old BlockRenderLayerMap no longer exists. Remove that code.
+6. Accessing Config Too Early: Never read config values in your mod constructor. Wait for the ModConfig.Loading event.
+7. Legacy Mappings: Trying to use old searge names or remapping tasks will fail, since the game is unobfuscated.
+
+---
+13. Java Version
+Minecraft 26.1 requires Java 25 as the minimum version. This is a hard requirement:
+- The game itself is compiled for Java 25
+- The modding tooling requires Java 25 features
+- Using an older version will result in UnsupportedClassVersionError
+
+---
+14. Common Errors & Fixes
+Error Message
+Cause
+Fix
+cannot find symbol: variable BLOCKS
+Using old plural registry names
+Replace with singular: BLOCK instead of BLOCKS, ITEM instead of ITEMS, etc.
+java.lang.IllegalStateException: Cannot create ItemStack before world load
+Creating ItemStack in static initializer
+Use ItemStackTemplate instead
+UnsupportedClassVersionError: class file has major version 69
+Using Java <25
+Use Java 25
+Could not find method net.neoforged.gradle...
+Old Gradle version
+Update Gradle to 9.1.0
+FileNotFoundException: mods.toml
+Old metadata filename
+Rename to neoforge.mods.toml
+Cannot get config value before config is loaded
+Reading config in mod constructor
+Wait for ModConfig.Loading event, or only read config values during/after initialization
+NoSuchMethodError: BlockRenderLayerMap.INSTANCE
+Old render layer registration
+Remove that code, render layers are now automatic
+
+---
+Additional Resources
+- NeoForge 26.1 Snapshot Announcement
+- Fabric 26.1 Porting Guide (vanilla changes apply to all modloaders)
+- NeoForge Documentation

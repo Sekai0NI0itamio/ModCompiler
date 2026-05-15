@@ -1,0 +1,943 @@
+Comprehensive Minecraft 1.12.2 Forge Modding Guide
+This guide covers everything needed to develop Minecraft mods for the 1.12-1.12.2 version range using the Forge modding framework. It includes exact code patterns, import paths, version comparisons, and common pitfalls to avoid.
+
+---
+1. Modding Framework
+Overview
+The foundation of your modding environment, including the recommended Forge version and mappings.
+Recommended Versions
+- Forge Version: 1.12.2 - 14.23.5.2859+ (latest stable, critical bug fixes)
+- MCP Mappings: stable_39 (default)
+- Forge 1.12.2: 14.23.5.2859 is the last stable build. Anything below 14.23.5.2838 has security vulnerabilities.
+Version Comparison
+Version
+Registry System
+Capabilities
+1.8.9
+Legacy GameRegistry only
+No, used IExtendedEntityProperties
+1.12.2
+New IForgeRegistry + legacy fallback
+Full capability system
+1.16+
+DeferredRegister + modern registries
+Enhanced capability system
+Gotchas
+- Never use older Forge versions: Pre-2859 builds have critical security and bug issues
+- Mappings mismatch: Do not change MCP versions manually, the default mappings ship with the correct ones
+
+---
+2. Build System
+Overview
+Gradle 4.x based build system with ForgeGradle (FG) to handle compilation, dependency management, and mod packaging.
+Exact Versions
+- Gradle: 4.10.3 (mandatory, newer versions break FG 3.0)
+- ForgeGradle: 3.0.176 (default)
+Dependencies and Shading
+
+---
+3. Mod Entry Point
+Overview
+The main class that initializes your mod, handles the FML lifecycle events.
+Exact Imports
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerAboutToStartEvent;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+Code Example
+@Mod(
+        modid = ${MOD_CLASS}.MOD_ID,
+        name = ${MOD_CLASS}.NAME,
+        version = ${MOD_CLASS}.VERSION,
+        dependencies = "required-after:mixinbooter@[9.1,);optional-after:othermod@[1.0,)",
+        useMetadata = true
+)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+    public static final String NAME = "${MOD_DISPLAY_NAME}";
+    public static final String VERSION = "1.0.0";
+
+    @Instance(MOD_ID)
+    public static ${MOD_CLASS} instance;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        // Run first: Register blocks, items, capabilities, config
+        CapabilityHandler.setupCapabilities();
+        NetworkRegistry.INSTANCE.registerGuiHandler(instance, new GuiHandler());
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        // Run second: Register recipes, packets, event handlers
+        PacketHandler.registerMessages();
+    }
+
+    @EventHandler
+    public void postInit(FMLPostInitializationEvent event) {
+        // Run last: Mod compatibility, final setup
+    }
+
+    @EventHandler
+    public void serverAboutToStart(FMLServerAboutToStartEvent event) {
+        // Run when server is starting, for server-specific setup
+    }
+}
+Warnings
+- Lifecycle event order: Never register blocks/items in init or postInit, they must be registered in preInit via RegistryEvents
+- @Instance annotation: This injects your mod instance, do not instantiate the main class manually
+Version Comparison
+Version
+Lifecycle Events
+1.8.9
+Same preInit/init/postInit pattern, but used FMLCommonHandler for event bus
+1.12.2
+Same lifecycle, but moved to mod-specific event bus
+1.16+
+Replaced with DeferredWorkQueue and enqueued work, lifecycle events are deprecated
+Gotchas
+- ModID restrictions: ModID must be lowercase, no spaces/special characters, max 64 characters
+- Dependencies string: Use required-after for mandatory dependencies, optional-after for optional ones
+
+---
+4. Registry System
+Overview
+Forge's new registry system to register blocks, items, entities, and other game objects. Replaces the legacy GameRegistry system.
+Exact Imports
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.registries.IForgeRegistryEntry;
+import net.minecraftforge.registries.RegistryEvent;
+import net.minecraftforge.registries.GameRegistry;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+Code Example
+@EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
+public class RegistrationHandler {
+    // Register Blocks
+    @SubscribeEvent
+    public static void registerBlocks(RegistryEvent.Register<Block> event) {
+        event.getRegistry().registerAll(
+                ModBlocks.EXAMPLE_BLOCK
+        );
+    }
+
+    // Register Items
+    @SubscribeEvent
+    public static void registerItems(RegistryEvent.Register<Item> event) {
+        event.getRegistry().registerAll(
+                ModItems.EXAMPLE_ITEM,
+                new ItemBlock(ModBlocks.EXAMPLE_BLOCK).setRegistryName(ModBlocks.EXAMPLE_BLOCK.getRegistryName())
+        );
+    }
+
+    // ObjectHolder injection
+    @ObjectHolder(${MOD_CLASS}.MOD_ID)
+    public static class ModBlocks {
+        public static final Block EXAMPLE_BLOCK = null; // Injected automatically
+    }
+
+    @ObjectHolder(${MOD_CLASS}.MOD_ID)
+    public static class ModItems {
+        public static final Item EXAMPLE_ITEM = null; // Injected automatically
+    }
+}
+Warnings
+- Deprecated GameRegistry.register: This legacy method still works but is deprecated. Use RegistryEvent.Register instead
+- IForgeRegistryEntry: All registerable objects implement this by default (Block, Item, etc.), you do not need to implement it manually
+Version Comparison
+Version
+Registration Method
+1.8.9
+Only GameRegistry.register, no RegistryEvents, no ObjectHolder injection
+1.12.2
+RegistryEvent recommended, GameRegistry deprecated
+1.16+
+DeferredRegister replaces manual event handling
+Gotchas
+- Event bus mismatch: RegistryEvent MUST be registered on the MOD BUS, not the Forge event bus. This is the #1 cause of missing blocks/items.
+- Registry name order: You must call setRegistryName on your blocks/items BEFORE registration, otherwise you will get a null pointer exception.
+
+---
+5. Block/Item Registration
+Overview
+The correct pattern for creating and registering custom blocks and items, including creative tabs.
+Exact Imports
+import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
+import net.minecraft.util.ResourceLocation;
+Code Example
+Custom Block
+public class ExampleBlock extends Block {
+    public ExampleBlock() {
+        super(Material.ROCK);
+        setRegistryName(new ResourceLocation(${MOD_CLASS}.MOD_ID, "example_block"));
+        setUnlocalizedName(${MOD_CLASS}.MOD_ID + ".example_block");
+        setCreativeTab(CreativeTabs.BUILDING_BLOCKS); // Or your custom tab
+        setHardness(2.0f);
+        setResistance(10.0f);
+    }
+}
+Custom Item
+public class ExampleItem extends Item {
+    public ExampleItem() {
+        setRegistryName(new ResourceLocation(${MOD_CLASS}.MOD_ID, "example_item"));
+        setUnlocalizedName(${MOD_CLASS}.MOD_ID + ".example_item");
+        setCreativeTab(CreativeTabs.MATERIALS);
+        setMaxStackSize(64);
+    }
+}
+Custom Creative Tab
+public static final CreativeTabs EXAMPLE_TAB = new CreativeTabs(CreativeTabs.getNextID(), ${MOD_CLASS}.MOD_ID) {
+    @Override
+    public ItemStack getTabIconItem() {
+        return new ItemStack(ModItems.EXAMPLE_ITEM);
+    }
+};
+Warnings
+- ItemBlock registration: When you register a block, you MUST also register an ItemBlock for it, otherwise the block will not have an item form in the inventory.
+- Unlocalized names: Always prefix your unlocalized names with your modID to avoid conflicts.
+Version Comparison
+Version
+Registration Pattern
+1.8.9
+setRegistryName was not used, you passed the name to GameRegistry.register
+1.12.2
+setRegistryName on the object before registration
+1.16+
+Same pattern, but DeferredRegister handles registry names automatically
+Gotchas
+- Case sensitivity: Registry names must be lowercase. Uppercase names will work on Windows but crash on Linux/macOS due to case-sensitive file systems.
+- Duplicate names: Never reuse registry names between blocks/items, even though they are in different registries, it causes confusion.
+
+---
+6. Rendering
+Overview
+Handling block/item models, colors, and special rendering for tile entities.
+Exact Imports
+import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraftforge.client.event.ColorHandlerEvent;
+import net.minecraftforge.client.event.ModelRegistryEvent;
+import net.minecraftforge.client.model.ModelLoader;
+import net.minecraftforge.fml.common.Optional;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
+Code Example
+Model Registration
+@SubscribeEvent
+@SideOnly(Side.CLIENT)
+public static void registerModels(ModelRegistryEvent event) {
+    // Register block model
+    ModelLoader.setCustomModelResourceLocation(
+        Item.getItemFromBlock(ModBlocks.EXAMPLE_BLOCK),
+        0,
+        new ModelResourceLocation(ModBlocks.EXAMPLE_BLOCK.getRegistryName(), "inventory")
+    );
+
+    // Register item model
+    ModelLoader.setCustomModelResourceLocation(
+        ModItems.EXAMPLE_ITEM,
+        0,
+        new ModelResourceLocation(ModItems.EXAMPLE_ITEM.getRegistryName(), "inventory")
+    );
+}
+Color Handlers
+@SubscribeEvent
+@SideOnly(Side.CLIENT)
+public static void registerBlockColors(ColorHandlerEvent.Block event) {
+    event.getBlockColors().register(new IBlockColor() {
+        @Override
+        public int colorMultiplier(IBlockState state, IBlockAccess world, BlockPos pos, int tintIndex) {
+            return 0xFF5555; // Custom red tint
+        }
+    }, ModBlocks.EXAMPLE_BLOCK);
+}
+
+@SubscribeEvent
+@SideOnly(Side.CLIENT)
+public static void registerItemColors(ColorHandlerEvent.Item event) {
+    event.getItemColors().register(new IItemColor() {
+        @Override
+        public int colorMultiplier(ItemStack stack, int tintIndex) {
+            return 0x55FF55; // Custom green tint
+        }
+    }, ModItems.EXAMPLE_ITEM);
+}
+TESR (Tile Entity Special Renderer)
+// Register during preInit client side
+ClientRegistry.bindTileEntitySpecialRenderer(ExampleTileEntity.class, new ExampleTESR());
+
+public class ExampleTESR extends TileEntitySpecialRenderer<ExampleTileEntity> {
+    @Override
+    public void render(ExampleTileEntity te, double x, double y, double z, float partialTicks, int destroyStage, float alpha) {
+        // Custom rendering code here
+    }
+}
+JSON Model/Blockstate Files
+// assets/${MOD_ID}/blockstates/example_block.json
+{
+    "variants": {
+        "normal": { "model": "${MOD_ID}:block/example_block" }
+    }
+}
+// assets/${MOD_ID}/models/block/example_block.json
+{
+    "parent": "block/cube_all",
+    "textures": {
+        "all": "${MOD_ID}:blocks/example_block"
+    }
+}
+// assets/${MOD_ID}/models/item/example_item.json
+{
+    "parent": "item/generated",
+    "textures": {
+        "layer0": "${MOD_ID}:items/example_item"
+    }
+}
+Warnings
+- TESR deprecation: TESR is replaced with BlockEntityRenderer (BER) in 1.14+, this is legacy code.
+- Client-only code: All rendering code must be annotated with @SideOnly(Side.CLIENT) to avoid crashing the server.
+Version Comparison
+Version
+Rendering System
+1.8.9
+Similar TESR system, but model loading was different
+1.12.2
+TESR, JSON models, color handlers
+1.16+
+BER instead of TESR, same JSON model format mostly
+Gotchas
+- Missing models: If your block/item is purple/black checkered, you forgot to register the model, or the JSON file is in the wrong folder.
+- State JSON: Blockstate files are mandatory, even for blocks with no states.
+
+---
+7. GUI/Container
+Overview
+The IGuiHandler pattern for creating custom GUIs, with server-side Container logic and client-side Gui rendering.
+Exact Imports
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.world.World;
+import net.minecraftforge.fml.common.network.IGuiHandler;
+import net.minecraft.inventory.Container;
+import net.minecraft.client.gui.inventory.GuiContainer;
+Code Example
+IGuiHandler
+public class GuiHandler implements IGuiHandler {
+    public static final int EXAMPLE_GUI = 0;
+
+    @Override
+    public Object getServerGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
+        switch (ID) {
+            case EXAMPLE_GUI:
+                return new ExampleContainer(player.inventory, world, x, y, z);
+            default:
+                return null;
+        }
+    }
+
+    @Override
+    public Object getClientGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
+        switch (ID) {
+            case EXAMPLE_GUI:
+                return new ExampleGui(new ExampleContainer(player.inventory, world, x, y, z));
+            default:
+                return null;
+        }
+    }
+}
+Container (Server-side)
+public class ExampleContainer extends Container {
+    public ExampleContainer(InventoryPlayer playerInv, World world, int x, int y, int z) {
+        // Add your custom slots here
+        this.addSlotToContainer(new Slot(...) );
+
+        // Add player inventory slots
+        for (int k = 0; k < 3; k++) {
+            for (int i = 0; i < 9; i++) {
+                this.addSlotToContainer(new Slot(playerInv, i + k * 9 + 9, 8 + i * 18, 84 + k * 18));
+            }
+        }
+        // Add player hotbar
+        for (int i = 0; i < 9; i++) {
+            this.addSlotToContainer(new Slot(playerInv, i, 8 + i * 18, 142));
+        }
+    }
+
+    @Override
+    public boolean canInteractWith(EntityPlayer playerIn) {
+        return true; // Custom interaction check
+    }
+}
+GuiContainer (Client-side)
+@SideOnly(Side.CLIENT)
+public class ExampleGui extends GuiContainer {
+    private static final ResourceLocation TEXTURE = new ResourceLocation(${MOD_CLASS}.MOD_ID, "textures/gui/example_gui.png");
+
+    public ExampleGui(Container container) {
+        super(container);
+        this.xSize = 176;
+        this.ySize = 166;
+    }
+
+    @Override
+    protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+        this.mc.getTextureManager().bindTexture(TEXTURE);
+        int offsetX = (this.width - this.xSize) / 2;
+        int offsetY = (this.height - this.ySize) / 2;
+        this.drawTexturedModalRect(offsetX, offsetY, 0, 0, this.xSize, this.ySize);
+    }
+}
+Opening the GUI
+// In your block's onBlockActivated
+if (!world.isRemote) {
+    player.openGui(${MOD_CLASS}.instance, GuiHandler.EXAMPLE_GUI, world, pos.getX(), pos.getY(), pos.getZ());
+}
+Warnings
+- Server/client separation: Never put client-side Gui code in the Container, it will crash the server.
+- Register the handler: You must register the GuiHandler in preInit with NetworkRegistry.INSTANCE.registerGuiHandler.
+Version Comparison
+Version
+GUI System
+1.8.9
+Same IGuiHandler pattern
+1.12.2
+Same IGuiHandler pattern
+1.16+
+Replaced with MenuProvider and screen registration, no more IGuiHandler
+Gotchas
+- GUI IDs: Make sure your GUI IDs are unique, they are used to map between client and server.
+- World isRemote check: Always open the GUI only on the server side, the client will automatically sync.
+
+---
+8. Networking
+Overview
+Forge's SimpleImpl network system for sending custom packets between client and server.
+Exact Imports
+import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
+import net.minecraftforge.fml.common.network.NetworkRegistry;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
+import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+import io.netty.buffer.ByteBuf;
+Code Example
+Packet Handler Setup
+public class PacketHandler {
+    public static final SimpleNetworkWrapper INSTANCE = NetworkRegistry.INSTANCE.newSimpleChannel(${MOD_CLASS}.MOD_ID);
+    private static int DISCRIMINATOR = 0;
+
+    public static void registerMessages() {
+        INSTANCE.registerMessage(ExampleMessage.Handler.class, ExampleMessage.class, DISCRIMINATOR++, Side.SERVER);
+    }
+}
+Custom Packet
+public class ExampleMessage implements IMessage {
+    private int data;
+
+    // Mandatory empty constructor
+    public ExampleMessage() {}
+
+    public ExampleMessage(int data) {
+        this.data = data;
+    }
+
+    @Override
+    public void toBytes(ByteBuf buf) {
+        buf.writeInt(data);
+    }
+
+    @Override
+    public void fromBytes(ByteBuf buf) {
+        data = buf.readInt(buf);
+    }
+
+    public static class Handler implements IMessageHandler<ExampleMessage, IMessage> {
+        @Override
+        public IMessage onMessage(ExampleMessage message, MessageContext ctx) {
+            // Handle on main thread!
+            EntityPlayerMP player = ctx.getServerHandler().player;
+            player.getServerWorld().addScheduledTask(() -> {
+                // Process your data here
+                player.inventory.addItemStackToInventory(new ItemStack(Items.DIAMOND, message.data));
+            });
+            return null;
+        }
+    }
+}
+Sending Packets
+// Send to server
+PacketHandler.INSTANCE.sendToServer(new ExampleMessage(5));
+
+// Send to all clients
+PacketHandler.INSTANCE.sendToAll(new ExampleMessage(5));
+
+// Send to a specific client
+PacketHandler.INSTANCE.sendTo(new ExampleMessage(5), playerMP);
+Warnings
+- Network thread: Packets are handled on the network thread, not the main thread! Always use addScheduledTask to run game code.
+- Discriminators: Each packet needs a unique discriminator, increment them in order.
+Version Comparison
+Version
+Networking
+1.8.9
+Same SimpleImpl system
+1.12.2
+Same SimpleImpl system
+1.16+
+Similar, but moved to NetworkManager with custom payloads
+Gotchas
+- Order matters: You must read/write data in the EXACT same order in toBytes and fromBytes.
+- Security: Never trust client-sent data, always validate it on the server to prevent exploits.
+
+---
+9. Events
+Overview
+Forge's event system, with two separate event buses: the mod bus for mod loading events, and the Forge bus for game events.
+Exact Imports
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent;
+Code Example
+// Register on the Forge bus for game events
+@EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
+public class GameEventHandler {
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        EntityPlayer player = event.player;
+        // Send welcome message
+        player.sendMessage(new TextComponentString("Welcome to the server!"));
+    }
+}
+
+// Register on the mod bus for mod loading events
+@EventBusSubscriber(modid = ${MOD_CLASS}.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
+public class ModEventHandler {
+    @SubscribeEvent
+    public static void registerBlocks(RegistryEvent.Register<Block> event) {
+        // As before
+    }
+}
+Warnings
+- Wrong bus: This is the #1 common mistake!
+  - Mod bus (Bus.MOD): Registry events, lifecycle events, ColorHandlerEvent, ModelRegistryEvent
+  - Forge bus (Bus.FORGE): Game events, Player events, World events, AttachCapabilitiesEvent
+- @SubscribeEvent: Never forget this annotation, otherwise your event will never fire.
+Version Comparison
+Version
+Event Buses
+1.8.9
+Used FMLCommonHandler.instance().bus() for mod bus
+1.12.2
+FMLJavaModLoadingContext.get().getModEventBus() for mod bus
+1.16+
+Same bus system, but more events moved to mod bus
+Gotchas
+- Static methods: When using @EventBusSubscriber, your event handler methods MUST be static.
+- Null bus: Never use MinecraftForge.EVENT_BUS for mod loading events, they will never fire.
+
+---
+10. Config
+Overview
+Forge's annotation-based config system, with automatic config GUI generation.
+Exact Imports
+import net.minecraftforge.common.config.Config;
+import net.minecraftforge.common.config.Config.Comment;
+import net.minecraftforge.common.config.Config.RangeInt;
+Code Example
+@Config(modid = ${MOD_CLASS}.MOD_ID, name = "${MOD_ID}")
+public class ModConfig {
+    @Comment("Enable the example feature")
+    public static boolean enableExample = true;
+
+    @Comment("The amount of items to give on join")
+    @RangeInt(min = 1, max = 64)
+    public static int joinGiveAmount = 5;
+
+    @Comment("Sub category for world settings")
+    public static WorldSettings world = new WorldSettings();
+
+    public static class WorldSettings {
+        @Comment("Enable world generation")
+        public static boolean generateOre = true;
+
+        @Comment("Ore spawn rate")
+        @RangeInt(min = 1, max = 100)
+        public static int oreSpawnRate = 10;
+    }
+}
+Warnings
+- Static fields: All config fields MUST be static, the config system injects values into them.
+- Config GUI: Forge automatically generates a config GUI for you, no extra code needed.
+Version Comparison
+Version
+Config System
+1.8.9
+Manual Configuration class, no annotation support
+1.12.2
+Annotation-based config with automatic GUI
+1.16+
+Configured/ConfigSpec system, replaced annotation config
+Gotchas
+- Config reload: Some config changes require a game restart, mark them with @RequiresMcRestart.
+- Config file: The config file is saved to config/${MOD_ID}.cfg, players can edit it manually.
+
+---
+11. Common Pitfalls
+Overview
+Version-specific bugs, deprecations, and common mistakes.
+1. Case sensitivity: All resource locations must be lowercase, works on Windows but breaks on Linux.
+2. Wrong event bus: Registering mod loading events on the Forge bus.
+3. Forgetting ItemBlock: Blocks will have no item form if you don't register the ItemBlock.
+4. Client-only code: Running client code on the server, causing ClassNotFoundException.
+5. Recipe folder: Putting recipes in data/ instead of assets/ (1.16+ habit).
+6. Language files: Using JSON language files instead of .lang (1.16+ habit).
+7. Registry order: Registering blocks/items too late in the lifecycle.
+8. Network thread: Running game code directly in packet handlers.
+Deprecations
+- GameRegistry.register: Deprecated, use RegistryEvents.
+- FMLCommonHandler.instance().bus(): Deprecated, use the mod bus.
+- addShapedRecipe: Deprecated, use JSON recipes.
+
+---
+12. Java Version
+Overview
+1.12.2 Forge requires Java 8, it will not work with any newer Java version.
+Details
+- Supported Java: Java 8 Update 401+ (latest compatible version)
+- Unsupported: Java 9, 10, 11, 17, etc. They will cause compile errors and crashes.
+
+---
+13. Mixin
+Overview
+Mixin support for 1.12.2 requires MixinBooter, as Forge does not have built-in mixin support.
+Setup
+1. Add required-after:mixinbooter@[9.1,) to your @Mod dependencies
+3. Create your mixin config file: src/main/resources/${MOD_ID}.mixins.json
+{
+  "required": true,
+  "package": "${PACKAGE_PATH}.mixins",
+  "refmap": "${MOD_ID}.refmap.json",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "ExampleMixin"
+  ],
+  "client": [
+    "ClientExampleMixin"
+  ]
+}
+Mixin Example
+@Mixin(EntityPlayer.class)
+public class ExampleMixin {
+    @Redirect(method = "getAbsorptionAmount", at = @At(value = "RETURN"))
+    public float getAbsorptionAmount(float original) {
+        return original * 2;
+    }
+}
+Version Comparison
+Version
+Mixin Support
+1.8.9
+Also requires MixinBooter
+1.12.2
+Requires MixinBooter
+1.16+
+Built-in mixin support, no extra mod needed
+Gotchas
+- Mixin version: Use MixinBooter 9.1, it includes the correct Mixin version for 1.12.2.
+- Coremod: Mixins are loaded early, make sure your mixin config is correct.
+
+---
+14. Mod Compatibility
+Overview
+Handling mod compatibility, optional dependencies, and side-only code.
+Exact Imports
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraftforge.fml.common.Optional;
+Code Example
+@SideOnly
+@SideOnly(Side.CLIENT)
+public void clientOnlyMethod() {
+    // This code is only loaded on the client
+}
+@Optional Methods
+@Optional.Method(modid = "othermod")
+public void compatibilityMethod() {
+    // This method is only called if othermod is loaded
+}
+Dependencies String
+@Mod(
+        dependencies = "required-after:forge@[14.23.5.2859,);required-after:mixinbooter@[9.1,);optional-after:othermod@[1.0,)"
+)
+Warnings
+- Optional methods: Use @Optional.Method to avoid NoClassDefFoundError when a mod is not present.
+- SideOnly: This annotation strips the code from the other side, use it for client-only rendering code.
+
+---
+15. Recipe System
+Overview
+JSON-based recipe system added in 1.12, with automatic loading.
+Recipe Folder
+Recipes are placed in assets/${MOD_ID}/recipes/ (NOT data/! That's for .113+).
+Shaped Recipe Example
+// assets/${MOD_ID}/recipes/example_item.json
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "XXX",
+    "X X",
+    "XXX"
+  ],
+  "key": {
+    "X": {
+      "type": "forge:ore_dict",
+      "ore": "plankWood"
+    }
+  },
+  "result": {
+    "item": "${MOD_ID}:example_item",
+    "count": 1
+  }
+}
+Shapeless Recipe Example
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:diamond"
+    },
+    {
+      "item": "minecraft:stick"
+    }
+  ],
+  "result": {
+    "item": "${MOD_ID}:example_item"
+  }
+}
+Smelting Recipes
+Smelting recipes are NOT JSON-based in 1.12.2, you need to register them in code:
+GameRegistry.addSmelting(ModBlocks.EXAMPLE_BLOCK, new ItemStack(ModItems.EXAMPLE_ITEM), 0.7f);
+Warnings
+- Recipe names: Recipe files cannot start with _, that's reserved for constants.
+- Smelting: No JSON support for smelting, you have to use the legacy method.
+Version Comparison
+Version
+Recipe Location
+1.8.9
+All recipes registered in code, no JSON
+1.12.2
+JSON recipes in assets/modid/recipes/
+1.16+
+JSON recipes in data/modid/recipes/ (data packs)
+Gotchas
+- Data vs Assets: This is the most common gotcha for modders coming from newer versions. Putting recipes in data/ will make them not load at all.
+- Ore dictionary: Use forge:ore_dict type to use ore dictionary entries in recipes.
+
+---
+16. Common Errors
+Overview
+Frequently seen compile errors and their fixes.
+Error
+Fix
+java.lang.UnsupportedClassVersionError: Unsupported major.minor version
+You are using the wrong Java version, use Java 8
+Registry entry for ... was missing or null
+You registered your RegistryEvent on the wrong bus, or forgot to setRegistryName
+Block/item is purple/black checkered
+You forgot to register the model, or the JSON file is missing/wrong path
+java.lang.NoClassDefFoundError: net/minecraft/client/...
+You ran client-only code on the server, add @SideOnly
+Recipe not loading
+You put the recipe in data/ instead of assets/
+Language keys not working
+You used a JSON language file instead of .lang, or wrong file name
+Server crash: Network thread exception
+You ran game code directly in the packet handler, use addScheduledTask
+
+---
+17. Resource System
+Overview
+The assets folder structure for resources, language files, models, etc.
+Folder Structure
+src/main/resources/
+├── assets/
+│   ├── ${MOD_ID}/
+│   │   ├── blockstates/
+│   │   │   └── example_block.json
+│   │   ├── lang/
+│   │   │   └── en_us.lang
+│   │   ├── models/
+│   │   │   ├── block/
+│   │   │   │   └── example_block.json
+│   │   │   └── item/
+│   │   │       ├── example_block.json
+│   │   │       └── example_item.json
+│   │   ├── recipes/
+│   │   │   └── example_item.json
+│   │   ├── textures/
+│   │   │   ├── blocks/
+│   │   │   │   └── example_block.png
+│   │   │   ├── items/
+│   │   │   │   └── example_item.png
+│   │   │   └── gui/
+│   │   │       └── example_gui.png
+│   └── minecraft/
+├── mcmod.info
+└── pack.mcmeta
+Language Files
+Language files are .lang files, not JSON! Example en_us.lang:
+tile.${MOD_ID}.example_block.name=Example Block
+item.${MOD_ID}.example_item.name=Example Item
+itemGroup.${MOD_ID}=Example Tab
+pack.mcmeta
+{
+  "pack": {
+    "description": "${MOD_DISPLAY_NAME} Resources",
+    "pack_format": 3
+  }
+}
+- pack_format: 3 is mandatory for 1.11-1.12.2.
+Version Comparison
+Version
+Language Files
+Resource Structure
+1.8.9
+.lang files, same structure
+Same assets structure
+1.12.2
+.lang files
+Same assets structure, recipes in assets
+1.16+
+.json language files
+Data packs, recipes in data
+Gotchas
+- Language file name: It must be en_us.lang (lowercase), not en_US.lang, otherwise it won't load.
+- pack_format: Using the wrong pack format will cause your resources to not load.
+
+---
+18. Capabilities
+Overview
+Forge's capability system to attach custom data to entities, items, and tile entities.
+Exact Imports
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.CapabilityManager;
+import net.minecraftforge.common.capabilities.ICapabilityProvider;
+import net.minecraftforge.common.capabilities.Capability.IStorage;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
+Code Example
+Capability Interface
+public interface IExampleCapability {
+    int getValue();
+    void setValue(int value);
+}
+Implementation & Storage
+public class ExampleCapability implements IExampleCapability {
+    private int value = 0;
+
+    @Override
+    public int getValue() { return value; }
+    @Override
+    public void setValue(int value) { this.value = value; }
+
+    public static class Storage implements IStorage<IExampleCapability> {
+        @Override
+        public NBTBase writeNBT(Capability<IExampleCapability> cap, IExampleCapability instance, EnumFacing side) {
+            NBTTagCompound nbt = new NBTTagCompound();
+            nbt.setInteger("value", instance.getValue());
+            return nbt;
+        }
+
+        @Override
+        public void readNBT(Capability<IExampleCapability> cap, IExampleCapability instance, EnumFacing side, NBTBase nbt) {
+            NBTTagCompound compound = (NBTTagCompound) nbt;
+            instance.setValue(compound.getInteger("value"));
+        }
+    }
+}
+Registration
+@CapabilityInject(IExampleCapability.class)
+public static Capability<IExampleCapability> EXAMPLE_CAP = null;
+
+public static void setupCapabilities() {
+    CapabilityManager.INSTANCE.register(
+        IExampleCapability.class,
+        new ExampleCapability.Storage(),
+        ExampleCapability.class
+    );
+}
+Attach to Player
+@SubscribeEvent
+public static void attachCapabilities(AttachCapabilitiesEvent<Entity> event) {
+    if (event.getObject() instanceof EntityPlayer) {
+        event.addCapability(
+            new ResourceLocation(${MOD_CLASS}.MOD_ID, "example_cap"),
+            new ICapabilitySerializable<NBTTagCompound>() {
+                private IExampleCapability instance = new ExampleCapability();
+
+                @Override
+                public boolean hasCapability(Capability<?> cap, EnumFacing facing) {
+                    return cap == EXAMPLE_CAP;
+                }
+
+                @Override
+                public <T> T getCapability(Capability<T> cap, EnumFacing facing) {
+                    return hasCapability(cap, facing) ? EXAMPLE_CAP.<T>cast(instance) : null;
+                }
+
+                @Override
+                public NBTTagCompound serializeNBT() {
+                    return (NBTTagCompound) EXAMPLE_CAP.getStorage().writeNBT(EXAMPLE_CAP, instance, null);
+                }
+
+                @Override
+                public void deserializeNBT(NBTTagCompound nbt) {
+                    EXAMPLE_CAP.getStorage().readNBT(EXAMPLE_CAP, instance, null, nbt);
+                }
+            }
+        );
+    }
+}
+
+// Copy capability on player respawn
+@SubscribeEvent
+public static void onPlayerClone(PlayerEvent.Clone event) {
+    if (event.isWasDeath()) {
+        EntityPlayer oldPlayer = event.getOriginal();
+        EntityPlayer newPlayer = event.getEntityPlayer();
+
+        if (oldPlayer.hasCapability(EXAMPLE_CAP, null) && newPlayer.hasCapability(EXAMPLE_CAP, null)) {
+            IExampleCapability oldCap = oldPlayer.getCapability(EXAMPLE_CAP, null);
+            IExampleCapability newCap = newPlayer.getCapability(EXAMPLE_CAP, null);
+            newCap.setValue(oldCap.getValue());
+        }
+    }
+}
+Using the Capability
+if (player.hasCapability(EXAMPLE_CAP, null)) {
+    IExampleCapability cap = player.getCapability(EXAMPLE_CAP, null);
+    cap.setValue(100);
+}
+Warnings
+- Syncing: Capabilities are NOT automatically synced between client and server! You have to send packets to sync the data.
+- Null capability: Always check hasCapability before calling getCapability.
+Version Comparison
+Version
+Data Attachment
+1.8.9
+Used IExtendedEntityProperties, no capability system
+1.12.2
+Full capability system
+1.16+
+Same capability system, with improvements
+Gotchas
+- Player respawn: You have to manually copy the capability data when the player respawns, otherwise it will be lost on death.
+- Attach event: AttachCapabilitiesEvent is fired on the Forge bus, not the mod bus.
+
+---
+That's all! This guide covers everything you need to get started with 1.12.2 Forge modding, avoiding all the common pitfalls and version-specific gotchas.

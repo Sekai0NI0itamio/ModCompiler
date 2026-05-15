@@ -1,0 +1,388 @@
+Comprehensive Forge Modding Guide for 1.21.9-1.21.11
+This guide covers everything you need to code a Minecraft Forge mod for the 1.21.9-1.21.11 version range, including latest API changes, code patterns, and common pitfalls.
+
+---
+1. Modding Framework
+Versions & Mappings
+Minecraft Version
+Minimum Forge Version
+1.21.9
+59.0.1+
+1.21.10
+60.0.18+
+1.21.11
+Latest stable build
+- Mappings: Official Mojang mappings are the default. No more MCP mappings.
+- Optional: Parchment mappings (community-sourced javadocs/parameters) are available with extra setup.
+
+---
+3. Key Changes from 1.21.2-1.21.8
+These are breaking changes that affect all mods porting from older 1.21.x versions:
+Vanilla Changes
+1. Entity World Method Rename: Entity#getWorld() was renamed to Entity#getEntityWorld() to fix method overload conflicts.
+2. KeyMapping Category Overhaul: Key categories are now strongly typed KeyMapping.Category instead of raw strings.
+3. BlockEntityRenderer Refactor: BERs now use the render state system, the old single render() method is removed.
+4. Deprecated Serialization Removal: Old container serialization methods were removed, use ContainerHelper instead.
+5. GameRule Registry Refactor: Game rules are now registered via the vanilla registry system with GameRuleBuilder.
+Forge Changes
+1. EventBus API Updates: New event fire() method and Result helper methods for event handling.
+2. Rendering Pipeline Refactor: World rendering events were reworked to separate extraction from rendering logic.
+
+---
+4. Mod Entry Point
+@Mod Annotation
+The main mod class, annotated with @Mod to mark it as the mod entry point.
+Imports:
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+Code Example:
+package ${PACKAGE_PATH};
+
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+
+    public ${MOD_CLASS}() {
+        // Get the mod-specific event bus
+        var modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+
+        // Register deferred registers, configs, and event handlers here
+        // BLOCKS.register(modEventBus);
+        // ITEMS.register(modEventBus);
+        // ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CONFIG_SPEC);
+    }
+}
+mods.toml
+The mod metadata file, located at src/main/resources/META-INF/mods.toml.
+Example:
+modLoader="javafml"
+loaderVersion="[60,)"
+
+[mods]
+    [[mods]]
+    modId="${MOD_ID}"
+    version="${version}"
+    displayName="${MOD_DISPLAY_NAME}"
+    authors="Your Name"
+    description="${MOD_DISPLAY_NAME} for 1.21.9-1.21.11"
+
+    # Minimum required Forge version
+    dependencies="forge>=59.0.1"
+Warnings
+- The loaderVersion must match the ForgeGradle version, use [60,) for 1.21.9+ versions.
+- Mod IDs are case-sensitive, ensure they match everywhere in your code.
+
+---
+5. Registry System: DeferredRegister
+DeferredRegister is the recommended way to register mod objects, it automatically handles the RegisterEvent lifecycle.
+Imports:
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+Core Pattern:
+// Create a DeferredRegister for the registry type, with your mod ID
+public static final DeferredRegister<Block> BLOCKS =
+    DeferredRegister.create(ForgeRegistries.BLOCKS, MOD_ID);
+
+public static final DeferredRegister<Item> ITEMS =
+    DeferredRegister.create(ForgeRegistries.ITEMS, MOD_ID);
+
+// In your mod constructor, register the deferred register to the mod event bus
+BLOCKS.register(modEventBus);
+ITEMS.register(modEventBus);
+Critical Warning
+Never register DeferredRegister to the Forge EVENT_BUS! It must be registered to the mod-specific event bus from FMLJavaModLoadingContext.
+
+---
+6. Block/Item Registration
+Use the DeferredRegister pattern to register blocks and items, with RegistryObject to reference them later.
+Code Example:
+// Register a custom block
+public static final RegistryObject<Block> EXAMPLE_BLOCK = BLOCKS.register(
+    "example_block",
+    () -> new Block(BlockBehaviour.Properties.of(Material.STONE)
+        .strength(2.0f, 3.0f)
+        .requiresCorrectToolForDrops())
+);
+
+// Register the block's item form
+public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register(
+    "example_block",
+    () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties())
+);
+
+// Register a standalone custom item
+public static final RegistryObject<Item> EXAMPLE_ITEM = ITEMS.register(
+    "example_item",
+    () -> new Item(new Item.Properties()
+        .stacksTo(16)
+        .fireResistant())
+);
+Referencing Registered Objects
+To get the actual registered instance, call .get() on the RegistryObject:
+Block block = EXAMPLE_BLOCK.get();
+Item item = EXAMPLE_ITEM.get();
+Warning
+Never call .get() during static initialization! The objects are only populated after the RegisterEvent is fired, so calling it early will return null.
+
+---
+7. Rendering: Model Changes
+The 1.21.9 update includes a rendering pipeline refactor, most notably for BlockEntityRenderers.
+BlockEntityRenderer Changes
+The old single render() method is removed, replaced with the new render state system:
+Old Pattern (No Longer Works):
+// DEPRECATED/REMOVED
+public void render(MyBlockEntity blockEntity, float partialTicks, PoseStack stack, MultiBufferSource buffer, int light, int overlay) {
+    // Old rendering code
+}
+New Pattern:
+public class MyBlockEntityRenderer extends BlockEntityRenderer<MyBlockEntity, MyRenderState> {
+
+    // Create your custom render state
+    @Override
+    public MyRenderState createRenderState() {
+        return new MyRenderState();
+    }
+
+    // Extract data from the block entity into the render state
+    @Override
+    public void updateRenderState(MyBlockEntity blockEntity, MyRenderState state, float partialTick) {
+        state.customData = blockEntity.getCustomData();
+    }
+
+    // Render using the pre-extracted state
+    @Override
+    public void render(MyRenderState state, PoseStack poseStack, MultiBufferSource buffer, int light, int overlay) {
+        // Your rendering code here, using the state
+    }
+
+    // Your render state class
+    public static class MyRenderState extends BlockEntityRenderState {
+        public int customData;
+    }
+}
+Model JSON Changes
+There are no breaking changes to standard JSON block/item models. Custom model loaders may require updates to support the new rendering pipeline.
+
+---
+8. GUI/Container: MenuType, Screen
+There are no major breaking changes to the GUI system from 1.21.8, the standard pattern remains valid.
+Imports:
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+Menu Registration
+// Register the menu type via DeferredRegister
+public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+    DeferredRegister.create(ForgeRegistries.MENU_TYPES, MOD_ID);
+
+public static final RegistryObject<MenuType<ExampleMenu>> EXAMPLE_MENU =
+    MENU_TYPES.register("example_menu",
+        () -> new MenuType<>(ExampleMenu::new)
+    );
+Menu Class
+public class ExampleMenu extends AbstractContainerMenu {
+    public ExampleMenu(int id, Inventory playerInventory) {
+        super(EXAMPLE_MENU.get(), id);
+
+        // Add your slots here
+        this.addSlot(new Slot(container, 0, 80, 35));
+
+        // Add player inventory slots
+        // ...
+    }
+}
+Screen Class
+public class ExampleScreen extends AbstractContainerScreen<ExampleMenu> {
+    public ExampleScreen(ExampleMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+    }
+
+    @Override
+    protected void renderBg(PoseStack poseStack, float partialTick, int mouseX, int mouseY) {
+        // Render your GUI background
+    }
+}
+
+---
+9. Networking: SimpleChannel
+SimpleChannel remains the standard way to handle custom network packets in Forge.
+Imports:
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
+Channel Setup
+private static final String PROTOCOL_VERSION = "1";
+public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
+    new ResourceLocation(MOD_ID, "main"),
+    () -> PROTOCOL_VERSION,
+    PROTOCOL_VERSION::equals,
+    PROTOCOL_VERSION::equals
+);
+Packet Registration
+private static int packetId = 0;
+public static void registerPackets() {
+    // Register your packet class
+    CHANNEL.registerMessage(
+        packetId++,
+        ExamplePacket.class,
+        ExamplePacket::encode,
+        ExamplePacket::decode,
+        ExamplePacket::handle
+    );
+}
+Packet Class
+public class ExamplePacket {
+    private final int data;
+
+    // Constructor for sending
+    public ExamplePacket(int data) {
+        this.data = data;
+    }
+
+    // Encode to buffer
+    public void encode(FriendlyByteBuf buf) {
+        buf.writeInt(data);
+    }
+
+    // Decode from buffer
+    public static ExamplePacket decode(FriendlyByteBuf buf) {
+        return new ExamplePacket(buf.readInt());
+    }
+
+    // Handle the packet
+    public void handle(Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            // Work here runs on the MAIN THREAD, safe to interact with game objects
+            ServerPlayer player = ctx.get().getSender();
+            // Do your work
+        });
+        ctx.get().setPacketHandled(true);
+    }
+}
+Warning
+Packets are handled on the network thread by default. Always use enqueueWork to run game logic on the main thread, never interact with world/player objects directly from the handler.
+
+---
+10. Events: Forge Event Bus
+Forge uses two separate event buses:
+1. Mod Event Bus: For mod lifecycle events, registration, config loading.
+2. Forge Event Bus: For game events (player joins, world ticks, etc.)
+Imports:
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+Event Handling Patterns
+// 1. Register an object to the Forge event bus
+MinecraftForge.EVENT_BUS.register(this);
+
+// 2. Use @Mod.EventBusSubscriber for static handlers
+// For Forge game events
+@Mod.EventBusSubscriber(modid = MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public static class ForgeEvents {
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        // Handle player login
+    }
+}
+
+// For mod lifecycle events
+@Mod.EventBusSubscriber(modid = MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
+public static class ModEvents {
+    @SubscribeEvent
+    public static void onClientSetup(FMLClientSetupEvent event) {
+        // Handle client setup
+    }
+}
+
+---
+11. Config: ModConfig
+Forge uses the TOML-based config system with ForgeConfigSpec.
+Imports:
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
+Config Class
+public class Config {
+    public static final Config CONFIG;
+    public static final ForgeConfigSpec CONFIG_SPEC;
+
+    // Config values
+    public final ForgeConfigSpec.ConfigValue<Integer> exampleInt;
+    public final ForgeConfigSpec.ConfigValue<Boolean> exampleBool;
+
+    private Config(ForgeConfigSpec.Builder builder) {
+        builder.push("general"); // Section in the config file
+
+        exampleInt = builder.comment("Example integer setting, 0-100")
+            .defineInRange("exampleInt", 10, 0, 100);
+
+        exampleBool = builder.comment("Example boolean setting")
+            .define("exampleBool", true);
+
+        builder.pop();
+    }
+
+    static {
+        // Build the config spec
+        var pair = new ForgeConfigSpec.Builder().configure(Config::new);
+        CONFIG_SPEC = pair.getRight();
+        CONFIG = pair.getLeft();
+    }
+}
+Register Config
+In your mod constructor:
+ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.CONFIG_SPEC);
+Using Config Values
+int value = Config.CONFIG.exampleInt.get();
+
+---
+12. Common Pitfalls
+1. Wrong Event Bus: Registering mod events/DeferredRegister to the Forge bus instead of the mod bus.
+2. Early RegistryObject Access: Calling .get() on RegistryObject during static initialization, returns null.
+3. Old KeyMapping API: Using the deprecated string category constructor for KeyMapping.
+4. Old Entity Method: Using entity.getWorld() instead of the new entity.getEntityWorld().
+5. Old BER Render Method: Not updating BlockEntityRenderers to the new render state system.
+6. Reobf Flag Enabled: Leaving reobf enabled causes build failures.
+7. Missing EventBus Dependency: Forgetting to include the eventbus dependency in older 1.21.6+ versions.
+8. Network Thread Access: Interacting with game objects directly from packet handlers, causes thread safety issues.
+
+---
+13. Java Version
+Requirements
+- Java 21 is mandatory: Minecraft 1.21+ requires Java 21, older versions will not work.
+
+---
+14. Common Errors & Fixes
+Error
+Cause
+Fix
+error: package net.minecraftforge.eventbus.api does not exist
+Missing eventbus dependency
+Add implementation "net.minecraftforge:eventbus:6.0.0" to dependencies.
+error: cannot find symbol method getWorld()
+Old method name
+Replace entity.getWorld() with entity.getEntityWorld().
+error: constructor KeyMapping(...) is undefined
+Old string category constructor
+Register a KeyMapping.Category first, use the new constructor.
+error: unsupported major.minor version 65.0
+Compiling with Java 17 instead of 21
+Use Java 21.
+error: cannot find symbol method render(...)
+Old BlockEntityRenderer method
+Update your BER to use the new render state system.
+BUILD FAILED: Could not find reobf mappings
+reobf enabled
+Set reobf = false.
+NullPointerException when accessing block/item
+Called .get() too early
+Only access RegistryObject after mod setup, never during static init.
+Mod rejected, wrong loader version
+Old loaderVersion in mods.toml
+Update loaderVersion to [60,) for 1.21.9+ versions.
+Mod does not match the checksum
+Outdated cache
+Clean and rebuild your project.

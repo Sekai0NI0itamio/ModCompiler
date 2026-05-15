@@ -1,0 +1,442 @@
+Comprehensive 1.8.9 Forge Modding Guide
+This guide covers everything you need to develop mods for Minecraft 1.8.9 using Forge, including version-specific details, code patterns, and common pitfalls.
+
+---
+1. Modding Framework
+Forge Version
+The latest stable recommended Forge build for 1.8.9 is 11.15.1.2318. This is the most widely used and tested version for 1.8.9 modding.
+MCP Mappings
+For 1.8.9, use MCP Stable 20 mappings. Snapshot mappings are not recommended for production as they may change.
+- Warning: Avoid using 1.8.8 mappings for 1.8.9, this will cause mapping mismatches and obfuscation errors.
+---
+3. Mod Entry Point
+@Mod Annotation
+This annotation marks your main mod class. All parameters must be correctly set.
+Exact Imports:
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+Code Example:
+@Mod(
+    modid = "${MOD_ID}",
+    name = "${MOD_DISPLAY_NAME}",
+    version = "1.0.0",
+    acceptedMinecraftVersions = "[1.8.9]",
+    clientSideOnly = false // Set to true for client-only mods
+)
+public class ${MOD_CLASS} {
+    public static ${MOD_CLASS} instance;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        instance = this;
+        // Register blocks, items, configs, tile entities here
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        // Register recipes, network channels, GUI handlers here
+    }
+
+    @EventHandler
+    public void postInit(FMLPostInitializationEvent event) {
+        // Mod compatibility handling, inter-mod communication here
+    }
+}
+FML Lifecycle
+Stage
+Purpose
+preInit
+Register all your mod's content (blocks, items, etc.), load configs
+init
+Register recipes, network channels, event handlers
+postInit
+Handle mod interactions, process IMC messages
+Comparison to newer versions: 1.8.9 uses the legacy 3-stage lifecycle, unlike the modern FMLCommonSetupEvent/FMLClientSetupEvent system.
+
+---
+4. Key API Changes vs other versions
+1.8.9 is a critical transition version with several unique features:
+- First version with JSON model system: Replaced the old ISBRH-based rendering system
+- Introduced Capability system: For attaching custom data to entities/tiles without ASM
+- New Potion Registry: Moved away from raw IDs for potion registration
+- First version with SimpleImpl networking: The simple packet system that remained until 1.13
+- No DeferredRegister: All registration is done eagerly during preInit
+- No JSON recipes: All recipes must be registered via code, no data generation
+- No @EventBusSubscriber: Event registration must be done manually
+
+---
+5. Common Block/Item Registration
+GameRegistry
+In 1.8.9, you use GameRegistry to register your content, unlike the modern DeferredRegister system.
+Exact Imports:
+import net.minecraftforge.fml.common.registry.GameRegistry;
+import net.minecraft.block.Block;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
+Code Example:
+// Your content fields
+public static Block myBlock;
+public static Item myItem;
+
+// In preInit()
+public void preInit() {
+    // Initialize your block/item instances first
+    myBlock = new BlockMyBlock().setRegistryName("${MOD_ID}:myblock");
+    myItem = new ItemMyItem().setRegistryName("${MOD_ID}:myitem");
+
+    // Register block (with default ItemBlock)
+    GameRegistry.registerBlock(myBlock, ItemBlock.class);
+
+    // Register item
+    GameRegistry.registerItem(myItem);
+}
+OreDictionary
+The OreDictionary allows cross-mod item/block compatibility.
+Exact Imports:
+import net.minecraftforge.oredict.OreDictionary;
+import net.minecraft.item.ItemStack;
+Code Example:
+// In preInit(), after registering your item/block
+OreDictionary.registerOre("ingotCopper", new ItemStack(myItem));
+OreDictionary.registerOre("blockCopper", new ItemStack(myBlock));
+Warning: Never use the deprecated registerItem(Item, String, String) overload with modId parameter, it was removed in 1.8.9.
+
+---
+6. Rendering
+JSON Models vs Legacy
+1.8.9 introduced the new JSON model system, which replaced the old ISBRH system. Most blocks/items should use JSON models.
+Item Model Registration
+You must register item models during preInit:
+import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraftforge.client.model.ModelLoader;
+
+// Client-side only!
+@SideOnly(Side.CLIENT)
+public void initModels() {
+    // Register model for your item
+    ModelLoader.setCustomModelResourceLocation(
+        myItem,
+        0,
+        new ModelResourceLocation("${MOD_ID}:myitem", "inventory")
+    );
+}
+Forge Blockstate JSON
+Use Forge's extended blockstate format to avoid writing hundreds of variant combinations:
+{
+  "forge_marker": 1,
+  "defaults": {
+    "model": "cube_all",
+    "textures": { "all": "${MOD_ID}:blocks/myblock" }
+  },
+  "variants": {
+    "facing": {
+      "north": {},
+      "south": { "y": 180 },
+      "west": { "y": 270 },
+      "east": { "y": 90 }
+    }
+  }
+}
+TESR (TileEntitySpecialRenderer)
+For dynamic rendering of tile entities:
+@SideOnly(Side.CLIENT)
+public class MyTESR extends TileEntitySpecialRenderer<MyTileEntity> {
+    @Override
+    public void renderTileEntityAt(MyTileEntity te, double x, double y, double z, float partialTicks, int destroyStage) {
+        // Custom rendering code here
+    }
+}
+
+// Register in preInit (client side)
+ClientRegistry.bindTileEntitySpecialRenderer(MyTileEntity.class, new MyTESR());
+ISBRH (Legacy)
+ISBRH is deprecated in 1.8.9, but still supported for legacy code. It is not thread-safe and should be avoided in favor of JSON models.
+Gotcha: If you extend BlockContainer, it automatically sets getRenderType() to -1, which disables standard model rendering. Override it to return 3 to enable JSON model rendering.
+
+---
+7. GUI/Container
+IGuiHandler
+Forge uses IGuiHandler to handle GUI synchronization between client and server.
+Exact Imports:
+import net.minecraftforge.fml.common.network.IGuiHandler;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.world.World;
+Code Example:
+public class MyGuiHandler implements IGuiHandler {
+    public static final int GUI_MY_BLOCK = 0;
+
+    @Override
+    public Object getServerGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
+        switch(ID) {
+            case GUI_MY_BLOCK:
+                TileEntity te = world.getTileEntity(new BlockPos(x, y, z));
+                return new MyContainer(player.inventory, (MyTileEntity) te);
+            default: return null;
+        }
+    }
+
+    @Override
+    public Object getClientGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
+        switch(ID) {
+            case GUI_MY_BLOCK:
+                TileEntity te = world.getTileEntity(new BlockPos(x, y, z));
+                return new MyGuiContainer(player.inventory, (MyTileEntity) te);
+            default: return null;
+        }
+    }
+}
+Register the Handler:
+// In init()
+NetworkRegistry.INSTANCE.registerGuiHandler(${MOD_CLASS}.instance, new MyGuiHandler());
+Opening a GUI
+Always open GUIs from the server side to ensure synchronization:
+// In your block's onBlockActivated method
+if (!world.isRemote) {
+    player.openGui(${MOD_CLASS}.instance, MyGuiHandler.GUI_MY_BLOCK, world, pos.getX(), pos.getY(), pos.getZ());
+}
+return true;
+
+---
+8. Networking
+SimpleImpl
+1.8.9 uses SimpleImpl, the simple packet system that was standard until 1.13.
+Step 1: Create Network Channel
+import net.minecraftforge.fml.common.network.NetworkRegistry;
+import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
+
+public class PacketHandler {
+    public static final SimpleNetworkWrapper INSTANCE = NetworkRegistry.INSTANCE.newSimpleChannel("${MOD_ID}");
+}
+Step 2: Create Packet
+import io.netty.buffer.ByteBuf;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+
+public class MyMessage implements IMessage {
+    private int data;
+
+    // Required empty constructor
+    public MyMessage() {}
+
+    public MyMessage(int data) {
+        this.data = data;
+    }
+
+    @Override
+    public void toBytes(ByteBuf buf) {
+        buf.writeInt(data);
+    }
+
+    @Override
+    public void fromBytes(ByteBuf buf) {
+        data = buf.readInt();
+    }
+}
+Step 3: Create Packet Handler
+import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
+import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+import net.minecraft.entity.player.EntityPlayerMP;
+
+public class MyMessageHandler implements IMessageHandler<MyMessage, IMessage> {
+    @Override
+    public IMessage onMessage(MyMessage message, MessageContext ctx) {
+        EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+
+        // Run on main thread! Network thread is separate.
+        player.getServerWorld().addScheduledTask(() -> {
+            // Handle your packet data here
+            player.inventory.addItemStackToInventory(new ItemStack(Items.diamond, message.data));
+        });
+        return null;
+    }
+}
+Step 4: Register Packet
+// In init()
+PacketHandler.INSTANCE.registerMessage(
+    MyMessageHandler.class,
+    MyMessage.class,
+    0, // Discriminator, unique per packet
+    Side.SERVER // Target side
+);
+Sending Packets
+// Send to server
+PacketHandler.INSTANCE.sendToServer(new MyMessage(5));
+
+// Send to specific client
+PacketHandler.INSTANCE.sendTo(new MyMessage(5), playerMP);
+
+---
+9. Events
+Event Bus
+Forge uses an event bus system to hook into vanilla behavior.
+Exact Imports:
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
+Basic Event Handler
+public class MyEventHandler {
+    @SubscribeEvent
+    public void onClientTick(ClientTickEvent event) {
+        // Client tick logic
+    }
+}
+
+// Register the handler in init()
+MinecraftForge.EVENT_BUS.register(new MyEventHandler());
+Event Buses
+There are multiple event buses:
+- MinecraftForge.EVENT_BUS: Most events, including most world/entity events
+- MinecraftForge.TERRAIN_GEN_BUS: World generation events
+- MinecraftForge.ORE_GEN_BUS: Ore generation events
+Comparison to newer versions: 1.8.9 has no @EventBusSubscriber annotation, you must manually register your event handler classes.
+
+---
+10. Config
+1.8.9 uses the legacy Forge configuration system, not the modern ForgeConfigSpec.
+Exact Imports:
+import net.minecraftforge.common.config.Configuration;
+import java.io.File;
+Code Example:
+public static Configuration config;
+public static boolean myBooleanConfig;
+public static int myIntConfig;
+
+public void preInit(FMLPreInitializationEvent event) {
+    config = new Configuration(event.getSuggestedConfigurationFile());
+
+    try {
+        config.load();
+
+        myBooleanConfig = config.getBoolean(
+            "myBoolean",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Description of my config"
+        );
+
+        myIntConfig = config.getInt(
+            "myInt",
+            Configuration.CATEGORY_GENERAL,
+            10,
+            0,
+            100,
+            "Description of my int config"
+        );
+    } finally {
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+}
+
+---
+11. Common Pitfalls
+1. BlockContainer Render Type: Extending BlockContainer automatically sets getRenderType() to -1, which disables standard model rendering. Override it to return 3.
+2. Packet Threading: Packet handlers run on the network thread, never access game objects directly. Always use addScheduledTask to run code on the main thread.
+3. Sided Code: Never reference client-only classes from server code, this will cause NoClassDefFoundError on dedicated servers.
+4. Model Registration: Item models must be registered during preInit, otherwise they will be missing.
+5. Metadata: In 1.8.9, metadata is 4-bit, so you can only have 16 variants per block/item.
+6. Forge Blockstate Marker: Always include "forge_marker": 1 in your blockstate JSON, otherwise Forge won't parse the extended format.
+
+---
+12. Java Version
+Java 8 Compatibility
+1.8.9 Forge requires Java 8. Newer Java versions (9+) will cause launch failures, class loading errors, or unexpected crashes.
+
+---
+13. Mixin
+Support
+Mixin is fully supported for 1.8.9 Forge, but requires manual setup.
+Setup Steps
+1. Create your mixin config file src/main/resources/mixins.${MOD_ID}.json:
+{
+  "package": "${PACKAGE_PATH}.mixin",
+  "refmap": "mixins.${MOD_ID}.refmap.json",
+  "minVersion": "0.7",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "MixinMinecraft"
+  ]
+}
+4. Register your mixin plugin in your mcmod.info:
+"mixins": ["mixins.${MOD_ID}.json"]
+Mixin Best Practices
+- Never use @Overwrite unless absolutely necessary, it breaks mod compatibility.
+- Never use @Redirect, only one mod can use it on the same call.
+- Prefix all injected methods with your modid to avoid conflicts.
+- Enable mixin debug with -Dmixin.debug=true to troubleshoot issues.
+
+---
+14. Mod Compatibility
+@SideOnly Annotation
+This annotation tells Forge to strip specific code from the opposite physical side, preventing server crashes from client-only code.
+Exact Imports:
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+Usage:
+// Mark an entire class as client-only
+@SideOnly(Side.CLIENT)
+public class MyGuiContainer extends GuiContainer {
+    // ...
+}
+
+// Mark a single method
+@SideOnly(Side.CLIENT)
+public void initClient() {
+    // Client-only init code
+}
+Sidedness
+There are two types of sides:
+- Physical Side: The actual process (client or dedicated server)
+- Logical Side: The thread (client thread or server thread, exists on both physical sides)
+Use world.isRemote to check logical side, use @SideOnly to strip physical side code.
+Common Mistake: Checking FMLCommonHandler.instance().getSide() to check logical side. This only checks physical side, which is wrong. Always use world.isRemote for logical side checks.
+
+---
+15. Recipe System
+In 1.8.9, all recipes are registered via code, there is no JSON recipe system.
+Shaped Recipe
+// In init()
+GameRegistry.addRecipe(
+    new ItemStack(myItem, 1),
+    "XY",
+    "Y ",
+    'X', Items.diamond,
+    'Y', Items.stick
+);
+Shapeless Recipe
+GameRegistry.addShapelessRecipe(
+    new ItemStack(myItem, 4),
+    Items.coal, Items.dye
+);
+Smelting Recipe
+GameRegistry.addSmelting(
+    myBlock,
+    new ItemStack(myItem),
+    0.7f // XP
+);
+
+---
+16. Common Errors
+Compile Errors
+1. Gradle Build Failed with Unsupported Class Version:
+  - Fix: You are using the wrong Java version. Switch to Java 8.
+2. NoClassDefFoundError on Dedicated Server:
+  - Fix: You referenced a client-only class from server code. Add @SideOnly and use sided proxies.
+3. Missing Mappings Warnings:
+  - Fix: You are using the wrong MCP mappings version. Use stable_20 for 1.8.9.
+4. Model Loading Errors:
+  - Fix: You forgot to register your item model, or your model JSON has invalid syntax.
+5. Duplicate Registration Errors:
+  - Fix: You registered the same block/item twice, or used a duplicate modid.
+Runtime Errors
+1. Block is Invisible:
+  - Fix: You extended BlockContainer and didn't override getRenderType(). Return 3 to enable model rendering.
+2. Packet Data is Corrupted:
+  - Fix: You read/wrote data in the wrong order in your packet. Always read in the same order you wrote.
+3. ConcurrentModificationException in Packet Handler:
+  - Fix: You ran game code on the network thread. Use addScheduledTask to run on main thread.
+4. Mod ID Mismatch:
+  - Fix: Your modid has uppercase letters, or doesn't match across registration. Modids must be lowercase.

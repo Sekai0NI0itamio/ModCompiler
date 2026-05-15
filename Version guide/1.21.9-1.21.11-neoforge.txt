@@ -1,0 +1,411 @@
+NeoForge 1.21.9-1.21.11 Modding Guide
+This guide covers everything needed to develop Minecraft mods for the 1.21.9-1.21.11 version range using NeoForge, including latest API changes, code patterns, and common pitfalls.
+
+---
+1. Modding Framework
+Compatible Versions
+Component
+Version/Details
+NeoForge
+21.9.x (1.21.9), 21.10.x (1.21.10), 21.11.x (1.21.11)
+Build Plugin
+ModDevGradle 1.0.11+ (replaces legacy NeoGradle)
+Mappings
+Official Mojang Mappings (default), optional Parchment for parameter names
+⚠️ Warning: Legacy NeoGradle is no longer supported for this version range. You must use ModDevGradle for modern builds.
+
+---
+3. Key Changes from 1.21.2-1.21.8
+These are the most impactful changes that will break older mods:
+1. ResourceLocation → Identifier: All references to the resource location class have been renamed. This is a mechanical find-and-replace for most code.
+2. Transfer API Rework (1.21.9+): Complete rewrite of item/fluid/energy transfer system, replacing legacy IItemHandler/IFluidHandler with transactional resource handlers.
+3. Key Mapping Overhaul: Key mapping categories are now strongly-typed records instead of raw strings.
+4. Package Reorganization:
+  - Most utility classes moved to net.minecraft.util
+  - net.minecraft.advancements.critereon → net.minecraft.advancements.criterion (spelling fix)
+  - Entity/Model classes split into subpackages (e.g., net.minecraft.world.entity.monster.zombie)
+5. Rendering Pipeline Rewrite: Separation of samplers, RenderType moved to RenderTypes, new RenderSetup system for custom render types.
+6. Item Atlas Split: Item textures are no longer in the block atlas, they have their own minecraft:items atlas.
+
+---
+4. Mod Entry Point
+The @Mod Annotation
+This is your mod's main entry point.
+Exact Imports:
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.ModContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+Code Example:
+@Mod(${MOD_CLASS}.MOD_ID)
+public class ${MOD_CLASS} {
+    public static final String MOD_ID = "${MOD_ID}";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    // FML automatically injects these parameters
+    public ${MOD_CLASS}(IEventBus modEventBus, ModContainer modContainer) {
+        // Register deferred registers
+        ModBlocks.BLOCKS.register(modEventBus);
+        ModItems.ITEMS.register(modEventBus);
+        ModMenus.MENUS.register(modEventBus);
+
+        // Register config
+        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        // Register game event listeners
+        NeoForge.EVENT_BUS.register(this);
+    }
+}
+neoforge.mods.toml
+This file defines your mod's metadata, placed in src/main/resources/META-INF/neoforge.mods.toml.
+Example:
+[[mods]]
+modId="${MOD_ID}"
+version="1.0.0"
+displayName="${MOD_DISPLAY_NAME}"
+authors="Your Name"
+description="An example mod for 1.21.11"
+displayURL="https://example.com"
+updateJSONURL="https://example.com/updates.json"
+features="minecraft:client_only"
+
+# Dependencies
+[[dependencies.${MOD_ID}]]
+modId="neoforge"
+mandatory=true
+versionRange="[21.11.0,)"
+ordering="NONE"
+side="BOTH"
+⚠️ Gotcha: Mod IDs can only contain lowercase letters and underscores. Hyphens are not allowed in NeoForge mod IDs!
+
+---
+5. Registry System
+NeoForge uses a deferred registration system to handle registry events safely.
+Core Concepts
+- DeferredRegister: A helper to queue registration entries until the correct registry event fires.
+- BuiltInRegistries: Vanilla's built-in registries (blocks, items, etc.)
+- NeoForgeRegistries: NeoForge's custom registries (for things like fluid types, capabilities)
+Exact Imports:
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+⚠️ Warning: All registry names now use Identifier instead of ResourceLocation. Replace all ResourceLocation references with Identifier.
+
+---
+6. Block/Item Registration
+Use the specialized DeferredRegister subclasses for simplified block/item registration.
+Exact Imports:
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.neoforged.neoforge.registries.DeferredBlock;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
+Code Example:
+public class ModBlocks {
+    // Create a deferred register for blocks
+    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(${MOD_CLASS}.MOD_ID);
+
+    // Register a simple block
+    public static final DeferredBlock<Block> EXAMPLE_BLOCK = BLOCKS.registerSimpleBlock(
+        "example_block",
+        BlockBehaviour.Properties.of().strength(2.0f)
+    );
+}
+
+public class ModItems {
+    // Create a deferred register for items
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(${MOD_CLASS}.MOD_ID);
+
+    // Register a simple item
+    public static final DeferredItem<Item> EXAMPLE_ITEM = ITEMS.registerSimpleItem(
+        "example_item",
+        new Item.Properties()
+    );
+
+    // Register the block item for our custom block
+    public static final DeferredItem<BlockItem> EXAMPLE_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
+        ModBlocks.EXAMPLE_BLOCK,
+        new Item.Properties()
+    );
+}
+✅ Best Practice: Use the specialized createBlocks()/createItems() helpers instead of generic DeferredRegister.create(), they provide extra utility methods.
+
+---
+7. Rendering: Model Changes
+The rendering system received major updates in 1.21.11.
+Key Changes
+1. RenderType → RenderTypes: All built-in render types moved to the RenderTypes class.
+// Old: RenderType.solid()
+// New: RenderTypes.solid()
+2. Custom Render Types: Now use RenderSetup instead of composite state.
+// Exact Imports:
+import com.mojang.blaze3d.rendering.RenderPipeline;
+import com.mojang.blaze3d.rendering.RenderSetup;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.RenderTypes;
+
+// Example custom render type
+private static final RenderSetup EXAMPLE_SETUP = RenderSetup.builder()
+    .pipeline(RenderPipeline.POSITION_TEX_COLOR)
+    .useLightmap()
+    .useOverlay()
+    .build();
+
+public static final RenderType EXAMPLE_RENDER_TYPE = RenderType.create(
+    "${MOD_ID}:example_type",
+    EXAMPLE_SETUP
+);
+3. Item Atlas: Item textures are now in their own atlas. Use AtlasIds.ITEMS for item texture references.
+
+---
+8. GUI/Container: MenuType, Screen
+Menu Registration
+Exact Imports:
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+Code Example:
+public class ModMenus {
+    public static final DeferredRegister<MenuType<?>> MENUS =
+        DeferredRegister.create(Registries.MENU, ${MOD_CLASS}.MOD_ID);
+
+    // Register a menu with extra data support
+    public static final DeferredRegister<MenuType<ExampleMenu>> EXAMPLE_MENU =
+        MENUS.register("example_menu", () ->
+            IMenuTypeExtension.create(ExampleMenu::new)
+        );
+}
+
+// The menu class
+public class ExampleMenu extends AbstractContainerMenu {
+    public ExampleMenu(int containerId, Inventory playerInventory) {
+        super(ModMenus.EXAMPLE_MENU.get(), containerId);
+        // Add slots and container logic here
+    }
+
+    // Constructor with extra buffer data
+    public ExampleMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buffer) {
+        this(containerId, playerInventory);
+        // Read extra data from buffer here
+    }
+
+    @Override
+    public boolean stillValid(Player player) {
+        return true;
+    }
+}
+Screen Registration
+Exact Imports:
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.minecraft.resources.Identifier;
+Screen Class:
+public class ExampleScreen extends AbstractContainerScreen<ExampleMenu> {
+    private static final Identifier BACKGROUND =
+        Identifier.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "textures/gui/example_gui.png");
+
+    public ExampleScreen(ExampleMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(BACKGROUND, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        super.renderLabels(graphics, mouseX, mouseY);
+        graphics.drawString(font, title, 8, 6, 0x404040, false);
+    }
+}
+Register the Screen:
+@SubscribeEvent // On mod event bus
+public static void registerScreens(RegisterMenuScreensEvent event) {
+    event.register(ModMenus.EXAMPLE_MENU.get(), ExampleScreen::new);
+}
+
+---
+9. Networking: NeoForge Networking
+NeoForge uses a payload-based networking system for 1.21.x.
+Exact Imports:
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.resources.Identifier;
+Payload Example:
+// Custom packet payload record
+public record ExamplePayload(String message, int value) implements CustomPacketPayload {
+    // Unique payload identifier
+    public static final Type<ExamplePayload> TYPE =
+        new Type<>(Identifier.fromNamespaceAndPath(${MOD_CLASS}.MOD_ID, "example_payload"));
+
+    // Stream codec to serialize/deserialize the payload
+    public static final StreamCodec<ByteBuf, ExamplePayload> STREAM_CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.STRING_UTF8, ExamplePayload::message,
+            ByteBufCodecs.VAR_INT, ExamplePayload::value,
+            ExamplePayload::new
+        );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+}
+Register Payload Handlers:
+@SubscribeEvent
+public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+    PayloadRegistrar registrar = event.registrar("1"); // Network version
+
+    // Register bidirectional payload
+    registrar.playBidirectional(
+        ExamplePayload.TYPE,
+        ExamplePayload.STREAM_CODEC,
+        ExamplePayload::handle
+    );
+}
+
+// Handler method
+private static void handle(ExamplePayload payload, IPayloadContext context) {
+    context.enqueueWork(() -> {
+        // Handle the payload on the main thread
+        ${MOD_CLASS}.LOGGER.info("Received payload: {} - {}", payload.message(), payload.value());
+    });
+}
+
+---
+10. Events: NeoForge Event Bus
+There are two event buses:
+1. Mod Event Bus: For mod-specific events (registration, config)
+2. NeoForge Event Bus: For game-wide events (player joins, world ticks, etc.)
+Exact Imports:
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+Event Listener Example:
+// Register the class to the NeoForge bus
+NeoForge.EVENT_BUS.register(this);
+
+// Event handler method
+@SubscribeEvent
+public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+    ${MOD_CLASS}.LOGGER.info("Player joined: {}", event.getEntity().getName());
+}
+⚠️ Common Pitfall: Don't register game events to the mod event bus, and don't register registration events to the game bus!
+
+---
+11. Config: NeoForge Config
+NeoForge uses NightConfig for TOML-based configuration.
+Exact Imports:
+import net.neoforged.neoforge.common.ModConfigSpec;
+import org.apache.commons.lang3.tuple.Pair;
+Config Class:
+public class Config {
+    public static final ModConfigSpec SPEC;
+    public static final Config INSTANCE;
+
+    // Config values
+    public final ModConfigSpec.BooleanValue logDirtBlock;
+    public final ModConfigSpec.IntValue magicNumber;
+    public final ModConfigSpec.ConfigValue<String> magicMessage;
+    public final ModConfigSpec.ConfigValue<java.util.List<? extends String>> itemList;
+
+    static {
+        Pair<Config, ModConfigSpec> pair = new ModConfigSpec.Builder()
+            .configure(Config::new);
+        INSTANCE = pair.getLeft();
+        SPEC = pair.getRight();
+    }
+
+    private Config(ModConfigSpec.Builder builder) {
+        builder.push("general");
+
+        logDirtBlock = builder.comment("Whether to log dirt block on startup")
+            .define("logDirtBlock", true);
+
+        magicNumber = builder.comment("A magic number")
+            .defineInRange("magicNumber", 42, 0, Integer.MAX_VALUE);
+
+        magicMessage = builder.comment("Message for the magic number")
+            .define("magicMessage", "The magic number is: ");
+
+        itemList = builder.comment("List of items to log")
+            .defineListAllowEmpty("items",
+                java.util.List.of("minecraft:iron_ingot"),
+                () -> true
+            );
+
+        builder.pop();
+    }
+}
+Register Config:
+Do this in your mod constructor:
+modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+---
+12. Common Pitfalls
+1. ResourceLocation vs Identifier: Forgetting to replace all ResourceLocation references with Identifier is the #1 compile error in 1.21.11.
+2. Transfer API Migration: Legacy IItemHandler capabilities no longer work. You must migrate to the new ResourceHandler system, or use the wrapper adapters.
+3. Key Mapping Categories: Old string-based categories will throw errors. You must create a KeyMapping.Category and register it.
+4. Mod ID Validation: Using uppercase letters or hyphens in your mod ID will cause loading failures.
+5. Event Bus Mixup: Registering events to the wrong bus will cause them to never fire.
+6. Render Type Changes: Old custom RenderType code will break due to the new rendering pipeline.
+
+---
+13. Java Version
+Java 21 is strictly required for this version range. Minecraft 1.21+ uses Java 21 features, and NeoForge will not build or run with older Java versions.
+❌ Invalid: Java 17, 19
+✅ Valid: Java 21
+
+---
+14. Common Errors & Fixes
+Error
+Cause
+Fix
+cannot find symbol: class ResourceLocation
+Forgot to rename to Identifier
+Find+replace all ResourceLocation with Identifier, update imports to net.minecraft.resources.Identifier
+cannot find symbol: method fromNamespaceAndPath(ResourceLocation)
+Old RL static method
+Use Identifier.fromNamespaceAndPath() instead
+package net.minecraft.advancements.critereon does not exist
+Spelling change
+Update import to net.minecraft.advancements.criterion
+Capabilities.ItemHandler.BLOCK cannot be found
+Old transfer API capability
+Use Capabilities.Item.BLOCK instead, wrap with IItemHandler.of() if needed
+Unsupported major.minor version 65
+Wrong Java version
+Set your project SDK to Java 21
+Gradle version 8.8 is required
+Old Gradle version
+Update your Gradle version to 8.8+
+Mod ID 'example-mod' contains invalid characters
+Invalid mod ID
+Remove hyphens, use only lowercase letters and underscores
+Event never fires
+Wrong event bus
+Move registration to the correct bus (mod bus for registration, game bus for game events)
+
+---
+Additional Resources
+- Official NeoForge Documentation
+- 1.21.11 Migration Primer
+- Transfer API Migration Guide
+- Mod Generator - Generate a starter project
