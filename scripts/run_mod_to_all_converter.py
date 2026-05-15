@@ -692,15 +692,6 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
     for tname in skipped_targets:
         if tname not in ai_progress:
             ai_progress[tname] = previous_progress.get(tname, "skipped")
-    # Add targets that were already done (found airesponse.txt without progress file)
-    for td in already_done:
-        if td.name not in ai_progress:
-            resp_path = td / "airesponse.txt"
-            if resp_path.exists():
-                content = resp_path.read_text(encoding="utf-8")
-                ai_progress[td.name] = "complete" if _response_has_java_files(content) else "failed"
-            else:
-                ai_progress[td.name] = "failed"
 
     out_root = bundle_dir.parent.parent
     ai_progress_path = out_root / "ai_stage_progress.json"
