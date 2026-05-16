@@ -36,6 +36,64 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 _VERSION_GUIDE_DIR = _REPO_ROOT / "Version guide"
+_DECOMPILED_ROOT = _REPO_ROOT / "DecompiledMinecraftSourceCode"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Decompiled Source Helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _find_decompiled_source_dir(mc_version: str, loader: str) -> Path | None:
+    """Find the decompiled Minecraft source directory for a version+loader combo."""
+    target_name = f"{mc_version}-{loader}"
+    direct = _DECOMPILED_ROOT / target_name
+    if direct.exists() and direct.is_dir():
+        return direct
+    for d in _DECOMPILED_ROOT.iterdir():
+        if not d.is_dir():
+            continue
+        if d.name.startswith(f"{mc_version}-{loader}"):
+            return d
+        if mc_version.startswith(d.name.split("-")[0]):
+            return d
+    return None
+
+
+def _collect_decompiled_source_paths(source_dir: Path) -> list[str]:
+    """Collect all .java file paths relative to the decompiled source directory."""
+    paths = []
+    for p in sorted(source_dir.rglob("*.java")):
+        rel = str(p.relative_to(source_dir))
+        if rel.endswith("package-info.java"):
+            continue
+        paths.append(rel)
+    return paths
+
+
+def _read_decompiled_source_content(source_dir: Path, file_paths: list[str], max_chars: int = 50000) -> str:
+    """Read the content of selected decompiled source files, up to max_chars total."""
+    content_parts = []
+    total = 0
+    for path in file_paths:
+        file_path = source_dir / path
+        if not file_path.exists() or not file_path.is_file():
+            continue
+        try:
+            text = file_path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        if len(text) > 200000:
+            text = text[:200000] + "\n// ... (truncated)\n"
+        if total + len(text) > max_chars:
+            # Truncate the last entry if needed
+            allowed = max_chars - total
+            if allowed > 200:
+                text = text[:allowed] + "\n// ... (truncated)\n"
+                content_parts.append(f"--- {path} ---\n```java\n{text}\n```")
+            break
+        content_parts.append(f"--- {path} ---\n```java\n{text}\n```")
+        total += len(text)
+    return "\n".join(content_parts)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -337,6 +395,58 @@ def generate_background_info(
             lines.append(_format_dif_entry(entry))
             lines.append("")
 
+    # ── Section 3: Decompiled Minecraft Source Code References ───────────
+    lines.append("─" * 60)
+    lines.append("## Section 3: Minecraft Source Code References")
+    lines.append("─" * 60)
+    lines.append("")
+    lines.append("The following is the decompiled Minecraft source code for this version and loader.")
+    lines.append("Study these file paths and signatures carefully — they are the EXACT APIs")
+    lines.append("available in this Minecraft version. Always use these correct class paths")
+    lines.append("(under `net.minecraft.*`) rather than guessing or inventing your own.")
+    lines.append("")
+
+    decompiled_dir = _find_decompiled_source_dir(minecraft_version, loader)
+    if decompiled_dir and decompiled_dir.exists():
+        source_paths = _collect_decompiled_source_paths(decompiled_dir)
+        lines.append(f"Decompiled source directory found: {decompiled_dir.name}")
+        lines.append(f"Total available source files: {len(source_paths)}")
+        lines.append("")
+        lines.append("### Complete Source File Paths (for correct import paths)")
+        lines.append("")
+        lines.append("```")
+        for sp in source_paths:
+            lines.append(sp)
+        lines.append("```")
+        lines.append("")
+
+        # Include content from some key files (up to max_chars limit)
+        # Prioritize files most relevant to modding: events, commands, registries, etc.
+        priority_keywords = ["Command", "Event", "Registry", "Item", "Block", "Entity",
+                            "Player", "World", "Server", "GameRule", "MinecraftServer"]
+        priority_paths = []
+        other_paths = []
+        for sp in source_paths:
+            if any(kw in Path(sp).name for kw in priority_keywords):
+                priority_paths.append(sp)
+            else:
+                other_paths.append(sp)
+        selected_paths = priority_paths[:15] + other_paths[:5]  # Up to 20 files
+
+        source_content = _read_decompiled_source_content(decompiled_dir, selected_paths, max_chars=80000)
+        if source_content:
+            lines.append("### Key Source File Contents (truncated for length)")
+            lines.append("")
+            lines.append(source_content)
+            lines.append("")
+            lines.append("*Only a subset of files is shown above to save space.")
+            lines.append("Use the full file path list above to determine correct imports and class names.*")
+            lines.append("")
+    else:
+        lines.append(f"*No decompiled source available for {minecraft_version}/{loader}.*")
+        lines.append("The AI should rely on the template code and standard Minecraft API knowledge.")
+        lines.append("")
+
     lines.append("─" * 60)
     lines.append("End of Background Info")
     return "\n".join(lines)
@@ -551,6 +661,16 @@ def generate_prompt(
     lines.append("1. **YOU MUST OUTPUT ALL FILES** — Every single file must be provided.")
     lines.append("   Missing a single file will cause the build to fail.")
     lines.append("")
+    lines.append("1b. **🚫 FORBIDDEN: NEVER use com.example, ExampleMod, or any 'Example' names**")
+    lines.append(f"    - DO NOT use `com.example` as a package — use `{mod_path}`")
+    lines.append(f"    - DO NOT name classes `ExampleMod`, `ExampleModClient`, `ExampleMixin`, `ExampleClientMixin`")
+    lines.append(f"    - DO NOT use `modid` as the mod ID — use the actual mod ID from the metadata")
+    lines.append(f"    - ALWAYS use `{mod_path}` as the Java package")
+    lines.append(f"    - ALWAYS use `Itamio` / `itamio` as the author in ALL metadata files")
+    lines.append(f"    - ALWAYS use the actual mod name `{meta.get('mod_name', 'Mod')}` in display names and descriptions")
+    lines.append("    The template code in PART 2 uses 'com.example' and 'ExampleMod' as placeholders.")
+    lines.append(f"    You MUST replace ALL of these with the correct package `{mod_path}` and class `{main_class_name}`.")
+    lines.append("")
     lines.append("2. **EXACT OUTPUT FORMAT** — Each file MUST be in this EXACT two-block format.")
     lines.append("   This is the ONLY accepted format. The parser strictly reads blocks in pairs:")
     lines.append("")
@@ -581,7 +701,10 @@ def generate_prompt(
     lines.append("")
     lines.append("5. **Implement REAL logic** from the decompiled source in PART 1. No stubs or TODOs.")
     lines.append("")
-    lines.append(f"6. **Use the EXACT package** `{mod_path}` in all Java files.")
+    lines.append(f"6. **Use the EXACT package** `{mod_path}` in ALL Java files.")
+    lines.append(f"    This is the author 'Itamio' package: `asd.itamio.<mod_id>`.")
+    lines.append(f"    The author in ALL metadata files MUST be `Itamio` or `itamio`.")
+    lines.append(f"    NEVER use `com.example` or any other author/package.")
     lines.append("")
     lines.append(f"7. **The main class name is `{main_class_name}`** — filename must match exactly.")
     lines.append("")
@@ -615,6 +738,12 @@ def generate_prompt(
     lines.append("    - gradle/wrapper/*")
     lines.append("    Creating these files will cause build failures. Only create source files.")
     lines.append("")
+    lines.append("11. **Use the Minecraft Source Code References in Background Info (Section 3)**")
+    lines.append("    The Background Info file contains a complete list of all decompiled Minecraft")
+    lines.append("    source file paths for this version and loader. Use these paths to determine")
+    lines.append("    the CORRECT import paths and class names. NEVER guess or invent API paths.")
+    lines.append("    The correct imports always start with `net.minecraft.` followed by the")
+    lines.append("    exact path shown in Section 3.")
 
     # Expected files based on template
     lines.append("## FILES TO CREATE")
