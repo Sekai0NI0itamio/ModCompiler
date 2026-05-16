@@ -111,7 +111,7 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
 
 
 def _normalize_modrinth_link(raw: str) -> str:
-    raw = raw.strip().rstrip("/")
+    raw = raw.strip().strip("`").strip("'").strip('"').rstrip("/")
     if not raw:
         raise RunError("Modrinth link or slug is required.")
     if "modrinth.com" in raw:
