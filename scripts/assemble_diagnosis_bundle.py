@@ -321,13 +321,15 @@ def assemble_bundle(
     body = project_info.get("body", "") or ""
     loaders = project_info.get("loaders", [])
 
-    working_records = [r for r in diagnosis.get("version_records", []) if not r.get("is_shell")]
+    working_records = [r for r in diagnosis.get("version_records", []) if not r.get("is_shell") and r.get("launcher_status") != "launcher_failed"]
     shell_records = [r for r in diagnosis.get("version_records", []) if r.get("is_shell")]
+    launcher_failed_records = [r for r in diagnosis.get("version_records", []) if r.get("launcher_status") == "launcher_failed"]
     missing_pairs = diagnosis.get("missing_pairs", [])
 
     _log(f"Project: {title} ({slug})")
     _log(f"Working versions: {len(working_records)}")
     _log(f"Shell versions: {len(shell_records)}")
+    _log(f"Launcher-failed versions: {len(launcher_failed_records)}")
     _log(f"Missing pairs (repo can build): {len(missing_pairs)}")
 
     # ── Build combined needed-targets list ─────────────────────────────────────
@@ -343,6 +345,18 @@ def assemble_bundle(
                         "loader": loader,
                         "reason": "shell",
                         "shell_version_number": rec.get("version_number", "?"),
+                    }
+
+    for rec in launcher_failed_records:
+        for mc_ver in rec.get("game_versions", []):
+            for loader in rec.get("loaders", []):
+                key = f"{mc_ver}-{loader}"
+                if key not in needed_targets:
+                    needed_targets[key] = {
+                        "minecraft_version": mc_ver,
+                        "loader": loader,
+                        "reason": "launcher_failed",
+                        "launcher_crash_summary": rec.get("launcher_crash_summary", ""),
                     }
 
     for pair in missing_pairs:
@@ -767,6 +781,7 @@ def assemble_bundle(
     diagnosis_lines.append(f"  Analysed (latest per slot) : {diagnosis.get('analysed_versions', '?')}")
     diagnosis_lines.append(f"  Working versions           : {diagnosis.get('working_count', 0)}")
     diagnosis_lines.append(f"  Shell/malformed versions   : {diagnosis.get('shell_count', 0)}")
+    diagnosis_lines.append(f"  Launcher-failed versions   : {diagnosis.get('launcher_failed', 0)}")
     diagnosis_lines.append(f"  Missing (repo can build)   : {diagnosis.get('missing_count', 0)}")
     diagnosis_lines.append(f"  Total needed targets       : {len(needed_targets)}")
     diagnosis_lines.append("")
@@ -775,7 +790,7 @@ def assemble_bundle(
     for rec in working_records:
         ldrs = ",".join(rec.get("loaders", []))
         gvs = ",".join(rec.get("game_versions", []))
-        status = "SHELL" if rec.get("is_shell") else "OK"
+        status = "SHELL" if rec.get("is_shell") else ("LAUNCH_FAIL" if rec.get("launcher_status") == "launcher_failed" else "OK")
         diagnosis_lines.append(f"  {rec['version_number']:<20} [{status}] MC={gvs:<20} Loader={ldrs:<20} classes={rec.get('class_count', '?'):>6}")
     diagnosis_lines.append("")
 
@@ -786,6 +801,19 @@ def assemble_bundle(
         reason = rec.get("shell_reason", "unknown")
         diagnosis_lines.append(f"  {rec['version_number']:<20} MC={gvs:<20} Loader={ldrs:<20} reason={reason}")
     if not shell_records:
+        diagnosis_lines.append("  None")
+    diagnosis_lines.append("")
+
+    diagnosis_lines.append("── LAUNCHER FAILED VERSIONS (jar has classes but crashes at runtime) ──")
+    for rec in launcher_failed_records:
+        ldrs = ",".join(rec.get("loaders", []))
+        gvs = ",".join(rec.get("game_versions", []))
+        crash = rec.get("launcher_crash_summary", "")
+        diagnosis_lines.append(f"  {rec['version_number']:<20} MC={gvs:<20} Loader={ldrs:<20}")
+        if crash:
+            for cl in crash.splitlines()[:5]:
+                diagnosis_lines.append(f"    {cl}")
+    if not launcher_failed_records:
         diagnosis_lines.append("  None")
     diagnosis_lines.append("")
 

@@ -3,29 +3,36 @@ name: Automated Mod to ALL Version Converter
 # ---------------------------------------------------------------------------
 # Purpose
 # -------
-# Generates an AI-ready "porting bundle" from a Modrinth project URL. The
-# workflow has three distinct phases spanning four jobs:
+# Generates an AI-ready "porting bundle" from a Modrinth project URL.
+# The workflow has three distinct phases spanning six jobs:
 #
-#   PHASE 1 — INFORMATION GATHERING & DIAGNOSIS
-#   ────────────────────────────────────────────
-#   Job 1: info-gather     — Fetches Modrinth project metadata, downloads the
-#                            original/oldest working jar, decompiles its source,
-#                            and writes a master projectinfo.txt.
-#   Job 2: diagnosis       — Scans all published versions, detects shells
-#                            (malformed jars) and identifies which MC version +
-#                            loader combos the repo can build but are missing
-#                            from Modrinth.
+#   PHASE 1 — INFORMATION GATHERING, DIAGNOSIS & LAUNCHER TESTING
+#   ──────────────────────────────────────────────────────────────
+#   Job 1: info-gather      — Fetches Modrinth project metadata, downloads the
+#                              original/oldest working jar, decompiles its source,
+#                              and writes a master projectinfo.txt.
+#   Job 2: diagnosis         — Scans all published versions, detects shells
+#                              (malformed jars) and identifies which MC version +
+#                              loader combos the repo can build but are missing
+#                              from Modrinth. Also builds a launcher test matrix
+#                              for all working (non-shell) versions.
+#   Job 3: launcher-test     — Tests each working version by launching it in a
+#                              headless Minecraft client. Versions that crash are
+#                              marked as launcher_failed.
+#   Job 4: update-diagnosis  — Merges launcher test results back into the
+#                              diagnosis data, producing an updated diagnosis
+#                              artifact with launcher_status for every version.
 #
 #   PHASE 2 — BUNDLE ASSEMBLY
 #   ──────────────────────────
-#   Job 3: assemble        — For each missing/shell target (mc_version-loader),
+#   Job 5: assemble        — For each missing/shell/launcher_failed target (mc_version-loader),
 #                            creates a per-target folder with projectinfo.txt
 #                            (mod metadata + decompiled source from the closest
 #                            working version AND closest working loader).
 #
 #   PHASE 3 — AI PROMPT GENERATION
 #   ──────────────────────────────
-#   Job 4: generate-prompts — For each target folder created in Phase 2, adds:
+#   Job 6: generate-prompts — For each target folder created in Phase 2, adds:
 #                              • Background Info.txt  — Working template code
 #                                                       from the repo + top 4
 #                                                       DIF (Documented Issue
@@ -386,6 +393,167 @@ jobs:
           output_path.write_text(f"project_slug={slug}\nversion_count={len(all_versions)}\n", encoding="utf-8")
           PY
 
+      - name: Build launcher test matrix
+        id: build-launcher-matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
+          from pathlib import Path
+
+          OUT = Path(".workflow_artifacts/diagnosis")
+          diag = json.loads((OUT / "diagnosis.json").read_text(encoding="utf-8"))
+          working = [r for r in diag.get("version_records", []) if not r.get("is_shell", False)]
+
+          if not working:
+              matrix = json.dumps({"include": []})
+              output_path = Path(os.environ["GITHUB_OUTPUT"])
+              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
+              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+              print("No working versions to test — empty launcher matrix")
+              sys.exit(0)
+
+          print("Fetching mc-runtime-test supported version data...")
+          try:
+              req = urllib.request.Request(
+                  "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json",
+                  headers={"User-Agent": "ModCompilerLauncherDiagnosis/1.0"},
+              )
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  ci_data = json.loads(r.read().decode())
+          except Exception as e:
+              print(f"WARNING: Could not fetch ci-data.json: {e}")
+              matrix = json.dumps({"include": []})
+              output_path = Path(os.environ["GITHUB_OUTPUT"])
+              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
+              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+              sys.exit(0)
+
+          run_data = ci_data.get("run_data", [])
+          if not run_data:
+              print("WARNING: ci-data.json contains no run_data")
+              matrix = json.dumps({"include": []})
+              output_path = Path(os.environ["GITHUB_OUTPUT"])
+              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
+              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+              sys.exit(0)
+
+          supported = {}
+          for entry in run_data:
+              mc = entry.get("mc")
+              ltype = entry.get("type")
+              modloader = entry.get("modloader")
+              regex = entry.get("regex")
+              java_str = entry.get("java")
+              if not all([mc, ltype, modloader, regex, java_str]):
+                  continue
+              try:
+                  java = int(java_str)
+              except (ValueError, TypeError):
+                  java = 17
+              supported[(mc, modloader)] = {
+                  "mc": mc,
+                  "modloader": modloader,
+                  "mcrt_jar": ltype,
+                  "regex": regex,
+                  "java": java,
+              }
+
+          def parse_mc_version(v):
+              parts = []
+              for token in re.split(r'[.\-_]', str(v).strip()):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  else:
+                      break
+              return tuple(parts) if parts else (0,)
+
+          def minor_key(v):
+              p = parse_mc_version(v)
+              if p[0] == 1 and len(p) >= 2:
+                  return (1, p[1])
+              return p[:2]
+
+          by_minor = {}
+          for (mc, modloader), cfg in supported.items():
+              key = (minor_key(mc), modloader)
+              if key not in by_minor or parse_mc_version(mc) > parse_mc_version(by_minor[key]["mc"]):
+                  by_minor[key] = cfg
+
+          def map_loader(loader):
+              if loader == "quilt":
+                  return "fabric"
+              return loader
+
+          def find_test_config(gv, loader):
+              if (gv, loader) in supported:
+                  return supported[(gv, loader)]
+              mk = minor_key(gv)
+              if (mk, loader) in by_minor:
+                  return by_minor[(mk, loader)]
+              return None
+
+          def safe_artifact_key(loader, gv):
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", f"{loader}-{gv}").strip("_")
+
+          matrix_entries = []
+          skipped = []
+
+          for r in working:
+              file_url = r.get("file_url", "")
+              file_name = r.get("jar_name", "")
+              if not file_url or not file_name:
+                  continue
+              for gv in r.get("game_versions", []):
+                  if not isinstance(gv, str) or not gv.strip():
+                      continue
+                  gv = gv.strip()
+                  for loader in r.get("loaders", []):
+                      if not isinstance(loader, str) or not loader.strip():
+                          continue
+                      loader = loader.strip()
+                      test_loader = map_loader(loader)
+                      if test_loader not in ("fabric", "forge", "neoforge"):
+                          skipped.append((gv, loader, "unsupported loader"))
+                          continue
+                      test_config = find_test_config(gv, test_loader)
+                      if test_config is None:
+                          skipped.append((gv, test_loader, "no mc-runtime-test support"))
+                          continue
+                      matrix_entries.append({
+                          "game_version": gv,
+                          "test_mc": test_config["mc"],
+                          "loader": test_config["modloader"],
+                          "original_loader": loader,
+                          "file_url": file_url,
+                          "file_name": file_name,
+                          "version_number": r.get("version_number", ""),
+                          "java_version": test_config["java"],
+                          "loader_regex": test_config["regex"],
+                          "mcrt_jar": test_config["mcrt_jar"],
+                          "safe_key": safe_artifact_key(loader, gv),
+                      })
+
+          matrix_entries.sort(key=lambda e: (e["game_version"], e["loader"]))
+
+          if skipped:
+              unique_skipped = sorted(set(skipped))
+              print(f"Skipped {len(unique_skipped)} (version, loader) pairs:")
+              for gv, loader, reason in unique_skipped:
+                  print(f"    {loader} {gv}: {reason}")
+
+          print(f"\nGenerated {len(matrix_entries)} launcher test entries:")
+          for entry in matrix_entries:
+              mapped = "" if entry["game_version"] == entry["test_mc"] else f" (tested on {entry['test_mc']})"
+              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<12} -> {entry['test_mc']}{mapped}  Java {entry['java_version']}  ({entry['version_number']})")
+
+          matrix = json.dumps({"include": matrix_entries})
+          (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count={len(matrix_entries)}\n", encoding="utf-8")
+          print(f"Wrote launcher-matrix.json ({len(matrix_entries)} entries)")
+          PYEOF
+
       - uses: actions/upload-artifact@v4
         with:
           name: info-gather-output
@@ -400,6 +568,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has_issues: ${{ steps.diagnose.outputs.has_issues }}
+      launcher_matrix: ${{ steps.build-launcher-matrix.outputs.launcher_matrix }}
+      launcher_matrix_count: ${{ steps.build-launcher-matrix.outputs.launcher_matrix_count }}
     steps:
       - uses: actions/checkout@v4
 
@@ -522,6 +692,7 @@ jobs:
               vid = v["id"]
               fi = select_primary_modrinth_file(v.get("files", []))
               jar_name = ""
+              jar_url = ""
               jar_size = 0
               class_count = -1
               is_shell = False
@@ -562,6 +733,7 @@ jobs:
                   "game_versions": v.get("game_versions", []),
                   "loaders": v.get("loaders", []),
                   "jar_name": jar_name,
+                  "file_url": jar_url,
                   "jar_size": jar_size,
                   "class_count": class_count,
                   "is_shell": is_shell,
@@ -693,15 +865,335 @@ jobs:
           path: .workflow_artifacts/diagnosis/
           if-no-files-found: error
 
+  # ---------------------------------------------------------------------------
+  # Job 3: Launcher Test — Test each working version in a headless Minecraft client
+  # ---------------------------------------------------------------------------
+  launcher-test:
+    name: Launcher test ${{ matrix.original_loader }} ${{ matrix.game_version }}
+    needs: [diagnosis]
+    if: ${{ always() && needs.diagnosis.outputs.launcher_matrix_count != '0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJson(needs.diagnosis.outputs.launcher_matrix) }}
+
+    steps:
+      - name: Install Java ${{ matrix.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java_version }}
+          distribution: temurin
+
+      - name: Download Mod Jar
+        env:
+          MOD_FILE_URL: ${{ matrix.file_url }}
+          MOD_FILE_NAME: ${{ matrix.file_name }}
+        run: |
+          mkdir -p run/mods
+          echo "Downloading $MOD_FILE_NAME ..."
+          for attempt in 1 2 3; do
+            if curl -fsSL --retry 3 --retry-delay 5 "$MOD_FILE_URL" -o "run/mods/$MOD_FILE_NAME"; then
+              break
+            fi
+            echo "Download attempt $attempt failed, retrying in 10s..."
+            sleep 10
+          done
+          if [ ! -f "run/mods/$MOD_FILE_NAME" ]; then
+            echo "ERROR: Mod jar was not downloaded"
+            exit 1
+          fi
+          if [ ! -s "run/mods/$MOD_FILE_NAME" ]; then
+            echo "ERROR: Mod jar is empty (0 bytes)"
+            rm -f "run/mods/$MOD_FILE_NAME"
+            exit 1
+          fi
+          SIZE=$(stat -c%s "run/mods/$MOD_FILE_NAME" 2>/dev/null || echo "?")
+          echo "Downloaded: $MOD_FILE_NAME ($SIZE bytes)"
+
+      - name: Launch Headless Minecraft Client
+        id: mc-test
+        uses: headlesshq/mc-runtime-test@4.4.0
+        with:
+          mc: ${{ matrix.test_mc }}
+          modloader: ${{ matrix.loader }}
+          regex: ${{ matrix.loader_regex }}
+          java: ${{ matrix.java_version }}
+          mc-runtime-test: ${{ matrix.mcrt_jar }}
+          dummy-assets: true
+          xvfb: true
+          cache-mc: github
+
+      - name: Write passed result
+        if: success()
+        shell: bash
+        env:
+          MATRIX_GAME_VERSION: ${{ matrix.game_version }}
+          MATRIX_ORIGINAL_LOADER: ${{ matrix.original_loader }}
+          MATRIX_TEST_MC: ${{ matrix.test_mc }}
+          MATRIX_VERSION_NUMBER: ${{ matrix.version_number }}
+        run: |
+          mkdir -p launcher-result
+          python3 - <<'PYEOF'
+          import json, os
+          result = {
+              "status": "passed",
+              "game_version": os.environ.get("MATRIX_GAME_VERSION", ""),
+              "loader": os.environ.get("MATRIX_ORIGINAL_LOADER", ""),
+              "test_mc": os.environ.get("MATRIX_TEST_MC", ""),
+              "version_number": os.environ.get("MATRIX_VERSION_NUMBER", ""),
+          }
+          with open("launcher-result/result.json", "w") as f:
+              json.dump(result, f, indent=2)
+          PYEOF
+          echo "SUCCESS: Mod launched correctly for $MATRIX_ORIGINAL_LOADER on Minecraft $MATRIX_GAME_VERSION (tested on $MATRIX_TEST_MC)"
+
+      - name: Collect crash logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          echo "Game crashed! Collecting diagnostic logs..."
+          mkdir -p crash-logs
+          if [ -d run/crash-reports ]; then
+            cp -r run/crash-reports crash-logs/ 2>/dev/null || true
+            echo "  Collected crash-reports/"
+          fi
+          if [ -d run/logs ]; then
+            cp -r run/logs crash-logs/ 2>/dev/null || true
+            echo "  Collected logs/"
+          fi
+          if [ -f run/latest.log ]; then
+            cp run/latest.log crash-logs/ 2>/dev/null || true
+            echo "  Collected latest.log"
+          fi
+          for f in run/hs_err_pid*.log; do
+            if [ -f "$f" ]; then
+              cp "$f" crash-logs/ 2>/dev/null || true
+              echo "  Collected JVM crash log: $(basename "$f")"
+            fi
+          done
+          if [ -f run/options.txt ]; then
+            cp run/options.txt crash-logs/ 2>/dev/null || true
+          fi
+
+      - name: Write failed result
+        if: failure()
+        shell: bash
+        env:
+          MATRIX_GAME_VERSION: ${{ matrix.game_version }}
+          MATRIX_ORIGINAL_LOADER: ${{ matrix.original_loader }}
+          MATRIX_TEST_MC: ${{ matrix.test_mc }}
+          MATRIX_VERSION_NUMBER: ${{ matrix.version_number }}
+        run: |
+          mkdir -p launcher-result
+          CRASH_SUMMARY=""
+          if [ -f crash-logs/latest.log ]; then
+            CRASH_SUMMARY=$(head -20 crash-logs/latest.log 2>/dev/null | tr '\n' ' ' | head -c 500)
+          elif [ -d crash-logs/crash-reports ]; then
+            CRASH_FILE=$(find crash-logs/crash-reports -name '*.txt' -type f 2>/dev/null | head -1)
+            if [ -n "$CRASH_FILE" ]; then
+              CRASH_SUMMARY=$(head -20 "$CRASH_FILE" 2>/dev/null | tr '\n' ' ' | head -c 500)
+            fi
+          fi
+          export CRASH_SUMMARY
+          python3 - <<'PYEOF'
+          import json, os
+          result = {
+              "status": "launcher_failed",
+              "game_version": os.environ.get("MATRIX_GAME_VERSION", ""),
+              "loader": os.environ.get("MATRIX_ORIGINAL_LOADER", ""),
+              "test_mc": os.environ.get("MATRIX_TEST_MC", ""),
+              "version_number": os.environ.get("MATRIX_VERSION_NUMBER", ""),
+              "crash_summary": os.environ.get("CRASH_SUMMARY", ""),
+          }
+          with open("launcher-result/result.json", "w") as f:
+              json.dump(result, f, indent=2)
+          PYEOF
+          echo "FAILED: Mod crashed for $MATRIX_ORIGINAL_LOADER on Minecraft $MATRIX_GAME_VERSION"
+
+      - name: Upload launcher result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-result-${{ matrix.safe_key }}
+          path: launcher-result/
+          if-no-files-found: warn
+
+      - name: Upload crash logs
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-${{ matrix.safe_key }}
+          path: crash-logs/
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # Job 4: Update Diagnosis — Merge launcher test results into diagnosis data
+  # ---------------------------------------------------------------------------
+  update-diagnosis:
+    name: Update diagnosis with launcher test results
+    needs: [diagnosis, launcher-test]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download diagnosis output
+        uses: actions/download-artifact@v4
+        with:
+          name: diagnosis-output
+          path: .workflow_downloads/diagnosis
+
+      - name: Download launcher result artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: launcher-result-*
+          path: .workflow_downloads/launcher-results
+
+      - name: Merge launcher results into diagnosis
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, shutil
+          from pathlib import Path
+          from datetime import datetime
+
+          DIAG_DIR = Path(".workflow_downloads/diagnosis")
+          RESULTS_DIR = Path(".workflow_downloads/launcher-results")
+          OUT = Path(".workflow_artifacts/diagnosis-updated")
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          diag = json.loads((DIAG_DIR / "diagnosis.json").read_text(encoding="utf-8"))
+          diag_text = (DIAG_DIR / "diagnosis.txt").read_text(encoding="utf-8")
+
+          launcher_results = {}
+          if RESULTS_DIR.exists():
+              for rf in RESULTS_DIR.rglob("result.json"):
+                  try:
+                      r = json.loads(rf.read_text(encoding="utf-8"))
+                      gv = r.get("game_version", "")
+                      loader = r.get("loader", "")
+                      key = (gv, loader)
+                      launcher_results[key] = r
+                  except Exception as e:
+                      print(f"WARNING: Could not read {rf}: {e}")
+
+          print(f"Found {len(launcher_results)} launcher test results")
+
+          tested = 0
+          passed = 0
+          failed = 0
+          launcher_failed_versions = []
+
+          for rec in diag.get("version_records", []):
+              is_shell = rec.get("is_shell", False)
+              if is_shell:
+                  rec["launcher_status"] = "skipped_shell"
+                  continue
+
+              matched_result = None
+              for gv in rec.get("game_versions", []):
+                  for loader in rec.get("loaders", []):
+                      if (gv, loader) in launcher_results:
+                          matched_result = launcher_results[(gv, loader)]
+                          break
+                  if matched_result:
+                      break
+
+              if matched_result:
+                  status = matched_result.get("status", "not_tested")
+                  rec["launcher_status"] = status
+                  if status == "passed":
+                      passed += 1
+                      tested += 1
+                  elif status == "launcher_failed":
+                      failed += 1
+                      tested += 1
+                      launcher_failed_versions.append({
+                          "game_version": matched_result.get("game_version", ""),
+                          "loader": matched_result.get("loader", ""),
+                          "test_mc": matched_result.get("test_mc", ""),
+                          "version_number": matched_result.get("version_number", ""),
+                          "crash_summary": matched_result.get("crash_summary", ""),
+                      })
+                  else:
+                      rec["launcher_status"] = "not_tested"
+              else:
+                  rec["launcher_status"] = "not_tested"
+
+          diag["launcher_tested"] = tested
+          diag["launcher_passed"] = passed
+          diag["launcher_failed"] = failed
+          diag["launcher_failed_versions"] = launcher_failed_versions
+
+          (OUT / "diagnosis.json").write_text(json.dumps(diag, indent=2, default=str), encoding="utf-8")
+
+          lines = diag_text.splitlines()
+          generated_idx = None
+          for i, line in enumerate(lines):
+              if line.startswith("Generated:"):
+                  generated_idx = i
+                  break
+
+          launcher_section = [
+              "",
+              "── LAUNCHER TEST RESULTS ──────────────────────────────────────────",
+              f"  Tested  : {tested}",
+              f"  Passed  : {passed}",
+              f"  Failed  : {failed}",
+              "",
+          ]
+
+          if launcher_failed_versions:
+              launcher_section.append("  Failed versions:")
+              for fv in launcher_failed_versions:
+                  launcher_section.append(f"    {fv['loader']} MC {fv['game_version']} (tested on {fv['test_mc']}) — {fv['version_number']}")
+                  if fv.get("crash_summary"):
+                      summary = fv["crash_summary"][:200]
+                      launcher_section.append(f"      Crash: {summary}")
+          else:
+              launcher_section.append("  No launcher failures detected.")
+
+          launcher_section.append("")
+
+          if generated_idx is not None:
+              lines = lines[:generated_idx] + launcher_section + lines[generated_idx:]
+          else:
+              lines += launcher_section
+
+          (OUT / "diagnosis.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+          for f in DIAG_DIR.iterdir():
+              if f.name not in ("diagnosis.json", "diagnosis.txt"):
+                  if f.is_file():
+                      shutil.copy2(f, OUT / f.name)
+                  elif f.is_dir():
+                      shutil.copytree(f, OUT / f.name, dirs_exist_ok=True)
+
+          print(f"Updated diagnosis: {tested} tested, {passed} passed, {failed} failed")
+          PYEOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diagnosis-updated
+          path: .workflow_artifacts/diagnosis-updated/
+          if-no-files-found: error
+
   # ===========================================================================
   # PHASE 2 — BUNDLE ASSEMBLY
   # ===========================================================================
   # ---------------------------------------------------------------------------
-  # Job 3: Assemble — Create per-target projectinfo.txt with nearest source code
+  # Job 5: Assemble — Create per-target projectinfo.txt with nearest source code
   # ---------------------------------------------------------------------------
   assemble:
     name: Assemble diagnosis bundle (per-target projectinfo.txt)
-    needs: [info-gather, diagnosis]
+    needs: [info-gather, update-diagnosis]
     if: always()
     runs-on: ubuntu-latest
 
@@ -724,7 +1216,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: diagnosis-output
+          name: diagnosis-updated
           path: .workflow_downloads/diagnosis
 
       - name: Run assembly script
@@ -762,7 +1254,7 @@ jobs:
   # PHASE 3 — AI PROMPT GENERATION
   # ===========================================================================
   # ---------------------------------------------------------------------------
-  # Job 4: Generate Prompts — Add Background Info.txt + prompt.txt per target
+  # Job 6: Generate Prompts — Add Background Info.txt + prompt.txt per target
   # ---------------------------------------------------------------------------
   generate-prompts:
     name: Generate AI-ready prompt.txt for each target
