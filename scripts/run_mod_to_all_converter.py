@@ -611,7 +611,22 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
         prompt_text = (td / "prompt.txt").read_text(encoding="utf-8")
         author, mod_path = _read_author_info(td)
 
-        print(f"[{idx + 1}/{total}] {target_name}")
+        # Check for launcher failure log and prepend to prompt
+        launcher_failure_path = td / "launcher-failure.txt"
+        if launcher_failure_path.exists():
+            crash_log = launcher_failure_path.read_text(encoding="utf-8", errors="replace")
+            launcher_failure_context = (
+                "\n=== LAUNCHER TEST FAILURE ===\n"
+                "The mod was built successfully but FAILED to launch in Minecraft.\n"
+                "The crash log is below. Fix the issues that caused this crash:\n"
+                "\n"
+                f"{crash_log}\n"
+                "=== END LAUNCHER TEST FAILURE ===\n"
+            )
+            prompt_text = launcher_failure_context + "\n" + prompt_text
+            print(f"[{idx + 1}/{total}] {target_name}  ⚠ LAUNCHER FAILURE DETECTED")
+        else:
+            print(f"[{idx + 1}/{total}] {target_name}")
         print(f"  Prompt size: {len(prompt_text):,} chars")
 
         # Build system prompt with author context
@@ -862,6 +877,7 @@ class Runner:
             "has_build_results": False,
             "compile_started": False,
             "compile_complete": False,
+            "has_launcher_failure_logs": False,
             "ai_stage_progress": ai_stage_progress,
         }
         if bundle_dir and bundle_dir.exists():
@@ -875,6 +891,8 @@ class Runner:
                     prompt_targets.append(target_dir.name)
                 if (target_dir / "airesponse.txt").exists():
                     airesponse_targets.append(target_dir.name)
+                if (target_dir / "launcher-failure.txt").exists():
+                    progress["has_launcher_failure_logs"] = True
             progress["airesponse_count"] = len(airesponse_targets)
             progress["prompt_target_count"] = len(prompt_targets)
             # has_airesponse_txt is True only when ALL targets with prompts have responses
@@ -925,6 +943,7 @@ class Runner:
                 print(f"  AI responses:    {'✓ present' if progress['has_airesponse_txt'] else '✗ missing'}")
             print(f"  Build zip:       {'✓ present' if progress['has_build_zip'] else '✗ missing'}")
             print(f"  Build results:   {'✓ present' if progress['has_build_results'] else '✗ missing'}")
+            print(f"  Launcher fails:  {'⚠ detected' if progress['has_launcher_failure_logs'] else '✓ none'}")
             print()
         else:
             print(f"Modrinth:    {self.modrinth_url}")
@@ -1173,6 +1192,13 @@ class Runner:
         data = json.loads(out or "{}")
         return data.get("jobs", [])
 
+    def _list_artifacts(self) -> list[dict]:
+        out = _gh([
+            "api", f"repos/{self.repo}/actions/runs/{self.run_id}/artifacts",
+        ], token=self.token)
+        data = json.loads(out or "{}")
+        return data.get("artifacts", [])
+
     def _download_all(self, artifacts_dir: Path) -> None:
         MAX_WORKERS = 20
         logs_dir = self.out_root / "logs"
@@ -1191,6 +1217,28 @@ class Runner:
             f"artifact:{ANALYSIS_ARTIFACT}",
             lambda: self._download_artifact(ANALYSIS_ARTIFACT, artifacts_dir / ANALYSIS_ARTIFACT),
         ))
+
+        # Crash artifacts (launcher test failures)
+        crash_artifacts = []
+        try:
+            all_artifacts = self._list_artifacts()
+            crash_artifacts = [a for a in all_artifacts if a.get("name", "").startswith("crash-")]
+            if crash_artifacts:
+                print(f"  Found {len(crash_artifacts)} crash artifact(s) out of {len(all_artifacts)} total")
+        except RunError as exc:
+            print(f"  Could not list artifacts: {exc}")
+
+        for artifact in crash_artifacts:
+            aname = artifact.get("name", "unknown")
+            dest = artifacts_dir / aname
+            def _make_crash_dl(an=aname, d=dest):
+                def _dl():
+                    try:
+                        self._download_artifact(an, d)
+                    except RunError as exc:
+                        print(f"  (artifact {an} not available: {exc})")
+                return _dl
+            tasks.append((f"artifact:{aname}", _make_crash_dl()))
 
         # Run log
         def _dl_run_log():
@@ -1233,6 +1281,54 @@ class Runner:
                 exc = fut.exception()
                 if exc:
                     print(f"  \u2717 {label}: {exc}")
+
+        # Copy crash logs into target directories as launcher-failure.txt
+        self._copy_crash_logs_to_targets(artifacts_dir)
+
+    def _copy_crash_logs_to_targets(self, artifacts_dir: Path) -> None:
+        bundle_dir = artifacts_dir / ANALYSIS_ARTIFACT
+        if not bundle_dir.exists():
+            return
+
+        crash_dirs = sorted(artifacts_dir.glob("crash-*"))
+        if not crash_dirs:
+            return
+
+        target_dirs = {
+            d.name: d for d in bundle_dir.iterdir()
+            if d.is_dir() and not d.name.startswith(".")
+        }
+
+        for crash_dir in crash_dirs:
+            crash_key = crash_dir.name[len("crash-"):]
+            matching_target = target_dirs.get(crash_key)
+
+            if not matching_target:
+                sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", crash_key).strip("_")
+                matching_target = target_dirs.get(sanitized)
+
+            if not matching_target:
+                continue
+
+            crash_files = sorted(
+                f for f in crash_dir.rglob("*")
+                if f.is_file() and f.suffix in (".txt", ".log")
+            )
+            if not crash_files:
+                crash_files = sorted(f for f in crash_dir.rglob("*") if f.is_file())
+
+            if not crash_files:
+                continue
+
+            parts = []
+            for cf in crash_files:
+                rel = cf.relative_to(crash_dir)
+                content = cf.read_text(encoding="utf-8", errors="replace")
+                parts.append(f"--- {rel} ---\n{content}")
+
+            launcher_failure_path = matching_target / "launcher-failure.txt"
+            launcher_failure_path.write_text("\n\n".join(parts), encoding="utf-8")
+            print(f"  \u2713 launcher-failure.txt written to {matching_target.name}/")
 
     def _download_artifact(self, name: str, dest: Path) -> None:
         dest.mkdir(parents=True, exist_ok=True)
@@ -1328,6 +1424,48 @@ class Runner:
                     rel = af.relative_to(bundle_dir)
                     size = af.stat().st_size
                     lines.append(f"- `{rel}` ({size:,}B)")
+
+            # Launcher test results (crash artifacts)
+            crash_artifact_dirs = sorted(artifacts_dir.glob("crash-*"))
+            if crash_artifact_dirs:
+                lines += ["", "## Launcher Test Results"]
+                lines.append(f"\n{len(crash_artifact_dirs)} target(s) failed launcher testing.")
+                lines.append("")
+                for cd in crash_artifact_dirs:
+                    files = list(cd.rglob("*"))
+                    file_names = [f.name for f in files if f.is_file()]
+                    lines.append(f"- `{cd.name}/` ({len(file_names)} file(s))")
+                    for fn in file_names[:10]:
+                        lines.append(f"  - `{fn}`")
+                    if len(file_names) > 10:
+                        lines.append(f"  - ... and {len(file_names) - 10} more")
+                    crash_key = cd.name[len("crash-"):]
+                    target_dir = bundle_dir / crash_key
+                    if not target_dir.exists():
+                        sanitized = re.sub(r"[^A-Za-z0-9._-]+", "_", crash_key).strip("_")
+                        target_dir = bundle_dir / sanitized
+                    lf = target_dir / "launcher-failure.txt" if target_dir.exists() else None
+                    if lf and lf.exists():
+                        lines[-1] += "  [✓ launcher-failure.txt]"
+                lines.append("")
+
+            # Launcher failure logs in target directories
+            launcher_failure_files = list(bundle_dir.rglob("launcher-failure.txt"))
+            if launcher_failure_files:
+                lines += ["", "## Launcher Failure Logs"]
+                lines.append("")
+                for lf in sorted(launcher_failure_files):
+                    rel = lf.relative_to(bundle_dir)
+                    text = lf.read_text(encoding="utf-8")
+                    lines.append(f"### {rel}")
+                    lines.append("")
+                    lines.append("```")
+                    for line in text.splitlines()[:80]:
+                        lines.append(line)
+                    if text.count("\n") > 80:
+                        lines.append(f"... ({text.count(chr(10)) - 80} more lines)")
+                    lines.append("```")
+                    lines.append("")
         else:
             lines.append("Artifact bundle was not created (workflow may have failed early).")
 

@@ -165,9 +165,231 @@ jobs:
         shell: bash
         run: exit "${{ steps.bundle.outputs.exit_code }}"
 
+  launcher-test:
+    needs: [prepare, build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(needs.prepare.outputs.max_parallel) }}
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: mod-${{ matrix.slug }}
+          path: .workflow_downloads/mod-${{ matrix.slug }}
+
+      - name: Check build result and extract metadata
+        id: check
+        shell: bash
+        env:
+          RESULT_FILE: .workflow_downloads/mod-${{ matrix.slug }}/result.json
+        run: |
+          if [ ! -f "$RESULT_FILE" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "No build result found, skipping launcher test"
+            exit 0
+          fi
+          python3 - <<'PYEOF'
+          import json, os
+          with open(os.environ["RESULT_FILE"]) as f:
+              data = json.load(f)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              if data.get("status") != "success":
+                  out.write("skip=true\n")
+                  print(f"Build status: {data.get('status')}, skipping launcher test")
+              else:
+                  out.write("skip=false\n")
+                  jar_names = data.get("jar_names", [])
+                  out.write(f"jar_name={jar_names[0] if jar_names else ''}\n")
+                  out.write(f"mc_version={data.get('minecraft_version', '')}\n")
+                  out.write(f"loader={data.get('loader', '')}\n")
+                  out.write(f"java_version={data.get('java_version', '')}\n")
+          PYEOF
+
+      - uses: actions/setup-java@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            16
+            17
+            21
+
+      - name: Resolve test config from ci-data.json
+        if: steps.check.outputs.skip != 'true'
+        id: resolve
+        shell: bash
+        env:
+          MC_VERSION: ${{ steps.check.outputs.mc_version }}
+          LOADER: ${{ steps.check.outputs.loader }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re, urllib.request
+          mc_version = os.environ["MC_VERSION"]
+          loader = os.environ["LOADER"]
+          if loader == "quilt":
+              loader = "fabric"
+          url = "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json"
+          req = urllib.request.Request(url, headers={"User-Agent": "ModCompiler/1.0"})
+          with urllib.request.urlopen(req, timeout=30) as r:
+              ci_data = json.loads(r.read().decode())
+          run_data = ci_data.get("run_data", [])
+          def parse_mc_version(v):
+              parts = []
+              for token in re.split(r'[.\-_]', str(v).strip()):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  else:
+                      break
+              return tuple(parts) if parts else (0,)
+          def minor_key(v):
+              p = parse_mc_version(v)
+              if p[0] == 1 and len(p) >= 2:
+                  return (1, p[1])
+              return p[:2]
+          supported = {}
+          for entry in run_data:
+              mc = entry.get("mc")
+              ltype = entry.get("type")
+              modloader = entry.get("modloader")
+              regex = entry.get("regex")
+              java_str = entry.get("java")
+              if not all([mc, ltype, modloader, regex, java_str]):
+                  continue
+              try:
+                  java = int(java_str)
+              except (ValueError, TypeError):
+                  java = 17
+              supported[(mc, modloader)] = {
+                  "mc": mc, "modloader": modloader,
+                  "mcrt_jar": ltype, "regex": regex, "java": java,
+              }
+          by_minor = {}
+          for (mc, modloader), cfg in supported.items():
+              key = (minor_key(mc), modloader)
+              if key not in by_minor or parse_mc_version(mc) > parse_mc_version(by_minor[key]["mc"]):
+                  by_minor[key] = cfg
+          test_config = None
+          if (mc_version, loader) in supported:
+              test_config = supported[(mc_version, loader)]
+          else:
+              mk = minor_key(mc_version)
+              if (mk, loader) in by_minor:
+                  test_config = by_minor[(mk, loader)]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              if test_config is None:
+                  out.write("has_test=false\n")
+                  print(f"No mc-runtime-test support for {loader} {mc_version}")
+              else:
+                  out.write("has_test=true\n")
+                  out.write(f"test_mc={test_config['mc']}\n")
+                  out.write(f"test_loader={test_config['modloader']}\n")
+                  out.write(f"mcrt_jar={test_config['mcrt_jar']}\n")
+                  out.write(f"loader_regex={test_config['regex']}\n")
+                  out.write(f"test_java={test_config['java']}\n")
+                  mapped = "" if mc_version == test_config["mc"] else f" (mapped from {mc_version})"
+                  print(f"Test config: {loader} {mc_version} -> {test_config['mc']}{mapped}, Java {test_config['java']}")
+          PYEOF
+
+      - name: Copy mod jar for testing
+        if: steps.resolve.outputs.has_test == 'true'
+        shell: bash
+        env:
+          JAR_NAME: ${{ steps.check.outputs.jar_name }}
+          SLUG: ${{ matrix.slug }}
+        run: |
+          mkdir -p run/mods
+          cp ".workflow_downloads/mod-${SLUG}/jars/${JAR_NAME}" "run/mods/"
+          echo "Copied $JAR_NAME to run/mods/"
+
+      - name: Launch Headless Minecraft Client
+        id: mc-test
+        if: steps.resolve.outputs.has_test == 'true'
+        continue-on-error: true
+        uses: headlesshq/mc-runtime-test@4.4.0
+        with:
+          mc: ${{ steps.resolve.outputs.test_mc }}
+          modloader: ${{ steps.resolve.outputs.test_loader }}
+          regex: ${{ steps.resolve.outputs.loader_regex }}
+          java: ${{ steps.resolve.outputs.test_java }}
+          mc-runtime-test: ${{ steps.resolve.outputs.mcrt_jar }}
+          dummy-assets: true
+          xvfb: true
+          cache-mc: github
+
+      - name: Write launcher test result
+        if: always() && steps.check.outputs.skip != 'true'
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+          TEST_OUTCOME: ${{ steps.mc-test.outcome }}
+          HAS_TEST: ${{ steps.resolve.outputs.has_test }}
+        run: |
+          mkdir -p .workflow_artifacts/launcher-test
+          if [ "$HAS_TEST" = "true" ]; then
+            if [ "$TEST_OUTCOME" = "success" ]; then
+              echo "pass" > ".workflow_artifacts/launcher-test/${SLUG}.txt"
+              echo "Launcher test PASSED for $SLUG"
+            else
+              echo "fail" > ".workflow_artifacts/launcher-test/${SLUG}.txt"
+              echo "Launcher test FAILED for $SLUG"
+            fi
+          else
+            echo "no-test-available" > ".workflow_artifacts/launcher-test/${SLUG}.txt"
+            echo "No mc-runtime-test support for $SLUG, skipping"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.check.outputs.skip != 'true'
+        with:
+          name: launcher-result-${{ matrix.slug }}
+          path: .workflow_artifacts/launcher-test/${{ matrix.slug }}.txt
+
+      - name: Collect crash logs
+        if: steps.mc-test.outcome == 'failure'
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "Launcher test failed! Collecting diagnostic logs..."
+          mkdir -p crash-logs
+          if [ -d run/crash-reports ]; then
+            cp -r run/crash-reports crash-logs/ 2>/dev/null || true
+          fi
+          if [ -d run/logs ]; then
+            cp -r run/logs crash-logs/ 2>/dev/null || true
+          fi
+          if [ -f run/latest.log ]; then
+            cp run/latest.log crash-logs/ 2>/dev/null || true
+          fi
+          for f in run/hs_err_pid*.log; do
+            [ -f "$f" ] && cp "$f" crash-logs/ 2>/dev/null || true
+          done
+
+      - name: Upload crash logs
+        if: steps.mc-test.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-${{ matrix.slug }}
+          path: crash-logs/
+          if-no-files-found: warn
+
+      - name: Fail job if launcher test failed
+        if: always() && steps.check.outputs.skip != 'true' && steps.resolve.outputs.has_test == 'true' && steps.mc-test.outcome == 'failure'
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+        run: |
+          echo "Launcher test failed for $SLUG"
+          exit 1
+
   publish-modrinth:
     needs:
       - bundle
+      - launcher-test
     if: ${{ always() && inputs.modrinth_project_url != '' }}
     runs-on: ubuntu-latest
     steps:
@@ -181,6 +403,50 @@ jobs:
         with:
           name: all-mod-builds
           path: .workflow_downloads/combined
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: launcher-result-*
+          path: .workflow_downloads/launcher-results
+
+      - name: Filter mods that failed launcher test
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, shutil
+          from pathlib import Path
+          results_dir = Path(".workflow_downloads/launcher-results")
+          combined_dir = Path(".workflow_downloads/combined")
+          summary_path = combined_dir / "run-summary.json"
+          if not results_dir.exists() or not summary_path.exists():
+              print("No launcher test results or summary found, proceeding with all mods")
+              exit(0)
+          failed_slugs = set()
+          for result_file in sorted(results_dir.rglob("*.txt")):
+              slug = result_file.stem
+              content = result_file.read_text(encoding="utf-8").strip()
+              if content == "fail":
+                  failed_slugs.add(slug)
+                  print(f"Mod {slug} failed launcher test, will skip publishing")
+          if not failed_slugs:
+              print("All launcher tests passed or were skipped")
+              exit(0)
+          mods_dir = combined_dir / "mods"
+          for slug in failed_slugs:
+              mod_dir = mods_dir / slug
+              if mod_dir.exists():
+                  shutil.rmtree(mod_dir)
+                  print(f"Removed {mod_dir}")
+          with open(summary_path, encoding="utf-8") as f:
+              summary = json.load(f)
+          original_count = len(summary.get("mods", []))
+          summary["mods"] = [m for m in summary.get("mods", []) if m.get("slug") not in failed_slugs]
+          filtered_count = original_count - len(summary["mods"])
+          with open(summary_path, "w", encoding="utf-8") as f:
+              json.dump(summary, f, indent=2)
+          print(f"Filtered {filtered_count} mod(s) that failed launcher test")
+          PYEOF
 
       - name: Mask Modrinth token
         shell: bash

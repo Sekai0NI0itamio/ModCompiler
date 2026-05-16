@@ -12,18 +12,27 @@ name: Profile Diagnosis
 #        - Identifies the original (oldest working) version
 #        - Finds the latest working version per loader
 #        - Computes missing versions vs what this repo can build
-#   4. Produces a per-project report.txt and bundle zip
-#   5. Assembles a combined master report.txt across all projects
+#   4. Prepares a launcher test matrix for working (non-shell) versions
+#   5. Launches each working version in a headless Minecraft client
+#   6. Merges launcher test results back into diagnosis data
+#   7. Produces a per-project report.txt and bundle zip
+#   8. Assembles a combined master report.txt across all projects
 #
 # Jobs
 # ----
-#   list-projects   - Fetches all public projects for the user, emits matrix
-#   diagnose        - Matrix job (one runner per project), full diagnosis
-#   assemble-report - Merges all per-project reports into one master report
+#   list-projects          - Fetches all public projects for the user, emits matrix
+#   diagnose               - Matrix job (one runner per project), full diagnosis
+#   prepare-launcher-tests - Collects launcher matrices from all projects, emits combined matrix
+#   launcher-test          - Matrix job, launches each version in headless Minecraft
+#   update-diagnosis       - Merges launcher results back into diagnosis.json and report.txt
+#   assemble-report        - Merges all per-project reports into one master report
 #
 # Artifacts
 # ---------
 #   diagnosis-<slug>          per-project bundle (report.txt + all version data)
+#   launcher-result-<key>     per-test launcher result (pass/fail)
+#   crash-<key>               crash logs when a launcher test fails
+#   diagnosis-updated         updated bundles with launcher results merged in
 #   profile-diagnosis-report  master report.txt covering all projects
 # ---------------------------------------------------------------------------
 
@@ -667,6 +676,202 @@ jobs:
           print(f"Report written for {SLUG}")
           PY
 
+      # ── Prepare launcher test matrix ──────────────────────────────────────
+      - name: Launcher test
+        id: launcher-matrix
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
+          from pathlib import Path
+
+          SLUG = os.environ.get("SLUG", "").strip()
+          base = Path(f".diag/{SLUG}")
+
+          diagnosis_path = base / "diagnosis.json"
+          if not diagnosis_path.exists():
+              print("No diagnosis.json found, skipping launcher test matrix preparation")
+              (base / "launcher-matrix.json").write_text("[]", encoding="utf-8")
+              sys.exit(0)
+
+          diagnosis = json.loads(diagnosis_path.read_text(encoding="utf-8"))
+          working_versions = [r for r in diagnosis.get("version_records", []) if not r.get("is_shell", False)]
+
+          if not working_versions:
+              print("No working versions to test")
+              (base / "launcher-matrix.json").write_text("[]", encoding="utf-8")
+              sys.exit(0)
+
+          CI_DATA_URL = "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json"
+
+          def get(url):
+              req = urllib.request.Request(url, headers={"User-Agent": "ModCompilerProfileDiagnosis/1.0", "Accept": "application/json"})
+              for attempt in range(1, 6):
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          return json.loads(r.read().decode())
+                  except urllib.error.HTTPError as e:
+                      if e.code in {429, 500, 502, 503, 504} and attempt < 5:
+                          time.sleep(2 ** attempt)
+                          continue
+                      print(f"HTTP {e.code} fetching {url}, skipping launcher tests")
+                      (base / "launcher-matrix.json").write_text("[]", encoding="utf-8")
+                      sys.exit(0)
+                  except urllib.error.URLError as e:
+                      if attempt < 5:
+                          time.sleep(2 ** attempt)
+                          continue
+                      print(f"Network error fetching {url}: {e.reason}, skipping launcher tests")
+                      (base / "launcher-matrix.json").write_text("[]", encoding="utf-8")
+                      sys.exit(0)
+              print(f"Failed after 5 retries: {url}, skipping launcher tests")
+              (base / "launcher-matrix.json").write_text("[]", encoding="utf-8")
+              sys.exit(0)
+
+          print("Fetching mc-runtime-test ci-data.json...")
+          ci_data = get(CI_DATA_URL)
+          run_data = ci_data.get("run_data", [])
+          if not run_data:
+              print("ci-data.json contains no run_data, skipping launcher tests")
+              (base / "launcher-matrix.json").write_text("[]", encoding="utf-8")
+              sys.exit(0)
+
+          supported = {}
+          for entry in run_data:
+              mc = entry.get("mc")
+              ltype = entry.get("type")
+              modloader = entry.get("modloader")
+              regex = entry.get("regex")
+              java_str = entry.get("java")
+              if not all([mc, ltype, modloader, regex, java_str]):
+                  continue
+              try:
+                  java = int(java_str)
+              except (ValueError, TypeError):
+                  java = 17
+              supported[(mc, modloader)] = {
+                  "mc": mc,
+                  "modloader": modloader,
+                  "mcrt_jar": ltype,
+                  "regex": regex,
+                  "java": java,
+              }
+
+          def parse_mc_version(v):
+              parts = []
+              for token in re.split(r'[.\-_]', str(v).strip()):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  else:
+                      break
+              return tuple(parts) if parts else (0,)
+
+          def minor_key(v):
+              p = parse_mc_version(v)
+              if p[0] == 1 and len(p) >= 2:
+                  return (1, p[1])
+              return p[:2]
+
+          by_minor = {}
+          for (mc, modloader), cfg in supported.items():
+              key = (minor_key(mc), modloader)
+              if key not in by_minor or parse_mc_version(mc) > parse_mc_version(by_minor[key]["mc"]):
+                  by_minor[key] = cfg
+
+          print(f"mc-runtime-test supports {len(supported)} (mc, loader) combos")
+
+          def map_loader(loader):
+              if loader == "quilt":
+                  return "fabric"
+              return loader
+
+          def find_test_config(gv, loader):
+              if (gv, loader) in supported:
+                  return supported[(gv, loader)]
+              mk = minor_key(gv)
+              if (mk, loader) in by_minor:
+                  return by_minor[(mk, loader)]
+              return None
+
+          def safe_artifact_key(s, loader, gv):
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", f"{s}-{loader}-{gv}").strip("_")
+
+          all_versions = json.loads((base / "all_versions.json").read_text(encoding="utf-8"))
+          version_map = {}
+          for v in all_versions:
+              version_map[v["id"]] = v
+
+          matrix_entries = []
+          skipped = []
+
+          for r in working_versions:
+              vid = r["id"]
+              v = version_map.get(vid)
+              if not v:
+                  skipped.append((r.get("version_number", vid), "version data not found"))
+                  continue
+
+              files = v.get("files") or []
+              primary_file = next((f for f in files if f.get("primary")), None)
+              if not primary_file and files:
+                  primary_file = files[0]
+              if not primary_file:
+                  skipped.append((r.get("version_number", vid), "no file"))
+                  continue
+
+              file_url = primary_file.get("url")
+              file_name = primary_file.get("filename")
+              if not file_url or not file_name:
+                  skipped.append((r.get("version_number", vid), "missing URL/filename"))
+                  continue
+
+              for gv in r.get("game_versions", []):
+                  for loader in r.get("loaders", []):
+                      test_loader = map_loader(loader)
+                      if test_loader not in ("fabric", "forge", "neoforge"):
+                          skipped.append((gv, loader, "unsupported loader"))
+                          continue
+
+                      test_config = find_test_config(gv, test_loader)
+                      if test_config is None:
+                          skipped.append((gv, test_loader, "no mc-runtime-test support"))
+                          continue
+
+                      matrix_entries.append({
+                          "slug": SLUG,
+                          "version_id": vid,
+                          "version_number": r.get("version_number", vid),
+                          "game_version": gv,
+                          "test_mc": test_config["mc"],
+                          "loader": test_config["modloader"],
+                          "original_loader": loader,
+                          "file_url": file_url,
+                          "file_name": file_name,
+                          "java_version": test_config["java"],
+                          "loader_regex": test_config["regex"],
+                          "mcrt_jar": test_config["mcrt_jar"],
+                          "safe_key": safe_artifact_key(SLUG, loader, gv),
+                      })
+
+          matrix_entries.sort(key=lambda e: (e["game_version"], e["loader"]))
+
+          print(f"\nGenerated {len(matrix_entries)} launcher test entries for {SLUG}:")
+          for entry in matrix_entries:
+              mapped = "" if entry["game_version"] == entry["test_mc"] else f" (tested on {entry['test_mc']})"
+              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<12} -> {entry['test_mc']}{mapped}  Java {entry['java_version']}  ({entry['version_number']})")
+
+          if skipped:
+              unique_skipped = sorted(set(str(s) for s in skipped))
+              print(f"\nSkipped {len(unique_skipped)} entries:")
+              for s in unique_skipped[:20]:
+                  print(f"    {s}")
+
+          (base / "launcher-matrix.json").write_text(json.dumps(matrix_entries, indent=2), encoding="utf-8")
+          print(f"Launcher test matrix written for {SLUG}: {len(matrix_entries)} entries")
+          PYEOF
+
       # ── Upload per-project bundle ─────────────────────────────────────────
       - name: Upload project bundle
         if: always()
@@ -677,11 +882,429 @@ jobs:
           if-no-files-found: warn
 
 # ---------------------------------------------------------------------------
-# Job 3 — assemble master report across all projects
+# Job 3 — collect launcher matrices from all projects, emit combined matrix
+# ---------------------------------------------------------------------------
+  prepare-launcher-tests:
+    name: Prepare launcher test matrix
+    needs: diagnose
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.combine.outputs.matrix }}
+      matrix_count: ${{ steps.combine.outputs.matrix_count }}
+
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download all project bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: diagnosis-*
+          path: .diag-downloads
+
+      - name: Combine launcher matrices
+        id: combine
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          from pathlib import Path
+
+          downloads = Path(".diag-downloads")
+          all_entries = []
+
+          for bundle_dir in sorted(downloads.iterdir()):
+              if not bundle_dir.is_dir():
+                  continue
+              matrix_file = bundle_dir / "launcher-matrix.json"
+              if matrix_file.exists():
+                  try:
+                      entries = json.loads(matrix_file.read_text(encoding="utf-8"))
+                      all_entries.extend(entries)
+                  except Exception:
+                      pass
+
+          all_entries.sort(key=lambda e: (e.get("slug", ""), e.get("game_version", ""), e.get("loader", "")))
+
+          MAX_MATRIX = 256
+          if len(all_entries) > MAX_MATRIX:
+              print(f"WARNING: {len(all_entries)} entries exceeds cap of {MAX_MATRIX}. Truncating.")
+              all_entries = all_entries[:MAX_MATRIX]
+
+          print(f"Combined launcher test matrix: {len(all_entries)} entries")
+          for entry in all_entries:
+              print(f"  {entry.get('slug', '?')}  {entry.get('original_loader', '?'):>8}  MC {entry.get('game_version', '?')}")
+
+          matrix = json.dumps({"include": all_entries})
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"matrix={matrix}\n")
+              f.write(f"matrix_count={len(all_entries)}\n")
+          PYEOF
+
+# ---------------------------------------------------------------------------
+# Job 4 — test each version+loader pair in a headless Minecraft client
+# ---------------------------------------------------------------------------
+  launcher-test:
+    name: Launcher test ${{ matrix.slug }} ${{ matrix.original_loader }} ${{ matrix.game_version }}
+    needs: prepare-launcher-tests
+    if: ${{ needs.prepare-launcher-tests.outputs.matrix_count != '0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJson(needs.prepare-launcher-tests.outputs.matrix) }}
+
+    steps:
+      - name: Install Java ${{ matrix.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java_version }}
+          distribution: temurin
+
+      - name: Download Mod Jar
+        env:
+          MOD_FILE_URL: ${{ matrix.file_url }}
+          MOD_FILE_NAME: ${{ matrix.file_name }}
+        run: |
+          mkdir -p run/mods
+          echo "Downloading $MOD_FILE_NAME ..."
+          for attempt in 1 2 3; do
+            if curl -fsSL --retry 3 --retry-delay 5 "$MOD_FILE_URL" -o "run/mods/$MOD_FILE_NAME"; then
+              break
+            fi
+            echo "Download attempt $attempt failed, retrying in 10s..."
+            sleep 10
+          done
+          if [ ! -f "run/mods/$MOD_FILE_NAME" ]; then
+            echo "ERROR: Mod jar was not downloaded"
+            exit 1
+          fi
+          if [ ! -s "run/mods/$MOD_FILE_NAME" ]; then
+            echo "ERROR: Mod jar is empty (0 bytes)"
+            rm -f "run/mods/$MOD_FILE_NAME"
+            exit 1
+          fi
+          SIZE=$(stat -c%s "run/mods/$MOD_FILE_NAME" 2>/dev/null || echo "?")
+          echo "Downloaded: $MOD_FILE_NAME ($SIZE bytes)"
+
+      - name: Launch Headless Minecraft Client
+        id: mc-test
+        uses: headlesshq/mc-runtime-test@4.4.0
+        with:
+          mc: ${{ matrix.test_mc }}
+          modloader: ${{ matrix.loader }}
+          regex: ${{ matrix.loader_regex }}
+          java: ${{ matrix.java_version }}
+          mc-runtime-test: ${{ matrix.mcrt_jar }}
+          dummy-assets: true
+          xvfb: true
+          cache-mc: github
+
+      - name: Mark test as passed
+        if: success()
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+          VERSION_ID: ${{ matrix.version_id }}
+          VERSION_NUMBER: ${{ matrix.version_number }}
+          GAME_VERSION: ${{ matrix.game_version }}
+          TEST_MC: ${{ matrix.test_mc }}
+          LOADER: ${{ matrix.loader }}
+          ORIGINAL_LOADER: ${{ matrix.original_loader }}
+        run: |
+          mkdir -p launcher-result
+          python3 - <<'PYEOF'
+          import json, os
+          result = {
+              "slug": os.environ["SLUG"],
+              "version_id": os.environ["VERSION_ID"],
+              "version_number": os.environ["VERSION_NUMBER"],
+              "game_version": os.environ["GAME_VERSION"],
+              "test_mc": os.environ["TEST_MC"],
+              "loader": os.environ["LOADER"],
+              "original_loader": os.environ["ORIGINAL_LOADER"],
+              "status": "passed",
+          }
+          with open("launcher-result/result.json", "w") as f:
+              json.dump(result, f, indent=2)
+          PYEOF
+          echo "SUCCESS: Mod launched correctly for $ORIGINAL_LOADER on Minecraft $GAME_VERSION (tested on $TEST_MC)"
+
+      - name: Collect crash logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          echo "Game crashed! Collecting diagnostic logs..."
+          mkdir -p crash-logs launcher-result
+
+          if [ -d run/crash-reports ]; then
+            cp -r run/crash-reports crash-logs/ 2>/dev/null || true
+            echo "  Collected crash-reports/"
+          fi
+
+          if [ -d run/logs ]; then
+            cp -r run/logs crash-logs/ 2>/dev/null || true
+            echo "  Collected logs/"
+          fi
+
+          if [ -f run/latest.log ]; then
+            cp run/latest.log crash-logs/ 2>/dev/null || true
+            echo "  Collected latest.log"
+          fi
+
+          for f in run/hs_err_pid*.log; do
+            if [ -f "$f" ]; then
+              cp "$f" crash-logs/ 2>/dev/null || true
+              echo "  Collected JVM crash log: $(basename "$f")"
+            fi
+          done
+
+          if [ -f run/options.txt ]; then
+            cp run/options.txt crash-logs/ 2>/dev/null || true
+          fi
+
+          echo ""
+          echo "=== Crash log summary ==="
+          echo ""
+          find crash-logs -type f 2>/dev/null | head -20 | while read -r f; do
+            echo "--- $f ---"
+            head -50 "$f" 2>/dev/null || true
+            echo ""
+          done
+
+      - name: Write failure result
+        if: failure()
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+          VERSION_ID: ${{ matrix.version_id }}
+          VERSION_NUMBER: ${{ matrix.version_number }}
+          GAME_VERSION: ${{ matrix.game_version }}
+          TEST_MC: ${{ matrix.test_mc }}
+          LOADER: ${{ matrix.loader }}
+          ORIGINAL_LOADER: ${{ matrix.original_loader }}
+        run: |
+          mkdir -p launcher-result
+          python3 - <<'PYEOF'
+          import json, os
+          from pathlib import Path
+
+          crash_summary = ""
+          latest_log = Path("crash-logs/latest.log")
+          if latest_log.exists():
+              try:
+                  crash_summary = latest_log.read_text(encoding="utf-8", errors="replace")[:2000]
+              except Exception:
+                  pass
+
+          result = {
+              "slug": os.environ["SLUG"],
+              "version_id": os.environ["VERSION_ID"],
+              "version_number": os.environ["VERSION_NUMBER"],
+              "game_version": os.environ["GAME_VERSION"],
+              "test_mc": os.environ["TEST_MC"],
+              "loader": os.environ["LOADER"],
+              "original_loader": os.environ["ORIGINAL_LOADER"],
+              "status": "launcher_failed",
+          }
+          if crash_summary:
+              result["crash_summary"] = crash_summary
+          with open("launcher-result/result.json", "w") as f:
+              json.dump(result, f, indent=2)
+          PYEOF
+
+      - name: Upload launcher result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-result-${{ matrix.safe_key }}
+          path: launcher-result/
+          if-no-files-found: warn
+
+      - name: Upload crash logs
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-${{ matrix.safe_key }}
+          path: crash-logs/
+          if-no-files-found: warn
+
+# ---------------------------------------------------------------------------
+# Job 5 — merge launcher test results back into diagnosis data
+# ---------------------------------------------------------------------------
+  update-diagnosis:
+    name: Update diagnosis with launcher results
+    needs: [diagnose, launcher-test]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download all project bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: diagnosis-*
+          path: .diag-downloads
+
+      - name: Download all launcher results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: launcher-result-*
+          path: .launcher-results
+
+      - name: Merge launcher results into diagnosis
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, shutil
+          from pathlib import Path
+          from datetime import datetime
+
+          downloads = Path(".diag-downloads")
+          results_dir = Path(".launcher-results")
+          out = Path(".diag-updated")
+          out.mkdir(exist_ok=True)
+
+          launcher_results = {}
+          if results_dir.exists():
+              for result_dir in sorted(results_dir.iterdir()):
+                  if not result_dir.is_dir():
+                      continue
+                  result_file = result_dir / "result.json"
+                  if result_file.exists():
+                      try:
+                          result = json.loads(result_file.read_text(encoding="utf-8"))
+                          key = (result.get("slug", ""), result.get("version_id", ""),
+                                 result.get("game_version", ""), result.get("loader", ""))
+                          launcher_results[key] = result
+                      except Exception:
+                          pass
+
+          print(f"Found {len(launcher_results)} launcher test results")
+
+          for bundle_dir in sorted(downloads.iterdir()):
+              if not bundle_dir.is_dir():
+                  continue
+              diag_file = bundle_dir / "diagnosis.json"
+              report_file = bundle_dir / "report.txt"
+              if not diag_file.exists():
+                  continue
+
+              diagnosis = json.loads(diag_file.read_text(encoding="utf-8"))
+              slug = diagnosis.get("slug", "")
+
+              launcher_passed = 0
+              launcher_failed = 0
+              launcher_skipped = 0
+
+              for record in diagnosis.get("version_records", []):
+                  vid = record.get("id", "")
+                  is_shell = record.get("is_shell", False)
+                  if is_shell:
+                      record["launcher_status"] = "skipped_shell"
+                      launcher_skipped += 1
+                      continue
+
+                  version_results = []
+                  for gv in record.get("game_versions", []):
+                      for loader in record.get("loaders", []):
+                          test_loader = loader
+                          if loader == "quilt":
+                              test_loader = "fabric"
+                          key = (slug, vid, gv, test_loader)
+                          result = launcher_results.get(key)
+                          if result:
+                              version_results.append(result)
+
+                  if version_results:
+                      statuses = [r.get("status") for r in version_results]
+                      if "launcher_failed" in statuses:
+                          record["launcher_status"] = "launcher_failed"
+                          launcher_failed += 1
+                          crash = next((r.get("crash_summary", "") for r in version_results
+                                        if r.get("status") == "launcher_failed" and r.get("crash_summary")), "")
+                          if crash:
+                              record["launcher_crash_summary"] = crash
+                      elif all(s == "passed" for s in statuses):
+                          record["launcher_status"] = "passed"
+                          launcher_passed += 1
+                      else:
+                          record["launcher_status"] = "partial"
+                          launcher_passed += statuses.count("passed")
+                          launcher_failed += statuses.count("launcher_failed")
+                  else:
+                      record["launcher_status"] = "not_tested"
+
+              diagnosis["launcher_tested"] = True
+              diagnosis["launcher_passed"] = launcher_passed
+              diagnosis["launcher_failed"] = launcher_failed
+              diagnosis["launcher_skipped"] = launcher_skipped
+
+              if report_file.exists():
+                  report_text = report_file.read_text(encoding="utf-8")
+                  lines = []
+                  lines.append("")
+                  lines.append("── LAUNCHER TEST RESULTS ───────────────────────────────────────────")
+                  lines.append(f"  Passed  : {launcher_passed}")
+                  lines.append(f"  Failed  : {launcher_failed}")
+                  lines.append(f"  Skipped : {launcher_skipped} (shells)")
+                  lines.append("")
+                  lines.append(f"  {'Version':<20} {'Loaders':<20} {'MC versions':<30} {'Launcher':<12}")
+                  lines.append(f"  {'-'*20} {'-'*20} {'-'*30} {'-'*12}")
+                  for record in diagnosis.get("version_records", []):
+                      if record.get("is_shell", False):
+                          continue
+                      status = record.get("launcher_status", "not_tested")
+                      loaders_str = ",".join(record.get("loaders", []))[:18]
+                      gv_str = ",".join(record.get("game_versions", []))[:28]
+                      lines.append(
+                          f"  {record.get('version_number', ''):<20} {loaders_str:<20} {gv_str:<30} {status:<12}"
+                      )
+                  lines.append("")
+
+                  launcher_section = "\n".join(lines) + "\n"
+
+                  if "Generated:" in report_text:
+                      parts = report_text.rsplit("Generated:", 1)
+                      report_text = parts[0] + launcher_section + "Generated:" + parts[1]
+                  else:
+                      report_text += launcher_section
+
+                  report_file.write_text(report_text, encoding="utf-8")
+
+              diag_file.write_text(json.dumps(diagnosis, indent=2, default=str), encoding="utf-8")
+
+              project_out = out / bundle_dir.name
+              if project_out.exists():
+                  shutil.rmtree(project_out)
+              shutil.copytree(bundle_dir, project_out)
+
+              print(f"Updated diagnosis for {slug}: passed={launcher_passed}, failed={launcher_failed}, skipped={launcher_skipped}")
+
+          print("All diagnoses updated")
+          PYEOF
+
+      - name: Upload updated bundles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnosis-updated
+          path: .diag-updated/
+          if-no-files-found: warn
+
+# ---------------------------------------------------------------------------
+# Job 6 — assemble master report across all projects
 # ---------------------------------------------------------------------------
   assemble-report:
     name: Assemble master report
-    needs: [list-projects, diagnose]
+    needs: [list-projects, update-diagnosis]
     if: always()
     runs-on: ubuntu-latest
 
@@ -692,10 +1315,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Download all project bundles
+      - name: Download updated diagnosis bundles
         uses: actions/download-artifact@v4
         with:
-          pattern: diagnosis-*
+          name: diagnosis-updated
           path: .diag-downloads
 
       - name: Build master report
@@ -716,10 +1339,12 @@ jobs:
           all_reports = []
           all_diagnoses = []
 
-          for bundle_dir in sorted(downloads.iterdir()):
+          updated_dir = downloads / "diagnosis-updated"
+          search_dir = updated_dir if updated_dir.exists() else downloads
+
+          for bundle_dir in sorted(search_dir.iterdir()):
               if not bundle_dir.is_dir():
                   continue
-              # artifact name is "diagnosis-<slug>", dir inside is the slug content
               report_file = bundle_dir / "report.txt"
               diag_file   = bundle_dir / "diagnosis.json"
 
@@ -728,7 +1353,8 @@ jobs:
               if diag_file.exists():
                   all_diagnoses.append(json.loads(diag_file.read_text(encoding="utf-8")))
 
-          # ── Master summary table ─────────────────────────────────────────
+          has_launcher = any(d.get("launcher_tested") for d in all_diagnoses)
+
           header_lines = [
               SEP,
               "MODRINTH PROFILE DIAGNOSIS — MASTER REPORT",
@@ -740,31 +1366,63 @@ jobs:
               SEP,
               "",
               "── OVERVIEW TABLE ───────────────────────────────────────────────────",
-              f"  {'Project':<35} {'Total':>6} {'Analysed':>9} {'Working':>8} {'Shells':>7} {'Missing':>8}",
-              f"  {'-'*35} {'-'*6} {'-'*9} {'-'*8} {'-'*7} {'-'*8}",
           ]
+
+          if has_launcher:
+              header_lines.append(
+                  f"  {'Project':<30} {'Total':>6} {'Work':>5} {'Shell':>5} {'Miss':>5} {'L.Pass':>7} {'L.Fail':>7}"
+              )
+              header_lines.append(
+                  f"  {'-'*30} {'-'*6} {'-'*5} {'-'*5} {'-'*5} {'-'*7} {'-'*7}"
+              )
+          else:
+              header_lines.append(
+                  f"  {'Project':<35} {'Total':>6} {'Analysed':>9} {'Working':>8} {'Shells':>7} {'Missing':>8}"
+              )
+              header_lines.append(
+                  f"  {'-'*35} {'-'*6} {'-'*9} {'-'*8} {'-'*7} {'-'*8}"
+              )
 
           total_working = 0
           total_shells  = 0
           total_missing = 0
+          total_lpass   = 0
+          total_lfail   = 0
 
           for d in sorted(all_diagnoses, key=lambda x: x.get("slug", "")):
               slug     = d.get("slug", "?")
-              title    = d.get("title", slug)[:33]
+              title    = d.get("title", slug)
               total    = d.get("total_versions", 0)
-              analysed = d.get("analysed_versions", total)
               working  = d.get("working_count", 0)
               shells   = d.get("shell_count", 0)
               missing  = d.get("missing_count", 0)
+              lpass    = d.get("launcher_passed", 0)
+              lfail    = d.get("launcher_failed", 0)
               total_working += working
               total_shells  += shells
               total_missing += missing
+              total_lpass   += lpass
+              total_lfail   += lfail
+              if has_launcher:
+                  header_lines.append(
+                      f"  {title[:28]:<30} {total:>6} {working:>5} {shells:>5} {missing:>5} {lpass:>7} {lfail:>7}"
+                  )
+              else:
+                  analysed = d.get("analysed_versions", total)
+                  header_lines.append(
+                      f"  {title[:33]:<35} {total:>6} {analysed:>9} {working:>8} {shells:>7} {missing:>8}"
+                  )
+
+          if has_launcher:
               header_lines.append(
-                  f"  {title:<35} {total:>6} {analysed:>9} {working:>8} {shells:>7} {missing:>8}"
+                  f"  {'TOTAL':<30} {'':>6} {total_working:>5} {total_shells:>5} {total_missing:>5} {total_lpass:>7} {total_lfail:>7}"
+              )
+          else:
+              header_lines.append(
+                  f"  {'TOTAL':<35} {'':>6} {'':>9} {total_working:>8} {total_shells:>7} {total_missing:>8}"
               )
 
           header_lines += [
-              f"  {'TOTAL':<35} {'':>6} {'':>9} {total_working:>8} {total_shells:>7} {total_missing:>8}",
               "",
               "── PROJECTS WITH MISSING VERSIONS ───────────────────────────────────",
           ]
@@ -790,6 +1448,27 @@ jobs:
                   slug   = d.get("slug", "?")
                   shells = d.get("shell_count", 0)
                   header_lines.append(f"  {slug}: {shells} shell version(s) (zero .class files)")
+
+          if has_launcher and total_lfail > 0:
+              header_lines += [
+                  "",
+                  "── PROJECTS WITH LAUNCHER FAILURES ─────────────────────────────────",
+              ]
+              for d in sorted(all_diagnoses, key=lambda x: x.get("slug", "")):
+                  if d.get("launcher_failed", 0) > 0:
+                      slug = d.get("slug", "?")
+                      lfail = d.get("launcher_failed", 0)
+                      failed_versions = [
+                          r for r in d.get("version_records", [])
+                          if r.get("launcher_status") == "launcher_failed"
+                      ]
+                      header_lines.append(f"  {slug}: {lfail} launcher failure(s)")
+                      for r in failed_versions:
+                          loaders_str = ",".join(r.get("loaders", []))
+                          gv_str = ",".join(r.get("game_versions", []))
+                          header_lines.append(
+                              f"    {r.get('version_number', '?')}  {loaders_str}  MC {gv_str}"
+                          )
 
           header_lines += ["", SEP, "", "── PER-PROJECT DETAILS ──────────────────────────────────────────────", ""]
 
