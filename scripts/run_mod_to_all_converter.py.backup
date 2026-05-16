@@ -6,18 +6,17 @@ Triggers the "Automated Mod to ALL Version Converter" workflow on GitHub
 Actions, waits for completion, and downloads all artifacts and logs.
 
 After the workflow completes, the script enters the second stage
-(mode="prompt-and-code" by default) — an **automated** Grok browser-based
-AI coding stage. For each target version/loader:
+(mode="prompt-and-code" by default) — an **interactive** copy/paste
+workflow. For each target version/loader:
 
-  1. The prompt is sent to Grok via Safari browser automation (grok.com)
-  2. Grok's response is captured programmatically
-  3. The response is saved as airesponse.txt
-  4. If the response lacks Java source files, retries with enhanced prompt
-     (up to AI_JAVA_RETRIES times)
-  5. Conversation is saved as conversation.json on success
+  1. The prompt is copied to your clipboard automatically
+  2. You paste it into your preferred web AI (ChatGPT, Claude, DeepSeek, etc.)
+  3. You copy the AI's response back
+  4. You press Enter here and the response is read from your clipboard
+  5. The response is saved as airesponse.txt
 
-Requires: macOS + Safari authenticated to grok.com + C05 server running.
-See setup instructions in the AI config section below.
+If the response lacks Java source code, the script enters a retry loop
+with an enhanced prompt that includes fix instructions.
 
 Pass --mode prompt-creation to skip the AI coding stage entirely.
 
@@ -31,7 +30,7 @@ Usage
 Modes
 -----
   prompt-and-code (default) — Run workflow, download prompts, THEN run the
-                              automated Grok browser-based AI coding stage.
+                              interactive copy/paste AI coding stage.
   prompt-creation            — Run the workflow and download the prompt bundle only.
 
 The script exits 0 on workflow success, 1 on failure or error.
@@ -50,8 +49,7 @@ Output folder layout
           projectinfo.txt
           Background Info.txt
           prompt.txt
-          airesponse.txt    ← created by Grok browser automation
-          conversation.json ← saved on successful responses
+          airesponse.txt    ← created during interactive stage
         first_version/...
         jars/...
     logs/
@@ -165,31 +163,75 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AI Coding Stage — sends prompts to Grok via browser automation
+# Colors / ANSI helpers for the AI coding stage status display
 # ─────────────────────────────────────────────────────────────────────────────
-#
-#   HOSTER: Grok (Browser-Based)  |  hoster: "grok"
-#
-# This uses Safari automation on macOS to interact with the Grok web
-# interface at grok.com. The user must be authenticated to Grok in Safari.
-# The system never steals focus or disrupts the user's current work.
-# Fresh Safari tabs are created for each request and closed afterward.
-#
-# SETUP (one-time):
-#   1. Open Safari and authenticate to https://grok.com
-#   2. Safari > Preferences > Advanced > Check "Show Develop menu in menu bar"
-#   3. Safari > Develop menu > Check "Allow JavaScript from Apple Events"
-#   4. Keep Safari running (can be minimized)
-#   5. Key file at keys/grok.txt can be empty — "browser-auth" fallback is automatic
-#   6. Run: python scripts/check_safari_permissions.py
-#   7. Test:  python scripts/test_browser_grok.py
-#
-#   IMPORTANT: This hoster ONLY works on macOS. It uses AppleScript/JXA.
+
+class Colors:
+    GREY = "\033[90m"
+    PINK = "\033[95m"
+    PURPLE = "\033[35m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    GREEN = "\033[92m"
+    CYAN = "\033[96m"
+    WHITE = "\033[97m"
+    BLACK_BOLD = "\033[1;30m"
+    HIGHLIGHT_BG = "\033[43m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    REVERSE = "\033[7m"
+
+
+_STATUS_LABELS = {
+    "queued": ("Queued", Colors.GREY),
+    "copy_prompt": ("Copy Prompt", Colors.PINK),
+    "paste_response": ("Paste Response", Colors.PURPLE),
+    "saving": ("Saving", Colors.CYAN),
+    "complete": ("Complete", Colors.GREEN),
+    "retry": ("Retry", Colors.YELLOW),
+    "failed": ("Failed", Colors.RED),
+    "skipped": ("Skipped", Colors.GREY),
+}
+
+
+def _copy_to_clipboard(text: str) -> None:
+    """Copy text to system clipboard using pbcopy (macOS)."""
+    try:
+        p = subprocess.run(["pbcopy"], input=text, text=True, capture_output=True, timeout=5)
+        if p.returncode != 0:
+            print(f"  ⚠ pbcopy warning: {p.stderr}")
+    except FileNotFoundError:
+        print(f"  ⚠ pbcopy not found (not on macOS). Copy manually:")
+        print(f"  {'─' * 60}")
+        print(text[:500])
+        print(f"  {'─' * 60}")
+    except Exception as exc:
+        print(f"  ⚠ Clipboard copy error: {exc}")
+
+
+def _paste_from_clipboard() -> str:
+    """Read text from system clipboard using pbpaste (macOS)."""
+    try:
+        p = subprocess.run(["pbpaste"], capture_output=True, text=True, timeout=5)
+        if p.returncode == 0:
+            return p.stdout
+        print(f"  ⚠ pbpaste error: {p.stderr}")
+        return ""
+    except FileNotFoundError:
+        print(f"  ⚠ pbpaste not found (not on macOS). Paste manually and press Enter.")
+        return ""
+    except Exception as exc:
+        print(f"  ⚠ Clipboard paste error: {exc}")
+        return ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AI Coding Stage — sends prompts to C05LocalAI / Groq
+# ─────────────────────────────────────────────────────────────────────────────
 
 # --- AI Provider Config ---
 AI_C05_BASE = "http://localhost:8129"
-AI_MODEL = "Fast"
-AI_HOSTER = "grok"
+AI_MODEL = "openai/gpt-oss-20b"
 
 # Maximum retries when the AI response contains no Java source files
 AI_JAVA_RETRIES = 3
@@ -273,7 +315,7 @@ def _generate_metadata_with_ai(
     raw_name: str,
     status_callback: callable | None = None,
 ) -> dict[str, str]:
-    """Send a raw mod name to Grok (browser-based) to format into proper metadata fields.
+    """Send a raw mod name to Groq AI to format into proper metadata fields.
 
     The AI formats the name WITHOUT changing, renaming, or inventing anything.
     It only converts to the required field formats (mod_id, mod_class, etc.).
@@ -281,8 +323,10 @@ def _generate_metadata_with_ai(
     Returns dict with keys: mod_id, mod_class, mod_client_class,
     mod_display_name, package_path, author_name.
     """
-    import http.client
-    import urllib.parse
+    import urllib.request
+    import urllib.error
+
+    url = f"{AI_C05_BASE}/chat"
 
     prompt_dir = Path(__file__).resolve().parent.parent / "prompts"
     prompt_path = prompt_dir / "metadata_generation.txt"
@@ -299,71 +343,54 @@ def _generate_metadata_with_ai(
     user_prompt = f"Mod name: {raw_name}\n\nFormat this name into the metadata JSON. Do NOT change the name."
 
     payload: dict[str, Any] = {
-        "hoster": AI_HOSTER,
+        "hoster": "nvidia",
         "model": AI_MODEL,
-        "request_type": "browser_based",
         "system_prompt": system_prompt,
         "user_prompt": user_prompt,
-        "response_mode": "direct",
     }
 
     body_bytes = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
 
-    parsed = urllib.parse.urlparse(AI_C05_BASE)
-    host = parsed.hostname or "localhost"
-    port = parsed.port or 8129
+    req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
 
     full_response = ""
     buffer = ""
-    done = False
 
-    conn = http.client.HTTPConnection(host, port, timeout=600)
     try:
-        conn.request(
-            "POST",
-            "/chat",
-            body=body_bytes,
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-        )
-        resp = conn.getresponse()
-
-        if resp.status != 200:
-            error_detail = resp.read().decode("utf-8", errors="replace")[:500]
-            raise RuntimeError(f"HTTP {resp.status}: {error_detail}")
-
-        while not done:
-            chunk = resp.read(4096)
-            if not chunk:
-                break
-            buffer += chunk.decode("utf-8", errors="replace")
-
-            while "\n" in buffer and not done:
-                line, buffer = buffer.split("\n", 1)
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    data = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-
-                if "error" in data:
-                    raise RuntimeError(str(data["error"]))
-
-                if data.get("event") == "content":
-                    full_response += data.get("content", "")
-
-                if data.get("status") == "end":
-                    end_content = data.get("content", "") or ""
-                    if end_content and not full_response:
-                        full_response = end_content
-                    done = True
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            while True:
+                chunk = resp.read(4096)
+                if not chunk:
                     break
-    finally:
-        conn.close()
+                buffer += chunk.decode("utf-8", errors="replace")
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if "error" in data:
+                        raise RuntimeError(str(data["error"]))
+                    if data.get("event") == "content":
+                        full_response += data.get("content", "")
+    except urllib.error.HTTPError as e:
+        error_body = ""
+        try:
+            error_body = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"Metadata AI request failed: HTTP {e.code} - {error_body}"
+        ) from e
+    except Exception:
+        raise
 
     full_response = full_response.strip()
 
@@ -402,169 +429,40 @@ def _substitute_prompt_variables(prompt_text: str, metadata: dict[str, str]) -> 
     return prompt_text
 
 
-def _send_prompt_to_grok(
-    target_name: str,
-    prompt_text: str,
-    retry_context: str = "",
-) -> str:
-    """Send a prompt to Grok via browser automation (Safari) and return the response.
-
-    Uses the C05 local server at localhost:8129 which controls Safari to interact
-    with grok.com. The user must be authenticated to Grok in Safari.
-
-    - Sends NDJSON streaming request to /chat endpoint
-    - Uses response_mode "direct" for faster non-streaming responses
-    - Accumulates content events and returns only the content text
-    - Properly exits on the "end" event to avoid hanging
-
-    Args:
-        target_name: The name of the target (e.g. "1.20.5-fabric").
-        prompt_text: The prompt to send.
-        retry_context: If non-empty, this is a retry — the text explains what
-                       was wrong with the previous response.
-    """
-    import http.client
-    import urllib.parse
-
-    # Build system prompt from author info if available
-    system_parts = [
-        "You are an excellent and professional Minecraft mod developer.",
-        "You are expert at reading and following technical instructions precisely.",
-        "You write clean, correct, and well-structured Java code.",
-        "Provide ALL files requested with complete implementations — no stubs, no TODOs, no placeholders.",
-    ]
-
-    user_content = prompt_text
-    if retry_context:
-        user_content = f"{retry_context}\n\n---\n\n{prompt_text}"
-
-    payload: dict[str, Any] = {
-        "hoster": AI_HOSTER,
-        "model": AI_MODEL,
-        "request_type": "browser_based",
-        "system_prompt": "\n".join(system_parts),
-        "user_prompt": user_content,
-        "response_mode": "direct",
-    }
-
-    body_bytes = json.dumps(payload).encode("utf-8")
-
-    parsed = urllib.parse.urlparse(AI_C05_BASE)
-    host = parsed.hostname or "localhost"
-    port = parsed.port or 8129
-
-    full_response = ""
-    accumulated = 0
-    done = False
-
-    conn = http.client.HTTPConnection(host, port, timeout=600)
-    try:
-        conn.request(
-            "POST",
-            "/chat",
-            body=body_bytes,
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-        )
-        resp = conn.getresponse()
-
-        if resp.status != 200:
-            error_detail = resp.read().decode("utf-8", errors="replace")[:500]
-            if resp.status in (429, 503):
-                print(f"  ⚠ {target_name}: HTTP {resp.status} — waiting 30s before retry...")
-                time.sleep(30)
-                raise RetryableHTTPError(f"HTTP {resp.status}: {error_detail}")
-            raise RuntimeError(f"HTTP {resp.status}: {error_detail}")
-
-        buffer = ""
-        while not done:
-            chunk = resp.read(4096)
-            if not chunk:
-                break
-            buffer += chunk.decode("utf-8", errors="replace")
-
-            while "\n" in buffer and not done:
-                line, buffer = buffer.split("\n", 1)
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    data = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-
-                if "error" in data:
-                    raise RuntimeError(str(data["error"]))
-
-                event = data.get("event", "")
-
-                if event == "content":
-                    content = data.get("content", "") or ""
-                    if content:
-                        full_response += content
-                        accumulated += len(content)
-                        if accumulated % 2000 < 100:
-                            print(f"  {target_name}: {accumulated:,} bytes received...")
-
-                if data.get("status") == "end":
-                    end_content = data.get("content", "") or ""
-                    if end_content and not full_response:
-                        full_response = end_content
-                        accumulated = len(end_content)
-                    done = True
-                    break
-    except RetryableHTTPError:
-        conn.close()
-        raise
-    except Exception:
-        conn.close()
-        raise
-
-    conn.close()
-
-    if not full_response:
-        raise RuntimeError("Empty response from Grok — no content generated.")
-
-    print(f"  {target_name}: ✓ {accumulated:,} bytes total")
-    return full_response
-
-
 def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | None = None) -> int:
-    """Execute the AI coding stage: send prompts to Grok via browser automation.
+    """Execute the AI coding stage: interactive copy/paste TUI.
 
-    Iterates through all target directories programmatically. For each target:
-      1. Sends the prompt to Grok (via Safari browser automation)
-      2. Saves the response as airesponse.txt
-      3. If the response lacks Java source files, retries with enhanced prompt
-         (up to AI_JAVA_RETRIES times)
-      4. Saves conversation.json for successful responses
+    Presents a navigable list of targets. Use:
+      Up/Down arrows  — move between targets
+      Left/Right      — switch mode (Copy Prompt / Paste Response / Retry)
+      Enter           — execute current action for selected target
 
-    This replaces the old interactive copy/paste TUI with fully automated
-    browser-based AI interaction. No user intervention required.
+    When all targets are Complete, the stage exits automatically.
 
     Args:
         bundle_dir: Path to the analysis bundle directory.
         previous_progress: Dict mapping target_name -> status ("complete" or "failed")
                            from a previous partial run.
     """
+    import termios
+    import tty
+
     is_resume = bool(previous_progress)
-    previous_progress = previous_progress or {}
 
     # ── Find targets ──────────────────────────────────────────────────────
-    all_target_dirs = sorted([
+    target_dirs = sorted([
         d for d in bundle_dir.iterdir()
         if d.is_dir() and not d.name.startswith(".")
     ])
-    if not all_target_dirs:
+    if not target_dirs:
         print("ERROR: No target directories found in bundle.", file=sys.stderr)
         return 1
 
+    previous_progress = previous_progress or {}
     prompt_targets: list[Path] = []
     skipped_names: list[str] = []
 
-    for td in all_target_dirs:
+    for td in target_dirs:
         prompt_path = td / "prompt.txt"
         if not prompt_path.exists():
             continue
@@ -591,161 +489,307 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
         print("All targets already processed. Skipping AI coding stage.")
         return 0
 
-    print()
-    print("=" * 72)
-    print("  PHASE 2 — AI MOD CODING via Grok (Browser Automation)")
-    print("=" * 72)
-    print()
-    print(f"  {len(prompt_targets)} target(s) to process")
-    print(f"  AI: Grok (browser-based, Safari automation)")
-    print(f"  Model: {AI_MODEL}")
-    print(f"  Max Java retries: {AI_JAVA_RETRIES}")
-    print()
+    target_names = sorted(td.name for td in prompt_targets)
 
-    # ── Process each target sequentially ──────────────────────────────────
-    results: dict[str, str] = {}  # target_name -> "complete" | "failed"
-    total = len(prompt_targets)
+    # ── Per-target state ──────────────────────────────────────────────────
+    class TargetState:
+        __slots__ = ("name", "dir", "prompt_text", "status", "response")
+        def __init__(self, name: str, td: Path):
+            self.name = name
+            self.dir = td
+            self.prompt_text = (td / "prompt.txt").read_text(encoding="utf-8")
+            self.status = "queued"
+            self.response = ""
 
-    for idx, td in enumerate(prompt_targets):
-        target_name = td.name
-        prompt_text = (td / "prompt.txt").read_text(encoding="utf-8")
-        author, mod_path = _read_author_info(td)
+    states = [TargetState(n, td) for n, td in zip(target_names, prompt_targets)]
+    selected = 0
 
-        print(f"[{idx + 1}/{total}] {target_name}")
-        print(f"  Prompt size: {len(prompt_text):,} chars")
+    # ── Terminal raw mode helpers ─────────────────────────────────────────
+    fd = sys.stdin.fileno()
+    old_attr = termios.tcgetattr(fd)
 
-        # Build system prompt with author context
-        system_parts = [
-            "You are an excellent and professional Minecraft mod developer.",
-            "You are expert at reading and following technical instructions precisely.",
-            "You write clean, correct, and well-structured Java code.",
-            "Provide ALL files requested with complete implementations — no stubs, no TODOs, no placeholders.",
-        ]
-        if author:
-            system_parts.append(f"The mod author is: {author}")
-            system_parts.append("You should keep the package path and style consistent with this author's work.")
-        if mod_path:
-            system_parts.append(f"The preferred package path for the mod is: {mod_path}")
-            system_parts.append("Use this Java package path for all source files.")
+    def _enable_raw():
+        tty.setraw(fd)
 
-        system_prompt = "\n".join(system_parts)
+    def _disable_raw():
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_attr)
 
-        # ── Send to Grok with retry loop for no-Java responses ────────────
-        response = ""
-        final_status = "failed"
-        current_prompt = prompt_text
-        retry_context = ""
+    def _get_key() -> str:
+        """Read one keypress. Returns 'UP', 'DOWN', 'LEFT', 'RIGHT', 'ENTER', 'q', etc."""
+        ch = sys.stdin.read(1)
+        if ch == "\x1b":
+            # Possible escape sequence
+            _disable_raw()
+            import select
+            # Check if more chars available (non-blocking)
+            timeout = 0.05
+            r, _, _ = select.select([sys.stdin], [], [], timeout)
+            if r:
+                seq = sys.stdin.read(2)
+                _enable_raw()
+                if seq == "[A":
+                    return "UP"
+                if seq == "[B":
+                    return "DOWN"
+                if seq == "[C":
+                    return "RIGHT"
+                if seq == "[D":
+                    return "LEFT"
+                return seq  # Unknown escape sequence
+            _enable_raw()
+            return "esc"
+        if ch in ("\r", "\n"):
+            return "ENTER"
+        if ch == "\x7f":
+            return "BACKSPACE"
+        if ch == "\x03":
+            raise KeyboardInterrupt
+        if ch == "\x04":
+            return "CTRL_D"
+        return ch
 
-        for attempt in range(1 + AI_JAVA_RETRIES):
-            try:
-                if attempt == 0:
-                    print(f"  Sending to Grok (browser)...", end=" ", flush=True)
-                else:
-                    print(f"  Retry {attempt}/{AI_JAVA_RETRIES} (previous response had no Java)...", end=" ", flush=True)
+    # ── Draw helpers ──────────────────────────────────────────────────────
+    def _status_text(status: str) -> tuple[str, str]:
+        """Return (colored_label, plain_label)."""
+        return _STATUS_LABELS.get(status, (status, Colors.RESET))
 
-                # Build the full payload with system prompt embedded in user content
-                # Grok browser-based doesn't support separate system_prompt in the same way
-                full_user_prompt = current_prompt
+    def _draw():
+        """Redraw the table by overwriting the previous lines in-place."""
+        nonlocal _table_height
+        _target_count = len(states)
+        lines = []
+        lines.append(f"{'─' * 72}")
+        lines.append(f"  {'Target':<30}  Status")
+        lines.append(f"{'─' * 72}")
+        for i, st in enumerate(states):
+            label, color = _status_text(st.status)
+            text = f"  {st.name:<30}  {color}{label}{Colors.RESET}"
+            if i == selected:
+                text = f"{Colors.REVERSE}{text}{Colors.RESET}"
+            lines.append(text)
+        lines.append(f"{'─' * 72}")
+        sel_st = states[selected]
+        if sel_st.status in ("queued", "copy_prompt"):
+            hint = "Enter: Copy prompt to clipboard | Left/Right: switch mode"
+        elif sel_st.status == "paste_response":
+            hint = "Enter: Read clipboard and save response | Left/Right: switch mode"
+        elif sel_st.status == "complete":
+            hint = "Complete | Left/Right: Show Retry"
+        elif sel_st.status == "retry":
+            hint = "Enter: Reset target for retry | Left/Right: Cancel retry"
+        elif sel_st.status == "failed":
+            hint = "Left/Right: Reset to redo"
+        else:
+            hint = ""
+        lines.append(f"  Arrow keys: navigate | Selected: {sel_st.name} | {hint}")
 
-                # Send via the low-level HTTP helper
-                response = _send_prompt_to_grok(
-                    target_name,
-                    full_user_prompt,
-                    retry_context=retry_context,
+        new_height = len(lines)
+        if _table_height > 0:
+            # Move cursor up by previous table height to overwrite it
+            sys.stdout.write(f"\r\033[{_table_height}A")
+            for i, line in enumerate(lines):
+                if i > 0:
+                    sys.stdout.write("\r\n")
+                sys.stdout.write(line)
+            # If new table is shorter, clear remaining old lines
+            if new_height < _table_height:
+                for _ in range(_table_height - new_height):
+                    sys.stdout.write("\r\n\033[K")
+        else:
+            # First draw: just print at current position
+            sys.stdout.write(("\r\n").join(lines) + "\r\n")
+        _table_height = new_height
+        sys.stdout.flush()
+
+    # ── Action runner (called outside raw mode) ──────────────────────────
+    def _execute_action(st: TargetState) -> str:
+        """Run the action for the current state. Returns new status.
+        No print() calls for status here — the TUI status column communicates changes.
+        """
+        if st.status in ("queued", "copy_prompt"):
+            _copy_to_clipboard(st.prompt_text)
+            return "paste_response"
+
+        if st.status == "paste_response":
+            response = _paste_from_clipboard()
+            if not response.strip():
+                # Interactive fallback — user must type/paste manually
+                print("\n  Clipboard empty. Paste the AI response below (Ctrl+D to finish):")
+                try:
+                    manual_lines = []
+                    while True:
+                        line = sys.stdin.readline()
+                        if not line:
+                            break
+                        manual_lines.append(line)
+                    response = "".join(manual_lines)
+                except (EOFError, KeyboardInterrupt):
+                    response = ""
+                print()
+
+            if not response.strip():
+                return "failed"
+
+            st.response = response
+            (st.dir / "airesponse.txt").write_text(response, encoding="utf-8")
+
+            if _response_has_java_files(response):
+                author, mod_path = _read_author_info(st.dir)
+                system_parts = [
+                    "You are an excellent and professional Minecraft mod developer.",
+                    "You are expert at reading and following technical instructions precisely.",
+                    "You write clean, correct, and well-structured Java code.",
+                    "Provide ALL files requested with complete implementations - no stubs, no TODOs, no placeholders.",
+                ]
+                if author:
+                    system_parts.append(f"The mod author is: {author}")
+                    system_parts.append("You should keep the package path and style consistent with this author's work.")
+                if mod_path:
+                    system_parts.append(f"The preferred package path for the mod is: {mod_path}")
+                    system_parts.append("Use this Java package path for all source files.")
+                conversation = [
+                    {"role": "system", "content": "\n".join(system_parts)},
+                    {"role": "user", "content": st.prompt_text},
+                    {"role": "assistant", "content": response},
+                ]
+                (st.dir / "conversation.json").write_text(
+                    json.dumps(conversation, indent=2), encoding="utf-8"
                 )
+                return "complete"
+            else:
+                _, mod_path = _read_author_info(st.dir)
+                retry_context = (
+                    "YOUR PREVIOUS RESPONSE HAD NO JAVA SOURCE FILES.\n"
+                    "This means the build will produce empty jars with no .class files.\n"
+                    "You MUST generate COMPLETE Java source files for this mod, "
+                    "each one starting with the correct `package` declaration.\n"
+                    "Output each file under `src/main/java/` with its full package path.\n"
+                    "Do NOT output the same JSON/config files again - they are already present."
+                )
+                st.prompt_text = f"{retry_context}\n\n---\n\n{st.prompt_text}"
+                return "copy_prompt"
 
-                if not response or not response.strip():
-                    print(f"\n  ⚠ Empty response from Grok")
-                    if attempt < AI_JAVA_RETRIES:
-                        retry_context = (
-                            "YOUR PREVIOUS RESPONSE WAS EMPTY.\n"
-                            "You MUST generate COMPLETE Java source files for this mod."
-                        )
-                        current_prompt = prompt_text
-                        time.sleep(2)
-                        continue
-                    break
+        if st.status == "retry":
+            original = (st.dir / "prompt.txt").read_text(encoding="utf-8")
+            st.prompt_text = original
+            st.response = ""
+            return "copy_prompt"
 
-                # Save the response
-                (td / "airesponse.txt").write_text(response, encoding="utf-8")
+        if st.status == "failed":
+            original = (st.dir / "prompt.txt").read_text(encoding="utf-8")
+            st.prompt_text = original
+            st.response = ""
+            for fname in ("airesponse.txt", "conversation.json"):
+                fp = st.dir / fname
+                if fp.exists():
+                    fp.unlink()
+            return "copy_prompt"
 
-                if _response_has_java_files(response):
-                    # Save conversation for successful responses
-                    conversation = [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt_text},
-                        {"role": "assistant", "content": response},
-                    ]
-                    (td / "conversation.json").write_text(
-                        json.dumps(conversation, indent=2), encoding="utf-8"
-                    )
-                    final_status = "complete"
-                    print(f"  ✓ Complete ({len(response):,} chars)")
-                    break
-                else:
-                    print(f"\n  ⚠ No Java source files detected in response")
-                    if attempt < AI_JAVA_RETRIES:
-                        retry_context = (
-                            "YOUR PREVIOUS RESPONSE HAD NO JAVA SOURCE FILES.\n"
-                            "This means the build will produce empty jars with no .class files.\n"
-                            "You MUST generate COMPLETE Java source files for this mod, "
-                            "each one starting with the correct `package` declaration.\n"
-                            "Output each file under `src/main/java/` with its full package path.\n"
-                            "Do NOT output the same JSON/config files again — they are already present."
-                        )
-                        current_prompt = prompt_text
-                        time.sleep(2)
-                        continue
-                    else:
-                        print(f"  ✗ Failed after {AI_JAVA_RETRIES} retries (no Java files)")
-                        final_status = "failed"
-                        break
+        return st.status
 
-            except RetryableHTTPError as e:
-                print(f"\n  ⚠ Retryable error: {e}")
-                if attempt < AI_JAVA_RETRIES:
-                    time.sleep(10)
-                    continue
-                final_status = "failed"
+    def _next_incomplete() -> int:
+        """Find the next non-complete/non-failed target forward, wrapping around."""
+        n = len(states)
+        for offset in range(1, n):
+            idx = (selected + offset) % n
+            if states[idx].status not in ("complete", "failed"):
+                return idx
+        return selected
+
+    # ── Main interactive loop ────────────────────────────────────────────
+    # Set first target to copy_prompt mode
+    if states:
+        states[0].status = "copy_prompt"
+
+    _table_height = 0
+    print()
+    _draw()
+
+    try:
+        _enable_raw()
+        while True:
+            key = _get_key()
+
+            if key == "UP" and selected > 0:
+                selected -= 1
+                _draw()
+
+            elif key == "DOWN" and selected < len(states) - 1:
+                selected += 1
+                _draw()
+
+            elif key == "LEFT":
+                st = states[selected]
+                if st.status == "paste_response":
+                    st.status = "copy_prompt"
+                elif st.status in ("complete", "retry"):
+                    st.status = "retry" if st.status == "complete" else "complete"
+                elif st.status == "failed":
+                    st.status = "copy_prompt"
+                _draw()
+
+            elif key == "RIGHT":
+                st = states[selected]
+                if st.status == "copy_prompt":
+                    st.status = "paste_response"
+                elif st.status in ("complete", "retry"):
+                    st.status = "retry" if st.status == "complete" else "complete"
+                elif st.status == "failed":
+                    st.status = "copy_prompt"
+                _draw()
+
+            elif key == "ENTER":
+                st = states[selected]
+                _disable_raw()
+                new_status = _execute_action(st)
+                st.status = new_status
+                _enable_raw()
+
+                # Auto-advance to next non-complete target after completion
+                if new_status == "complete":
+                    nxt = _next_incomplete()
+                    if nxt != selected:
+                        selected = nxt
+                    elif all(s.status in ("complete", "failed") for s in states):
+                        pass  # All done, will exit
+
+                _draw()
+
+            elif key == "q":
                 break
-            except Exception as e:
-                print(f"\n  ✗ Error: {e}")
-                final_status = "failed"
+
+            # Check if all targets are done
+            if all(s.status in ("complete", "failed") for s in states):
                 break
 
-        results[target_name] = final_status
-
-        # Rate limiting: Grok browser automation is serial, ~2 requests/min max
-        if idx < total - 1:
-            print(f"  Waiting 5s before next target (browser automation rate limit)...")
-            time.sleep(5)
-        print()
+    finally:
+        _disable_raw()
 
     # ── Summary ──────────────────────────────────────────────────────────
-    success_count = sum(1 for v in results.values() if v == "complete")
-    fail_count = sum(1 for v in results.values() if v == "failed")
+    success_count = sum(1 for s in states if s.status == "complete")
+    fail_count = sum(1 for s in states if s.status == "failed")
 
     print()
     print("=" * 72)
-    print("  PHASE 2 — AI MOD CODING Complete")
+    print("  PHASE 2 -- AI MOD CODING Complete")
     print("=" * 72)
     print()
-    for name, status in results.items():
-        icon = "✓" if status == "complete" else "✗"
-        print(f"  {icon} {name}")
+    for s in states:
+        label, color = _status_text(s.status)
+        print(f"  {s.name:<30}  {color}{label}{Colors.RESET}")
     print()
     print(f"  {success_count} success, {fail_count} failed")
     print()
 
     # ── Save progress ───────────────────────────────────────────────────
     ai_progress: dict[str, str] = {}
-    for td in all_target_dirs:
-        resp_path = td / "airesponse.txt"
+    for s in states:
+        resp_path = s.dir / "airesponse.txt"
         if resp_path.exists():
             content = resp_path.read_text(encoding="utf-8")
-            ai_progress[td.name] = "complete" if _response_has_java_files(content) else "failed"
+            ai_progress[s.name] = "complete" if _response_has_java_files(content) else "failed"
         else:
-            ai_progress[td.name] = results.get(td.name, "failed")
+            ai_progress[s.name] = "failed"
     for n in skipped_names:
         if n not in ai_progress:
             ai_progress[n] = previous_progress.get(n, "skipped")
@@ -759,6 +803,170 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
         _log(f"  Warning: Failed to save AI stage progress: {exc}")
 
     return 0 if fail_count == 0 else 1
+
+
+def _send_prompt_to_c05(
+    target_name: str,
+    prompt_text: str,
+    status_callback: callable,
+    author_info: tuple[str, str] = ("", ""),
+    retry_context: str = "",
+) -> str:
+    """Send a single prompt to C05LocalAI and return the full content response.
+
+    - Streams NDJSON lines from the /chat endpoint
+    - Displays reasoning_text on screen ("Thinking" status) but does NOT
+      include it in the returned response
+    - Accumulates content events and returns only the content text
+    - Properly exits both read loops on the "end" event to avoid hanging
+
+    Args:
+        target_name: The name of the target (e.g. "1.20.5-fabric").
+        prompt_text: The prompt to send.
+        status_callback: Callback for status updates.
+        author_info: (author_name, mod_path) tuple from projectinfo.txt.
+        retry_context: If non-empty, this is a retry — the text explains what
+                       was wrong with the previous response.
+    """
+    import http.client
+    import urllib.parse
+
+    author, mod_path = author_info
+
+    system_parts = [
+        "You are an excellent and professional Minecraft mod developer.",
+        "You are expert at reading and following technical instructions precisely.",
+        "You write clean, correct, and well-structured Java code.",
+        "Provide ALL files requested with complete implementations — no stubs, no TODOs, no placeholders.",
+    ]
+    if author:
+        system_parts.append(f"")
+        system_parts.append(f"The mod author is: {author}")
+        system_parts.append(f"You should keep the package path and style consistent with this author's work.")
+    if mod_path:
+        system_parts.append(f"")
+        system_parts.append(f"The preferred package path for the mod is: {mod_path}")
+        system_parts.append(f"Use this Java package path for all source files.")
+
+    user_content = prompt_text
+    if retry_context:
+        user_content = f"{retry_context}\n\n---\n\n{prompt_text}"
+
+    payload: dict[str, Any] = {
+        "hoster": "nvidia",
+        "model": AI_MODEL,
+        "system_prompt": "\n".join(system_parts),
+        "user_prompt": user_content,
+    }
+
+    body_bytes = json.dumps(payload).encode("utf-8")
+
+    parsed = urllib.parse.urlparse(AI_C05_BASE)
+    host = parsed.hostname or "localhost"
+    port = parsed.port or 8129
+
+    status_callback(target_name, "waiting")
+
+    full_response = ""
+    accumulated = 0
+    reasoning_text = ""
+    done = False
+
+    conn = http.client.HTTPConnection(host, port, timeout=600)
+    try:
+        conn.request(
+            "POST",
+            "/chat",
+            body=body_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+        )
+        resp = conn.getresponse()
+
+        if resp.status != 200:
+            error_detail = resp.read().decode("utf-8", errors="replace")[:500]
+            if resp.status in (429, 503):
+                status_callback(target_name, "retrying", f"HTTP {resp.status}: {error_detail}")
+                import time as _time
+                _time.sleep(30)
+                raise RetryableHTTPError(f"HTTP {resp.status}: {error_detail}")
+            raise RuntimeError(f"HTTP {resp.status}: {error_detail}")
+
+        buffer = ""
+        while not done:
+            chunk = resp.read(4096)
+            if not chunk:
+                break
+            buffer += chunk.decode("utf-8", errors="replace")
+
+            # Process complete NDJSON lines from the buffer
+            while "\n" in buffer and not done:
+                line, buffer = buffer.split("\n", 1)
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                # Error event
+                if "error" in data:
+                    raise RuntimeError(str(data["error"]))
+
+                event = data.get("event", "")
+
+                # Reasoning text — display on screen but do NOT save
+                if event == "reasoning_text":
+                    text = data.get("content", "") or ""
+                    if text:
+                        reasoning_text += text
+                        # Show the last ~60 chars of reasoning on the status line
+                        snippet = reasoning_text[-60:].replace("\n", " ").strip()
+                        if snippet:
+                            status_callback(target_name, "reasoning", snippet)
+
+                # Content event — accumulate for the final saved response
+                elif event == "content":
+                    content = data.get("content", "") or ""
+                    if content:
+                        full_response += content
+                        accumulated += len(content)
+                        # Removed: response size limit was previously 100KB
+                        if accumulated % 500 < 100:
+                            status_callback(
+                                target_name, "streaming",
+                                f"{accumulated:,} bytes received"
+                            )
+
+                # End event — signal that the stream is finished
+                if data.get("status") == "end":
+                    end_content = data.get("content", "") or ""
+                    if end_content and not full_response:
+                        full_response = end_content
+                        accumulated = len(end_content)
+                    done = True
+                    break
+    except RetryableHTTPError:
+        conn.close()
+        raise
+    except ResponseTooLarge:
+        conn.close()
+        raise
+    except Exception as e:
+        conn.close()
+        raise RuntimeError(str(e))
+
+    conn.close()
+
+    if not full_response:
+        raise RuntimeError("Empty response from AI — no content generated.")
+
+    # Final streaming update
+    status_callback(target_name, "streaming", f"{accumulated:,} bytes received")
+    return full_response
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -782,8 +990,8 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Operation mode:\n"
             "  prompt-and-code (default) — Run workflow, download prompts, THEN\n"
-            "                              execute prompts via Grok browser\n"
-            "                              automation and save airesponse.txt.\n"
+            "                              execute prompts locally via AI and\n"
+            "                              save airesponse.txt files.\n"
             "  prompt-creation           — Run workflow + download prompts only."
         ))
     args = parser.parse_args(argv)
