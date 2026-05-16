@@ -393,167 +393,6 @@ jobs:
           output_path.write_text(f"project_slug={slug}\nversion_count={len(all_versions)}\n", encoding="utf-8")
           PY
 
-      - name: Build launcher test matrix
-        id: build-launcher-matrix
-        shell: bash
-        run: |
-          python3 - <<'PYEOF'
-          import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
-          from pathlib import Path
-
-          OUT = Path(".workflow_artifacts/diagnosis")
-          diag = json.loads((OUT / "diagnosis.json").read_text(encoding="utf-8"))
-          working = [r for r in diag.get("version_records", []) if not r.get("is_shell", False)]
-
-          if not working:
-              matrix = json.dumps({"include": []})
-              output_path = Path(os.environ["GITHUB_OUTPUT"])
-              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
-              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
-              print("No working versions to test — empty launcher matrix")
-              sys.exit(0)
-
-          print("Fetching mc-runtime-test supported version data...")
-          try:
-              req = urllib.request.Request(
-                  "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json",
-                  headers={"User-Agent": "ModCompilerLauncherDiagnosis/1.0"},
-              )
-              with urllib.request.urlopen(req, timeout=30) as r:
-                  ci_data = json.loads(r.read().decode())
-          except Exception as e:
-              print(f"WARNING: Could not fetch ci-data.json: {e}")
-              matrix = json.dumps({"include": []})
-              output_path = Path(os.environ["GITHUB_OUTPUT"])
-              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
-              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
-              sys.exit(0)
-
-          run_data = ci_data.get("run_data", [])
-          if not run_data:
-              print("WARNING: ci-data.json contains no run_data")
-              matrix = json.dumps({"include": []})
-              output_path = Path(os.environ["GITHUB_OUTPUT"])
-              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
-              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
-              sys.exit(0)
-
-          supported = {}
-          for entry in run_data:
-              mc = entry.get("mc")
-              ltype = entry.get("type")
-              modloader = entry.get("modloader")
-              regex = entry.get("regex")
-              java_str = entry.get("java")
-              if not all([mc, ltype, modloader, regex, java_str]):
-                  continue
-              try:
-                  java = int(java_str)
-              except (ValueError, TypeError):
-                  java = 17
-              supported[(mc, modloader)] = {
-                  "mc": mc,
-                  "modloader": modloader,
-                  "mcrt_jar": ltype,
-                  "regex": regex,
-                  "java": java,
-              }
-
-          def parse_mc_version(v):
-              parts = []
-              for token in re.split(r'[.\-_]', str(v).strip()):
-                  if token.isdigit():
-                      parts.append(int(token))
-                  else:
-                      break
-              return tuple(parts) if parts else (0,)
-
-          def minor_key(v):
-              p = parse_mc_version(v)
-              if p[0] == 1 and len(p) >= 2:
-                  return (1, p[1])
-              return p[:2]
-
-          by_minor = {}
-          for (mc, modloader), cfg in supported.items():
-              key = (minor_key(mc), modloader)
-              if key not in by_minor or parse_mc_version(mc) > parse_mc_version(by_minor[key]["mc"]):
-                  by_minor[key] = cfg
-
-          def map_loader(loader):
-              if loader == "quilt":
-                  return "fabric"
-              return loader
-
-          def find_test_config(gv, loader):
-              if (gv, loader) in supported:
-                  return supported[(gv, loader)]
-              mk = minor_key(gv)
-              if (mk, loader) in by_minor:
-                  return by_minor[(mk, loader)]
-              return None
-
-          def safe_artifact_key(loader, gv):
-              return re.sub(r"[^A-Za-z0-9._-]+", "_", f"{loader}-{gv}").strip("_")
-
-          matrix_entries = []
-          skipped = []
-
-          for r in working:
-              file_url = r.get("file_url", "")
-              file_name = r.get("jar_name", "")
-              if not file_url or not file_name:
-                  continue
-              for gv in r.get("game_versions", []):
-                  if not isinstance(gv, str) or not gv.strip():
-                      continue
-                  gv = gv.strip()
-                  for loader in r.get("loaders", []):
-                      if not isinstance(loader, str) or not loader.strip():
-                          continue
-                      loader = loader.strip()
-                      test_loader = map_loader(loader)
-                      if test_loader not in ("fabric", "forge", "neoforge"):
-                          skipped.append((gv, loader, "unsupported loader"))
-                          continue
-                      test_config = find_test_config(gv, test_loader)
-                      if test_config is None:
-                          skipped.append((gv, test_loader, "no mc-runtime-test support"))
-                          continue
-                      matrix_entries.append({
-                          "game_version": gv,
-                          "test_mc": test_config["mc"],
-                          "loader": test_config["modloader"],
-                          "original_loader": loader,
-                          "file_url": file_url,
-                          "file_name": file_name,
-                          "version_number": r.get("version_number", ""),
-                          "java_version": test_config["java"],
-                          "loader_regex": test_config["regex"],
-                          "mcrt_jar": test_config["mcrt_jar"],
-                          "safe_key": safe_artifact_key(loader, gv),
-                      })
-
-          matrix_entries.sort(key=lambda e: (e["game_version"], e["loader"]))
-
-          if skipped:
-              unique_skipped = sorted(set(skipped))
-              print(f"Skipped {len(unique_skipped)} (version, loader) pairs:")
-              for gv, loader, reason in unique_skipped:
-                  print(f"    {loader} {gv}: {reason}")
-
-          print(f"\nGenerated {len(matrix_entries)} launcher test entries:")
-          for entry in matrix_entries:
-              mapped = "" if entry["game_version"] == entry["test_mc"] else f" (tested on {entry['test_mc']})"
-              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<12} -> {entry['test_mc']}{mapped}  Java {entry['java_version']}  ({entry['version_number']})")
-
-          matrix = json.dumps({"include": matrix_entries})
-          (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
-          output_path = Path(os.environ["GITHUB_OUTPUT"])
-          output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count={len(matrix_entries)}\n", encoding="utf-8")
-          print(f"Wrote launcher-matrix.json ({len(matrix_entries)} entries)")
-          PYEOF
-
       - uses: actions/upload-artifact@v4
         with:
           name: info-gather-output
@@ -858,6 +697,175 @@ jobs:
           output_path.write_text(f"has_issues={'true' if diag['has_issues'] else 'false'}\n", encoding="utf-8")
           print(f"Diagnosis complete: {len(shells)} shells, {len(missing_pairs)} missing")
           PY
+
+      - name: Build launcher test matrix
+        id: build-launcher-matrix
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
+          from pathlib import Path
+
+          OUT = Path(".workflow_artifacts/diagnosis")
+          diag_path = OUT / "diagnosis.json"
+          if not diag_path.exists():
+              print("No diagnosis.json found — skipping launcher matrix")
+              matrix = json.dumps({"include": []})
+              output_path = Path(os.environ["GITHUB_OUTPUT"])
+              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
+              sys.exit(0)
+
+          diag = json.loads(diag_path.read_text(encoding="utf-8"))
+          working = [r for r in diag.get("version_records", []) if not r.get("is_shell", False)]
+
+          if not working:
+              matrix = json.dumps({"include": []})
+              output_path = Path(os.environ["GITHUB_OUTPUT"])
+              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
+              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+              print("No working versions to test — empty launcher matrix")
+              sys.exit(0)
+
+          print("Fetching mc-runtime-test supported version data...")
+          try:
+              req = urllib.request.Request(
+                  "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json",
+                  headers={"User-Agent": "ModCompilerLauncherDiagnosis/1.0"},
+              )
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  ci_data = json.loads(r.read().decode())
+          except Exception as e:
+              print(f"WARNING: Could not fetch ci-data.json: {e}")
+              matrix = json.dumps({"include": []})
+              output_path = Path(os.environ["GITHUB_OUTPUT"])
+              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
+              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+              sys.exit(0)
+
+          run_data = ci_data.get("run_data", [])
+          if not run_data:
+              print("WARNING: ci-data.json contains no run_data")
+              matrix = json.dumps({"include": []})
+              output_path = Path(os.environ["GITHUB_OUTPUT"])
+              output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count=0\n", encoding="utf-8")
+              (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+              sys.exit(0)
+
+          supported = {}
+          for entry in run_data:
+              mc = entry.get("mc")
+              ltype = entry.get("type")
+              modloader = entry.get("modloader")
+              regex = entry.get("regex")
+              java_str = entry.get("java")
+              if not all([mc, ltype, modloader, regex, java_str]):
+                  continue
+              try:
+                  java = int(java_str)
+              except (ValueError, TypeError):
+                  java = 17
+              supported[(mc, modloader)] = {
+                  "mc": mc,
+                  "modloader": modloader,
+                  "mcrt_jar": ltype,
+                  "regex": regex,
+                  "java": java,
+              }
+
+          def parse_mc_version(v):
+              parts = []
+              for token in re.split(r'[.\-_]', str(v).strip()):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  else:
+                      break
+              return tuple(parts) if parts else (0,)
+
+          def minor_key(v):
+              p = parse_mc_version(v)
+              if p[0] == 1 and len(p) >= 2:
+                  return (1, p[1])
+              return p[:2]
+
+          by_minor = {}
+          for (mc, modloader), cfg in supported.items():
+              key = (minor_key(mc), modloader)
+              if key not in by_minor or parse_mc_version(mc) > parse_mc_version(by_minor[key]["mc"]):
+                  by_minor[key] = cfg
+
+          def map_loader(loader):
+              if loader == "quilt":
+                  return "fabric"
+              return loader
+
+          def find_test_config(gv, loader):
+              if (gv, loader) in supported:
+                  return supported[(gv, loader)]
+              mk = minor_key(gv)
+              if (mk, loader) in by_minor:
+                  return by_minor[(mk, loader)]
+              return None
+
+          def safe_artifact_key(loader, gv):
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", f"{loader}-{gv}").strip("_")
+
+          matrix_entries = []
+          skipped = []
+
+          for r in working:
+              file_url = r.get("file_url", "")
+              file_name = r.get("jar_name", "")
+              if not file_url or not file_name:
+                  continue
+              for gv in r.get("game_versions", []):
+                  if not isinstance(gv, str) or not gv.strip():
+                      continue
+                  gv = gv.strip()
+                  for loader in r.get("loaders", []):
+                      if not isinstance(loader, str) or not loader.strip():
+                          continue
+                      loader = loader.strip()
+                      test_loader = map_loader(loader)
+                      if test_loader not in ("fabric", "forge", "neoforge"):
+                          skipped.append((gv, loader, "unsupported loader"))
+                          continue
+                      test_config = find_test_config(gv, test_loader)
+                      if test_config is None:
+                          skipped.append((gv, test_loader, "no mc-runtime-test support"))
+                          continue
+                      matrix_entries.append({
+                          "game_version": gv,
+                          "test_mc": test_config["mc"],
+                          "loader": test_config["modloader"],
+                          "original_loader": loader,
+                          "file_url": file_url,
+                          "file_name": file_name,
+                          "version_number": r.get("version_number", ""),
+                          "java_version": test_config["java"],
+                          "loader_regex": test_config["regex"],
+                          "mcrt_jar": test_config["mcrt_jar"],
+                          "safe_key": safe_artifact_key(loader, gv),
+                      })
+
+          matrix_entries.sort(key=lambda e: (e["game_version"], e["loader"]))
+
+          if skipped:
+              unique_skipped = sorted(set(skipped))
+              print(f"Skipped {len(unique_skipped)} (version, loader) pairs:")
+              for gv, loader, reason in unique_skipped:
+                  print(f"    {loader} {gv}: {reason}")
+
+          print(f"\nGenerated {len(matrix_entries)} launcher test entries:")
+          for entry in matrix_entries:
+              mapped = "" if entry["game_version"] == entry["test_mc"] else f" (tested on {entry['test_mc']})"
+              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<12} -> {entry['test_mc']}{mapped}  Java {entry['java_version']}  ({entry['version_number']})")
+
+          matrix = json.dumps({"include": matrix_entries})
+          (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          output_path.write_text(f"launcher_matrix={matrix}\nlauncher_matrix_count={len(matrix_entries)}\n", encoding="utf-8")
+          print(f"Wrote launcher-matrix.json ({len(matrix_entries)} entries)")
+          PYEOF
 
       - uses: actions/upload-artifact@v4
         with:
