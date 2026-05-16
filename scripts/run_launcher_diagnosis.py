@@ -1,17 +1,36 @@
 #!/usr/bin/env python3
 """
-Trigger the ModLauncherRunDiagnosis GitHub Actions workflow.
+run_launcher_diagnosis.py
+-------------------------
+Trigger the ModLauncherRunDiagnosis workflow on GitHub Actions,
+stream live progress, download crash-log artifacts, and write a
+structured local run folder.
 
 Usage
 -----
-  python3 scripts/run_launcher_diagnosis.py https://modrinth.com/mod/fabric-api
-  python3 scripts/run_launcher_diagnosis.py sort-chest
-  python3 scripts/run_launcher_diagnosis.py https://modrinth.com/mod/sort-chest --wait
-  python3 scripts/run_launcher_diagnosis.py https://modrinth.com/mod/sort-chest --download-crash-logs
+  python3 scripts/run_launcher_diagnosis.py https://modrinth.com/mod/pingfix
+  python3 scripts/run_launcher_diagnosis.py fabric-api
+  python3 scripts/run_launcher_diagnosis.py https://modrinth.com/mod/sort-chest --output-dir MyRuns
+  python3 scripts/run_launcher_diagnosis.py sort-chest --no-wait
+
+The script exits 0 if all launcher tests pass, 1 on failure or error.
+
+Output folder layout
+--------------------
+  <output-dir>/<run-id>/
+    result.json          - machine-readable run summary
+    SUMMARY.md           - human-readable summary (read this first)
+    artifacts/
+      crash-<loader>-<mc>/  - crash logs for each failed test
+    logs/
+      run_overview.txt   - top-level workflow run log
+      <job-name>.txt     - full log for each job
+      jobs.json          - raw job list from GitHub API
 
 Requirements
 ------------
   - gh (GitHub CLI) must be installed and authenticated
+  - git must be installed
 """
 
 from __future__ import annotations
@@ -23,18 +42,436 @@ import re
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
 
 WORKFLOW_FILE = "ModLauncherRunDiagnosis.yml"
+DEFAULT_OUTPUT_DIR = "LauncherDiagnosisRuns"
+DEFAULT_TIMEOUT = 7200
+POLL_INTERVAL = 15
+LOG_POLL_INTERVAL = 30
 MAX_GH_RETRIES = 4
 GH_RETRY_DELAY = 3.0
-POLL_INTERVAL = 15
-DEFAULT_TIMEOUT = 7200
 
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Trigger ModLauncherRunDiagnosis workflow, wait, download artifacts + logs."
+    )
+    parser.add_argument(
+        "modrinth_link",
+        help="Modrinth project link or slug (e.g. https://modrinth.com/mod/fabric-api or fabric-api)",
+    )
+    parser.add_argument("--repo", default="",
+        help="owner/repo override (default: auto-detect from git remote)")
+    parser.add_argument("--no-wait", action="store_true",
+        help="Don't wait for the workflow to complete (just dispatch)")
+    parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR,
+        help=f"Root folder for run outputs (default: {DEFAULT_OUTPUT_DIR})")
+    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
+        help=f"Max seconds to wait for workflow (default: {DEFAULT_TIMEOUT})")
+    args = parser.parse_args(argv)
+
+    try:
+        return Runner(args).run()
+    except RunError as exc:
+        print(f"\nERROR: {exc}", file=sys.stderr)
+        return 1
+
+
+# ---------------------------------------------------------------------------
+# Runner
+# ---------------------------------------------------------------------------
+
+class Runner:
+    def __init__(self, args: argparse.Namespace) -> None:
+        self.modrinth_link = _normalize_modrinth_link(args.modrinth_link)
+        self.no_wait = args.no_wait
+        self.timeout = int(args.timeout)
+        self.repo = (args.repo or _detect_repo()).strip()
+        self.token = _detect_token()
+        self.run_id: int = 0
+
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        self.out_root = Path(args.output_dir).resolve() / f"run-{ts}"
+
+    # ------------------------------------------------------------------
+    def run(self) -> int:
+        self.out_root.mkdir(parents=True, exist_ok=True)
+        _ensure_gh()
+
+        print("=" * 60)
+        print("ModLauncherRunDiagnosis — Workflow Trigger")
+        print("=" * 60)
+        print(f"  Repo:          {self.repo}")
+        print(f"  Modrinth link: {self.modrinth_link}")
+        print(f"  Output dir:    {self.out_root}")
+        print()
+
+        # 1. Dispatch
+        self.run_id = self._dispatch()
+        run_url = f"https://github.com/{self.repo}/actions/runs/{self.run_id}"
+        print(f"\nDispatched run #{self.run_id}")
+        print(f"URL: {run_url}")
+
+        if self.no_wait:
+            print(f"\nCheck progress at:")
+            print(f"  {run_url}")
+            print("=" * 60)
+            return 0
+
+        print()
+
+        # 2. Wait + stream progress
+        conclusion = self._wait()
+
+        # 3. Download artifacts + logs concurrently
+        print("\nDownloading artifacts and logs concurrently...")
+        artifacts_dir = self.out_root / "artifacts"
+        self._download_all(artifacts_dir)
+
+        # 4. Write summary
+        self._write_summary(conclusion, run_url, artifacts_dir)
+
+        # 5. Print final status
+        summary_path = self.out_root / "SUMMARY.md"
+        print(f"\nRun folder:  {self.out_root}")
+        print(f"Summary:     {summary_path}")
+        print()
+        print("=" * 60)
+        if conclusion == "success":
+            print("✓ All launcher tests passed!")
+        else:
+            print("✗ Some launcher tests failed.")
+            crash_artifacts = list(artifacts_dir.glob("crash-*"))
+            if crash_artifacts:
+                print(f"  Crash logs downloaded to:")
+                for d in crash_artifacts:
+                    print(f"    {d}")
+            else:
+                print("  No crash log artifacts found.")
+        print(f"  Run URL: {run_url}")
+        print("=" * 60)
+
+        return 0 if conclusion == "success" else 1
+
+    # ------------------------------------------------------------------
+    def _dispatch(self) -> int:
+        before = {r["databaseId"] for r in self._list_runs()}
+
+        _gh([
+            "workflow", "run", WORKFLOW_FILE, "-R", self.repo,
+            "-f", f"modrinth_link={self.modrinth_link}",
+        ], token=self.token)
+
+        deadline = time.time() + 120
+        while time.time() < deadline:
+            for run in self._list_runs():
+                rid = run["databaseId"]
+                if rid not in before:
+                    return rid
+            time.sleep(4)
+        raise RunError("Workflow was dispatched but no new run appeared within 120 s.")
+
+    # ------------------------------------------------------------------
+    def _list_runs(self) -> list[dict]:
+        out = _gh([
+            "run", "list", "-R", self.repo,
+            "-w", WORKFLOW_FILE,
+            "-e", "workflow_dispatch",
+            "--json", "databaseId,status,conclusion,createdAt",
+            "-L", "20",
+        ], token=self.token)
+        return json.loads(out or "[]")
+
+    # ------------------------------------------------------------------
+    def _wait(self) -> str:
+        deadline = time.time() + self.timeout
+        last_status = ""
+        last_jobs_print = 0.0
+
+        print(f"Waiting for workflow run #{self.run_id} to complete...")
+        print(f"  (polling every {POLL_INTERVAL}s, timeout {self.timeout}s)\n")
+
+        while time.time() < deadline:
+            info = self._run_view()
+            status = info.get("status", "")
+            conclusion = info.get("conclusion") or ""
+
+            if status != last_status:
+                _log(f"Status: {status}")
+                last_status = status
+
+            if time.time() - last_jobs_print >= LOG_POLL_INTERVAL:
+                self._print_job_progress()
+                last_jobs_print = time.time()
+
+            if status == "completed":
+                _log(f"Completed — conclusion: {conclusion}")
+                return conclusion
+
+            time.sleep(POLL_INTERVAL)
+
+        raise RunError(f"Timed out after {self.timeout}s waiting for run {self.run_id}.")
+
+    # ------------------------------------------------------------------
+    def _run_view(self) -> dict:
+        out = _gh([
+            "run", "view", str(self.run_id), "-R", self.repo,
+            "--json", "status,conclusion,url,workflowName",
+        ], token=self.token)
+        return json.loads(out or "{}")
+
+    # ------------------------------------------------------------------
+    def _print_job_progress(self) -> None:
+        try:
+            jobs = self._get_jobs()
+        except RunError:
+            return
+        lines = []
+        for job in jobs:
+            name = job.get("name", "?")
+            status = job.get("status", "?")
+            conc = job.get("conclusion") or ""
+            icon = {"success": "✓", "failure": "✗", "skipped": "–"}.get(conc, "…")
+            lines.append(f"  {icon} {name}  [{status}{' / ' + conc if conc else ''}]")
+        if lines:
+            print(f"\nJob progress ({len(lines)} jobs):")
+            print("\n".join(lines))
+            print()
+
+    # ------------------------------------------------------------------
+    def _get_jobs(self) -> list[dict]:
+        out = _gh([
+            "run", "view", str(self.run_id), "-R", self.repo,
+            "--json", "jobs",
+        ], token=self.token)
+        data = json.loads(out or "{}")
+        return data.get("jobs", [])
+
+    # ------------------------------------------------------------------
+    def _download_all(self, artifacts_dir: Path) -> None:
+        MAX_WORKERS = 30
+        logs_dir = self.out_root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            jobs = self._get_jobs()
+            (logs_dir / "jobs.json").write_text(
+                json.dumps(jobs, indent=2), encoding="utf-8")
+        except RunError:
+            jobs = []
+
+        tasks: list[tuple[str, Any]] = []
+
+        # Download crash-log artifacts for failed jobs
+        failed_job_names = set()
+        for job in jobs:
+            conc = job.get("conclusion") or ""
+            if conc == "failure":
+                job_name = job.get("name", "unknown")
+                safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", job_name).strip("_")
+                failed_job_names.add(safe_name)
+
+        for safe_name in sorted(failed_job_names):
+            artifact_name = f"crash-{safe_name}"
+            dest = artifacts_dir / artifact_name
+            def _make_dl(an=artifact_name, d=dest):
+                def _dl():
+                    try:
+                        self._download_artifact(an, d)
+                    except RunError as exc:
+                        print(f"  (artifact {an} not available: {exc})")
+                return _dl
+            tasks.append((f"artifact:{artifact_name}", _make_dl()))
+
+        # Download full run log
+        def _dl_run_log():
+            try:
+                raw_log = _gh([
+                    "run", "view", str(self.run_id), "-R", self.repo, "--log",
+                ], token=self.token)
+                (logs_dir / "run_overview.txt").write_text(raw_log, encoding="utf-8")
+                print(f"  ✓ run_overview.txt  ({len(raw_log):,} chars)")
+            except RunError as exc:
+                (logs_dir / "run_overview.txt").write_text(
+                    f"Could not fetch run log: {exc}\n", encoding="utf-8")
+        tasks.append(("log:run_overview", _dl_run_log))
+
+        # Download per-job logs
+        for job in jobs:
+            job_id = job.get("databaseId") or job.get("id")
+            job_name = job.get("name", f"job-{job_id}")
+            safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", job_name).strip("_")
+            log_file = logs_dir / f"{safe_name}.txt"
+
+            if not job_id:
+                continue
+
+            def _make_job_log_task(jid=job_id, lf=log_file, sn=safe_name):
+                def _dl():
+                    try:
+                        job_log = _gh([
+                            "run", "view", str(self.run_id), "-R", self.repo,
+                            "--log", "--job", str(jid),
+                        ], token=self.token)
+                        lf.write_text(job_log, encoding="utf-8")
+                        print(f"  ✓ {sn}.txt  ({len(job_log):,} chars)")
+                    except RunError as exc:
+                        lf.write_text(f"Could not fetch log for job {jid}: {exc}\n",
+                                      encoding="utf-8")
+                return _dl
+
+            tasks.append((f"log:{safe_name}", _make_job_log_task()))
+
+        print(f"  Queuing {len(tasks)} download tasks (max {MAX_WORKERS} concurrent)...")
+        with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(tasks))) as pool:
+            futures = {pool.submit(fn): label for label, fn in tasks}
+            for fut in as_completed(futures):
+                label = futures[fut]
+                exc = fut.exception()
+                if exc:
+                    print(f"  ✗ {label}: {exc}")
+
+    # ------------------------------------------------------------------
+    def _download_artifact(self, name: str, dest: Path) -> None:
+        dest.mkdir(parents=True, exist_ok=True)
+        last_err = ""
+        for attempt in range(1, 6):
+            try:
+                _gh([
+                    "run", "download", str(self.run_id),
+                    "-R", self.repo,
+                    "-n", name,
+                    "-D", str(dest),
+                ], token=self.token)
+                print(f"  ✓ {name}  →  {dest}")
+                return
+            except RunError as exc:
+                last_err = str(exc)
+                time.sleep(3 * attempt)
+        raise RunError(f"Could not download artifact '{name}': {last_err}")
+
+    # ------------------------------------------------------------------
+    def _write_summary(self, conclusion: str, run_url: str, artifacts_dir: Path) -> None:
+        jobs = []
+        try:
+            jobs = self._get_jobs()
+        except RunError:
+            pass
+
+        passed = sum(1 for j in jobs if (j.get("conclusion") or "") == "success")
+        failed = sum(1 for j in jobs if (j.get("conclusion") or "") == "failure")
+        skipped = sum(1 for j in jobs if (j.get("conclusion") or "") == "skipped")
+        total = len(jobs)
+
+        status_icon = "✓" if conclusion == "success" else "✗"
+        lines = [
+            "# ModLauncherRunDiagnosis Summary",
+            "",
+            f"- Status:      {status_icon} {conclusion.upper()}",
+            f"- Run ID:      {self.run_id}",
+            f"- Run URL:     {run_url}",
+            f"- Repo:        {self.repo}",
+            f"- Modrinth:    {self.modrinth_link}",
+            f"- Output dir:  {self.out_root}",
+            f"- Tests:       {passed} passed, {failed} failed, {skipped} skipped (of {total})",
+            "",
+            "## Per-job results",
+            "",
+            "| Status | Job | Conclusion |",
+            "|--------|-----|------------|",
+        ]
+
+        for job in jobs:
+            name = job.get("name", "?")
+            conc = job.get("conclusion") or "pending"
+            icon = {"success": "✓", "failure": "✗", "skipped": "–"}.get(conc, "…")
+            lines.append(f"| {icon} | {name} | {conc} |")
+
+        lines += [
+            "",
+            "## Folder layout",
+            "",
+            "```",
+            f"{self.out_root.name}/",
+            "  SUMMARY.md              ← this file",
+            "  result.json             ← machine-readable summary",
+            "  artifacts/",
+            "    crash-<loader>-<mc>/  ← crash logs for failed tests",
+            "  logs/",
+            "    run_overview.txt      ← full workflow run log",
+            "    <job-name>.txt        ← per-job log",
+            "    jobs.json             ← raw job list",
+            "```",
+            "",
+        ]
+
+        crash_artifacts = list(artifacts_dir.glob("crash-*"))
+        if crash_artifacts:
+            lines += ["## Crash log artifacts", ""]
+            for d in sorted(crash_artifacts):
+                files = list(d.rglob("*"))
+                file_names = [f.name for f in files if f.is_file()]
+                lines.append(f"- `{d.name}/` ({len(file_names)} files)")
+                for fn in file_names[:10]:
+                    lines.append(f"  - `{fn}`")
+                if len(file_names) > 10:
+                    lines.append(f"  - ... and {len(file_names) - 10} more")
+            lines.append("")
+
+        (self.out_root / "SUMMARY.md").write_text("\n".join(lines), encoding="utf-8")
+
+        result = {
+            "run_id": self.run_id,
+            "run_url": run_url,
+            "repo": self.repo,
+            "modrinth_link": self.modrinth_link,
+            "conclusion": conclusion,
+            "status": "success" if conclusion == "success" else "failed",
+            "total_jobs": total,
+            "passed": passed,
+            "failed": failed,
+            "skipped": skipped,
+            "out_root": str(self.out_root),
+            "artifacts_dir": str(artifacts_dir),
+            "logs_dir": str(self.out_root / "logs"),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        (self.out_root / "result.json").write_text(
+            json.dumps(result, indent=2), encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 class RunError(Exception):
     pass
+
+
+def _log(msg: str) -> None:
+    ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    print(f"[{ts}] {msg}")
+
+
+def _normalize_modrinth_link(raw: str) -> str:
+    raw = raw.strip().strip("`").strip("'").strip('"').rstrip("/")
+    if not raw:
+        raise RunError("Modrinth link or slug is required.")
+    if "modrinth.com" in raw:
+        return raw
+    return f"https://modrinth.com/mod/{raw}"
 
 
 def _detect_repo() -> str:
@@ -110,221 +547,9 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
     raise RunError(f"gh {' '.join(args[:3])}... failed: {last_err}")
 
 
-def _normalize_modrinth_link(raw: str) -> str:
-    raw = raw.strip().strip("`").strip("'").strip('"').rstrip("/")
-    if not raw:
-        raise RunError("Modrinth link or slug is required.")
-    if "modrinth.com" in raw:
-        return raw
-    return f"https://modrinth.com/mod/{raw}"
-
-
-def dispatch(repo: str, token: str, modrinth_link: str) -> int:
-    before = {r["databaseId"] for r in _list_runs(repo, token)}
-
-    _gh([
-        "workflow", "run", WORKFLOW_FILE, "-R", repo,
-        "-f", f"modrinth_link={modrinth_link}",
-    ], token=token)
-
-    deadline = time.time() + 120
-    while time.time() < deadline:
-        for run in _list_runs(repo, token):
-            rid = run["databaseId"]
-            if rid not in before:
-                return rid
-        time.sleep(4)
-    raise RunError("Workflow was dispatched but no new run appeared within 120 s.")
-
-
-def _list_runs(repo: str, token: str) -> list[dict]:
-    out = _gh([
-        "run", "list", "-R", repo,
-        "-w", WORKFLOW_FILE,
-        "-e", "workflow_dispatch",
-        "--json", "databaseId,status,conclusion,createdAt",
-        "-L", "20",
-    ], token=token)
-    return json.loads(out or "[]")
-
-
-def _run_view(run_id: int, repo: str, token: str) -> dict:
-    out = _gh([
-        "run", "view", str(run_id), "-R", repo,
-        "--json", "status,conclusion,url,workflowName",
-    ], token=token)
-    return json.loads(out or "{}")
-
-
-def _get_jobs(run_id: int, repo: str, token: str) -> list[dict]:
-    out = _gh([
-        "run", "view", str(run_id), "-R", repo,
-        "--json", "jobs",
-    ], token=token)
-    data = json.loads(out or "{}")
-    return data.get("jobs", [])
-
-
-def wait_for_run(run_id: int, repo: str, token: str, timeout: int = DEFAULT_TIMEOUT) -> str:
-    deadline = time.time() + timeout
-    last_status = ""
-    last_jobs_print = 0.0
-
-    print(f"Waiting for workflow run #{run_id} to complete...")
-    print(f"  (polling every {POLL_INTERVAL}s, timeout {timeout}s)\n")
-
-    while time.time() < deadline:
-        info = _run_view(run_id, repo, token)
-        status = info.get("status", "")
-        conclusion = info.get("conclusion") or ""
-
-        if status != last_status:
-            _log(f"Status: {status}")
-            last_status = status
-
-        if time.time() - last_jobs_print >= 30:
-            _print_job_progress(run_id, repo, token)
-            last_jobs_print = time.time()
-
-        if status == "completed":
-            _log(f"Completed — conclusion: {conclusion}")
-            return conclusion
-
-        time.sleep(POLL_INTERVAL)
-
-    raise RunError(f"Timed out after {timeout}s waiting for run {run_id}.")
-
-
-def _print_job_progress(run_id: int, repo: str, token: str) -> None:
-    try:
-        jobs = _get_jobs(run_id, repo, token)
-    except RunError:
-        return
-    lines = []
-    for job in jobs:
-        name = job.get("name", "?")
-        status = job.get("status", "?")
-        conc = job.get("conclusion") or ""
-        icon = {"success": "✓", "failure": "✗", "skipped": "–"}.get(conc, "…")
-        lines.append(f"  {icon} {name}  [{status}{' / ' + conc if conc else ''}]")
-    if lines:
-        print(f"\nJob progress ({len(lines)} jobs):")
-        print("\n".join(lines))
-        print()
-
-
-def download_crash_artifacts(run_id: int, repo: str, token: str, dest: Path) -> list[str]:
-    dest.mkdir(parents=True, exist_ok=True)
-    jobs = _get_jobs(run_id, repo, token)
-    downloaded = []
-
-    for job in jobs:
-        if (job.get("conclusion") or "") != "failure":
-            continue
-        job_name = job.get("name", "unknown")
-        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", job_name).strip("_")
-
-        try:
-            _gh([
-                "run", "download", str(run_id),
-                "-R", repo,
-                "-n", f"crash-{safe_name}",
-                "-D", str(dest / safe_name),
-            ], token=token)
-            downloaded.append(safe_name)
-            print(f"  ✓ crash logs for {safe_name}")
-        except RunError:
-            pass
-
-    return downloaded
-
-
-def _log(msg: str) -> None:
-    ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
-    print(f"[{ts}] {msg}")
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Trigger ModLauncherRunDiagnosis workflow on GitHub Actions."
-    )
-    parser.add_argument(
-        "modrinth_link",
-        help="Modrinth project link (e.g. https://modrinth.com/mod/fabric-api) or slug (e.g. fabric-api)",
-    )
-    parser.add_argument("--repo", default="",
-        help="owner/repo override (default: auto-detect from git remote)")
-    parser.add_argument("--wait", action="store_true",
-        help="Wait for the workflow to complete before exiting")
-    parser.add_argument("--download-crash-logs", action="store_true",
-        help="Download crash log artifacts for any failed test jobs (implies --wait)")
-    parser.add_argument("--output-dir", default="LauncherDiagnosisRuns",
-        help="Root folder for downloaded artifacts (default: LauncherDiagnosisRuns)")
-    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
-        help=f"Max seconds to wait for workflow (default: {DEFAULT_TIMEOUT})")
-
-    args = parser.parse_args(argv)
-
-    if args.download_crash_logs:
-        args.wait = True
-
-    try:
-        _ensure_gh()
-
-        repo = (args.repo or _detect_repo()).strip()
-        token = _detect_token()
-        modrinth_link = _normalize_modrinth_link(args.modrinth_link)
-
-        print("=" * 60)
-        print("ModLauncherRunDiagnosis — Workflow Trigger")
-        print("=" * 60)
-        print(f"  Repo:          {repo}")
-        print(f"  Modrinth link: {modrinth_link}")
-        print()
-
-        run_id = dispatch(repo, token, modrinth_link)
-        run_url = f"https://github.com/{repo}/actions/runs/{run_id}"
-
-        print(f"\n✓ Workflow triggered successfully!")
-        print(f"  Run ID:  {run_id}")
-        print(f"  URL:     {run_url}")
-
-        if not args.wait:
-            print(f"\nCheck progress at:")
-            print(f"  {run_url}")
-            print("=" * 60)
-            return 0
-
-        conclusion = wait_for_run(run_id, repo, token, args.timeout)
-
-        print()
-        if args.download_crash_logs:
-            print("Downloading crash log artifacts...")
-            ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-            dest = Path(args.output_dir).resolve() / f"run-{run_id}-{ts}"
-            downloaded = download_crash_artifacts(run_id, repo, token, dest)
-            if downloaded:
-                print(f"\n  Crash logs saved to: {dest}")
-            else:
-                print("\n  No crash log artifacts found (all tests may have passed).")
-
-        print()
-        print("=" * 60)
-        if conclusion == "success":
-            print("✓ All launcher tests passed!")
-        else:
-            print("✗ Some launcher tests failed.")
-            if not args.download_crash_logs:
-                print("  Tip: re-run with --download-crash-logs to get crash reports.")
-        print(f"  Run URL: {run_url}")
-        print("=" * 60)
-
-        return 0 if conclusion == "success" else 1
-
-    except RunError as exc:
-        print(f"\nERROR: {exc}", file=sys.stderr)
-        return 1
-
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     raise SystemExit(main())
