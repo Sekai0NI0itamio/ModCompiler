@@ -1,8 +1,6 @@
 name: ModLauncherRunDiagnosis
 
 # ---------------------------------------------------------------------------
-# Purpose
-# -------
 # Takes a Modrinth project link, fetches all supported Minecraft version +
 # loader combinations, finds the LATEST upload for each pair, downloads the
 # jar, and launches it in a headless Minecraft client to verify the mod
@@ -18,7 +16,7 @@ name: ModLauncherRunDiagnosis
 #
 # Artifacts
 # ---------
-#   crash-<loader>-<mc_version>  crash logs uploaded when a test fails
+#   crash-<safe-key>  crash logs uploaded when a test fails
 # ---------------------------------------------------------------------------
 
 on:
@@ -55,12 +53,13 @@ jobs:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           MODRINTH_LINK: ${{ inputs.modrinth_link }}
         run: |
-          python3 - <<'PY'
+          python3 - <<'PYEOF'
           import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 
           API   = "https://api.modrinth.com/v2"
           TOKEN = os.environ.get("MODRINTH_TOKEN") or ""
           RAW   = os.environ.get("MODRINTH_LINK", "").strip().strip("`").strip("'").strip('"').rstrip("/")
+          MAX_MATRIX = 200
 
           def slug_from_url(v):
               m = re.search(r"modrinth\.com/(?:mod|plugin|resourcepack|shader|datapack|modpack)/([^/?#]+)", v)
@@ -85,12 +84,13 @@ jobs:
                       if e.code in {429, 500, 502, 503, 504} and attempt < 5:
                           time.sleep(2 ** attempt)
                           continue
-                      sys.exit(f"HTTP {e.code}: {url}")
+                      sys.exit(f"HTTP {e.code} fetching {url}")
                   except urllib.error.URLError as e:
                       if attempt < 5:
                           time.sleep(2 ** attempt)
                           continue
-                      sys.exit(f"Network error: {e.reason}")
+                      sys.exit(f"Network error fetching {url}: {e.reason}")
+              sys.exit(f"Failed after 5 retries: {url}")
 
           def parse_mc_version(v):
               parts = []
@@ -107,40 +107,56 @@ jobs:
                   return (1, p[1])
               return p[:2]
 
+          def safe_artifact_key(loader, gv):
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", f"{loader}-{gv}").strip("_")
+
           ref = slug_from_url(RAW)
           print(f"Fetching project: {ref}")
           project = get(f"/project/{urllib.parse.quote(ref, safe='')}")
-          pid = project["id"]
+          pid = project.get("id")
+          if not pid:
+              sys.exit(f"Project has no id: {ref}")
           slug = project.get("slug", ref)
           print(f"Project: {slug} (id={pid})")
 
           all_versions = get(f"/project/{urllib.parse.quote(pid, safe='')}/version") or []
           print(f"Total versions on Modrinth: {len(all_versions)}")
 
-          # ── Fetch mc-runtime-test ci-data.json for supported versions ──
           print("Fetching mc-runtime-test supported version data...")
-          ci_data = get(
-              "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json",
-              is_full_url=True,
-          )
+          try:
+              ci_data = get(
+                  "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json",
+                  is_full_url=True,
+              )
+          except SystemExit:
+              print("ERROR: Could not fetch mc-runtime-test ci-data.json.")
+              print("This may be a temporary GitHub outage. Please retry later.")
+              raise
           run_data = ci_data.get("run_data", [])
+          if not run_data:
+              sys.exit("ci-data.json contains no run_data — mc-runtime-test may have changed format.")
 
-          # Build lookup: (mc_version, loader_type) → config from run_data
-          # loader_type is the mc-runtime-test jar type: "lexforge", "neoforge", "fabric"
           supported = {}
           for entry in run_data:
-              mc = entry["mc"]
-              ltype = entry["type"]          # "lexforge", "neoforge", "fabric"
-              modloader = entry["modloader"]  # "forge", "neoforge", "fabric"
+              mc = entry.get("mc")
+              ltype = entry.get("type")
+              modloader = entry.get("modloader")
+              regex = entry.get("regex")
+              java_str = entry.get("java")
+              if not all([mc, ltype, modloader, regex, java_str]):
+                  continue
+              try:
+                  java = int(java_str)
+              except (ValueError, TypeError):
+                  java = 17
               supported[(mc, modloader)] = {
                   "mc": mc,
                   "modloader": modloader,
                   "mcrt_jar": ltype,
-                  "regex": entry["regex"],
-                  "java": int(entry["java"]),
+                  "regex": regex,
+                  "java": java,
               }
 
-          # Group supported versions by (minor_key, modloader) for nearest-match
           by_minor = {}
           for (mc, modloader), cfg in supported.items():
               key = (minor_key(mc), modloader)
@@ -150,48 +166,52 @@ jobs:
           print(f"mc-runtime-test supports {len(supported)} (mc, loader) combos")
           print(f"  Versions: {sorted(set(mc for mc, _ in supported.keys()))}")
 
-          # ── Map Modrinth loader names to mc-runtime-test modloader names ──
           def map_loader(loader):
               if loader == "quilt":
                   return "fabric"
               return loader
 
-          # ── Find the best mc-runtime-test config for a given (gv, loader) ──
           def find_test_config(gv, loader):
-              # 1. Exact match
               if (gv, loader) in supported:
                   return supported[(gv, loader)]
-
-              # 2. Nearest match in same minor range (e.g. 1.12 → 1.12.2)
               mk = minor_key(gv)
               if (mk, loader) in by_minor:
                   return by_minor[(mk, loader)]
-
               return None
 
-          # ── Build the matrix ──────────────────────────────────────────────
           latest_versions = {}
           skipped = []
 
           for version in all_versions:
               date_published = version.get("date_published", "")
-              game_versions = version.get("game_versions", [])
-              loaders = version.get("loaders", [])
+              game_versions = version.get("game_versions") or []
+              loaders = version.get("loaders") or []
 
-              primary_file = next((f for f in version.get("files", []) if f.get("primary")), None)
-              if not primary_file and version.get("files"):
-                  primary_file = version["files"][0]
+              files = version.get("files") or []
+              primary_file = next((f for f in files if f.get("primary")), None)
+              if not primary_file and files:
+                  primary_file = files[0]
               if not primary_file:
                   continue
 
-              file_url = primary_file["url"]
-              file_name = primary_file["filename"]
+              file_url = primary_file.get("url")
+              file_name = primary_file.get("filename")
+              if not file_url or not file_name:
+                  continue
+
               version_number = version.get("version_number", "unknown")
 
               for gv in game_versions:
+                  if not isinstance(gv, str) or not gv.strip():
+                      continue
+                  gv = gv.strip()
                   for loader in loaders:
+                      if not isinstance(loader, str) or not loader.strip():
+                          continue
+                      loader = loader.strip()
                       test_loader = map_loader(loader)
                       if test_loader not in ("fabric", "forge", "neoforge"):
+                          skipped.append((gv, loader, "unsupported loader"))
                           continue
 
                       test_config = find_test_config(gv, test_loader)
@@ -214,26 +234,35 @@ jobs:
                               "java_version": test_config["java"],
                               "loader_regex": test_config["regex"],
                               "mcrt_jar": test_config["mcrt_jar"],
+                              "safe_key": safe_artifact_key(loader, gv),
                           }
 
           matrix_entries = list(latest_versions.values())
           matrix_entries.sort(key=lambda e: (e["game_version"], e["loader"]))
 
+          if len(matrix_entries) > MAX_MATRIX:
+              print(f"WARNING: {len(matrix_entries)} entries exceeds cap of {MAX_MATRIX}. Truncating to latest {MAX_MATRIX}.")
+              matrix_entries = matrix_entries[:MAX_MATRIX]
+
           print(f"\nGenerated {len(matrix_entries)} test entries:")
           for entry in matrix_entries:
               mapped = "" if entry["game_version"] == entry["test_mc"] else f" (tested on {entry['test_mc']})"
-              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<10} → {entry['test_mc']}{mapped}  Java {entry['java_version']}  ({entry['version_number']})")
+              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<12} -> {entry['test_mc']}{mapped}  Java {entry['java_version']}  ({entry['version_number']})")
 
           if skipped:
-              print(f"\nSkipped {len(skipped)} (version, loader) pairs (no mc-runtime-test support):")
-              for gv, loader, reason in sorted(set(skipped)):
+              unique_skipped = sorted(set(skipped))
+              print(f"\nSkipped {len(unique_skipped)} (version, loader) pairs:")
+              for gv, loader, reason in unique_skipped:
                   print(f"    {loader} {gv}: {reason}")
+
+          if not matrix_entries:
+              print("\nNo testable versions found. The mod may not support any mc-runtime-test compatible version/loader.")
 
           matrix = json.dumps({"include": matrix_entries})
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"matrix={matrix}\n")
               f.write(f"matrix_count={len(matrix_entries)}\n")
-          PY
+          PYEOF
 
 # ---------------------------------------------------------------------------
 # Job 2 — test each version+loader pair in a headless Minecraft client
@@ -243,6 +272,7 @@ jobs:
     needs: setup
     if: ${{ needs.setup.outputs.matrix_count != '0' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 8
@@ -256,11 +286,30 @@ jobs:
           distribution: 'temurin'
 
       - name: Download Mod Jar
+        env:
+          MOD_FILE_URL: ${{ matrix.file_url }}
+          MOD_FILE_NAME: ${{ matrix.file_name }}
         run: |
           mkdir -p run/mods
-          echo "Downloading ${{ matrix.file_name }} ..."
-          curl -fsSL "${{ matrix.file_url }}" -o "run/mods/${{ matrix.file_name }}"
-          echo "Downloaded: $(ls -lh run/mods/${{ matrix.file_name }} | awk '{print $5}')"
+          echo "Downloading $MOD_FILE_NAME ..."
+          for attempt in 1 2 3; do
+            if curl -fsSL --retry 3 --retry-delay 5 "$MOD_FILE_URL" -o "run/mods/$MOD_FILE_NAME"; then
+              break
+            fi
+            echo "Download attempt $attempt failed, retrying in 10s..."
+            sleep 10
+          done
+          if [ ! -f "run/mods/$MOD_FILE_NAME" ]; then
+            echo "ERROR: Mod jar was not downloaded"
+            exit 1
+          fi
+          if [ ! -s "run/mods/$MOD_FILE_NAME" ]; then
+            echo "ERROR: Mod jar is empty (0 bytes)"
+            rm -f "run/mods/$MOD_FILE_NAME"
+            exit 1
+          fi
+          SIZE=$(stat -c%s "run/mods/$MOD_FILE_NAME" 2>/dev/null || echo "?")
+          echo "Downloaded: $MOD_FILE_NAME ($SIZE bytes)"
 
       - name: Launch Headless Minecraft Client
         id: mc-test
@@ -282,43 +331,51 @@ jobs:
 
       - name: Collect crash logs
         if: failure()
+        continue-on-error: true
         run: |
           echo "Game crashed! Collecting diagnostic logs..."
           mkdir -p crash-logs
 
           if [ -d run/crash-reports ]; then
-            cp -r run/crash-reports crash-logs/
+            cp -r run/crash-reports crash-logs/ 2>/dev/null || true
             echo "  Collected crash-reports/"
           fi
 
           if [ -d run/logs ]; then
-            cp -r run/logs crash-logs/
+            cp -r run/logs crash-logs/ 2>/dev/null || true
             echo "  Collected logs/"
           fi
 
           if [ -f run/latest.log ]; then
-            cp run/latest.log crash-logs/
+            cp run/latest.log crash-logs/ 2>/dev/null || true
             echo "  Collected latest.log"
           fi
 
-          if ls run/hs_err_pid*.log 1>/dev/null 2>&1; then
-            cp run/hs_err_pid*.log crash-logs/ 2>/dev/null || true
-            echo "  Collected JVM crash logs"
-          fi
+          for f in run/hs_err_pid*.log; do
+            if [ -f "$f" ]; then
+              cp "$f" crash-logs/ 2>/dev/null || true
+              echo "  Collected JVM crash log: $(basename "$f")"
+            fi
+          done
 
           if [ -f run/options.txt ]; then
-            cp run/options.txt crash-logs/
+            cp run/options.txt crash-logs/ 2>/dev/null || true
           fi
 
           echo ""
           echo "=== Crash log summary ==="
           echo ""
-          find crash-logs -type f -exec echo "--- {} ---" \; -exec head -50 {} \; -exec echo "" \;
+          find crash-logs -type f 2>/dev/null | head -20 | while read -r f; do
+            echo "--- $f ---"
+            head -50 "$f" 2>/dev/null || true
+            echo ""
+          done
 
       - name: Upload crash logs
         if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: crash-${{ matrix.original_loader }}-${{ matrix.game_version }}
+          name: crash-${{ matrix.safe_key }}
           path: crash-logs/
           if-no-files-found: warn

@@ -21,7 +21,7 @@ Output folder layout
     result.json          - machine-readable run summary
     SUMMARY.md           - human-readable summary (read this first)
     artifacts/
-      crash-<loader>-<mc>/  - crash logs for each failed test
+      crash-<safe-key>/  - crash logs for each failed test
     logs/
       run_overview.txt   - top-level workflow run log
       <job-name>.txt     - full log for each job
@@ -47,10 +47,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 WORKFLOW_FILE = "ModLauncherRunDiagnosis.yml"
 DEFAULT_OUTPUT_DIR = "LauncherDiagnosisRuns"
 DEFAULT_TIMEOUT = 7200
@@ -59,10 +55,6 @@ LOG_POLL_INTERVAL = 30
 MAX_GH_RETRIES = 4
 GH_RETRY_DELAY = 3.0
 
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
@@ -87,11 +79,10 @@ def main(argv: list[str] | None = None) -> int:
     except RunError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print("\nInterrupted by user.")
+        return 130
 
-
-# ---------------------------------------------------------------------------
-# Runner
-# ---------------------------------------------------------------------------
 
 class Runner:
     def __init__(self, args: argparse.Namespace) -> None:
@@ -105,10 +96,10 @@ class Runner:
         ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         self.out_root = Path(args.output_dir).resolve() / f"run-{ts}"
 
-    # ------------------------------------------------------------------
     def run(self) -> int:
         self.out_root.mkdir(parents=True, exist_ok=True)
         _ensure_gh()
+        _ensure_gh_auth(self.token)
 
         print("=" * 60)
         print("ModLauncherRunDiagnosis — Workflow Trigger")
@@ -118,7 +109,6 @@ class Runner:
         print(f"  Output dir:    {self.out_root}")
         print()
 
-        # 1. Dispatch
         self.run_id = self._dispatch()
         run_url = f"https://github.com/{self.repo}/actions/runs/{self.run_id}"
         print(f"\nDispatched run #{self.run_id}")
@@ -132,27 +122,23 @@ class Runner:
 
         print()
 
-        # 2. Wait + stream progress
         conclusion = self._wait()
 
-        # 3. Download artifacts + logs concurrently
         print("\nDownloading artifacts and logs concurrently...")
         artifacts_dir = self.out_root / "artifacts"
         self._download_all(artifacts_dir)
 
-        # 4. Write summary
         self._write_summary(conclusion, run_url, artifacts_dir)
 
-        # 5. Print final status
         summary_path = self.out_root / "SUMMARY.md"
         print(f"\nRun folder:  {self.out_root}")
         print(f"Summary:     {summary_path}")
         print()
         print("=" * 60)
         if conclusion == "success":
-            print("✓ All launcher tests passed!")
+            print("All launcher tests passed!")
         else:
-            print("✗ Some launcher tests failed.")
+            print("Some launcher tests failed.")
             crash_artifacts = list(artifacts_dir.glob("crash-*"))
             if crash_artifacts:
                 print(f"  Crash logs downloaded to:")
@@ -165,7 +151,6 @@ class Runner:
 
         return 0 if conclusion == "success" else 1
 
-    # ------------------------------------------------------------------
     def _dispatch(self) -> int:
         before = {r["databaseId"] for r in self._list_runs()}
 
@@ -183,7 +168,6 @@ class Runner:
             time.sleep(4)
         raise RunError("Workflow was dispatched but no new run appeared within 120 s.")
 
-    # ------------------------------------------------------------------
     def _list_runs(self) -> list[dict]:
         out = _gh([
             "run", "list", "-R", self.repo,
@@ -194,7 +178,6 @@ class Runner:
         ], token=self.token)
         return json.loads(out or "[]")
 
-    # ------------------------------------------------------------------
     def _wait(self) -> str:
         deadline = time.time() + self.timeout
         last_status = ""
@@ -224,7 +207,6 @@ class Runner:
 
         raise RunError(f"Timed out after {self.timeout}s waiting for run {self.run_id}.")
 
-    # ------------------------------------------------------------------
     def _run_view(self) -> dict:
         out = _gh([
             "run", "view", str(self.run_id), "-R", self.repo,
@@ -232,7 +214,6 @@ class Runner:
         ], token=self.token)
         return json.loads(out or "{}")
 
-    # ------------------------------------------------------------------
     def _print_job_progress(self) -> None:
         try:
             jobs = self._get_jobs()
@@ -243,14 +224,13 @@ class Runner:
             name = job.get("name", "?")
             status = job.get("status", "?")
             conc = job.get("conclusion") or ""
-            icon = {"success": "✓", "failure": "✗", "skipped": "–"}.get(conc, "…")
-            lines.append(f"  {icon} {name}  [{status}{' / ' + conc if conc else ''}]")
+            icon = {"success": "OK", "failure": "FAIL", "skipped": "SKIP"}.get(conc, "...")
+            lines.append(f"  [{icon}] {name}  ({status}{' / ' + conc if conc else ''})")
         if lines:
             print(f"\nJob progress ({len(lines)} jobs):")
             print("\n".join(lines))
             print()
 
-    # ------------------------------------------------------------------
     def _get_jobs(self) -> list[dict]:
         out = _gh([
             "run", "view", str(self.run_id), "-R", self.repo,
@@ -259,7 +239,13 @@ class Runner:
         data = json.loads(out or "{}")
         return data.get("jobs", [])
 
-    # ------------------------------------------------------------------
+    def _list_artifacts(self) -> list[dict]:
+        out = _gh([
+            "api", f"repos/{self.repo}/actions/runs/{self.run_id}/artifacts",
+        ], token=self.token)
+        data = json.loads(out or "{}")
+        return data.get("artifacts", [])
+
     def _download_all(self, artifacts_dir: Path) -> None:
         MAX_WORKERS = 30
         logs_dir = self.out_root / "logs"
@@ -274,41 +260,38 @@ class Runner:
 
         tasks: list[tuple[str, Any]] = []
 
-        # Download crash-log artifacts for failed jobs
-        failed_job_names = set()
-        for job in jobs:
-            conc = job.get("conclusion") or ""
-            if conc == "failure":
-                job_name = job.get("name", "unknown")
-                safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", job_name).strip("_")
-                failed_job_names.add(safe_name)
+        crash_artifacts = []
+        try:
+            all_artifacts = self._list_artifacts()
+            crash_artifacts = [a for a in all_artifacts if a.get("name", "").startswith("crash-")]
+            print(f"  Found {len(crash_artifacts)} crash artifact(s) out of {len(all_artifacts)} total")
+        except RunError as exc:
+            print(f"  Could not list artifacts: {exc}")
 
-        for safe_name in sorted(failed_job_names):
-            artifact_name = f"crash-{safe_name}"
-            dest = artifacts_dir / artifact_name
-            def _make_dl(an=artifact_name, d=dest):
+        for artifact in crash_artifacts:
+            aname = artifact.get("name", "unknown")
+            dest = artifacts_dir / aname
+            def _make_dl(an=aname, d=dest):
                 def _dl():
                     try:
                         self._download_artifact(an, d)
                     except RunError as exc:
                         print(f"  (artifact {an} not available: {exc})")
                 return _dl
-            tasks.append((f"artifact:{artifact_name}", _make_dl()))
+            tasks.append((f"artifact:{aname}", _make_dl()))
 
-        # Download full run log
         def _dl_run_log():
             try:
                 raw_log = _gh([
                     "run", "view", str(self.run_id), "-R", self.repo, "--log",
                 ], token=self.token)
                 (logs_dir / "run_overview.txt").write_text(raw_log, encoding="utf-8")
-                print(f"  ✓ run_overview.txt  ({len(raw_log):,} chars)")
+                print(f"  + run_overview.txt  ({len(raw_log):,} chars)")
             except RunError as exc:
                 (logs_dir / "run_overview.txt").write_text(
                     f"Could not fetch run log: {exc}\n", encoding="utf-8")
         tasks.append(("log:run_overview", _dl_run_log))
 
-        # Download per-job logs
         for job in jobs:
             job_id = job.get("databaseId") or job.get("id")
             job_name = job.get("name", f"job-{job_id}")
@@ -326,7 +309,7 @@ class Runner:
                             "--log", "--job", str(jid),
                         ], token=self.token)
                         lf.write_text(job_log, encoding="utf-8")
-                        print(f"  ✓ {sn}.txt  ({len(job_log):,} chars)")
+                        print(f"  + {sn}.txt  ({len(job_log):,} chars)")
                     except RunError as exc:
                         lf.write_text(f"Could not fetch log for job {jid}: {exc}\n",
                                       encoding="utf-8")
@@ -334,20 +317,23 @@ class Runner:
 
             tasks.append((f"log:{safe_name}", _make_job_log_task()))
 
+        if not tasks:
+            print("  Nothing to download.")
+            return
+
         print(f"  Queuing {len(tasks)} download tasks (max {MAX_WORKERS} concurrent)...")
-        with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(tasks))) as pool:
+        with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, max(len(tasks), 1))) as pool:
             futures = {pool.submit(fn): label for label, fn in tasks}
             for fut in as_completed(futures):
                 label = futures[fut]
                 exc = fut.exception()
                 if exc:
-                    print(f"  ✗ {label}: {exc}")
+                    print(f"  x {label}: {exc}")
 
-    # ------------------------------------------------------------------
     def _download_artifact(self, name: str, dest: Path) -> None:
         dest.mkdir(parents=True, exist_ok=True)
         last_err = ""
-        for attempt in range(1, 6):
+        for attempt in range(1, 4):
             try:
                 _gh([
                     "run", "download", str(self.run_id),
@@ -355,14 +341,13 @@ class Runner:
                     "-n", name,
                     "-D", str(dest),
                 ], token=self.token)
-                print(f"  ✓ {name}  →  {dest}")
+                print(f"  + {name}  ->  {dest}")
                 return
             except RunError as exc:
                 last_err = str(exc)
                 time.sleep(3 * attempt)
         raise RunError(f"Could not download artifact '{name}': {last_err}")
 
-    # ------------------------------------------------------------------
     def _write_summary(self, conclusion: str, run_url: str, artifacts_dir: Path) -> None:
         jobs = []
         try:
@@ -375,7 +360,7 @@ class Runner:
         skipped = sum(1 for j in jobs if (j.get("conclusion") or "") == "skipped")
         total = len(jobs)
 
-        status_icon = "✓" if conclusion == "success" else "✗"
+        status_icon = "PASS" if conclusion == "success" else "FAIL"
         lines = [
             "# ModLauncherRunDiagnosis Summary",
             "",
@@ -396,7 +381,7 @@ class Runner:
         for job in jobs:
             name = job.get("name", "?")
             conc = job.get("conclusion") or "pending"
-            icon = {"success": "✓", "failure": "✗", "skipped": "–"}.get(conc, "…")
+            icon = {"success": "OK", "failure": "FAIL", "skipped": "SKIP"}.get(conc, "...")
             lines.append(f"| {icon} | {name} | {conc} |")
 
         lines += [
@@ -405,14 +390,14 @@ class Runner:
             "",
             "```",
             f"{self.out_root.name}/",
-            "  SUMMARY.md              ← this file",
-            "  result.json             ← machine-readable summary",
+            "  SUMMARY.md              <- this file",
+            "  result.json             <- machine-readable summary",
             "  artifacts/",
-            "    crash-<loader>-<mc>/  ← crash logs for failed tests",
+            "    crash-<safe-key>/     <- crash logs for failed tests",
             "  logs/",
-            "    run_overview.txt      ← full workflow run log",
-            "    <job-name>.txt        ← per-job log",
-            "    jobs.json             ← raw job list",
+            "    run_overview.txt      <- full workflow run log",
+            "    <job-name>.txt        <- per-job log",
+            "    jobs.json             <- raw job list",
             "```",
             "",
         ]
@@ -451,10 +436,6 @@ class Runner:
         (self.out_root / "result.json").write_text(
             json.dumps(result, indent=2), encoding="utf-8")
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 class RunError(Exception):
     pass
@@ -512,6 +493,24 @@ def _ensure_gh() -> None:
         )
 
 
+def _ensure_gh_auth(token: str) -> None:
+    env = os.environ.copy()
+    if token:
+        env["GH_TOKEN"] = token
+        env["GITHUB_TOKEN"] = token
+    try:
+        subprocess.run(
+            ["gh", "auth", "status"],
+            env=env, check=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        raise RunError(
+            "GitHub CLI is not authenticated.\n"
+            "Run `gh auth login` first, or set the GH_TOKEN environment variable."
+        )
+
+
 def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
     env = os.environ.copy()
     if token:
@@ -546,10 +545,6 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
 
     raise RunError(f"gh {' '.join(args[:3])}... failed: {last_err}")
 
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     raise SystemExit(main())
