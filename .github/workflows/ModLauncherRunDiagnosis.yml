@@ -10,7 +10,9 @@ name: ModLauncherRunDiagnosis
 #
 # Jobs
 # ----
-#   setup - Parses Modrinth link, fetches versions via API, emits test matrix
+#   setup - Parses Modrinth link, fetches versions via API, maps each
+#           Modrinth game version to the nearest mc-runtime-test supported
+#           version, and emits the test matrix
 #   test  - Matrix job (one runner per version+loader pair), launches the mod
 #           in a headless client and collects crash logs on failure
 #
@@ -31,7 +33,7 @@ permissions:
   contents: read
 
 # ---------------------------------------------------------------------------
-# Job 1 — fetch versions and build the test matrix
+# Job 1 — fetch versions, map to supported test versions, build matrix
 # ---------------------------------------------------------------------------
 jobs:
   setup:
@@ -70,8 +72,8 @@ jobs:
                   h["Authorization"] = TOKEN
               return h
 
-          def get(path):
-              url = API + path
+          def get(url_or_path, is_full_url=False):
+              url = url_or_path if is_full_url else API + url_or_path
               req = urllib.request.Request(url, headers=headers())
               for attempt in range(1, 6):
                   try:
@@ -79,7 +81,7 @@ jobs:
                           return json.loads(r.read().decode())
                   except urllib.error.HTTPError as e:
                       if e.code == 404:
-                          sys.exit(f"Project not found: {url}")
+                          sys.exit(f"Not found: {url}")
                       if e.code in {429, 500, 502, 503, 504} and attempt < 5:
                           time.sleep(2 ** attempt)
                           continue
@@ -90,38 +92,20 @@ jobs:
                           continue
                       sys.exit(f"Network error: {e.reason}")
 
-          def get_java_version(mc_version):
-              if mc_version.startswith("26."):
-                  return 25
-              try:
-                  parts = list(map(int, mc_version.split(".")))
-              except ValueError:
-                  return 21
-              if parts[0] == 1:
-                  if len(parts) >= 3 and parts[1] >= 21:
-                      return 21
-                  if parts[1] >= 20 and len(parts) >= 3 and parts[2] >= 5:
-                      return 21
-                  if parts[1] >= 18:
-                      return 17
-                  if parts[1] == 17:
-                      return 16
-                  return 8
-              return 21
+          def parse_mc_version(v):
+              parts = []
+              for token in re.split(r'[.\-_]', str(v).strip()):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  else:
+                      break
+              return tuple(parts) if parts else (0,)
 
-          def get_loader_regex(loader):
-              if loader == "fabric":
-                  return "fabric-loader-.*"
-              if loader == "forge":
-                  return "forge-.*"
-              if loader == "neoforge":
-                  return "neoforge-.*"
-              return ".*"
-
-          def get_mcrt_jar(loader):
-              if loader == "forge":
-                  return "lexforge"
-              return loader
+          def minor_key(v):
+              p = parse_mc_version(v)
+              if p[0] == 1 and len(p) >= 2:
+                  return (1, p[1])
+              return p[:2]
 
           ref = slug_from_url(RAW)
           print(f"Fetching project: {ref}")
@@ -133,7 +117,62 @@ jobs:
           all_versions = get(f"/project/{urllib.parse.quote(pid, safe='')}/version") or []
           print(f"Total versions on Modrinth: {len(all_versions)}")
 
+          # ── Fetch mc-runtime-test ci-data.json for supported versions ──
+          print("Fetching mc-runtime-test supported version data...")
+          ci_data = get(
+              "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json",
+              is_full_url=True,
+          )
+          run_data = ci_data.get("run_data", [])
+
+          # Build lookup: (mc_version, loader_type) → config from run_data
+          # loader_type is the mc-runtime-test jar type: "lexforge", "neoforge", "fabric"
+          supported = {}
+          for entry in run_data:
+              mc = entry["mc"]
+              ltype = entry["type"]          # "lexforge", "neoforge", "fabric"
+              modloader = entry["modloader"]  # "forge", "neoforge", "fabric"
+              supported[(mc, modloader)] = {
+                  "mc": mc,
+                  "modloader": modloader,
+                  "mcrt_jar": ltype,
+                  "regex": entry["regex"],
+                  "java": int(entry["java"]),
+              }
+
+          # Group supported versions by (minor_key, modloader) for nearest-match
+          by_minor = {}
+          for (mc, modloader), cfg in supported.items():
+              key = (minor_key(mc), modloader)
+              if key not in by_minor or parse_mc_version(mc) > parse_mc_version(by_minor[key]["mc"]):
+                  by_minor[key] = cfg
+
+          print(f"mc-runtime-test supports {len(supported)} (mc, loader) combos")
+          print(f"  Versions: {sorted(set(mc for mc, _ in supported.keys()))}")
+
+          # ── Map Modrinth loader names to mc-runtime-test modloader names ──
+          def map_loader(loader):
+              if loader == "quilt":
+                  return "fabric"
+              return loader
+
+          # ── Find the best mc-runtime-test config for a given (gv, loader) ──
+          def find_test_config(gv, loader):
+              # 1. Exact match
+              if (gv, loader) in supported:
+                  return supported[(gv, loader)]
+
+              # 2. Nearest match in same minor range (e.g. 1.12 → 1.12.2)
+              mk = minor_key(gv)
+              if (mk, loader) in by_minor:
+                  return by_minor[(mk, loader)]
+
+              return None
+
+          # ── Build the matrix ──────────────────────────────────────────────
           latest_versions = {}
+          skipped = []
+
           for version in all_versions:
               date_published = version.get("date_published", "")
               game_versions = version.get("game_versions", [])
@@ -151,33 +190,44 @@ jobs:
 
               for gv in game_versions:
                   for loader in loaders:
-                      test_loader = loader
-                      if loader == "quilt":
-                          test_loader = "fabric"
+                      test_loader = map_loader(loader)
                       if test_loader not in ("fabric", "forge", "neoforge"):
                           continue
+
+                      test_config = find_test_config(gv, test_loader)
+                      if test_config is None:
+                          skipped.append((gv, test_loader, "no mc-runtime-test support"))
+                          continue
+
                       key = (gv, test_loader)
                       current = latest_versions.get(key)
                       if current is None or date_published > current["date_published"]:
                           latest_versions[key] = {
                               "game_version": gv,
-                              "loader": test_loader,
+                              "test_mc": test_config["mc"],
+                              "loader": test_config["modloader"],
                               "original_loader": loader,
                               "file_url": file_url,
                               "file_name": file_name,
                               "version_number": version_number,
                               "date_published": date_published,
-                              "java_version": get_java_version(gv),
-                              "loader_regex": get_loader_regex(test_loader),
-                              "mcrt_jar": get_mcrt_jar(test_loader),
+                              "java_version": test_config["java"],
+                              "loader_regex": test_config["regex"],
+                              "mcrt_jar": test_config["mcrt_jar"],
                           }
 
           matrix_entries = list(latest_versions.values())
           matrix_entries.sort(key=lambda e: (e["game_version"], e["loader"]))
 
-          print(f"Generated {len(matrix_entries)} test entries:")
+          print(f"\nGenerated {len(matrix_entries)} test entries:")
           for entry in matrix_entries:
-              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<10}  Java {entry['java_version']}  ({entry['version_number']})")
+              mapped = "" if entry["game_version"] == entry["test_mc"] else f" (tested on {entry['test_mc']})"
+              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<10} → {entry['test_mc']}{mapped}  Java {entry['java_version']}  ({entry['version_number']})")
+
+          if skipped:
+              print(f"\nSkipped {len(skipped)} (version, loader) pairs (no mc-runtime-test support):")
+              for gv, loader, reason in sorted(set(skipped)):
+                  print(f"    {loader} {gv}: {reason}")
 
           matrix = json.dumps({"include": matrix_entries})
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
@@ -216,7 +266,7 @@ jobs:
         id: mc-test
         uses: headlesshq/mc-runtime-test@4.4.0
         with:
-          mc: ${{ matrix.game_version }}
+          mc: ${{ matrix.test_mc }}
           modloader: ${{ matrix.loader }}
           regex: ${{ matrix.loader_regex }}
           java: ${{ matrix.java_version }}
@@ -228,7 +278,7 @@ jobs:
       - name: Mark test as passed
         if: success()
         run: |
-          echo "SUCCESS: Mod launched correctly for ${{ matrix.original_loader }} on Minecraft ${{ matrix.game_version }}"
+          echo "SUCCESS: Mod launched correctly for ${{ matrix.original_loader }} on Minecraft ${{ matrix.game_version }} (tested on ${{ matrix.test_mc }})"
 
       - name: Collect crash logs
         if: failure()
