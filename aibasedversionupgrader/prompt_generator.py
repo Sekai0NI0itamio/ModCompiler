@@ -189,6 +189,8 @@ def _collect_template_files(template_dir: Path, repo_root: Path) -> List[Dict]:
         "CREDITS.txt", "changelog.txt",
         "README.txt", "README.md",
         "build.log", ".ds_store", ".ds_Store",
+        # Example/template files - included as reference code for the AI
+        # (filenames in FILES TO CREATE are generated dynamically from mod metadata)
     }
     # Directories (or prefixes) to skip entirely — build artifacts, hidden dirs
     SKIP_DIR_PREFIXES = {
@@ -443,6 +445,7 @@ def generate_prompt(
     background_info: str,
     template_files: List[Dict],
     metadata: Dict,
+    template_dir: Optional[Path] = None,
 ) -> str:
     """
     Generate the prompt.txt content for a single target.
@@ -467,34 +470,85 @@ def generate_prompt(
     else:
         main_class_name = "".join(w.capitalize() for w in re.split(r"[-_]", mod_id)) + "Mod"
 
-    # Build the list of expected output files based on template
+    # Build the list of expected output files based on template structure + mod metadata.
+    # We DO NOT use the raw template filenames (which are "ExampleMod.java" placeholders)
+    # — instead we generate correct names from the mod's class/metadata.
     expected_files = []
     resource_file = _determine_resource_file(minecraft_version, loader, mod_id, mod_name, mod_version,
                                               description, authors_list, license_str)
 
-    for tf in template_files:
-        # We use the filename relative to template_dir
-        template_rel = tf["filename"]
-        if template_rel.endswith(".java"):
-            # This is a template .java file we need to replicate
+    # Derive class names from mod metadata
+    mod_name_clean = mod_id.replace("-", "").replace("_", "")
+    main_class_name_from_mod = "".join(w.capitalize() for w in re.split(r"[-_]", mod_id)) + "Mod"
+    main_client_class_name = main_class_name_from_mod + "Client"
+    mixin_class_name = main_class_name_from_mod.replace("Mod", "Mixin")
+    if mixin_class_name == main_class_name_from_mod:
+        mixin_class_name = mod_name_clean.capitalize() + "Mixin"
+    client_mixin_class_name = mixin_class_name.replace("Mixin", "ClientMixin")
+    if client_mixin_class_name == mixin_class_name:
+        client_mixin_class_name = mod_name_clean.capitalize() + "ClientMixin"
+
+    # Scan template directory structure to know what files the AI needs to create
+    has_client_dir = False
+    has_mixin_dir = False
+    has_client_mixin_dir = False
+    if template_dir and template_dir.exists():
+        has_client_dir = (template_dir / "src" / "client").is_dir()
+        has_mixin_dir = (template_dir / "src" / "main" / "java" / "com" / "example" / "mixin").is_dir()
+        if has_client_dir:
+            has_client_mixin_dir = (template_dir / "src" / "client" / "java" / "com" / "example" / "mixin" / "client").is_dir()
+
+    # ── Java source files ──
+    # Main mod class
+    expected_files.append({
+        "bundle_path": f"bundle/{minecraft_version}-{loader}/src/main/java/{pkg}/{main_class_name}.java",
+        "template_rel": f"src/main/java/{pkg}/{main_class_name}.java",
+        "description": f"Main mod class ({main_class_name}.java)",
+    })
+    # Mixin class(es)
+    if has_mixin_dir:
+        expected_files.append({
+            "bundle_path": f"bundle/{minecraft_version}-{loader}/src/main/java/{pkg}/mixin/{mixin_class_name}.java",
+            "template_rel": f"src/main/java/{pkg}/mixin/{mixin_class_name}.java",
+            "description": f"Mixin class ({mixin_class_name}.java)",
+        })
+    # Client-side classes
+    if has_client_dir:
+        expected_files.append({
+            "bundle_path": f"bundle/{minecraft_version}-{loader}/src/client/java/{pkg}/{main_client_class_name}.java",
+            "template_rel": f"src/client/java/{pkg}/{main_client_class_name}.java",
+            "description": f"Client mod class ({main_client_class_name}.java)",
+        })
+        if has_client_mixin_dir:
             expected_files.append({
-                "bundle_path": f"bundle/{minecraft_version}-{loader}/src/main/java/{pkg}/{Path(template_rel).name}",
-                "template_rel": template_rel,
-                "description": f"Java source file ({Path(template_rel).name})",
+                "bundle_path": f"bundle/{minecraft_version}-{loader}/src/client/java/{pkg}/mixin/client/{client_mixin_class_name}.java",
+                "template_rel": f"src/client/java/{pkg}/mixin/client/{client_mixin_class_name}.java",
+                "description": f"Client mixin class ({client_mixin_class_name}.java)",
             })
-        elif "mcmod.info" in template_rel or "mods.toml" in template_rel or "fabric.mod.json" in template_rel or "neoforge.mods.toml" in template_rel:
-            # This is already a resource file, we'll include it via template
+
+    # ── Resource files from template (replace "modid" with actual mod_id) ──
+    for tf in template_files:
+        template_rel = tf["filename"]
+        # Java files already handled above — only process resource files here
+        if template_rel.endswith(".java"):
+            continue
+        if "mcmod.info" in template_rel or "mods.toml" in template_rel or "fabric.mod.json" in template_rel or "neoforge.mods.toml" in template_rel or ".mixins.json" in template_rel:
+            # Replace placeholder "modid" with the actual mod_id
+            # template_rel already includes the full path from template_dir
+            # (e.g., "src/main/resources/modid.mixins.json")
+            fixed_rel = template_rel.replace("modid", mod_id)
             expected_files.append({
-                "bundle_path": f"bundle/{minecraft_version}-{loader}/src/main/resources/{template_rel}",
-                "template_rel": template_rel,
-                "description": f"Mod descriptor resource file ({Path(template_rel).name})",
+                "bundle_path": f"bundle/{minecraft_version}-{loader}/{fixed_rel}",
+                "template_rel": fixed_rel,
+                "description": f"Mod resource file ({Path(fixed_rel).name})",
             })
 
     # Add the resource file (deduplicated)
-    resource_paths = {ef["template_rel"] for ef in expected_files if "resources" in ef["bundle_path"]}
+    resource_paths = {ef["template_rel"] for ef in expected_files if "resources" in ef.get("template_rel", "")}
     if resource_file and resource_file["path"] not in resource_paths:
+        # resource_file["path"] is already relative (e.g. "src/main/resources/fabric.mod.json")
         expected_files.append({
-            "bundle_path": f"bundle/{minecraft_version}-{loader}/src/main/resources/{resource_file['path']}",
+            "bundle_path": f"bundle/{minecraft_version}-{loader}/{resource_file['path']}",
             "template_rel": resource_file["path"],
             "description": f"Mod descriptor resource file ({resource_file['path']})",
         })
@@ -557,7 +611,12 @@ def generate_prompt(
     lines.append("1. **YOU MUST OUTPUT ALL FILES** — Every single file listed below must be provided.")
     lines.append("   Missing a single file will cause the build to fail.")
     lines.append("")
-    lines.append("2. **EXACT OUTPUT FORMAT** — Each file MUST be in this EXACT two-block format.")
+    lines.append("2. **NO REASONING / THINKING / PLANNING** — Do NOT output any reasoning, planning,")
+    lines.append("   or thinking steps. Do NOT explain what you are going to do. DO NOT list files")
+    lines.append("   before writing them. START DIRECTLY with the first `filepath` block.")
+    lines.append("   The ONLY output that matters is the actual source code files.")
+    lines.append("")
+    lines.append("3. **EXACT OUTPUT FORMAT** — Each file MUST be in this EXACT two-block format.")
     lines.append("   This is the ONLY accepted format. The parser strictly reads blocks in pairs:")
     lines.append("")
     lines.append("   ```filepath")
@@ -575,7 +634,7 @@ def generate_prompt(
     lines.append("   The FIRST backtick block (language `filepath`) contains ONLY the file path.")
     lines.append("   The SECOND backtick block contains the actual source code.")
     lines.append("")
-    lines.append("3. **❌ COMMON MISTAKES — DO NOT do any of these:**")
+    lines.append("4. **❌ COMMON MISTAKES — DO NOT do any of these:**")
     lines.append("   - DO NOT wrap the filepath in single backticks: `path/to/file.java` ← WRONG")
     lines.append("   - DO NOT put the filepath on a bare line without a ```filepath block")
     lines.append("   - DO NOT add extra text between the filepath block and the code block")
@@ -583,17 +642,17 @@ def generate_prompt(
     lines.append("   - DO NOT forget to include ALL files — every file must be listed")
     lines.append("   - DO NOT create build files (build.gradle, settings.gradle, etc.)")
     lines.append("")
-    lines.append("4. **ALL filepaths must be relative** — do NOT include full system paths.")
+    lines.append("5. **ALL filepaths must be relative** — do NOT include full system paths.")
     lines.append("")
-    lines.append("5. **Implement REAL logic** from the decompiled source above. Do NOT write stubs,")
-    lines.append("   placeholder comments, or TODO markers.")
+    lines.append("6. **Implement REAL logic** from the decompiled source above. Do NOT write stubs,")
+    lines.append("   placeholder comments, or TODO markers. Write COMPLETE implementations.")
     lines.append("")
-    lines.append("6. **Use the EXACT package** `{metadata.get('group', 'asd.itamio.mod')}` in all Java files.")
+    lines.append("7. **Use the EXACT package** `{metadata.get('group', 'asd.itamio.mod')}` in all Java files.")
     lines.append("")
-    lines.append("7. **The main class name is `{main_class_name}`** — the filename must match exactly")
+    lines.append("8. **The main class name is `{main_class_name}`** — the filename must match exactly")
     lines.append("   (`{main_class_name}.java`), including capitalisation.")
     lines.append("")
-    lines.append("8. **Loader-specific API patterns:**")
+    lines.append("9. **Loader-specific API patterns:**")
     lines.append("")
 
     # Add loader-specific instructions
@@ -959,6 +1018,7 @@ def generate_all_prompts(
             background_info=background_content,
             template_files=template_files,
             metadata=metadata,
+            template_dir=template_dir,
         )
 
         prompt_path = target_dir / "prompt.txt"

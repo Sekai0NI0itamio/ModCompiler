@@ -160,10 +160,12 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
 
 class Colors:
     GREY = "\033[90m"
-    BLUE = "[94m"
+    BLUE = "\033[94m"
     RED = "\033[91m"
     YELLOW = "\033[93m"
     GREEN = "\033[92m"
+    PURPLE = "\033[95m"
+    CYAN = "\033[96m"
     BLACK_BOLD = "\033[1;30m"
     RESET = "\033[0m"
     BOLD = "\033[1m"
@@ -174,6 +176,7 @@ _STATUS_LABELS = {
     "request_sent": ("Request Sent", Colors.BLUE),
     "waiting": ("Waiting for response", Colors.RED),
     "streaming": ("Streaming", Colors.YELLOW),
+    "reasoning": ("Thinking", Colors.PURPLE),
     "complete": ("Complete", Colors.GREEN),
     "retrying": ("Retrying", Colors.BLACK_BOLD),
     "failed": ("Failed", Colors.BLACK_BOLD),
@@ -186,7 +189,7 @@ _STATUS_LABELS = {
 
 # --- AI Provider Config ---
 AI_C05_BASE = "http://localhost:8129"
-AI_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+AI_MODEL = "openai/gpt-oss-20b"
 
 # Maximum retries when the AI response contains no Java source files
 AI_JAVA_RETRIES = 3
@@ -298,14 +301,11 @@ def _generate_metadata_with_ai(
     user_prompt = f"Mod name: {raw_name}\n\nFormat this name into the metadata JSON. Do NOT change the name."
 
     payload: dict[str, Any] = {
-        "hoster": "groq",
+        "hoster": "nvidia",
         "model": AI_MODEL,
         "system_prompt": system_prompt,
         "user_prompt": user_prompt,
-        "extra_body": {
-            "temperature": 0.1,
-            "max_tokens": 1024,
-        },
+        "reasoning_effort": "high",
     }
 
     body_bytes = json.dumps(payload).encode("utf-8")
@@ -404,8 +404,8 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
     print()
     print("=" * 72)
     print("  PHASE 2 — AI MOD CODING (Local)")
-    print(f"  Model: {AI_MODEL} (reasoning=high)")
-    print(f"  Provider: C05LocalAI / Groq")
+    print(f"  Model: {AI_MODEL}")
+    print(f"  Provider: C05LocalAI / NVIDIA")
     print(f"  Auto-retry on missing Java code: up to {AI_JAVA_RETRIES} retries per target")
     print("=" * 72)
     print()
@@ -716,7 +716,13 @@ def _send_prompt_to_c05(
     author_info: tuple[str, str] = ("", ""),
     retry_context: str = "",
 ) -> str:
-    """Send a single prompt to C05LocalAI / Groq and return the full response.
+    """Send a single prompt to C05LocalAI and return the full content response.
+
+    - Streams NDJSON lines from the /chat endpoint
+    - Displays reasoning_text on screen ("Thinking" status) but does NOT
+      include it in the returned response
+    - Accumulates content events and returns only the content text
+    - Properly exits both read loops on the "end" event to avoid hanging
 
     Args:
         target_name: The name of the target (e.g. "1.20.5-fabric").
@@ -726,10 +732,8 @@ def _send_prompt_to_c05(
         retry_context: If non-empty, this is a retry — the text explains what
                        was wrong with the previous response.
     """
-    import urllib.request
-    import urllib.error
-
-    url = f"{AI_C05_BASE}/chat"
+    import http.client
+    import urllib.parse
 
     author, mod_path = author_info
 
@@ -753,85 +757,114 @@ def _send_prompt_to_c05(
         user_content = f"{retry_context}\n\n---\n\n{prompt_text}"
 
     payload: dict[str, Any] = {
-        "hoster": "groq",
+        "hoster": "nvidia",
         "model": AI_MODEL,
         "system_prompt": "\n".join(system_parts),
         "user_prompt": user_content,
-        "extra_body": {
-            "temperature": 0.2,
-        },
         "reasoning_effort": "high",
     }
 
     body_bytes = json.dumps(payload).encode("utf-8")
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
+
+    parsed = urllib.parse.urlparse(AI_C05_BASE)
+    host = parsed.hostname or "localhost"
+    port = parsed.port or 8129
 
     status_callback(target_name, "waiting")
 
-    req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
-
     full_response = ""
     accumulated = 0
-    buffer = ""
+    reasoning_text = ""
+    done = False
 
+    conn = http.client.HTTPConnection(host, port, timeout=600)
     try:
-        with urllib.request.urlopen(req, timeout=600) as resp:
-            while True:
-                chunk = resp.read(4096)
-                if not chunk:
+        conn.request(
+            "POST",
+            "/chat",
+            body=body_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+        )
+        resp = conn.getresponse()
+
+        if resp.status != 200:
+            error_detail = resp.read().decode("utf-8", errors="replace")[:500]
+            if resp.status in (429, 503):
+                status_callback(target_name, "retrying", f"HTTP {resp.status}: {error_detail}")
+                import time as _time
+                _time.sleep(30)
+                raise RetryableHTTPError(f"HTTP {resp.status}: {error_detail}")
+            raise RuntimeError(f"HTTP {resp.status}: {error_detail}")
+
+        buffer = ""
+        while not done:
+            chunk = resp.read(4096)
+            if not chunk:
+                break
+            buffer += chunk.decode("utf-8", errors="replace")
+
+            # Process complete NDJSON lines from the buffer
+            while "\n" in buffer and not done:
+                line, buffer = buffer.split("\n", 1)
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                # Error event
+                if "error" in data:
+                    raise RuntimeError(str(data["error"]))
+
+                event = data.get("event", "")
+
+                # Reasoning text — display on screen but do NOT save
+                if event == "reasoning_text":
+                    text = data.get("content", "") or ""
+                    if text:
+                        reasoning_text += text
+                        # Show the last ~60 chars of reasoning on the status line
+                        snippet = reasoning_text[-60:].replace("\n", " ").strip()
+                        if snippet:
+                            status_callback(target_name, "reasoning", snippet)
+
+                # Content event — accumulate for the final saved response
+                elif event == "content":
+                    content = data.get("content", "") or ""
+                    if content:
+                        full_response += content
+                        accumulated += len(content)
+                        # Removed: response size limit was previously 100KB
+                        if accumulated % 500 < 100:
+                            status_callback(
+                                target_name, "streaming",
+                                f"{accumulated:,} bytes received"
+                            )
+
+                # End event — signal that the stream is finished
+                if data.get("status") == "end":
+                    end_content = data.get("content", "") or ""
+                    if end_content and not full_response:
+                        full_response = end_content
+                        accumulated = len(end_content)
+                    done = True
                     break
-                buffer += chunk.decode("utf-8", errors="replace")
-
-                # Process NDJSON lines (each line is a complete JSON object)
-                while "\n" in buffer:
-                    line, buffer = buffer.split("\n", 1)
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        data = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-
-                    # Error event
-                    if "error" in data:
-                        raise RuntimeError(str(data["error"]))
-
-                    # Content event
-                    if data.get("event") == "content":
-                        content = data.get("content", "") or ""
-                        if content:
-                            full_response += content
-                            accumulated += len(content)
-                            if accumulated > 100000:
-                                raise ResponseTooLarge(f"Response exceeded 100KB ({accumulated:,} bytes)")
-                            if accumulated % 500 < 100:
-                                status_callback(
-                                    target_name, "streaming",
-                                    f"{accumulated:,} bytes received"
-                                )
-
-                    # End event — contains the full accumulated content
-                    if data.get("status") == "end":
-                        end_content = data.get("content", "") or ""
-                        if end_content and not full_response:
-                            full_response = end_content
-                            accumulated = len(end_content)
-                        break
-    except urllib.error.HTTPError as e:
-        error_code = e.code
-        error_detail = e.read().decode("utf-8", errors="replace")[:500]
-        if error_code in (429, 503):
-            status_callback(target_name, "retrying", f"HTTP {error_code}: {error_detail}")
-            import time as _time
-            _time.sleep(30)
-            raise RetryableHTTPError(f"HTTP {error_code}: {error_detail}")
-        raise RuntimeError(f"HTTP {error_code}: {error_detail}")
+    except RetryableHTTPError:
+        conn.close()
+        raise
+    except ResponseTooLarge:
+        conn.close()
+        raise
     except Exception as e:
+        conn.close()
         raise RuntimeError(str(e))
+
+    conn.close()
 
     if not full_response:
         raise RuntimeError("Empty response from AI — no content generated.")

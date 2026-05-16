@@ -234,6 +234,8 @@ def _collect_template_files(template_dir: Path, repo_root: Path) -> List[Dict]:
         "gradle.properties",
         ".gitignore", ".gitattributes",
         "LICENSE.txt", "CREDITS.txt", "changelog.txt", "README.txt",
+        # Example/template files - included as reference code for the AI
+        # (filenames in FILES TO CREATE are generated dynamically from mod metadata)
     }
     SKIP_DIR_PREFIXES = {".gradle", "build", ".git", "__pycache__", "gradle"}
 
@@ -619,12 +621,52 @@ def generate_prompt(
     lines.append("")
     lines.append("You MUST create ALL of the following files:")
     lines.append("")
+
+    # Dynamically generate correct file paths using the mod's metadata
+    # (main_class_name, mod_id, etc.) rather than blindly copying template filenames
+    # which are named "Example*" and "modid" as placeholders.
+    mod_id_lower = meta.get("mod_path", "").split(".")[-1].lower() if meta.get("mod_path") else "mod"
+    # Derive client class name: e.g. "LifestealMod" -> "LifestealModClient"
+    main_client_class_name = main_class_name + "Client"
+    # Derive mixin class names
+    mixin_class_name = main_class_name.replace("Mod", "Mixin")
+    if mixin_class_name == main_class_name:
+        mixin_class_name = mod_name_clean.capitalize() + "Mixin"
+    client_mixin_class_name = mixin_class_name.replace("Mixin", "ClientMixin")
+    if client_mixin_class_name == mixin_class_name:
+        client_mixin_class_name = mod_name_clean.capitalize() + "ClientMixin"
+
+    # Scan the template dir to understand its structure (what files are needed)
+    has_client_dir = (template_dir / "src" / "client").is_dir() if template_dir else False
+    has_mixin_dir = (template_dir / "src" / "main" / "java" / "com" / "example" / "mixin").is_dir() if template_dir else False
+    has_client_mixin_dir = (template_dir / "src" / "client" / "java" / "com" / "example" / "mixin" / "client").is_dir() if template_dir and has_client_dir else False
+
+    # ── Java source files ──
+    # Main mod class
+    lines.append(f"  - `bundle/{minecraft_version}-{loader}/src/main/java/{pkg_path}/{main_class_name}.java`")
+    # Mixin class(es)
+    if has_mixin_dir:
+        lines.append(f"  - `bundle/{minecraft_version}-{loader}/src/main/java/{pkg_path}/mixin/{mixin_class_name}.java`")
+    # Client-side classes
+    if has_client_dir:
+        lines.append(f"  - `bundle/{minecraft_version}-{loader}/src/client/java/{pkg_path}/{main_client_class_name}.java`")
+        if has_client_mixin_dir:
+            lines.append(f"  - `bundle/{minecraft_version}-{loader}/src/client/java/{pkg_path}/mixin/client/{client_mixin_class_name}.java`")
+
+    # ── Resource files ──
+    resource_files_written = set()
     for tf in template_files:
         tf_rel = tf["filename"]
-        if tf_rel.endswith(".java"):
-            lines.append(f"  - `bundle/{minecraft_version}-{loader}/src/main/java/{pkg_path}/{Path(tf_rel).name}`")
-        elif "resources" in tf_rel:
-            lines.append(f"  - `bundle/{minecraft_version}-{loader}/{tf_rel}`")
+        if "resources" not in tf_rel:
+            continue
+        # Replace placeholder "modid" with the actual mod_id in resource filenames
+        tf_rel_fixed = tf_rel.replace("modid", mod_id_lower)
+        lines.append(f"  - `bundle/{minecraft_version}-{loader}/{tf_rel_fixed}`")
+        resource_files_written.add(tf_rel)
+
+    # Also add the determined resource file if not already included
+    if resource_file and resource_file not in resource_files_written:
+        lines.append(f"  - `bundle/{minecraft_version}-{loader}/{resource_file}`")
 
     lines.append("")
     lines.append("## RESOURCE FILE")
