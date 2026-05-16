@@ -1,0 +1,248 @@
+name: ModLauncherRunDiagnosis
+
+# ---------------------------------------------------------------------------
+# Purpose
+# -------
+# Takes a Modrinth project link, fetches all supported Minecraft version +
+# loader combinations, finds the LATEST upload for each pair, downloads the
+# jar, and launches it in a headless Minecraft client to verify the mod
+# actually works at runtime.
+#
+# Jobs
+# ----
+#   setup - Parses Modrinth link, fetches versions via API, emits test matrix
+#   test  - Matrix job (one runner per version+loader pair), launches the mod
+#           in a headless client and collects crash logs on failure
+#
+# Artifacts
+# ---------
+#   crash-<loader>-<mc_version>  crash logs uploaded when a test fails
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      modrinth_link:
+        description: 'Modrinth project link (e.g. https://modrinth.com/mod/fabric-api)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# ---------------------------------------------------------------------------
+# Job 1 — fetch versions and build the test matrix
+# ---------------------------------------------------------------------------
+jobs:
+  setup:
+    name: Setup Test Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix_count: ${{ steps.set-matrix.outputs.matrix_count }}
+    steps:
+      - name: Parse Modrinth Link
+        id: parse-link
+        run: |
+          MODRINTH_LINK="${{ github.event.inputs.modrinth_link }}"
+          SLUG=$(echo "$MODRINTH_LINK" | sed -E 's|https?://modrinth\.com/(mod|plugin|datapack|shader|resourcepack|modpack)/([^/?#]+).*|\2|')
+          echo "Extracted project slug: $SLUG"
+          echo "slug=$SLUG" >> $GITHUB_OUTPUT
+
+      - name: Fetch Project Versions from Modrinth API
+        run: |
+          curl -sL "https://api.modrinth.com/v2/project/${{ steps.parse-link.outputs.slug }}/version" > versions.json
+          VERSION_COUNT=$(python3 -c "import json; print(len(json.load(open('versions.json'))))")
+          echo "Fetched $VERSION_COUNT versions from Modrinth API"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Process Versions & Generate Test Matrix
+        id: set-matrix
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          def get_java_version(mc_version):
+              if mc_version.startswith('26.'):
+                  return 25
+              try:
+                  parts = list(map(int, mc_version.split('.')))
+              except ValueError:
+                  return 21
+              if parts[0] == 1:
+                  if len(parts) >= 3 and parts[1] >= 21:
+                      return 21
+                  if parts[1] >= 20 and len(parts) >= 3 and parts[2] >= 5:
+                      return 21
+                  if parts[1] >= 18:
+                      return 17
+                  if parts[1] == 17:
+                      return 16
+                  return 8
+              return 21
+
+          def get_loader_regex(loader):
+              if loader == 'fabric':
+                  return 'fabric-loader-.*'
+              if loader == 'forge':
+                  return 'forge-.*'
+              if loader == 'neoforge':
+                  return 'neoforge-.*'
+              return '.*'
+
+          def get_mcrt_jar(loader):
+              if loader == 'forge':
+                  return 'lexforge'
+              return loader
+
+          with open('versions.json', 'r') as f:
+              versions = json.load(f)
+
+          latest_versions = {}
+
+          for version in versions:
+              date_published = version.get('date_published', '')
+              game_versions = version.get('game_versions', [])
+              loaders = version.get('loaders', [])
+
+              primary_file = next((f for f in version.get('files', []) if f.get('primary')), None)
+              if not primary_file and version.get('files'):
+                  primary_file = version['files'][0]
+              if not primary_file:
+                  continue
+
+              file_url = primary_file['url']
+              file_name = primary_file['filename']
+              version_number = version.get('version_number', 'unknown')
+
+              for gv in game_versions:
+                  for loader in loaders:
+                      test_loader = loader
+                      if loader == 'quilt':
+                          test_loader = 'fabric'
+
+                      if test_loader not in ('fabric', 'forge', 'neoforge'):
+                          continue
+
+                      key = (gv, test_loader)
+                      current = latest_versions.get(key)
+                      if current is None or date_published > current['date_published']:
+                          latest_versions[key] = {
+                              'game_version': gv,
+                              'loader': test_loader,
+                              'original_loader': loader,
+                              'file_url': file_url,
+                              'file_name': file_name,
+                              'version_number': version_number,
+                              'date_published': date_published,
+                              'java_version': get_java_version(gv),
+                              'loader_regex': get_loader_regex(test_loader),
+                              'mcrt_jar': get_mcrt_jar(test_loader),
+                          }
+
+          matrix_entries = list(latest_versions.values())
+          matrix_entries.sort(key=lambda e: (e['game_version'], e['loader']))
+
+          print(f"Generated {len(matrix_entries)} test entries:")
+          for entry in matrix_entries:
+              print(f"  {entry['original_loader']:>8}  MC {entry['game_version']:<10}  Java {entry['java_version']}  ({entry['version_number']})")
+
+          matrix = json.dumps({"include": matrix_entries})
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"matrix={matrix}\n")
+              f.write(f"matrix_count={len(matrix_entries)}\n")
+          PY
+
+# ---------------------------------------------------------------------------
+# Job 2 — test each version+loader pair in a headless Minecraft client
+# ---------------------------------------------------------------------------
+  test:
+    name: Test ${{ matrix.original_loader }} ${{ matrix.game_version }}
+    needs: setup
+    if: ${{ needs.setup.outputs.matrix_count != '0' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
+
+    steps:
+      - name: Install Java ${{ matrix.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java_version }}
+          distribution: 'temurin'
+
+      - name: Download Mod Jar
+        run: |
+          mkdir -p run/mods
+          echo "Downloading ${{ matrix.file_name }} ..."
+          curl -fsSL "${{ matrix.file_url }}" -o "run/mods/${{ matrix.file_name }}"
+          echo "Downloaded: $(ls -lh run/mods/${{ matrix.file_name }} | awk '{print $5}')"
+
+      - name: Launch Headless Minecraft Client
+        id: mc-test
+        uses: headlesshq/mc-runtime-test@4.4.0
+        with:
+          mc: ${{ matrix.game_version }}
+          modloader: ${{ matrix.loader }}
+          regex: ${{ matrix.loader_regex }}
+          java: ${{ matrix.java_version }}
+          mc-runtime-test: ${{ matrix.mcrt_jar }}
+          dummy-assets: true
+          xvfb: true
+          cache-mc: github
+
+      - name: Mark test as passed
+        if: success()
+        run: |
+          echo "SUCCESS: Mod launched correctly for ${{ matrix.original_loader }} on Minecraft ${{ matrix.game_version }}"
+
+      - name: Collect crash logs
+        if: failure()
+        run: |
+          echo "Game crashed! Collecting diagnostic logs..."
+          mkdir -p crash-logs
+
+          if [ -d run/crash-reports ]; then
+            cp -r run/crash-reports crash-logs/
+            echo "  Collected crash-reports/"
+          fi
+
+          if [ -d run/logs ]; then
+            cp -r run/logs crash-logs/
+            echo "  Collected logs/"
+          fi
+
+          if [ -f run/latest.log ]; then
+            cp run/latest.log crash-logs/
+            echo "  Collected latest.log"
+          fi
+
+          if ls run/hs_err_pid*.log 1>/dev/null 2>&1; then
+            cp run/hs_err_pid*.log crash-logs/ 2>/dev/null || true
+            echo "  Collected JVM crash logs"
+          fi
+
+          if [ -f run/options.txt ]; then
+            cp run/options.txt crash-logs/
+          fi
+
+          echo ""
+          echo "=== Crash log summary ==="
+          echo ""
+          find crash-logs -type f -exec echo "--- {} ---" \; -exec head -50 {} \; -exec echo "" \;
+
+      - name: Upload crash logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-${{ matrix.original_loader }}-${{ matrix.game_version }}
+          path: crash-logs/
+          if-no-files-found: warn
+</parameter>
+</invoke>
+</tool_calls
