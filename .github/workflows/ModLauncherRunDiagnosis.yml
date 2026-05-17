@@ -311,6 +311,37 @@ jobs:
           SIZE=$(stat -c%s "run/mods/$MOD_FILE_NAME" 2>/dev/null || echo "?")
           echo "Downloaded: $MOD_FILE_NAME ($SIZE bytes)"
 
+      - name: Start crash watcher
+        run: |
+          cat > /tmp/crash-watcher.sh << 'WATCHER'
+          #!/bin/bash
+          CRASH_DIR="run/crash-reports"
+          MAX_WAIT=1200
+          ELAPSED=0
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            if ls $CRASH_DIR/crash-*.txt 2>/dev/null || ls run/hs_err_pid*.log 2>/dev/null; then
+              echo "CRASH WATCHER: Crash detected! Waiting 5s for report to finish writing..."
+              sleep 5
+              echo "CRASH WATCHER: Killing Java processes..."
+              pkill -f 'headlessmc-launcher' 2>/dev/null || true
+              pkill -f 'net.minecraft' 2>/dev/null || true
+              pkill -f 'net.neoforged' 2>/dev/null || true
+              pkill -f 'cpw.mods' 2>/dev/null || true
+              pkill -f 'Xvfb' 2>/dev/null || true
+              sleep 2
+              pkill -9 -f 'java' 2>/dev/null || true
+              echo "CRASH WATCHER: Processes killed."
+              exit 0
+            fi
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+          done
+          echo "CRASH WATCHER: Timeout reached ($MAX_WAIT s), no crash detected."
+          WATCHER
+          chmod +x /tmp/crash-watcher.sh
+          nohup bash /tmp/crash-watcher.sh > /tmp/crash-watcher.log 2>&1 &
+          echo "Crash watcher started (PID $!)"
+
       - name: Launch Headless Minecraft Client
         id: mc-test
         uses: headlesshq/mc-runtime-test@4.4.0
@@ -323,6 +354,15 @@ jobs:
           dummy-assets: true
           xvfb: true
           cache-mc: github
+
+      - name: Stop crash watcher
+        if: always()
+        run: |
+          pkill -f 'crash-watcher.sh' 2>/dev/null || true
+          if [ -f /tmp/crash-watcher.log ]; then
+            echo "=== Crash watcher log ==="
+            cat /tmp/crash-watcher.log
+          fi
 
       - name: Mark test as passed
         if: success()

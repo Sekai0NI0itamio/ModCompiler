@@ -40,6 +40,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+_HERE = Path(__file__).resolve().parent
+_REPO_ROOT = _HERE.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from run_mod_to_all_converter import (
+    _ai_select_fix_source_files,
+    _read_source_file_contents,
+    _trim_prompt_to_limit,
+)
+
+_DECOMPILED_ROOT = _REPO_ROOT / "DecompiledMinecraftSourceCode"
+
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -1326,33 +1339,91 @@ def _extract_fix_section(body: str) -> str:
     return "(No fix section found)"
 
 
-def _collect_mc_source_files(minecraft_version: str, loader: str) -> dict[str, str]:
-    """Try to find relevant Minecraft source files for this version."""
+def _find_decompiled_source_dir(minecraft_version: str, loader: str) -> Path | None:
+    target_name = f"{minecraft_version}-{loader}"
+    direct = _DECOMPILED_ROOT / target_name
+    if direct.exists() and direct.is_dir():
+        return direct
+    if not _DECOMPILED_ROOT.exists():
+        return None
+    for d in _DECOMPILED_ROOT.iterdir():
+        if not d.is_dir():
+            continue
+        if d.name.startswith(f"{minecraft_version}-{loader}"):
+            return d
+        if minecraft_version.startswith(d.name.split("-")[0]):
+            return d
+    return None
+
+
+def _collect_decompiled_source_paths(source_dir: Path) -> list[str]:
+    paths = []
+    for p in sorted(source_dir.rglob("*.java")):
+        rel = str(p.relative_to(source_dir))
+        if rel.endswith("package-info.java"):
+            continue
+        paths.append(rel)
+    return paths
+
+
+def _collect_mc_source_files(
+    minecraft_version: str,
+    loader: str,
+    build_error: str = "",
+    current_code: str = "",
+) -> dict[str, str]:
     src_files: dict[str, str] = {}
-    # Check DecompiledMinecraftSourceCode directory
-    decomp_root = Path("DecompiledMinecraftSourceCode")
-    if not decomp_root.exists():
+    decomp_dir = _find_decompiled_source_dir(minecraft_version, loader)
+    if not decomp_dir:
+        decomp_root = Path("DecompiledMinecraftSourceCode")
+        if decomp_root.exists():
+            for vdir in decomp_root.iterdir():
+                if not vdir.is_dir():
+                    continue
+                vname = vdir.name
+                if minecraft_version.startswith(vname) or vname.startswith(minecraft_version.split(".")[0]):
+                    decomp_dir = vdir
+                    break
+    if not decomp_dir:
         return src_files
 
-    # Look for matching version folder
-    for vdir in decomp_root.iterdir():
-        if not vdir.is_dir():
+    source_paths = _collect_decompiled_source_paths(decomp_dir)
+    if not source_paths:
+        return src_files
+
+    selected_paths: list[str] = []
+    if build_error and current_code:
+        try:
+            ai_selected = _ai_select_fix_source_files(
+                source_paths, build_error, current_code,
+            )
+            if ai_selected:
+                selected_paths = ai_selected
+                _log(f"    AI selected {len(selected_paths)} relevant source file(s) for {minecraft_version}-{loader}")
+        except Exception as exc:
+            _log(f"    AI file selection failed for {minecraft_version}-{loader}: {exc}")
+
+    if not selected_paths:
+        for p in decomp_dir.rglob("*.java"):
+            try:
+                text = p.read_text(encoding="utf-8", errors="replace")
+                rel = str(p.relative_to(decomp_dir))
+                if len(text) < 200000:
+                    src_files[rel] = text
+            except Exception:
+                pass
+        return src_files
+
+    for path in selected_paths:
+        file_path = decomp_dir / path
+        if not file_path.exists() or not file_path.is_file():
             continue
-        vname = vdir.name
-        if minecraft_version.startswith(vname) or vname.startswith(minecraft_version.split(".")[0]):
-            # Found a matching version directory
-            # Collect .java files from the mod's package area (asd/itamio/...)
-            for p in vdir.rglob("*.java"):
-                try:
-                    text = p.read_text(encoding="utf-8", errors="replace")
-                    rel = str(p.relative_to(vdir))
-                    # Only include files relevant to mod development
-                    if len(text) < 200000:  # Skip huge files
-                        src_files[rel] = text
-                except Exception:
-                    pass
-            if src_files:
-                break  # Use first matching directory
+        try:
+            text = file_path.read_text(encoding="utf-8", errors="replace")
+            if len(text) < 200000:
+                src_files[path] = text
+        except Exception:
+            pass
 
     return src_files
 
@@ -1419,11 +1490,14 @@ def _recompose_fix_prompt(
     if not dif_text:
         dif_text = "(no DIF entries found for this target)"
 
-    # Format MC source — cap at 4 files, 1KB each max
+    # Format MC source — cap at 8 files, 5KB each max
     mc_text = ""
-    for filepath in sorted(mc_source_files.keys())[:4]:
-        content = mc_source_files[filepath][:1000]
-        mc_text += f"### DecompiledMinecraftSourceCode/{filepath}\n```java\n{content}\n```\n\n"
+    if mc_source_files:
+        mc_text = "=== RELEVANT MINECRAFT SOURCE CODE (for fixing the error) ===\n"
+        for filepath in sorted(mc_source_files.keys())[:8]:
+            content = mc_source_files[filepath][:5000]
+            mc_text += f"--- {filepath} ---\n```java\n{content}\n```\n\n"
+        mc_text += "=== END RELEVANT MINECRAFT SOURCE CODE ===\n"
 
     # Detect if there are no Java source files at all — this indicates the
     # AI response didn't produce valid code, which requires a special note.
@@ -1666,6 +1740,8 @@ def _send_fix_prompt_to_ai(
             user_parts.append(f"[Assistant]:\n{content}")
 
     user_prompt = "\n\n".join(user_parts)
+
+    user_prompt = _trim_prompt_to_limit(user_prompt)
 
     payload: dict[str, Any] = {
         "hoster": AI_HOSTER,
@@ -2041,7 +2117,14 @@ def run_compile_cycle(
                 if not build_log:
                     build_log = "(build log not available)"
                 dif_entries = _collect_dif_for_target(mcver, loader)
-                mc_source = _collect_mc_source_files(mcver, loader)
+                current_code_str = "\n".join(
+                    f"// {fp}\n{content}" for fp, content in sorted(scode.items())
+                )
+                mc_source = _collect_mc_source_files(
+                    mcver, loader,
+                    build_error=build_log if build_log != "(build log not available)" else "",
+                    current_code=current_code_str,
+                )
                 # Record build error for DIF history
                 if tname in build_history and build_log and build_log != "(build log not available)":
                     build_history[tname]["errors"].append(build_log)
@@ -2132,12 +2215,14 @@ def run_compile_cycle(
 
             # MC source code
             if mc_source:
-                parts.append("### Minecraft Source Code (relevant)")
-                for filepath in sorted(mc_source.keys())[:4]:
-                    content = mc_source[filepath][:1000]
-                    parts.append(f"#### DecompiledMinecraftSourceCode/{filepath}")
+                parts.append("=== RELEVANT MINECRAFT SOURCE CODE (for fixing the error) ===")
+                for filepath in sorted(mc_source.keys())[:8]:
+                    content = mc_source[filepath][:5000]
+                    parts.append(f"--- {filepath} ---")
                     parts.append(f"```java\n{content}\n```")
                     parts.append("")
+                parts.append("=== END RELEVANT MINECRAFT SOURCE CODE ===")
+                parts.append("")
 
             # Reinforced format instructions
             parts.append("## CRITICAL — You MUST Follow This EXACT Output Format")

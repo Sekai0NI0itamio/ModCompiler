@@ -27,6 +27,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -94,6 +95,81 @@ def _read_decompiled_source_content(source_dir: Path, file_paths: list[str], max
         content_parts.append(f"--- {path} ---\n```java\n{text}\n```")
         total += len(text)
     return "\n".join(content_parts)
+
+
+def _query_local_ai(user_prompt: str, max_retries: int = 2) -> str:
+    import json as _json
+    import urllib.request
+    import urllib.error
+
+    payload = _json.dumps({
+        "hoster": "nvidia",
+        "model": "meta/llama-3.1-8b-instruct",
+        "user_prompt": user_prompt,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "http://localhost:8129/chat",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                return resp.read().decode("utf-8", errors="replace").strip()
+        except Exception as e:
+            if attempt < max_retries:
+                time.sleep(2 * attempt)
+                continue
+            return ""
+
+
+def _ai_select_source_files(
+    source_paths: list[str],
+    mod_info: str,
+    closest_version_source: str,
+    count: int = 30,
+) -> list[str]:
+    source_set = set(source_paths)
+    file_list = "\n".join(source_paths)
+    closest_version_source_truncated = closest_version_source[:4000] if closest_version_source else "(not available)"
+
+    prompt = (
+        f"You are a Minecraft modding expert. Given a list of Minecraft source code file paths "
+        f"and information about a mod, select the {count} most likely needed files for implementing this mod.\n\n"
+        f"MOD INFORMATION:\n{mod_info}\n\n"
+        f"SAMPLE SOURCE CODE FROM CLOSEST VERSION:\n{closest_version_source_truncated}\n\n"
+        f"AVAILABLE MINECRAFT SOURCE FILES:\n{file_list}\n\n"
+        f"Respond with ONLY the selected file paths, one per line, inside a code block. No explanations needed."
+    )
+
+    response = _query_local_ai(prompt)
+    if not response:
+        return []
+
+    selected = []
+    in_code_block = False
+    for line in response.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if in_code_block or (not response.count("```") and stripped):
+            candidate = stripped
+            if candidate in source_set:
+                selected.append(candidate)
+
+    if not selected:
+        for line in response.splitlines():
+            candidate = line.strip()
+            if candidate in source_set:
+                selected.append(candidate)
+
+    if len(selected) < 5:
+        return []
+
+    return selected[:count]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -395,15 +471,10 @@ def generate_background_info(
             lines.append(_format_dif_entry(entry))
             lines.append("")
 
-    # ── Section 3: Decompiled Minecraft Source Code References ───────────
+    # ── Section 3: AI-selected Minecraft Source Code References ───────────
     lines.append("─" * 60)
     lines.append("## Section 3: Minecraft Source Code References")
     lines.append("─" * 60)
-    lines.append("")
-    lines.append("The following is the decompiled Minecraft source code for this version and loader.")
-    lines.append("Study these file paths and signatures carefully — they are the EXACT APIs")
-    lines.append("available in this Minecraft version. Always use these correct class paths")
-    lines.append("(under `net.minecraft.*`) rather than guessing or inventing your own.")
     lines.append("")
 
     decompiled_dir = _find_decompiled_source_dir(minecraft_version, loader)
@@ -412,39 +483,33 @@ def generate_background_info(
         lines.append(f"Decompiled source directory found: {decompiled_dir.name}")
         lines.append(f"Total available source files: {len(source_paths)}")
         lines.append("")
-        lines.append("### Complete Source File Paths (for correct import paths)")
-        lines.append("")
-        lines.append("```")
-        for sp in source_paths:
-            lines.append(sp)
-        lines.append("```")
-        lines.append("")
 
-        # Include content from some key files (up to max_chars limit)
-        # Prioritize files most relevant to modding: events, commands, registries, etc.
-        priority_keywords = ["Command", "Event", "Registry", "Item", "Block", "Entity",
-                            "Player", "World", "Server", "GameRule", "MinecraftServer"]
-        priority_paths = []
-        other_paths = []
-        for sp in source_paths:
-            if any(kw in Path(sp).name for kw in priority_keywords):
-                priority_paths.append(sp)
-            else:
-                other_paths.append(sp)
-        selected_paths = priority_paths[:15] + other_paths[:5]  # Up to 20 files
+        mod_info = f"Minecraft {minecraft_version}, Loader: {loader}"
+
+        selected_paths = _ai_select_source_files(
+            source_paths=source_paths,
+            mod_info=mod_info,
+            closest_version_source="",
+            count=30,
+        )
+
+        if not selected_paths:
+            priority_keywords = ["Command", "Event", "Registry", "Item", "Block", "Entity",
+                                "Player", "World", "Server", "GameRule", "MinecraftServer"]
+            priority_paths = [sp for sp in source_paths if any(kw in Path(sp).name for kw in priority_keywords)]
+            selected_paths = priority_paths[:30]
 
         source_content = _read_decompiled_source_content(decompiled_dir, selected_paths, max_chars=80000)
         if source_content:
-            lines.append("### Key Source File Contents (truncated for length)")
+            lines.append("### Selected Source File Contents (AI-curated for this mod)")
             lines.append("")
             lines.append(source_content)
             lines.append("")
-            lines.append("*Only a subset of files is shown above to save space.")
-            lines.append("Use the full file path list above to determine correct imports and class names.*")
+        else:
+            lines.append("*No source file contents could be loaded.*")
             lines.append("")
     else:
         lines.append(f"*No decompiled source available for {minecraft_version}/{loader}.*")
-        lines.append("The AI should rely on the template code and standard Minecraft API knowledge.")
         lines.append("")
 
     lines.append("─" * 60)
@@ -819,6 +884,55 @@ def generate_prompt(
     return "\n".join(lines)
 
 
+def _trim_prompt_to_limit(prompt_text: str, max_chars: int = 300000) -> str:
+    if len(prompt_text) <= max_chars:
+        return prompt_text
+
+    source_marker = "### Selected Source File Contents"
+    section_markers = ["## Section", "─" * 60, "End of Background Info"]
+
+    source_start = prompt_text.find(source_marker)
+    if source_start == -1:
+        return prompt_text[:max_chars] + "\n... (truncated to fit character limit)\n"
+
+    source_end = len(prompt_text)
+    for marker in section_markers:
+        pos = prompt_text.find(marker, source_start + len(source_marker))
+        if pos != -1 and pos < source_end:
+            source_end = pos
+
+    before_source = prompt_text[:source_start]
+    after_source = prompt_text[source_end:]
+
+    source_section = prompt_text[source_start:source_end]
+
+    file_blocks = re.split(r"(?=--- .+ ---\n```java)", source_section)
+    trimmed_blocks = []
+    current_len = len(before_source) + len(after_source)
+
+    for block in reversed(file_blocks):
+        if not block.strip():
+            continue
+        block_len = len(block)
+        if current_len + block_len <= max_chars:
+            trimmed_blocks.insert(0, block)
+            current_len += block_len
+        else:
+            allowed = max_chars - current_len
+            if allowed > 200:
+                truncated = block[:allowed] + "\n// ... (truncated to fit limit)\n```"
+                trimmed_blocks.insert(0, truncated)
+            break
+
+    if not trimmed_blocks:
+        return before_source + after_source
+
+    result = before_source + "".join(trimmed_blocks) + after_source
+    if len(result) > max_chars:
+        return result[:max_chars] + "\n... (truncated to fit character limit)\n"
+    return result
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Main — iterate over bundle dir and add prompts to each target folder
 # ─────────────────────────────────────────────────────────────────────────────
@@ -892,6 +1006,7 @@ def add_prompts_to_bundle(
             repo_root=repo_root,
             manifest=manifest,
         )
+        prompt_content = _trim_prompt_to_limit(prompt_content)
         prompt_path = target_dir / "prompt.txt"
         prompt_path.write_text(prompt_content, encoding="utf-8")
 

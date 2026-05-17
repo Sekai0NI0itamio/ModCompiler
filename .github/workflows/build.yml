@@ -305,6 +305,38 @@ jobs:
           cp ".workflow_downloads/mod-${SLUG}/jars/${JAR_NAME}" "run/mods/"
           echo "Copied $JAR_NAME to run/mods/"
 
+      - name: Start crash watcher
+        if: steps.resolve.outputs.has_test == 'true'
+        run: |
+          cat > /tmp/crash-watcher.sh << 'WATCHER'
+          #!/bin/bash
+          CRASH_DIR="run/crash-reports"
+          MAX_WAIT=1200
+          ELAPSED=0
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            if ls $CRASH_DIR/crash-*.txt 2>/dev/null || ls run/hs_err_pid*.log 2>/dev/null; then
+              echo "CRASH WATCHER: Crash detected! Waiting 5s for report to finish writing..."
+              sleep 5
+              echo "CRASH WATCHER: Killing Java processes..."
+              pkill -f 'headlessmc-launcher' 2>/dev/null || true
+              pkill -f 'net.minecraft' 2>/dev/null || true
+              pkill -f 'net.neoforged' 2>/dev/null || true
+              pkill -f 'cpw.mods' 2>/dev/null || true
+              pkill -f 'Xvfb' 2>/dev/null || true
+              sleep 2
+              pkill -9 -f 'java' 2>/dev/null || true
+              echo "CRASH WATCHER: Processes killed."
+              exit 0
+            fi
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+          done
+          echo "CRASH WATCHER: Timeout reached ($MAX_WAIT s), no crash detected."
+          WATCHER
+          chmod +x /tmp/crash-watcher.sh
+          nohup bash /tmp/crash-watcher.sh > /tmp/crash-watcher.log 2>&1 &
+          echo "Crash watcher started (PID $!)"
+
       - name: Launch Headless Minecraft Client
         id: mc-test
         if: steps.resolve.outputs.has_test == 'true'
@@ -319,6 +351,15 @@ jobs:
           dummy-assets: true
           xvfb: true
           cache-mc: github
+
+      - name: Stop crash watcher
+        if: always() && steps.resolve.outputs.has_test == 'true'
+        run: |
+          pkill -f 'crash-watcher.sh' 2>/dev/null || true
+          if [ -f /tmp/crash-watcher.log ]; then
+            echo "=== Crash watcher log ==="
+            cat /tmp/crash-watcher.log
+          fi
 
       - name: Write launcher test result
         if: always() && steps.check.outputs.skip != 'true'

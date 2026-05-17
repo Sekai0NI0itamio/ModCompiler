@@ -81,6 +81,148 @@ LOG_POLL_INTERVAL = 30
 MAX_GH_RETRIES = 4
 GH_RETRY_DELAY = 3.0
 
+_DECOMPILED_ROOT = Path(__file__).resolve().parent.parent / "DecompiledMinecraftSourceCode"
+
+
+def _query_local_ai(user_prompt: str, max_retries: int = 2) -> str:
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    payload = _json.dumps({
+        "hoster": "nvidia",
+        "model": "meta/llama-3.1-8b-instruct",
+        "user_prompt": user_prompt,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "http://localhost:8129/chat",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                return resp.read().decode("utf-8", errors="replace").strip()
+        except Exception:
+            if attempt < max_retries:
+                time.sleep(2 * attempt)
+                continue
+            return ""
+
+
+def _ai_select_fix_source_files(
+    source_paths: list[str],
+    error_message: str,
+    current_code: str,
+    count: int = 5,
+) -> list[str]:
+    if not source_paths:
+        return []
+
+    current_code_truncated = current_code[:8000] if len(current_code) > 8000 else current_code
+
+    file_list = "\n".join(source_paths[:500])
+    if len(source_paths) > 500:
+        file_list += f"\n... and {len(source_paths) - 500} more files"
+
+    prompt = (
+        "You are a Minecraft modding expert. A mod failed to compile with the following error:\n"
+        "\n"
+        "BUILD ERROR:\n"
+        f"{error_message[:5000]}\n"
+        "\n"
+        "CURRENT MOD CODE:\n"
+        f"{current_code_truncated}\n"
+        "\n"
+        "AVAILABLE MINECRAFT SOURCE FILES:\n"
+        f"{file_list}\n"
+        "\n"
+        f"Select the {count} most likely Minecraft source files that would help fix this build error.\n"
+        "Respond with ONLY the selected file paths, one per line, inside a code block. No explanations needed."
+    )
+
+    response = _query_local_ai(prompt)
+    if not response:
+        return []
+
+    code_block_match = re.search(r"```[^\n]*\n(.*?)```", response, re.DOTALL)
+    if code_block_match:
+        response = code_block_match.group(1)
+
+    selected = []
+    path_set = set(source_paths)
+    for line in response.strip().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if line in path_set:
+            selected.append(line)
+        else:
+            for sp in source_paths:
+                if sp.endswith("/" + line) or sp.endswith("\\" + line):
+                    selected.append(sp)
+                    break
+
+    return selected[:count]
+
+
+def _read_source_file_contents(
+    decompiled_root: Path,
+    file_paths: list[str],
+    max_chars: int = 50000,
+) -> str:
+    content_parts = []
+    total = 0
+    for path in file_paths:
+        file_path = decompiled_root / path
+        if not file_path.exists() or not file_path.is_file():
+            continue
+        try:
+            text = file_path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        if len(text) > 200000:
+            text = text[:200000] + "\n// ... (truncated)\n"
+        if total + len(text) > max_chars:
+            allowed = max_chars - total
+            if allowed > 200:
+                text = text[:allowed] + "\n// ... (truncated)\n"
+                content_parts.append(f"--- {path} ---\n```java\n{text}\n```")
+            break
+        content_parts.append(f"--- {path} ---\n```java\n{text}\n```")
+        total += len(text)
+    return "\n".join(content_parts)
+
+
+def _trim_prompt_to_limit(prompt_text: str, max_chars: int = 300000) -> str:
+    if len(prompt_text) <= max_chars:
+        return prompt_text
+
+    source_start_marker = "=== RELEVANT MINECRAFT SOURCE CODE (for fixing the error) ==="
+    source_end_marker = "=== END RELEVANT MINECRAFT SOURCE CODE ==="
+
+    start_idx = prompt_text.find(source_start_marker)
+    end_idx = prompt_text.find(source_end_marker)
+
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        before = prompt_text[:start_idx]
+        after = prompt_text[end_idx + len(source_end_marker):]
+        source_section = prompt_text[start_idx:end_idx + len(source_end_marker)]
+
+        available = max_chars - len(before) - len(after)
+        if available > 1000:
+            trimmed_source = source_section[:available]
+            prompt_text = before + trimmed_source + "\n" + source_end_marker + after
+        else:
+            prompt_text = before + after
+
+    if len(prompt_text) > max_chars:
+        prompt_text = prompt_text[:max_chars]
+
+    return prompt_text
+
 
 class RunError(Exception):
     pass
@@ -437,6 +579,8 @@ def _send_prompt_to_grok(
     user_content = prompt_text
     if retry_context:
         user_content = f"{retry_context}\n\n---\n\n{prompt_text}"
+
+    user_content = _trim_prompt_to_limit(user_content)
 
     payload: dict[str, Any] = {
         "hoster": AI_HOSTER,
@@ -825,7 +969,13 @@ class Runner:
         self.mode = args.mode
 
         if args.continuefrom:
-            self.out_root = Path(args.output_dir).resolve() / args.continuefrom
+            candidate = Path(args.continuefrom)
+            if candidate.is_absolute() and candidate.exists():
+                self.out_root = candidate.resolve()
+            elif candidate.exists():
+                self.out_root = candidate.resolve()
+            else:
+                self.out_root = Path(args.output_dir).resolve() / args.continuefrom
             self.resuming = True
             self._load_existing_run(args.continuefrom)
         else:
