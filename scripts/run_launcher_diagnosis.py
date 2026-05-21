@@ -21,7 +21,8 @@ Output folder layout
     result.json          - machine-readable run summary
     SUMMARY.md           - human-readable summary (read this first)
     artifacts/
-      crash-<safe-key>/  - crash logs for each failed test
+      launcher-results/   - per-test result.json files
+      crash-logs/         - crash logs for each failed test
     logs/
       run_overview.txt   - top-level workflow run log
       <job-name>.txt     - full log for each job
@@ -139,11 +140,11 @@ class Runner:
             print("All launcher tests passed!")
         else:
             print("Some launcher tests failed.")
-            crash_artifacts = list(artifacts_dir.glob("crash-*"))
-            if crash_artifacts:
+            crash_dir = artifacts_dir / "crash-logs"
+            if crash_dir.exists() and any(crash_dir.iterdir()):
                 print(f"  Crash logs downloaded to:")
-                for d in crash_artifacts:
-                    print(f"    {d}")
+                for item in sorted(crash_dir.iterdir()):
+                    print(f"    {item}")
             else:
                 print("  No crash log artifacts found.")
         print(f"  Run URL: {run_url}")
@@ -261,12 +262,28 @@ class Runner:
         tasks: list[tuple[str, Any]] = []
 
         crash_artifacts = []
+        launcher_results_artifact = None
         try:
             all_artifacts = self._list_artifacts()
-            crash_artifacts = [a for a in all_artifacts if a.get("name", "").startswith("crash-")]
-            print(f"  Found {len(crash_artifacts)} crash artifact(s) out of {len(all_artifacts)} total")
+            crash_artifacts = [a for a in all_artifacts if a.get("name", "") == "crash-logs"]
+            launcher_results_artifact = next(
+                (a for a in all_artifacts if a.get("name", "") == "launcher-results"), None
+            )
+            print(f"  Found {len(all_artifacts)} artifact(s) total")
         except RunError as exc:
             print(f"  Could not list artifacts: {exc}")
+
+        if launcher_results_artifact:
+            aname = launcher_results_artifact.get("name", "launcher-results")
+            dest = artifacts_dir / aname
+            def _make_dl_lr(an=aname, d=dest):
+                def _dl():
+                    try:
+                        self._download_artifact(an, d)
+                    except RunError as exc:
+                        print(f"  (artifact {an} not available: {exc})")
+                return _dl
+            tasks.append((f"artifact:{aname}", _make_dl_lr()))
 
         for artifact in crash_artifacts:
             aname = artifact.get("name", "unknown")
@@ -355,10 +372,33 @@ class Runner:
         except RunError:
             pass
 
-        passed = sum(1 for j in jobs if (j.get("conclusion") or "") == "success")
-        failed = sum(1 for j in jobs if (j.get("conclusion") or "") == "failure")
-        skipped = sum(1 for j in jobs if (j.get("conclusion") or "") == "skipped")
-        total = len(jobs)
+        passed = 0
+        failed = 0
+        skipped = 0
+        total = 0
+
+        launcher_results_dir = artifacts_dir / "launcher-results"
+        if launcher_results_dir.exists():
+            for result_file in sorted(launcher_results_dir.rglob("result.json")):
+                try:
+                    data = json.loads(result_file.read_text(encoding="utf-8"))
+                    status = data.get("status", "")
+                    if status == "passed":
+                        passed += 1
+                    elif status == "launcher_failed":
+                        failed += 1
+                    else:
+                        skipped += 1
+                    total += 1
+                except Exception:
+                    skipped += 1
+                    total += 1
+
+        if total == 0:
+            passed = sum(1 for j in jobs if (j.get("conclusion") or "") == "success")
+            failed = sum(1 for j in jobs if (j.get("conclusion") or "") == "failure")
+            skipped = sum(1 for j in jobs if (j.get("conclusion") or "") == "skipped")
+            total = len(jobs)
 
         status_icon = "PASS" if conclusion == "success" else "FAIL"
         lines = [
@@ -372,17 +412,24 @@ class Runner:
             f"- Output dir:  {self.out_root}",
             f"- Tests:       {passed} passed, {failed} failed, {skipped} skipped (of {total})",
             "",
-            "## Per-job results",
+            "## Per-test results",
             "",
-            "| Status | Job | Conclusion |",
-            "|--------|-----|------------|",
+            "| Status | Loader | MC Version | Test MC | Details |",
+            "|--------|--------|------------|---------|---------|",
         ]
 
-        for job in jobs:
-            name = job.get("name", "?")
-            conc = job.get("conclusion") or "pending"
-            icon = {"success": "OK", "failure": "FAIL", "skipped": "SKIP"}.get(conc, "...")
-            lines.append(f"| {icon} | {name} | {conc} |")
+        if launcher_results_dir.exists():
+            for result_file in sorted(launcher_results_dir.rglob("result.json")):
+                try:
+                    data = json.loads(result_file.read_text(encoding="utf-8"))
+                    s = "OK" if data.get("status") == "passed" else "FAIL"
+                    loader = data.get("loader", data.get("original_loader", "?"))
+                    gv = data.get("game_version", "?")
+                    test_mc = data.get("test_mc", gv)
+                    summary = data.get("crash_summary", "")[:60].replace("\n", " ") if s == "FAIL" else ""
+                    lines.append(f"| {s} | {loader} | {gv} | {test_mc} | {summary} |")
+                except Exception:
+                    lines.append("| ERR | ? | ? | ? | parse error |")
 
         lines += [
             "",
@@ -393,7 +440,8 @@ class Runner:
             "  SUMMARY.md              <- this file",
             "  result.json             <- machine-readable summary",
             "  artifacts/",
-            "    crash-<safe-key>/     <- crash logs for failed tests",
+            "    launcher-results/     <- per-test result.json files",
+            "    crash-logs/           <- crash logs for failed tests",
             "  logs/",
             "    run_overview.txt      <- full workflow run log",
             "    <job-name>.txt        <- per-job log",
@@ -402,7 +450,7 @@ class Runner:
             "",
         ]
 
-        crash_artifacts = list(artifacts_dir.glob("crash-*"))
+        crash_artifacts = list(artifacts_dir.glob("crash-logs"))
         if crash_artifacts:
             lines += ["## Crash log artifacts", ""]
             for d in sorted(crash_artifacts):

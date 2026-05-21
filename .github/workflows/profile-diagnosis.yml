@@ -30,8 +30,8 @@ name: Profile Diagnosis
 # Artifacts
 # ---------
 #   diagnosis-<slug>          per-project bundle (report.txt + all version data)
-#   launcher-result-<key>     per-test launcher result (pass/fail)
-#   crash-<key>               crash logs when a launcher test fails
+#   launcher-results          all per-test launcher results (pass/fail)
+#   crash-logs                crash logs when a launcher test fails
 #   diagnosis-updated         updated bundles with launcher results merged in
 #   profile-diagnosis-report  master report.txt covering all projects
 # ---------------------------------------------------------------------------
@@ -938,240 +938,377 @@ jobs:
               print(f"  {entry.get('slug', '?')}  {entry.get('original_loader', '?'):>8}  MC {entry.get('game_version', '?')}")
 
           matrix = json.dumps({"include": all_entries})
+          Path("launcher-matrix.json").write_text(matrix, encoding="utf-8")
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"matrix={matrix}\n")
               f.write(f"matrix_count={len(all_entries)}\n")
           PYEOF
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher-matrix
+          path: launcher-matrix.json
+
 # ---------------------------------------------------------------------------
 # Job 4 — test each version+loader pair in a headless Minecraft client
 # ---------------------------------------------------------------------------
   launcher-test:
-    name: Launcher test ${{ matrix.slug }} ${{ matrix.original_loader }} ${{ matrix.game_version }}
+    name: Sequential launcher tests
     needs: prepare-launcher-tests
-    if: ${{ needs.prepare-launcher-tests.outputs.matrix_count != '0' }}
+    if: always() && needs.prepare-launcher-tests.outputs.matrix_count != '0'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      max-parallel: 6
-      matrix: ${{ fromJson(needs.prepare-launcher-tests.outputs.matrix) }}
+    timeout-minutes: 120
+    outputs:
+      total: ${{ steps.run-tests.outputs.total }}
+      passed: ${{ steps.run-tests.outputs.passed }}
+      failed: ${{ steps.run-tests.outputs.failed }}
 
     steps:
-      - name: Install Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v4
+      - uses: actions/setup-python@v5
         with:
-          java-version: ${{ matrix.java_version }}
+          python-version: '3.12'
+
+      - uses: actions/setup-java@v4
+        with:
           distribution: temurin
+          java-version: |
+            8
+            16
+            17
+            21
+            25
 
-      - name: Download Mod Jar
-        env:
-          MOD_FILE_URL: ${{ matrix.file_url }}
-          MOD_FILE_NAME: ${{ matrix.file_name }}
-        run: |
-          mkdir -p run/mods
-          echo "Downloading $MOD_FILE_NAME ..."
-          for attempt in 1 2 3; do
-            if curl -fsSL --retry 3 --retry-delay 5 "$MOD_FILE_URL" -o "run/mods/$MOD_FILE_NAME"; then
-              break
-            fi
-            echo "Download attempt $attempt failed, retrying in 10s..."
-            sleep 10
-          done
-          if [ ! -f "run/mods/$MOD_FILE_NAME" ]; then
-            echo "ERROR: Mod jar was not downloaded"
-            exit 1
-          fi
-          if [ ! -s "run/mods/$MOD_FILE_NAME" ]; then
-            echo "ERROR: Mod jar is empty (0 bytes)"
-            rm -f "run/mods/$MOD_FILE_NAME"
-            exit 1
-          fi
-          SIZE=$(stat -c%s "run/mods/$MOD_FILE_NAME" 2>/dev/null || echo "?")
-          echo "Downloaded: $MOD_FILE_NAME ($SIZE bytes)"
-
-      - name: Start crash watcher
-        run: |
-          cat > /tmp/crash-watcher.sh << 'WATCHER'
-          #!/bin/bash
-          CRASH_DIR="run/crash-reports"
-          MAX_WAIT=1200
-          ELAPSED=0
-          while [ $ELAPSED -lt $MAX_WAIT ]; do
-            if ls $CRASH_DIR/crash-*.txt 2>/dev/null || ls run/hs_err_pid*.log 2>/dev/null; then
-              echo "CRASH WATCHER: Crash detected! Waiting 5s for report to finish writing..."
-              sleep 5
-              echo "CRASH WATCHER: Killing Java processes..."
-              pkill -f 'headlessmc-launcher' 2>/dev/null || true
-              pkill -f 'net.minecraft' 2>/dev/null || true
-              pkill -f 'net.neoforged' 2>/dev/null || true
-              pkill -f 'cpw.mods' 2>/dev/null || true
-              pkill -f 'Xvfb' 2>/dev/null || true
-              sleep 2
-              pkill -9 -f 'java' 2>/dev/null || true
-              echo "CRASH WATCHER: Processes killed."
-              exit 0
-            fi
-            sleep 5
-            ELAPSED=$((ELAPSED + 5))
-          done
-          echo "CRASH WATCHER: Timeout reached ($MAX_WAIT s), no crash detected."
-          WATCHER
-          chmod +x /tmp/crash-watcher.sh
-          nohup bash /tmp/crash-watcher.sh > /tmp/crash-watcher.log 2>&1 &
-          echo "Crash watcher started (PID $!)"
-
-      - name: Launch Headless Minecraft Client
-        id: mc-test
-        uses: headlesshq/mc-runtime-test@4.4.0
+      - name: Download launcher matrix
+        uses: actions/download-artifact@v4
         with:
-          mc: ${{ matrix.test_mc }}
-          modloader: ${{ matrix.loader }}
-          regex: ${{ matrix.loader_regex }}
-          java: ${{ matrix.java_version }}
-          mc-runtime-test: ${{ matrix.mcrt_jar }}
-          dummy-assets: true
-          xvfb: true
-          cache-mc: github
+          name: launcher-matrix
 
-      - name: Stop crash watcher
-        if: always()
-        run: |
-          pkill -f 'crash-watcher.sh' 2>/dev/null || true
-          if [ -f /tmp/crash-watcher.log ]; then
-            echo "=== Crash watcher log ==="
-            cat /tmp/crash-watcher.log
-          fi
+      - name: Cache ~/.minecraft
+        uses: actions/cache@v4
+        with:
+          path: ~/.minecraft
+          key: mc-runtime-test-combined-${{ github.run_id }}
+          restore-keys: mc-runtime-test-combined-
 
-      - name: Mark test as passed
-        if: success()
+      - name: Download HeadlessMC
+        uses: robinraju/release-downloader@v1.11
+        with:
+          repository: 3arthqu4ke/headlessmc
+          tag: "2.9.0"
+          fileName: headlessmc-launcher-2.9.0.jar
+          out-file-path: .
+
+      - name: Install xvfb dependencies
+        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
+
+      - name: Run sequential launcher tests
+        id: run-tests
         shell: bash
-        env:
-          SLUG: ${{ matrix.slug }}
-          VERSION_ID: ${{ matrix.version_id }}
-          VERSION_NUMBER: ${{ matrix.version_number }}
-          GAME_VERSION: ${{ matrix.game_version }}
-          TEST_MC: ${{ matrix.test_mc }}
-          LOADER: ${{ matrix.loader }}
-          ORIGINAL_LOADER: ${{ matrix.original_loader }}
         run: |
-          mkdir -p launcher-result
           python3 - <<'PYEOF'
-          import json, os
-          result = {
-              "slug": os.environ["SLUG"],
-              "version_id": os.environ["VERSION_ID"],
-              "version_number": os.environ["VERSION_NUMBER"],
-              "game_version": os.environ["GAME_VERSION"],
-              "test_mc": os.environ["TEST_MC"],
-              "loader": os.environ["LOADER"],
-              "original_loader": os.environ["ORIGINAL_LOADER"],
-              "status": "passed",
-          }
-          with open("launcher-result/result.json", "w") as f:
-              json.dump(result, f, indent=2)
-          PYEOF
-          echo "SUCCESS: Mod launched correctly for $ORIGINAL_LOADER on Minecraft $GAME_VERSION (tested on $TEST_MC)"
-
-      - name: Collect crash logs
-        if: failure()
-        continue-on-error: true
-        run: |
-          echo "Game crashed! Collecting diagnostic logs..."
-          mkdir -p crash-logs launcher-result
-
-          if [ -d run/crash-reports ]; then
-            cp -r run/crash-reports crash-logs/ 2>/dev/null || true
-            echo "  Collected crash-reports/"
-          fi
-
-          if [ -d run/logs ]; then
-            cp -r run/logs crash-logs/ 2>/dev/null || true
-            echo "  Collected logs/"
-          fi
-
-          if [ -f run/latest.log ]; then
-            cp run/latest.log crash-logs/ 2>/dev/null || true
-            echo "  Collected latest.log"
-          fi
-
-          for f in run/hs_err_pid*.log; do
-            if [ -f "$f" ]; then
-              cp "$f" crash-logs/ 2>/dev/null || true
-              echo "  Collected JVM crash log: $(basename "$f")"
-            fi
-          done
-
-          if [ -f run/options.txt ]; then
-            cp run/options.txt crash-logs/ 2>/dev/null || true
-          fi
-
-          echo ""
-          echo "=== Crash log summary ==="
-          echo ""
-          find crash-logs -type f 2>/dev/null | head -20 | while read -r f; do
-            echo "--- $f ---"
-            head -50 "$f" 2>/dev/null || true
-            echo ""
-          done
-
-      - name: Write failure result
-        if: failure()
-        shell: bash
-        env:
-          SLUG: ${{ matrix.slug }}
-          VERSION_ID: ${{ matrix.version_id }}
-          VERSION_NUMBER: ${{ matrix.version_number }}
-          GAME_VERSION: ${{ matrix.game_version }}
-          TEST_MC: ${{ matrix.test_mc }}
-          LOADER: ${{ matrix.loader }}
-          ORIGINAL_LOADER: ${{ matrix.original_loader }}
-        run: |
-          mkdir -p launcher-result
-          python3 - <<'PYEOF'
-          import json, os
+          import json, os, subprocess, sys, shutil, re, time, urllib.request
           from pathlib import Path
 
-          crash_summary = ""
-          latest_log = Path("crash-logs/latest.log")
-          if latest_log.exists():
-              try:
-                  crash_summary = latest_log.read_text(encoding="utf-8", errors="replace")[:2000]
-              except Exception:
-                  pass
+          MATRIX_FILE = "launcher-matrix.json"
+          RESULTS_DIR = Path("launcher-results")
+          CRASH_DIR = Path("crash-logs")
+          HMC_JAR = "headlessmc-launcher-2.9.0.jar"
+          MCRT_VERSION = "4.4.0"
+          MCRT_REPO = "headlesshq/mc-runtime-test"
+          TEST_TIMEOUT = 600
 
-          result = {
-              "slug": os.environ["SLUG"],
-              "version_id": os.environ["VERSION_ID"],
-              "version_number": os.environ["VERSION_NUMBER"],
-              "game_version": os.environ["GAME_VERSION"],
-              "test_mc": os.environ["TEST_MC"],
-              "loader": os.environ["LOADER"],
-              "original_loader": os.environ["ORIGINAL_LOADER"],
-              "status": "launcher_failed",
-          }
-          if crash_summary:
-              result["crash_summary"] = crash_summary
-          with open("launcher-result/result.json", "w") as f:
-              json.dump(result, f, indent=2)
+          RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+          CRASH_DIR.mkdir(parents=True, exist_ok=True)
+
+          _mcrt_release = None
+          def get_mcrt_release():
+              global _mcrt_release
+              if _mcrt_release is not None:
+                  return _mcrt_release
+              url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"
+              req = urllib.request.Request(url, headers={"User-Agent": "ModCompiler/1.0"})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      _mcrt_release = json.loads(r.read().decode())
+              except Exception as e:
+                  print(f"  WARNING: Could not fetch mc-runtime-test release: {e}")
+                  _mcrt_release = {}
+              return _mcrt_release
+
+          def find_java_home(version):
+              tc = Path("/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk")
+              if tc.exists():
+                  for d in sorted(tc.iterdir(), reverse=True):
+                      if d.is_dir() and d.name.split('.')[0] == str(version):
+                          if (d / "x64" / "bin" / "java").exists():
+                              return str(d / "x64")
+              return os.environ.get("JAVA_HOME", "")
+
+          def download_mcrt_jar(mc_version, loader_type):
+              mods_dir = Path("run/mods")
+              mods_dir.mkdir(parents=True, exist_ok=True)
+              pat = f"mc-runtime-test-{mc_version}-*-{loader_type}-release.jar"
+              existing = list(mods_dir.glob(pat))
+              if existing:
+                  return existing[0].name
+              release = get_mcrt_release()
+              for asset in release.get("assets", []):
+                  name = asset.get("name", "")
+                  if re.match(f"mc-runtime-test-{re.escape(mc_version)}-.*-{re.escape(loader_type)}-release\\.jar$", name):
+                      dl_url = asset.get("browser_download_url", "")
+                      if not dl_url:
+                          continue
+                      try:
+                          urllib.request.urlretrieve(dl_url, str(mods_dir / name))
+                          print(f"  Downloaded mc-runtime-test: {name}")
+                          return name
+                      except Exception as e:
+                          print(f"  WARNING: Download failed for {name}: {e}")
+                          return None
+              print(f"  WARNING: No mc-runtime-test jar for {mc_version}/{loader_type}")
+              return None
+
+          def cleanup_processes():
+              for pat in ["crash-watcher.sh", "headlessmc-launcher", "Xvfb"]:
+                  subprocess.run(["pkill", "-f", pat], capture_output=True)
+              time.sleep(1)
+              subprocess.run(["pkill", "-9", "-f", "java"], capture_output=True)
+              time.sleep(1)
+
+          def run_test(entry, index, total):
+              slug = entry.get("slug", "")
+              version_id = entry.get("version_id", "")
+              version_number = entry.get("version_number", "")
+              gv = entry["game_version"]
+              loader = entry["loader"]
+              test_mc = entry["test_mc"]
+              java_ver = entry["java_version"]
+              file_url = entry["file_url"]
+              file_name = entry["file_name"]
+              loader_regex = entry["loader_regex"]
+              mcrt_jar_type = entry["mcrt_jar"]
+              safe_key = entry["safe_key"]
+              original_loader = entry.get("original_loader", loader)
+
+              print(f"::group::Test {index+1}/{total}: {slug} {original_loader} MC {gv}")
+
+              result = {
+                  "slug": slug,
+                  "version_id": version_id,
+                  "version_number": version_number,
+                  "game_version": gv,
+                  "test_mc": test_mc,
+                  "loader": loader,
+                  "original_loader": original_loader,
+                  "status": "launcher_failed",
+                  "crash_summary": "",
+              }
+
+              try:
+                  cleanup_processes()
+
+                  java_home = find_java_home(java_ver)
+                  os.environ["JAVA_HOME"] = java_home
+
+                  run_dir = Path("run")
+                  if run_dir.exists():
+                      shutil.rmtree(run_dir)
+                  run_dir.mkdir()
+                  (run_dir / "mods").mkdir()
+
+                  hmc_dir = Path("HeadlessMC")
+                  hmc_dir.mkdir(exist_ok=True)
+                  (hmc_dir / "config.properties").write_text(
+                      f"hmc.java.versions={java_home}/bin/java\n"
+                      f"hmc.gamedir={Path.cwd()}/run\n"
+                      f"hmc.offline=true\n"
+                      f"hmc.rethrow.launch.exceptions=true\n"
+                      f"hmc.exit.on.failed.command=true\n"
+                      f"hmc.assets.dummy=true\n"
+                  )
+
+                  (run_dir / "options.txt").write_text("onboardAccessibility:false\npauseOnLostFocus:false\n")
+
+                  print(f"  Downloading {file_name}...")
+                  for attempt in range(3):
+                      r = subprocess.run(
+                          ["curl", "-fsSL", "--retry", "3", "--retry-delay", "5",
+                           file_url, "-o", f"run/mods/{file_name}"],
+                          capture_output=True, text=True, timeout=120
+                      )
+                      if r.returncode == 0:
+                          break
+                      time.sleep(5)
+
+                  if not (run_dir / "mods" / file_name).exists():
+                      result["crash_summary"] = f"Failed to download: {file_name}"
+                      print(f"  FAILED: Could not download {file_name}")
+                      print("::endgroup::")
+                      return result
+
+                  mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / test_mc / f"{test_mc}.json"
+                  if not mc_json.exists():
+                      print(f"  Downloading Minecraft {test_mc}...")
+                      subprocess.run(
+                          ["java", "-jar", HMC_JAR, "--command", "download", test_mc],
+                          capture_output=True, text=True, timeout=300
+                      )
+                      print(f"  Installing {loader} for {test_mc} (Java {java_ver})...")
+                      subprocess.run(
+                          ["java", "-jar", HMC_JAR, "--command", loader, test_mc, "--java", str(java_ver)],
+                          capture_output=True, text=True, timeout=600
+                      )
+
+                  mcrt_name = download_mcrt_jar(test_mc, mcrt_jar_type)
+                  if not mcrt_name:
+                      result["crash_summary"] = f"No mc-runtime-test jar for {test_mc}/{mcrt_jar_type}"
+                      print(f"  FAILED: No mc-runtime-test jar available")
+                      print("::endgroup::")
+                      return result
+
+                  watcher_script = (
+                      '#!/bin/bash\n'
+                      'CRASH_DIR="run/crash-reports"\n'
+                      'MAX_WAIT=1200\n'
+                      'ELAPSED=0\n'
+                      'while [ $ELAPSED -lt $MAX_WAIT ]; do\n'
+                      '  if ls $CRASH_DIR/crash-*.txt 2>/dev/null || ls run/hs_err_pid*.log 2>/dev/null; then\n'
+                      '    echo "CRASH WATCHER: Crash detected!"\n'
+                      '    sleep 5\n'
+                      '    pkill -f \'headlessmc-launcher\' 2>/dev/null || true\n'
+                      '    pkill -f \'net.minecraft\' 2>/dev/null || true\n'
+                      '    pkill -f \'net.neoforged\' 2>/dev/null || true\n'
+                      '    pkill -f \'cpw.mods\' 2>/dev/null || true\n'
+                      '    pkill -f \'Xvfb\' 2>/dev/null || true\n'
+                      '    sleep 2\n'
+                      '    pkill -9 -f \'java\' 2>/dev/null || true\n'
+                      '    echo "CRASH WATCHER: Processes killed."\n'
+                      '    exit 0\n'
+                      '  fi\n'
+                      '  sleep 5\n'
+                      '  ELAPSED=$((ELAPSED + 5))\n'
+                      'done\n'
+                      'echo "CRASH WATCHER: Timeout"\n'
+                  )
+                  Path("/tmp/crash-watcher.sh").write_text(watcher_script)
+                  os.chmod("/tmp/crash-watcher.sh", 0o755)
+                  watcher_proc = subprocess.Popen(
+                      ["bash", "/tmp/crash-watcher.sh"],
+                      stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                  )
+
+                  print(f"  Launching Minecraft {test_mc} with {loader}...")
+                  try:
+                      launch_result = subprocess.run(
+                          ["xvfb-run", "java", "-Dhmc.check.xvfb=true",
+                           "-jar", HMC_JAR, "--command", "launch", loader_regex, "-regex",
+                           "--jvm", "-Djava.awt.headless=true"],
+                          capture_output=True, text=True, timeout=TEST_TIMEOUT
+                      )
+                      exit_code = launch_result.returncode
+                  except subprocess.TimeoutExpired:
+                      exit_code = -1
+                      print(f"  TIMEOUT: Test exceeded {TEST_TIMEOUT}s")
+
+                  subprocess.run(["pkill", "-f", "crash-watcher.sh"], capture_output=True)
+                  try:
+                      watcher_proc.wait(timeout=5)
+                  except subprocess.TimeoutExpired:
+                      watcher_proc.kill()
+
+                  crash_reports = list(Path("run/crash-reports").glob("crash-*.txt")) if Path("run/crash-reports").exists() else []
+                  hs_err = list(Path("run").glob("hs_err_pid*.log"))
+
+                  if crash_reports or hs_err or exit_code != 0:
+                      result["status"] = "launcher_failed"
+                      if crash_reports:
+                          result["crash_summary"] = crash_reports[0].read_text(encoding="utf-8", errors="replace")[:500]
+                      elif hs_err:
+                          result["crash_summary"] = hs_err[0].read_text(encoding="utf-8", errors="replace")[:500]
+                      else:
+                          result["crash_summary"] = f"Exit code: {exit_code}"
+
+                      cdir = CRASH_DIR / safe_key
+                      cdir.mkdir(parents=True, exist_ok=True)
+                      if Path("run/crash-reports").exists():
+                          shutil.copytree("run/crash-reports", cdir / "crash-reports", dirs_exist_ok=True)
+                      if Path("run/logs").exists():
+                          shutil.copytree("run/logs", cdir / "logs", dirs_exist_ok=True)
+                      for f in Path("run").glob("hs_err_pid*.log"):
+                          shutil.copy2(str(f), str(cdir / f.name))
+                      if Path("run/latest.log").exists():
+                          shutil.copy2("run/latest.log", str(cdir / "latest.log"))
+
+                      print(f"  FAILED: Game crashed (exit code {exit_code})")
+                  else:
+                      result["status"] = "passed"
+                      print(f"  PASSED")
+
+              except Exception as e:
+                  result["crash_summary"] = str(e)[:500]
+                  print(f"  ERROR: {e}")
+
+              cleanup_processes()
+              print("::endgroup::")
+              return result
+
+          matrix_data = json.loads(Path(MATRIX_FILE).read_text(encoding="utf-8"))
+          entries = matrix_data.get("include", [])
+
+          if not entries:
+              print("No entries to test")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("total=0\npassed=0\nfailed=0\n")
+              sys.exit(0)
+
+          print(f"Will test {len(entries)} versions sequentially\n")
+
+          passed = 0
+          failed = 0
+
+          for i, entry in enumerate(entries):
+              result = run_test(entry, i, len(entries))
+              safe_key = entry["safe_key"]
+              rdir = RESULTS_DIR / safe_key
+              rdir.mkdir(parents=True, exist_ok=True)
+              (rdir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+              if result["status"] == "passed":
+                  passed += 1
+              else:
+                  failed += 1
+
+          print(f"\n{'='*60}")
+          print(f"SUMMARY: {passed} passed, {failed} failed out of {len(entries)} tests")
+          print(f"{'='*60}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"total={len(entries)}\n")
+              f.write(f"passed={passed}\n")
+              f.write(f"failed={failed}\n")
           PYEOF
 
-      - name: Upload launcher result
+      - name: Upload launcher results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: launcher-result-${{ matrix.safe_key }}
-          path: launcher-result/
+          name: launcher-results
+          path: launcher-results/
           if-no-files-found: warn
 
       - name: Upload crash logs
-        if: failure()
+        if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: crash-${{ matrix.safe_key }}
+          name: crash-logs
           path: crash-logs/
           if-no-files-found: warn
+
+      - name: Fail if any test failed
+        if: steps.run-tests.outputs.failed != '0'
+        run: |
+          echo "::error::${{ steps.run-tests.outputs.failed }} launcher test(s) failed"
+          exit 1
 
 # ---------------------------------------------------------------------------
 # Job 5 — merge launcher test results back into diagnosis data
@@ -1193,10 +1330,11 @@ jobs:
           pattern: diagnosis-*
           path: .diag-downloads
 
-      - name: Download all launcher results
+      - name: Download launcher results
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          pattern: launcher-result-*
+          name: launcher-results
           path: .launcher-results
 
       - name: Merge launcher results into diagnosis

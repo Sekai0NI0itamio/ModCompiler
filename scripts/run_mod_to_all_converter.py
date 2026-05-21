@@ -6,17 +6,17 @@ Triggers the "Automated Mod to ALL Version Converter" workflow on GitHub
 Actions, waits for completion, and downloads all artifacts and logs.
 
 After the workflow completes, the script enters the second stage
-(mode="prompt-and-code" by default) — an **automated** Grok browser-based
+(mode="prompt-and-code" by default) — an **automated** DeepSeek
 AI coding stage. For each target version/loader:
 
-  1. The prompt is sent to Grok via Safari browser automation (grok.com)
-  2. Grok's response is captured programmatically
+  1. The prompt is sent to DeepSeek via C05 local server
+  2. DeepSeek's response is captured programmatically
   3. The response is saved as airesponse.txt
   4. If the response lacks Java source files, retries with enhanced prompt
      (up to AI_JAVA_RETRIES times)
   5. Conversation is saved as conversation.json on success
 
-Requires: macOS + Safari authenticated to grok.com + C05 server running.
+Requires: C05 local server running on localhost:8129.
 See setup instructions in the AI config section below.
 
 Pass --mode prompt-creation to skip the AI coding stage entirely.
@@ -31,7 +31,7 @@ Usage
 Modes
 -----
   prompt-and-code (default) — Run workflow, download prompts, THEN run the
-                              automated Grok browser-based AI coding stage.
+                              automated DeepSeek AI coding stage.
   prompt-creation            — Run the workflow and download the prompt bundle only.
 
 The script exits 0 on workflow success, 1 on failure or error.
@@ -50,7 +50,7 @@ Output folder layout
           projectinfo.txt
           Background Info.txt
           prompt.txt
-          airesponse.txt    ← created by Grok browser automation
+          airesponse.txt    ← created by DeepSeek AI
           conversation.json ← saved on successful responses
         first_version/...
         jars/...
@@ -307,31 +307,32 @@ def _gh(args: list[str], *, token: str, retries: int = MAX_GH_RETRIES) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AI Coding Stage — sends prompts to Grok via browser automation
+# AI Coding Stage — sends prompts to Free DeepSeek via C05 local server
 # ─────────────────────────────────────────────────────────────────────────────
 #
-#   HOSTER: Grok (Browser-Based)  |  hoster: "grok"
+#   HOSTER: Free DeepSeek  |  hoster: "freedeepseek"
+#   MODEL:  Expert
 #
-# This uses Safari automation on macOS to interact with the Grok web
-# interface at grok.com. The user must be authenticated to Grok in Safari.
-# The system never steals focus or disrupts the user's current work.
-# Fresh Safari tabs are created for each request and closed afterward.
+# Uses the C05 local server at localhost:8129 to access DeepSeek's models.
+# No API key required — the server handles authentication.
 #
-# SETUP (one-time):
-#   1. Open Safari and authenticate to https://grok.com
-#   2. Safari > Preferences > Advanced > Check "Show Develop menu in menu bar"
-#   3. Safari > Develop menu > Check "Allow JavaScript from Apple Events"
-#   4. Keep Safari running (can be minimized)
-#   5. Key file at keys/grok.txt can be empty — "browser-auth" fallback is automatic
-#   6. Run: python scripts/check_safari_permissions.py
-#   7. Test:  python scripts/test_browser_grok.py
-#
-#   IMPORTANT: This hoster ONLY works on macOS. It uses AppleScript/JXA.
+# Example curl:
+#   curl -s http://localhost:8129/chat \
+#     -H "Content-Type: application/json" \
+#     -d '{
+#       "hoster": "freedeepseek",
+#       "model": "Expert",
+#       "user_prompt": "Explain quantum computing",
+#       "extra_body": {
+#           "thinking": false,
+#           "web_search": false
+#       }
+#     }'
 
 # --- AI Provider Config ---
 AI_C05_BASE = "http://localhost:8129"
-AI_MODEL = "Fast"
-AI_HOSTER = "grok"
+AI_MODEL = "Expert"
+AI_HOSTER = "freedeepseek"
 
 # Maximum retries when the AI response contains no Java source files
 AI_JAVA_RETRIES = 3
@@ -415,7 +416,7 @@ def _generate_metadata_with_ai(
     raw_name: str,
     status_callback: callable | None = None,
 ) -> dict[str, str]:
-    """Send a raw mod name to Grok (browser-based) to format into proper metadata fields.
+    """Send a raw mod name to DeepSeek to format into proper metadata fields.
 
     The AI formats the name WITHOUT changing, renaming, or inventing anything.
     It only converts to the required field formats (mod_id, mod_class, etc.).
@@ -443,10 +444,12 @@ def _generate_metadata_with_ai(
     payload: dict[str, Any] = {
         "hoster": AI_HOSTER,
         "model": AI_MODEL,
-        "request_type": "browser_based",
         "system_prompt": system_prompt,
         "user_prompt": user_prompt,
-        "response_mode": "direct",
+        "extra_body": {
+            "thinking": False,
+            "web_search": False,
+        },
     }
 
     body_bytes = json.dumps(payload).encode("utf-8")
@@ -544,18 +547,17 @@ def _substitute_prompt_variables(prompt_text: str, metadata: dict[str, str]) -> 
     return prompt_text
 
 
-def _send_prompt_to_grok(
+def _send_prompt_to_deepseek(
     target_name: str,
     prompt_text: str,
     retry_context: str = "",
 ) -> str:
-    """Send a prompt to Grok via browser automation (Safari) and return the response.
+    """Send a prompt to DeepSeek via C05 local server and return the response.
 
-    Uses the C05 local server at localhost:8129 which controls Safari to interact
-    with grok.com. The user must be authenticated to Grok in Safari.
+    Uses the C05 local server at localhost:8129 to access DeepSeek's models.
+    No API key required — the server handles authentication.
 
     - Sends NDJSON streaming request to /chat endpoint
-    - Uses response_mode "direct" for faster non-streaming responses
     - Accumulates content events and returns only the content text
     - Properly exits on the "end" event to avoid hanging
 
@@ -580,15 +582,15 @@ def _send_prompt_to_grok(
     if retry_context:
         user_content = f"{retry_context}\n\n---\n\n{prompt_text}"
 
-    user_content = _trim_prompt_to_limit(user_content)
-
     payload: dict[str, Any] = {
         "hoster": AI_HOSTER,
         "model": AI_MODEL,
-        "request_type": "browser_based",
         "system_prompt": "\n".join(system_parts),
         "user_prompt": user_content,
-        "response_mode": "direct",
+        "extra_body": {
+            "thinking": False,
+            "web_search": False,
+        },
     }
 
     body_bytes = json.dumps(payload).encode("utf-8")
@@ -669,24 +671,23 @@ def _send_prompt_to_grok(
     conn.close()
 
     if not full_response:
-        raise RuntimeError("Empty response from Grok — no content generated.")
+        raise RuntimeError("Empty response from DeepSeek — no content generated.")
 
     print(f"  {target_name}: ✓ {accumulated:,} bytes total")
     return full_response
 
 
 def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | None = None) -> int:
-    """Execute the AI coding stage: send prompts to Grok via browser automation.
+    """Execute the AI coding stage: send prompts to DeepSeek via C05 server.
 
     Iterates through all target directories programmatically. For each target:
-      1. Sends the prompt to Grok (via Safari browser automation)
+      1. Sends the prompt to DeepSeek (via C05 local server)
       2. Saves the response as airesponse.txt
       3. If the response lacks Java source files, retries with enhanced prompt
          (up to AI_JAVA_RETRIES times)
       4. Saves conversation.json for successful responses
 
-    This replaces the old interactive copy/paste TUI with fully automated
-    browser-based AI interaction. No user intervention required.
+    Fully automated AI interaction. No user intervention required.
 
     Args:
         bundle_dir: Path to the analysis bundle directory.
@@ -737,11 +738,11 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
 
     print()
     print("=" * 72)
-    print("  PHASE 2 — AI MOD CODING via Grok (Browser Automation)")
+    print("  PHASE 2 — AI MOD CODING via DeepSeek")
     print("=" * 72)
     print()
     print(f"  {len(prompt_targets)} target(s) to process")
-    print(f"  AI: Grok (browser-based, Safari automation)")
+    print(f"  AI: DeepSeek (via C05 local server)")
     print(f"  Model: {AI_MODEL}")
     print(f"  Max Java retries: {AI_JAVA_RETRIES}")
     print()
@@ -789,7 +790,7 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
 
         system_prompt = "\n".join(system_parts)
 
-        # ── Send to Grok with retry loop for no-Java responses ────────────
+        # ── Send to DeepSeek with retry loop for no-Java responses ────────────
         response = ""
         final_status = "failed"
         current_prompt = prompt_text
@@ -798,23 +799,22 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
         for attempt in range(1 + AI_JAVA_RETRIES):
             try:
                 if attempt == 0:
-                    print(f"  Sending to Grok (browser)...", end=" ", flush=True)
+                    print(f"  Sending to DeepSeek...", end=" ", flush=True)
                 else:
                     print(f"  Retry {attempt}/{AI_JAVA_RETRIES} (previous response had no Java)...", end=" ", flush=True)
 
-                # Build the full payload with system prompt embedded in user content
-                # Grok browser-based doesn't support separate system_prompt in the same way
+                # Build the full payload
                 full_user_prompt = current_prompt
 
                 # Send via the low-level HTTP helper
-                response = _send_prompt_to_grok(
+                response = _send_prompt_to_deepseek(
                     target_name,
                     full_user_prompt,
                     retry_context=retry_context,
                 )
 
                 if not response or not response.strip():
-                    print(f"\n  ⚠ Empty response from Grok")
+                    print(f"\n  ⚠ Empty response from DeepSeek")
                     if attempt < AI_JAVA_RETRIES:
                         retry_context = (
                             "YOUR PREVIOUS RESPONSE WAS EMPTY.\n"
@@ -874,10 +874,10 @@ def _run_ai_coding_stage(bundle_dir: Path, previous_progress: dict[str, str] | N
 
         results[target_name] = final_status
 
-        # Rate limiting: Grok browser automation is serial, ~2 requests/min max
+        # Brief pause between targets to respect rate limits
         if idx < total - 1:
-            print(f"  Waiting 5s before next target (browser automation rate limit)...")
-            time.sleep(5)
+            print(f"  Waiting 3s before next target...")
+            time.sleep(3)
         print()
 
     # ── Summary ──────────────────────────────────────────────────────────
@@ -941,8 +941,8 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Operation mode:\n"
             "  prompt-and-code (default) — Run workflow, download prompts, THEN\n"
-            "                              execute prompts via Grok browser\n"
-            "                              automation and save airesponse.txt.\n"
+            "                              execute prompts via DeepSeek AI\n"
+            "                              and save airesponse.txt.\n"
             "  prompt-creation           — Run workflow + download prompts only."
         ))
     args = parser.parse_args(argv)

@@ -1,0 +1,98 @@
+---FILE: src/main/java/asd/itamio/super_jump/SuperJumpMod.java---
+```java
+package asd.itamio.super_jump;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = SuperJumpMod.MODID, name = SuperJumpMod.NAME, version = SuperJumpMod.VERSION, acceptableRemoteVersions = "*")
+public class SuperJumpMod {
+    public static final String MODID = "super_jump";
+    public static final String NAME = "Super Jump";
+    public static final String VERSION = "1.0.0";
+    public static Logger logger;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new JumpHandler());
+    }
+
+    @EventHandler
+    public void serverStarting(FMLServerStartingEvent event) {
+        event.registerServerCommand(new CommandJumpHeight());
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/super_jump/JumpHandler.java---
+```java
+package asd.itamio.super_jump;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.InputEvent;
+
+public class JumpHandler {
+    @SubscribeEvent
+    public void onKeyInput(InputEvent.KeyInputEvent event) {
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/super_jump/CommandJumpHeight.java---
+```java
+package asd.itamio.super_jump;
+
+import net.minecraft.command.CommandBase;
+import net.minecraft.command.CommandException;
+import net.minecraft.command.ICommandSender;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
+
+public class CommandJumpHeight extends CommandBase {
+    @Override public String getName() { return "jumpheight"; }
+    @Override public String getUsage(ICommandSender sender) { return "/jumpheight <height>"; }
+    @Override public int getRequiredPermissionLevel() { return 2; }
+
+    @Override
+    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        sender.sendMessage(new TextComponentString(TextFormatting.GREEN + "Jump height set!"));
+    }
+}
+```
+
+---FILE: src/main/resources/mcmod.info---
+```json
+[
+  {
+    "modid": "super_jump",
+    "name": "Super Jump",
+    "description": "Lets players jump 10 blocks high with the J key",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["Itamio"],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
+```
+
+---METADATA---
+group: asd.itamio.super_jump
+archivesBaseName: Super-Jump
+---

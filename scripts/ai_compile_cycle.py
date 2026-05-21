@@ -13,8 +13,8 @@ Phases:
                                 classify versions as success/failed.
   Phase C — Retry (loop):      For each failed version, create failed-N folder
                                 with full context and build a fix prompt.
-                                The fix prompt is sent to Grok via Safari
-                                browser automation. The fixed code is
+                                The fix prompt is sent to DeepSeek via C05
+                                local server. The fixed code is
                                 extracted, re-zipped, and re-built. Repeats
                                 until all pass or max retries reached.
 
@@ -69,27 +69,28 @@ GH_RETRY_DELAY = 3.0
 
 # --- AI Provider Config ---
 #
-#   HOSTER: Grok (Browser-Based)  |  hoster: "grok"
+#   HOSTER: Free DeepSeek  |  hoster: "freedeepseek"
+#   MODEL:  Expert
 #
-# This uses Safari automation on macOS to interact with the Grok web
-# interface at grok.com. The user must be authenticated to Grok in Safari.
-# The system never steals focus or disrupts the user's current work.
-# Fresh Safari tabs are created for each request and closed afterward.
+# Uses the C05 local server at localhost:8129 to access DeepSeek's models.
+# No API key required — the server handles authentication.
 #
-# SETUP (one-time):
-#   1. Open Safari and authenticate to https://grok.com
-#   2. Safari > Preferences > Advanced > Check "Show Develop menu in menu bar"
-#   3. Safari > Develop menu > Check "Allow JavaScript from Apple Events"
-#   4. Keep Safari running (can be minimized)
-#   5. Key file at keys/grok.txt can be empty — "browser-auth" fallback is automatic
-#   6. Run: python scripts/check_safari_permissions.py
-#   7. Test:  python scripts/test_browser_grok.py
-#
-#   IMPORTANT: This hoster ONLY works on macOS. It uses AppleScript/JXA.
+# Example curl:
+#   curl -s http://localhost:8129/chat \
+#     -H "Content-Type: application/json" \
+#     -d '{
+#       "hoster": "freedeepseek",
+#       "model": "Expert",
+#       "user_prompt": "Explain quantum computing",
+#       "extra_body": {
+#           "thinking": false,
+#           "web_search": false
+#       }
+#     }'
 
 AI_C05_BASE = "http://localhost:8129"
-AI_MODEL = "Fast"
-AI_HOSTER = "grok"
+AI_MODEL = "Expert"
+AI_HOSTER = "freedeepseek"
 
 class CycleError(Exception):
     pass
@@ -1716,7 +1717,7 @@ def _send_fix_prompt_to_ai(
     messages: list[dict],
     target_name: str,
 ) -> str:
-    """Send messages to Grok via browser automation (Safari) and return the response.
+    """Send messages to DeepSeek via C05 local server and return the response.
 
     Args:
         messages: List of message dicts with 'role' and 'content' keys.
@@ -1746,10 +1747,12 @@ def _send_fix_prompt_to_ai(
     payload: dict[str, Any] = {
         "hoster": AI_HOSTER,
         "model": AI_MODEL,
-        "request_type": "browser_based",
         "system_prompt": system_prompt,
         "user_prompt": user_prompt,
-        "response_mode": "direct",
+        "extra_body": {
+            "thinking": False,
+            "web_search": False,
+        },
     }
 
     body_bytes = json.dumps(payload).encode("utf-8")
@@ -1825,9 +1828,9 @@ def _send_fix_prompt_to_ai(
     conn.close()
 
     if not full_response:
-        raise CycleError("Empty response from Grok — no content generated.")
+        raise CycleError("Empty response from DeepSeek — no content generated.")
 
-    print(f"  {target_name}: ✓ {accumulated:,} bytes received from Grok")
+    print(f"  {target_name}: ✓ {accumulated:,} bytes received from DeepSeek")
     return full_response
 
 
@@ -2325,7 +2328,7 @@ def run_compile_cycle(
                 except Exception as conv_exc:
                     _log(f"    Failed to save conversation for {tname}: {conv_exc}")
 
-                # ── Send fix prompt to Grok via browser automation ──────
+                # ── Send fix prompt to DeepSeek via C05 server ──────
                 conv_text_parts = []
                 for m in conversations[tname]:
                     role = m.get("role", "")
@@ -2338,17 +2341,17 @@ def run_compile_cycle(
                         conv_text_parts.append(f"[Previous AI Response]\n{content}")
                 full_prompt = "\n\n".join(conv_text_parts)
 
-                print(f"  Fix prompt: sending to Grok ({len(full_prompt):,} chars)...", end=" ", flush=True)
+                print(f"  Fix prompt: sending to DeepSeek ({len(full_prompt):,} chars)...", end=" ", flush=True)
                 try:
                     ai_response = _send_fix_prompt_to_ai(conversations[tname], tname)
                 except CycleError as e:
-                    _log(f"  Grok request failed for {tname}: {e}")
+                    _log(f"  DeepSeek request failed for {tname}: {e}")
                     ai_responses[idx] = (idx, tname, None, str(e))
                     continue
 
                 if not ai_response or not ai_response.strip():
-                    error = "Empty response from Grok"
-                    _log(f"  No response from Grok for {tname}.")
+                    error = "Empty response from DeepSeek"
+                    _log(f"  No response from DeepSeek for {tname}.")
                     ai_responses[idx] = (idx, tname, None, error)
                     continue
 
