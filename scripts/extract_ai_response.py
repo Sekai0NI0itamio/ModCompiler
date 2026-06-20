@@ -49,7 +49,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
-WORKSPACE = ROOT / "Mod Developement" / "1.12.2-forge"
+WORKSPACE = ROOT / "Mod Development" / "1.12.2-forge"
 
 # Java 8 home for 1.12.2 Forge
 JAVA8_HOME = "/Library/Java/JavaVirtualMachines/temurin-8.jdk/Contents/Home"

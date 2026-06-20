@@ -59,8 +59,8 @@ python3 scripts/auto_create_modrinth_draft_projects.py create-drafts --only-bund
 3. Test the published version
 
 ## Files Location
-- Source: `Mod Developement/1.12.2-forge/src/main/java/asd/itamio/cropgrowth/`
-- JAR: `Mod Developement/1.12.2-forge/ReadyMods/Crop-Growth-Accelerator-1.0.0.jar`
-- ModCollection: `Mod Developement/1.12.2-forge/ModCollection/Crop-Growth-Accelerator-1.0.0.jar`
+- Source: `Mod Development/1.12.2-forge/src/main/java/asd/itamio/cropgrowth/`
+- JAR: `Mod Development/1.12.2-forge/ReadyMods/Crop-Growth-Accelerator-1.0.0.jar`
+- ModCollection: `Mod Development/1.12.2-forge/ModCollection/Crop-Growth-Accelerator-1.0.0.jar`
 - Bundle: `AutoCreateModrinthBundles/crop-growth-accelerator-1.0.0/`
 - ToBeUploaded: `ToBeUploaded/14/`

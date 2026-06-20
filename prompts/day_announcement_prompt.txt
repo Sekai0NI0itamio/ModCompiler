@@ -1,0 +1,77 @@
+You are an expert Minecraft mod developer. Create a compilable Forge 1.12.2 mod.
+
+## Project
+Workspace: Mod Development/1.12.2-forge/
+Forge 1.12.2-14.23.5.2847, ForgeGradle 2.3, MCP stable_39, Java 8.
+
+## Rules
+- Package: asd.itamio.<modid> | Author: "Itamio" | Main class: <Name>Mod
+- Use TextComponentString + TextFormatting (NOT Component.literal)
+- @Mod.EventHandler for lifecycle, @SubscribeEvent for event handlers
+- Commands: extend CommandBase (getName/getUsage/execute/getRequiredPermissionLevel)
+- Player: EntityPlayerMP | World: getEntityWorld()
+- Messages: player.sendMessage(new TextComponentString(TextFormatting.GREEN + "text"))
+- DO NOT output build.gradle or gradle files
+
+## Decompiled Forge source (verify API signatures):
+{DECOMPILED_SOURCE_URL}
+Key packages: fml/common/event/ fml/common/registry/ event/world/ event/entity/ common/config/
+
+## mcmod.info template:
+```json
+[{{"modid":"MODID","name":"Name","description":"Desc","version":"${{version}}","mcversion":"${{mcversion}}","authorList":["Itamio"],"url":"","updateUrl":"","credits":"","logoFile":"","screenshots":[],"dependencies":[]}}]
+```
+
+
+## MOD SPECIFICATION
+
+### Mod Name: Day Announcement
+### Target: Minecraft 1.12.2, Forge
+
+### Description:
+When a new day starts in minecraft, like when the user first spawns, or when the morning starts, or when the player finishes sleeping and wakes up, a announcement NOT in chat but in render will show in big: Day #, and slowly fade out afterwards, and also it will show a day counter on the right part of the screen with the day number based on the server played time.
+
+### Suggested identifiers:
+- mod_id: day_announcement
+- group: asd.itamio.day_announcement
+- archivesBaseName: Day-Announcement
+- main class: DayAnnouncementMod
+- author: Itamio
+
+
+## STRICT OUTPUT FORMAT — use this EXACTLY:
+
+---FILE: src/main/java/asd/itamio/<modid>/<ClassName>.java---
+```java
+package asd.itamio.<modid>;
+// complete Java code with ALL imports
+```
+
+---FILE: src/main/resources/mcmod.info---
+```json
+[ ... ]
+```
+
+---METADATA---
+group: asd.itamio.<modid>
+archivesBaseName: <Name>
+---
+
+RULES:
+- File path MUST start with "src/main/"
+- Use ---FILE: path--- as delimiter (3 dashes, FILE, colon, space, path, 3 dashes)
+- Content inside ```java``` or ```json``` fences
+- End with ---METADATA--- block (group + archivesBaseName)
+- NO build.gradle or gradle files
+
+
+## CHECKLIST
+1. Package "asd.itamio.day_announcement" in every Java file?
+2. @Mod annotation present with modid, name, version?
+3. All imports included?
+4. TextComponentString used (not Component.literal)?
+5. ---FILE: format followed exactly?
+6. ---METADATA--- block at the end?
+7. Check decompiled source at https://github.com/Sekai0NI0itamio/ModCompiler/tree/main/DecompiledMinecraftSourceCode/1.12.2-forge for API signatures?
+
+Generate the complete mod source code now:

@@ -12,7 +12,7 @@ During development of multiple mods ("No Hostile Mobs" and "Area Dig"), a critic
 ### What Happened
 
 1. User requested creation of "No Hostile Mobs" mod
-2. Mod was created in `Mod Developement/1.12.2-forge/src/main/java/com/nohostilemobs/`
+2. Mod was created in `Mod Development/1.12.2-forge/src/main/java/com/nohostilemobs/`
 3. Mod compiled successfully
 4. User then requested creation of "Area Dig" mod
 5. New mod was created in `src/main/java/com/areadig/`

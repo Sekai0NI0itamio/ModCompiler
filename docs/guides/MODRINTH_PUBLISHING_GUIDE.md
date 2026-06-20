@@ -225,7 +225,7 @@ Creating draft for area-dig-1.0.0 via GitHub...
 ### When to Use Local Source (Recommended)
 
 Use local source when:
-- ✅ You developed the mod locally (like in `Mod Developement/1.12.2-forge/`)
+- ✅ You developed the mod locally (like in `Mod Development/1.12.2-forge/`)
 - ✅ You have the original source code
 - ✅ You want faster processing
 - ✅ You want more accurate metadata

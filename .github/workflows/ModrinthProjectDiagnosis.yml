@@ -1,0 +1,1268 @@
+name: ModrinthProjectDiagnosis
+
+# ---------------------------------------------------------------------------
+# Purpose
+# -------
+# Provides a comprehensive health diagnosis of every version published on a
+# Modrinth project. For each (loader, MC version) slot this workflow:
+#
+#   1. Retrieves all published versions with their metadata and publish dates
+#   2. Selects the latest jar per (loader, MC version) slot
+#   3. Checks each jar for shell/corruption (class count, jar integrity)
+#   4. Tests each working jar in a headless Minecraft instance (crashes? errors?)
+#   5. Produces a per-jar health report (class count, code metrics, launcher logs)
+#   6. Notes any missing version+loader combos with explanation files
+#   7. Generates a final summary table covering ALL versions, health status,
+#      missing versions, and corrupted versions
+#
+# Final artifact: DiagnosisLogs/  (uploaded as workflow artifact)
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      modrinth_project_url:
+        description: >
+          Modrinth project URL, slug, or project ID.
+          Examples: https://modrinth.com/mod/sort-chest  |  sort-chest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  MODRINTH_PROJECT_URL: ${{ inputs.modrinth_project_url }}
+
+jobs:
+  # ===========================================================================
+  # JOB 1: DIAGNOSE — Fetch all versions, detect shells, build test matrix
+  # ===========================================================================
+  diagnose:
+    name: Diagnose Modrinth Project
+    runs-on: ubuntu-latest
+    outputs:
+      project_slug: ${{ steps.diagnose.outputs.project_slug }}
+      project_title: ${{ steps.diagnose.outputs.project_title }}
+      total_slots: ${{ steps.diagnose.outputs.total_slots }}
+      has_working: ${{ steps.diagnose.outputs.has_working }}
+      matrix_count: ${{ steps.diagnose.outputs.matrix_count }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Mask Modrinth token
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -n "$MODRINTH_TOKEN" ]; then
+            echo "::add-mask::$MODRINTH_TOKEN"
+          fi
+
+      - name: Run diagnosis
+        id: diagnose
+        shell: bash
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          mkdir -p .workflow_artifacts/diagnosis
+          python3 - <<'PY'
+          import json, os, re, sys, time, urllib.parse, urllib.request, urllib.error, zipfile
+          from pathlib import Path
+          from datetime import datetime
+
+          sys.path.insert(0, str(Path.cwd()))
+          from modcompiler.modrinth import (
+              ModrinthClient, build_modrinth_user_agent,
+              normalize_modrinth_project_ref, select_primary_modrinth_file,
+          )
+          from modcompiler.common import load_json
+
+          TOKEN = os.environ.get("MODRINTH_TOKEN", "").strip()
+          RAW_URL = "${{ inputs.modrinth_project_url }}"
+          OUT = Path(".workflow_artifacts/diagnosis")
+          OUT.mkdir(parents=True, exist_ok=True)
+
+          # ---- Resolve project ----
+          ref = normalize_modrinth_project_ref(RAW_URL)
+          client = ModrinthClient(token=TOKEN or None, user_agent=build_modrinth_user_agent())
+          project = client.resolve_project(ref)
+          slug = project.get("slug", ref)
+          title = project.get("title", slug)
+          print(f"Project: {title} ({slug})")
+
+          # ---- Fetch ALL versions ----
+          all_versions = client.request_json(
+              "GET", f"/project/{urllib.parse.quote(ref, safe='')}/version",
+              params={"include_changelog": "false"},
+          )
+          if not isinstance(all_versions, list):
+              all_versions = []
+          print(f"Total versions on Modrinth: {len(all_versions)}")
+
+          # ---- Helper: parse version number for sorting ----
+          def parse_vnum(s):
+              parts = []
+              for t in re.split(r"[.\-_]", str(s).strip()):
+                  if t.isdigit():
+                      parts.append(int(t))
+                  elif t:
+                      parts.append(t)
+              return tuple(parts) if parts else (0,)
+
+          # ---- Select the LATEST version per (loader, MC version) slot ----
+          best = {}
+          for v in all_versions:
+              loaders = [str(l) for l in v.get("loaders", []) if str(l).strip()]
+              gvs = [str(g) for g in v.get("game_versions", []) if str(g).strip()]
+              if not loaders or not gvs:
+                  continue
+              vnum = str(v.get("version_number", "")).strip()
+              vkey = parse_vnum(vnum)
+              pub = v.get("date_published", "") or ""
+              for loader in loaders:
+                  for gv in gvs:
+                      key = (loader, gv)
+                      cur = best.get(key)
+                      if cur is None:
+                          best[key] = {"v": v, "key": vkey, "pub": pub}
+                      else:
+                          try:
+                              is_newer = vkey > cur["key"]
+                          except TypeError:
+                              is_newer = str(vkey) > str(cur["key"])
+                          if is_newer or (vkey == cur["key"] and pub > cur["pub"]):
+                              best[key] = {"v": v, "key": vkey, "pub": pub}
+
+          # Deduplicate by version ID (same version can cover multiple loader+MC slots)
+          seen = set()
+          selected = []
+          for entry in best.values():
+              vid = entry["v"]["id"]
+              if vid not in seen:
+                  seen.add(vid)
+                  selected.append(entry["v"])
+          print(f"Selected {len(selected)} versions (latest per loader+MC slot)")
+
+          # ---- Helper: count .class files in a jar ----
+          def jar_class_count(path):
+              try:
+                  with zipfile.ZipFile(path) as z:
+                      return sum(
+                          1 for e in z.infolist()
+                          if not e.is_dir() and e.filename.endswith(".class")
+                      )
+              except Exception:
+                  return -1
+
+          # ---- Helper: count total methods via javap ----
+          def jar_method_count(path):
+              try:
+                  import subprocess
+                  with zipfile.ZipFile(path) as z:
+                      class_entries = [
+                          e for e in z.infolist()
+                          if not e.is_dir() and e.filename.endswith(".class")
+                          and "$" not in e.filename  # skip inner classes for speed
+                      ]
+                  # Only inspect a sample of top-level classes for methods
+                  total_methods = 0
+                  inspected = 0
+                  for entry in class_entries[:50]:  # cap at 50 classes
+                      try:
+                          z2 = zipfile.ZipFile(path)
+                          data = z2.read(entry.filename)
+                          z2.close()
+                          result = subprocess.run(
+                              ["javap", "-p", "-cp", path, entry.filename.replace("/", ".").replace(".class", "")],
+                              capture_output=True, text=True, timeout=15
+                          )
+                          method_lines = [ln for ln in result.stdout.splitlines() if ln.strip().startswith(("  public", "  private", "  protected", "  static"))]
+                          total_methods += len(method_lines)
+                          inspected += 1
+                      except Exception:
+                          pass
+                  if inspected == 0:
+                      return 0
+                  # Estimate total based on sample
+                  avg = total_methods / inspected
+                  return int(avg * len(class_entries))
+              except Exception:
+                  return -1
+
+          # ---- Helper: check for mod metadata files inside jar ----
+          def jar_has_mod_metadata(path):
+              try:
+                  with zipfile.ZipFile(path) as z:
+                      names = set(z.namelist())
+                      for marker in ["fabric.mod.json", "META-INF/mods.toml", "META-INF/neoforge.mods.toml",
+                                      "mcmod.info", "META-INF/jarcontainersilence", "quilt.mod.json",
+                                      "META-INF/plugin.xml"]:
+                          if marker in names:
+                              return marker
+                  return None
+              except Exception:
+                  return None
+
+          # ---- Download & analyse each selected version ----
+          records = []
+          shells = []
+          working = []
+          downloads_dir = OUT / "downloads"
+          downloads_dir.mkdir(parents=True, exist_ok=True)
+
+          for v in selected:
+              vid = v["id"]
+              vnum = v.get("version_number", vid)
+              fi = select_primary_modrinth_file(v.get("files", []))
+              jar_name = ""
+              jar_url = ""
+              jar_size = 0
+              class_count = -1
+              method_count = -1
+              mod_metadata = ""
+              is_shell = False
+              shell_reason = ""
+
+              if fi:
+                  jar_name = fi["filename"]
+                  jar_url = fi["url"]
+                  jar_dest = downloads_dir / vid / jar_name
+                  jar_dest.parent.mkdir(parents=True, exist_ok=True)
+                  req = urllib.request.Request(jar_url, headers={"User-Agent": build_modrinth_user_agent()})
+                  try:
+                      with urllib.request.urlopen(req, timeout=60) as r:
+                          jar_dest.write_bytes(r.read())
+                      jar_size = jar_dest.stat().st_size
+                      print(f"  Downloaded {vnum}: {jar_name} ({jar_size:,}B)")
+                  except Exception as e:
+                      print(f"  Download FAILED for {vnum}: {e}")
+
+                  if jar_dest.exists():
+                      class_count = jar_class_count(jar_dest)
+                      if class_count > 0:
+                          method_count = jar_method_count(jar_dest)
+                      mod_metadata = jar_has_mod_metadata(jar_dest) or ""
+
+                  if class_count == 0:
+                      is_shell = True
+                      shell_reason = "no .class files in jar"
+                  elif class_count == -1:
+                      is_shell = True
+                      shell_reason = "jar unreadable or corrupt"
+              else:
+                  is_shell = True
+                  shell_reason = "no primary file in version"
+
+              rec = {
+                  "id": vid,
+                  "version_number": vnum,
+                  "name": v.get("name", ""),
+                  "version_type": v.get("version_type", ""),
+                  "date_published": v.get("date_published", ""),
+                  "game_versions": [str(g) for g in v.get("game_versions", [])],
+                  "loaders": [str(l) for l in v.get("loaders", [])],
+                  "jar_name": jar_name,
+                  "file_url": jar_url,
+                  "jar_size": jar_size,
+                  "class_count": class_count,
+                  "method_estimate": method_count,
+                  "mod_metadata": mod_metadata,
+                  "is_shell": is_shell,
+                  "shell_reason": shell_reason,
+              }
+              records.append(rec)
+              if is_shell:
+                  shells.append(rec)
+              else:
+                  working.append(rec)
+
+          # ---- Determine missing version+loader combos ----
+          manifest = load_json(Path("version-manifest.json"))
+          repo_caps = set()
+          for rng in manifest["ranges"]:
+              for loader, lcfg in rng["loaders"].items():
+                  svs = lcfg.get("supported_versions", [])
+                  if not svs:
+                      svs = [rng["min_version"]]
+                  for sv in svs:
+                      repo_caps.add((sv, loader))
+
+          published_pairs = set()
+          for r in records:
+              if not r["is_shell"]:
+                  for loader in r["loaders"]:
+                      for gv in r["game_versions"]:
+                          published_pairs.add((gv, loader))
+
+          missing_pairs = sorted(repo_caps - published_pairs)
+          missing_by_loader = {}
+          for gv, ldr in missing_pairs:
+              missing_by_loader.setdefault(ldr, []).append(gv)
+
+          # ---- Print summary ----
+          print(f"\n{'='*60}")
+          print(f"DIAGNOSIS SUMMARY:")
+          print(f"  Total versions fetched : {len(all_versions)}")
+          print(f"  Slots (latest per slot) : {len(selected)}")
+          print(f"  Working                 : {len(working)}")
+          print(f"  Shell/corrupted         : {len(shells)}")
+          print(f"  Missing (repo can build): {len(missing_pairs)}")
+          print(f"{'='*60}")
+
+          # ---- Write machine-readable outputs ----
+          diag = {
+              "slug": slug,
+              "title": title,
+              "project_ref": ref,
+              "total_versions": len(all_versions),
+              "analysed_slots": len(selected),
+              "working_count": len(working),
+              "shell_count": len(shells),
+              "missing_count": len(missing_pairs),
+              "has_issues": len(shells) > 0 or len(missing_pairs) > 0,
+              "version_records": records,
+              "missing_pairs": [{"mc_version": gv, "loader": l} for gv, l in missing_pairs],
+              "missing_by_loader": {k: sorted(v) for k, v in missing_by_loader.items()},
+          }
+          (OUT / "diagnosis.json").write_text(json.dumps(diag, indent=2, default=str), encoding="utf-8")
+
+          # ---- Write human-readable diagnosis.txt ----
+          SEP = "=" * 72
+          lines = [
+              SEP,
+              f"MODRINTH PROJECT DIAGNOSIS",
+              f"Project: {title}",
+              f"Slug: {slug}",
+              f"URL: https://modrinth.com/mod/{slug}",
+              f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+              SEP,
+              "",
+              "── OVERVIEW ─────────────────────────────────────────────────────",
+              f"  Total versions published : {len(all_versions)}",
+              f"  Analysed slots           : {len(selected)}",
+              f"  Working jars             : {len(working)}",
+              f"  Shell/corrupted jars     : {len(shells)}",
+              f"  Missing (repo can build) : {len(missing_pairs)}",
+              "",
+          ]
+
+          lines += ["── ALL ANALYSED SLOTS ──────────────────────────────────────────"]
+          lines.append(f"  {'Version':<24} {'Date':<12} {'Loaders':<18} {'MC':<18} {'Status':<10} {'Classes':>7} {'Methods':>7} {'Metadata'}")
+          lines.append(f"  {'-'*24} {'-'*12} {'-'*18} {'-'*18} {'-'*10} {'-'*7} {'-'*7} {'-'*20}")
+          for r in records:
+              status = "SHELL" if r["is_shell"] else "OK"
+              ldrs = ",".join(r["loaders"])[:16]
+              gvs = ",".join(r["game_versions"])[:16]
+              meta = r.get("mod_metadata", "")[:18]
+              mc = r["method_estimate"] if r["method_estimate"] >= 0 else -1
+              lines.append(
+                  f"  {r['version_number']:<24} {r['date_published'][:10]:<12} "
+                  f"{ldrs:<18} {gvs:<18} {status:<10} "
+                  f"{r['class_count']:>7} {mc:>7} {meta:<20}"
+              )
+          lines.append("")
+
+          if shells:
+              lines += ["── SHELL / CORRUPTED VERSIONS ─────────────────────────────────"]
+              for r in shells:
+                  lines.append(
+                      f"  {r['version_number']:<22} {r['date_published'][:10]}  "
+                      f"loaders={','.join(r['loaders'])}  reason={r['shell_reason']}"
+                  )
+              lines.append("")
+
+          if missing_pairs:
+              lines += ["── MISSING VERSION+LOADER COMBOS (repo can build) ─────────────"]
+              for ldr in sorted(missing_by_loader.keys()):
+                  lines.append(f"  [{ldr}]  {', '.join(sorted(missing_by_loader[ldr]))}")
+              lines.append("")
+
+          lines.append(SEP)
+          (OUT / "diagnosis.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print(f"Wrote diagnosis.txt ({len(lines)} lines)")
+
+          # ---- Build launcher test matrix for working versions ----
+          print("\nBuilding launcher test matrix...")
+          try:
+              req = urllib.request.Request(
+                  "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json",
+                  headers={"User-Agent": "ModCompilerLauncherDiagnosis/1.0"},
+              )
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  ci_data = json.loads(resp.read().decode())
+          except Exception as e:
+              print(f"WARNING: Could not fetch ci-data.json: {e}")
+              ci_data = {"run_data": []}
+
+          run_data = ci_data.get("run_data", [])
+          supported = {}
+          for entry in run_data:
+              mc = entry.get("mc")
+              ltype = entry.get("type")
+              modloader = entry.get("modloader")
+              regex = entry.get("regex")
+              java_str = entry.get("java")
+              if not all([mc, ltype, modloader, regex, java_str]):
+                  continue
+              try:
+                  java = int(java_str)
+              except (ValueError, TypeError):
+                  java = 17
+              supported[(mc, modloader)] = {
+                  "mc": mc, "modloader": modloader,
+                  "mcrt_jar": ltype, "regex": regex, "java": java,
+              }
+
+          def parse_mc_version(v):
+              parts = []
+              for token in re.split(r'[.\-_]', str(v).strip()):
+                  if token.isdigit():
+                      parts.append(int(token))
+                  else:
+                      break
+              return tuple(parts) if parts else (0,)
+
+          def minor_key(v):
+              p = parse_mc_version(v)
+              if p[0] == 1 and len(p) >= 2:
+                  return (1, p[1])
+              return p[:2]
+
+          by_minor = {}
+          for (mc, modloader), cfg in supported.items():
+              key = (minor_key(mc), modloader)
+              if key not in by_minor or parse_mc_version(mc) > parse_mc_version(by_minor[key]["mc"]):
+                  by_minor[key] = cfg
+
+          def map_loader(loader):
+              return "fabric" if loader == "quilt" else loader
+
+          def find_test_config(gv, loader):
+              if (gv, loader) in supported:
+                  return supported[(gv, loader)]
+              mk = minor_key(gv)
+              if (mk, loader) in by_minor:
+                  return by_minor[(mk, loader)]
+              return None
+
+          def safe_artifact_key(loader, gv):
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", f"{loader}-{gv}").strip("_")
+
+          matrix_entries = []
+          skipped = []
+          for r in working:
+              file_url = r.get("file_url", "")
+              file_name = r.get("jar_name", "")
+              if not file_url or not file_name:
+                  continue
+              for gv in r.get("game_versions", []):
+                  if not isinstance(gv, str) or not gv.strip():
+                      continue
+                  gv = gv.strip()
+                  for loader in r.get("loaders", []):
+                      if not isinstance(loader, str) or not loader.strip():
+                          continue
+                      loader = loader.strip()
+                      test_loader = map_loader(loader)
+                      if test_loader not in ("fabric", "forge", "neoforge"):
+                          skipped.append((gv, loader, "unsupported loader"))
+                          continue
+                      test_config = find_test_config(gv, test_loader)
+                      if test_config is None:
+                          skipped.append((gv, test_loader, "no mc-runtime-test support"))
+                          continue
+                      matrix_entries.append({
+                          "game_version": gv,
+                          "test_mc": test_config["mc"],
+                          "loader": test_config["modloader"],
+                          "original_loader": loader,
+                          "file_url": file_url,
+                          "file_name": file_name,
+                          "version_number": r.get("version_number", ""),
+                          "java_version": test_config["java"],
+                          "loader_regex": test_config["regex"],
+                          "mcrt_jar": test_config["mcrt_jar"],
+                          "safe_key": safe_artifact_key(loader, gv),
+                      })
+
+          matrix_entries.sort(key=lambda e: (e["game_version"], e["loader"]))
+          matrix = json.dumps({"include": matrix_entries})
+          (OUT / "launcher-matrix.json").write_text(matrix, encoding="utf-8")
+          print(f"Launcher test matrix: {len(matrix_entries)} entries")
+          for entry in matrix_entries:
+              mapped = "" if entry["game_version"] == entry["test_mc"] else f" (tested on {entry['test_mc']})"
+              print(f"  {entry['original_loader']:>8} MC {entry['game_version']:<12}{mapped} Java {entry['java_version']}")
+
+          # ---- Write GitHub outputs ----
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as f:
+              f.write(f"project_slug={slug}\n")
+              f.write(f"project_title={title}\n")
+              f.write(f"total_slots={len(selected)}\n")
+              f.write(f"has_working={'true' if working else 'false'}\n")
+              f.write(f"matrix_count={len(matrix_entries)}\n")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: diagnosis-output
+          path: .workflow_artifacts/diagnosis/
+          if-no-files-found: error
+
+  # ===========================================================================
+  # JOB 2: LAUNCHER TEST — Test each working jar in headless Minecraft
+  # ===========================================================================
+  launcher-test:
+    name: Launcher test (sequential)
+    needs: [diagnose]
+    if: always() && needs.diagnose.outputs.matrix_count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      total: ${{ steps.run-tests.outputs.total }}
+      passed: ${{ steps.run-tests.outputs.passed }}
+      failed: ${{ steps.run-tests.outputs.failed }}
+
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            16
+            17
+            21
+            25
+
+      - name: Download diagnosis output
+        uses: actions/download-artifact@v4
+        with:
+          name: diagnosis-output
+          path: .workflow_downloads/diagnosis
+
+      - name: Cache ~/.minecraft
+        uses: actions/cache@v4
+        with:
+          path: ~/.minecraft
+          key: mc-runtime-test-diag-${{ github.run_id }}
+          restore-keys: mc-runtime-test-diag-
+
+      - name: Download HeadlessMC launcher
+        uses: robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2
+        with:
+          repository: 3arthqu4ke/headlessmc
+          tag: 2.9.0
+          fileName: headlessmc-launcher-2.9.0.jar
+
+      - name: Install xvfb deps
+        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
+
+      - name: Run launcher tests sequentially
+        id: run-tests
+        shell: bash
+        env:
+          MATRIX_FILE: .workflow_downloads/diagnosis/launcher-matrix.json
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, subprocess, sys, shutil, re, time, urllib.request
+          from pathlib import Path
+
+          MATRIX_FILE = os.environ.get("MATRIX_FILE", "launcher-matrix.json")
+          RESULTS_DIR = Path("launcher-results")
+          CRASH_DIR = Path("crash-logs")
+          HMC_JAR = "headlessmc-launcher-2.9.0.jar"
+          MCRT_VERSION = "4.4.0"
+          MCRT_REPO = "headlesshq/mc-runtime-test"
+          TEST_TIMEOUT = 600
+
+          RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+          CRASH_DIR.mkdir(parents=True, exist_ok=True)
+
+          _mcrt_release = None
+          def get_mcrt_release():
+              global _mcrt_release
+              if _mcrt_release is not None:
+                  return _mcrt_release
+              url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"
+              req = urllib.request.Request(url, headers={"User-Agent": "ModCompiler/1.0"})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      _mcrt_release = json.loads(r.read().decode())
+              except Exception as e:
+                  print(f"  WARNING: Could not fetch mc-runtime-test release: {e}")
+                  _mcrt_release = {}
+              return _mcrt_release
+
+          def find_java_home(version):
+              tc = Path("/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk")
+              if tc.exists():
+                  for d in sorted(tc.iterdir(), reverse=True):
+                      if d.is_dir() and d.name.split('.')[0] == str(version):
+                          if (d / "x64" / "bin" / "java").exists():
+                              return str(d / "x64")
+              return os.environ.get("JAVA_HOME", "")
+
+          def download_mcrt_jar(mc_version, loader_type):
+              mods_dir = Path("run/mods")
+              mods_dir.mkdir(parents=True, exist_ok=True)
+              pat = f"mc-runtime-test-{mc_version}-*-{loader_type}-release.jar"
+              existing = list(mods_dir.glob(pat))
+              if existing:
+                  return existing[0].name
+              release = get_mcrt_release()
+              for asset in release.get("assets", []):
+                  name = asset.get("name", "")
+                  if re.match(f"mc-runtime-test-{re.escape(mc_version)}-.*-{re.escape(loader_type)}-release\\.jar$", name):
+                      dl_url = asset.get("browser_download_url", "")
+                      if not dl_url:
+                          continue
+                      try:
+                          urllib.request.urlretrieve(dl_url, str(mods_dir / name))
+                          print(f"  Downloaded mc-runtime-test: {name}")
+                          return name
+                      except Exception as e:
+                          print(f"  WARNING: Download failed for {name}: {e}")
+                          return None
+              print(f"  WARNING: No mc-runtime-test jar for {mc_version}/{loader_type}")
+              return None
+
+          def cleanup_processes():
+              for pat in ["crash-watcher.sh", "headlessmc-launcher", "Xvfb"]:
+                  subprocess.run(["pkill", "-f", pat], capture_output=True)
+              time.sleep(1)
+              subprocess.run(["pkill", "-9", "-f", "java"], capture_output=True)
+              time.sleep(1)
+
+          def run_test(entry, index, total):
+              gv = entry["game_version"]
+              loader = entry["loader"]
+              test_mc = entry["test_mc"]
+              java_ver = entry["java_version"]
+              file_url = entry["file_url"]
+              file_name = entry["file_name"]
+              loader_regex = entry["loader_regex"]
+              mcrt_jar_type = entry["mcrt_jar"]
+              safe_key = entry["safe_key"]
+              original_loader = entry.get("original_loader", loader)
+              version_number = entry.get("version_number", "")
+
+              print(f"::group::Test {index+1}/{total}: {original_loader} MC {gv} (tested on {test_mc})")
+
+              result = {
+                  "status": "launcher_failed",
+                  "game_version": gv,
+                  "loader": original_loader,
+                  "test_mc": test_mc,
+                  "version_number": version_number,
+                  "crash_summary": "",
+                  "logs": "",
+              }
+
+              try:
+                  cleanup_processes()
+                  java_home = find_java_home(java_ver)
+                  os.environ["JAVA_HOME"] = java_home
+
+                  run_dir = Path("run")
+                  if run_dir.exists():
+                      shutil.rmtree(run_dir)
+                  run_dir.mkdir()
+                  (run_dir / "mods").mkdir()
+
+                  hmc_dir = Path("HeadlessMC")
+                  hmc_dir.mkdir(exist_ok=True)
+                  (hmc_dir / "config.properties").write_text(
+                      f"hmc.java.versions={java_home}/bin/java\n"
+                      f"hmc.gamedir={Path.cwd()}/run\n"
+                      f"hmc.offline=true\n"
+                      f"hmc.rethrow.launch.exceptions=true\n"
+                      f"hmc.exit.on.failed.command=true\n"
+                      f"hmc.assets.dummy=true\n"
+                  )
+                  (run_dir / "options.txt").write_text("onboardAccessibility:false\npauseOnLostFocus:false\n")
+
+                  print(f"  Downloading {file_name}...")
+                  for attempt in range(3):
+                      r = subprocess.run(
+                          ["curl", "-fsSL", "--retry", "3", "--retry-delay", "5",
+                           file_url, "-o", f"run/mods/{file_name}"],
+                          capture_output=True, text=True, timeout=120
+                      )
+                      if r.returncode == 0:
+                          break
+                      time.sleep(5)
+
+                  if not (run_dir / "mods" / file_name).exists():
+                      result["crash_summary"] = f"Failed to download: {file_name}"
+                      print(f"  FAILED: Could not download {file_name}")
+                      print("::endgroup::")
+                      return result
+
+                  mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / test_mc / f"{test_mc}.json"
+                  if not mc_json.exists():
+                      print(f"  Downloading Minecraft {test_mc}...")
+                      subprocess.run(
+                          ["java", "-jar", HMC_JAR, "--command", "download", test_mc],
+                          capture_output=True, text=True, timeout=300
+                      )
+                      print(f"  Installing {loader} for {test_mc} (Java {java_ver})...")
+                      subprocess.run(
+                          ["java", "-jar", HMC_JAR, "--command", loader, test_mc, "--java", str(java_ver)],
+                          capture_output=True, text=True, timeout=600
+                      )
+
+                  mcrt_name = download_mcrt_jar(test_mc, mcrt_jar_type)
+                  if not mcrt_name:
+                      result["crash_summary"] = f"No mc-runtime-test jar for {test_mc}/{mcrt_jar_type}"
+                      print(f"  FAILED: No mc-runtime-test jar available")
+                      print("::endgroup::")
+                      return result
+
+                  # Crash watcher
+                  watcher_script = (
+                      '#!/bin/bash\n'
+                      'CRASH_DIR="run/crash-reports"\n'
+                      'MAX_WAIT=1200\n'
+                      'ELAPSED=0\n'
+                      'while [ $ELAPSED -lt $MAX_WAIT ]; do\n'
+                      '  if ls $CRASH_DIR/crash-*.txt 2>/dev/null || ls run/hs_err_pid*.log 2>/dev/null; then\n'
+                      '    echo "CRASH WATCHER: Crash detected!"\n'
+                      '    sleep 5\n'
+                      '    pkill -f \'headlessmc-launcher\' 2>/dev/null || true\n'
+                      '    pkill -f \'net.minecraft\' 2>/dev/null || true\n'
+                      '    pkill -f \'net.neoforged\' 2>/dev/null || true\n'
+                      '    pkill -f \'cpw.mods\' 2>/dev/null || true\n'
+                      '    pkill -f \'Xvfb\' 2>/dev/null || true\n'
+                      '    sleep 2\n'
+                      '    pkill -9 -f \'java\' 2>/dev/null || true\n'
+                      '    echo "CRASH WATCHER: Processes killed."\n'
+                      '    exit 0\n'
+                      '  fi\n'
+                      '  sleep 5\n'
+                      '  ELAPSED=$((ELAPSED + 5))\n'
+                      'done\n'
+                      'echo "CRASH WATCHER: Timeout"\n'
+                  )
+                  Path("/tmp/crash-watcher.sh").write_text(watcher_script)
+                  os.chmod("/tmp/crash-watcher.sh", 0o755)
+                  watcher_proc = subprocess.Popen(
+                      ["bash", "/tmp/crash-watcher.sh"],
+                      stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                  )
+
+                  print(f"  Launching Minecraft {test_mc} with {loader}...")
+                  try:
+                      launch_result = subprocess.run(
+                          ["xvfb-run", "java", "-Dhmc.check.xvfb=true",
+                           "-jar", HMC_JAR, "--command", "launch", loader_regex, "-regex",
+                           "--jvm", "-Djava.awt.headless=true"],
+                          capture_output=True, text=True, timeout=TEST_TIMEOUT
+                      )
+                      exit_code = launch_result.returncode
+                  except subprocess.TimeoutExpired:
+                      exit_code = -1
+                      print(f"  TIMEOUT: Test exceeded {TEST_TIMEOUT}s")
+
+                  subprocess.run(["pkill", "-f", "crash-watcher.sh"], capture_output=True)
+                  try:
+                      watcher_proc.wait(timeout=5)
+                  except subprocess.TimeoutExpired:
+                      watcher_proc.kill()
+
+                  crash_reports = list(Path("run/crash-reports").glob("crash-*.txt")) if Path("run/crash-reports").exists() else []
+                  hs_err = list(Path("run").glob("hs_err_pid*.log"))
+
+                  # Collect logs
+                  log_text = ""
+                  if Path("run/logs/latest.log").exists():
+                      log_text = Path("run/logs/latest.log").read_text(encoding="utf-8", errors="replace")[:5000]
+                  elif Path("run/latest.log").exists():
+                      log_text = Path("run/latest.log").read_text(encoding="utf-8", errors="replace")[:5000]
+
+                  if crash_reports or hs_err or exit_code != 0:
+                      result["status"] = "launcher_failed"
+                      if crash_reports:
+                          result["crash_summary"] = crash_reports[0].read_text(encoding="utf-8", errors="replace")[:500]
+                      elif hs_err:
+                          result["crash_summary"] = hs_err[0].read_text(encoding="utf-8", errors="replace")[:500]
+                      else:
+                          result["crash_summary"] = f"Exit code: {exit_code}"
+                      result["logs"] = log_text
+
+                      cdir = CRASH_DIR / safe_key
+                      cdir.mkdir(parents=True, exist_ok=True)
+                      if Path("run/crash-reports").exists():
+                          shutil.copytree("run/crash-reports", cdir / "crash-reports", dirs_exist_ok=True)
+                      for f in Path("run").glob("hs_err_pid*.log"):
+                          shutil.copy2(str(f), str(cdir / f.name))
+                      if log_text:
+                          (cdir / "latest.log").write_text(log_text, encoding="utf-8")
+
+                      print(f"  FAILED: Game crashed (exit code {exit_code})")
+                  else:
+                      result["status"] = "passed"
+                      result["logs"] = log_text
+                      print(f"  PASSED")
+
+              except Exception as e:
+                  result["crash_summary"] = str(e)[:500]
+                  print(f"  ERROR: {e}")
+
+              cleanup_processes()
+              print("::endgroup::")
+              return result
+
+          matrix_data = json.loads(Path(MATRIX_FILE).read_text(encoding="utf-8"))
+          entries = matrix_data.get("include", [])
+
+          if not entries:
+              print("No entries to test")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("total=0\npassed=0\nfailed=0\n")
+              sys.exit(0)
+
+          print(f"Will test {len(entries)} versions sequentially\n")
+
+          passed = 0
+          failed = 0
+
+          for i, entry in enumerate(entries):
+              result = run_test(entry, i, len(entries))
+              safe_key = entry["safe_key"]
+              rdir = RESULTS_DIR / safe_key
+              rdir.mkdir(parents=True, exist_ok=True)
+              (rdir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+              if result["status"] == "passed":
+                  passed += 1
+              else:
+                  failed += 1
+
+          print(f"\n{'='*60}")
+          print(f"LAUNCHER TEST SUMMARY: {passed} passed, {failed} failed out of {len(entries)} tests")
+          print(f"{'='*60}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"total={len(entries)}\n")
+              f.write(f"passed={passed}\n")
+              f.write(f"failed={failed}\n")
+          PYEOF
+
+      - name: Upload launcher results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-results
+          path: launcher-results/
+          if-no-files-found: warn
+
+      - name: Upload crash logs
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-logs
+          path: crash-logs/
+          if-no-files-found: ignore
+
+      - name: Write step summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Launcher Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Result | Count |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Passed | ${{ steps.run-tests.outputs.passed }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Failed | ${{ steps.run-tests.outputs.failed }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Total  | ${{ steps.run-tests.outputs.total }} |" >> "$GITHUB_STEP_SUMMARY"
+
+  # ===========================================================================
+  # JOB 3: FINALIZE — Create DiagnosisLogs with per-jar health report + summary
+  # ===========================================================================
+  finalize:
+    name: Finalize Diagnosis Report
+    needs: [diagnose, launcher-test]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Download diagnosis output
+        uses: actions/download-artifact@v4
+        with:
+          name: diagnosis-output
+          path: .workflow_downloads/diagnosis
+
+      - name: Download launcher results (if any)
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: launcher-results
+          path: .workflow_downloads/launcher-results
+
+      - name: Download crash logs (if any)
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: crash-logs
+          path: .workflow_downloads/crash-logs
+
+      - name: Build DiagnosisLogs bundle
+        shell: bash
+        run: |
+          mkdir -p .workflow_artifacts/DiagnosisLogs
+          python3 - <<'PYEOF'
+          import json, os, re, shutil
+          from pathlib import Path
+          from datetime import datetime
+
+          DIAG_DIR = Path(".workflow_downloads/diagnosis")
+          RESULTS_DIR = Path(".workflow_downloads/launcher-results")
+          CRASH_DIR = Path(".workflow_downloads/crash-logs")
+          OUT = Path(".workflow_artifacts/DiagnosisLogs")
+          DOWNLOADS_DIR = DIAG_DIR / "downloads"
+
+          # ---- Load diagnosis data ----
+          diagnosis = json.loads((DIAG_DIR / "diagnosis.json").read_text(encoding="utf-8"))
+          slug = diagnosis["slug"]
+          title = diagnosis["title"]
+          records = diagnosis.get("version_records", [])
+          missing_pairs = diagnosis.get("missing_pairs", [])
+
+          # Build lookup: (version_number, loader) -> launcher result
+          launcher_map = {}
+          if RESULTS_DIR.exists():
+              for rf in RESULTS_DIR.rglob("result.json"):
+                  try:
+                      r = json.loads(rf.read_text(encoding="utf-8"))
+                      gv = r.get("game_version", "")
+                      loader = r.get("loader", "")
+                      launcher_map[(gv, loader)] = r
+                  except Exception:
+                      pass
+
+          def safe_dirname(version_number, loader, mc_version):
+              s = f"{version_number}-{loader}-{mc_version}"
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", s).strip("_")
+
+          def check_code_health(r):
+              """Auto-analyse jar health and return a health score + notes."""
+              class_count = r.get("class_count", 0)
+              method_est = r.get("method_estimate", 0)
+              has_metadata = bool(r.get("mod_metadata", ""))
+              jar_size = r.get("jar_size", 0)
+
+              if r.get("is_shell", False):
+                  return "CRITICAL", f"Shell jar: {r.get('shell_reason', 'unknown')}"
+
+              issues = []
+              positives = []
+
+              if class_count < 5:
+                  issues.append(f"Very few classes ({class_count})")
+              elif class_count < 20:
+                  issues.append(f"Small mod ({class_count} classes)")
+              else:
+                  positives.append(f"Substantial codebase ({class_count} classes)")
+
+              if method_est > 0:
+                  positives.append(f"Est. {method_est} methods")
+              else:
+                  issues.append("Could not estimate methods")
+
+              if has_metadata:
+                  positives.append(f"Has mod metadata ({r['mod_metadata']})")
+              else:
+                  issues.append("No mod metadata file found")
+
+              if jar_size > 100000:
+                  positives.append(f"Jar size {jar_size/1024:.0f}KB")
+              elif jar_size > 0:
+                  issues.append(f"Small jar ({jar_size/1024:.1f}KB)")
+
+              if not issues:
+                  return "HEALTHY", "; ".join(positives)
+              elif len(issues) <= 1:
+                  return "WARNING", "; ".join(issues + positives)
+              else:
+                  return "UNHEALTHY", "; ".join(issues + positives)
+
+          # ---- Process each version record ----
+          for r in records:
+              vnum = r.get("version_number", "unknown")
+              vid = r.get("id", "unknown")
+              is_shell = r.get("is_shell", False)
+
+              # Each record may have multiple loaders and MC versions
+              for loader in r.get("loaders", []):
+                  for mc_version in r.get("game_versions", []):
+                      if is_shell:
+                          # Create a missing-style entry for shells too
+                          dirname = safe_dirname(vnum, loader, mc_version)
+                          entry_dir = OUT / dirname
+                          entry_dir.mkdir(parents=True, exist_ok=True)
+
+                          lines = [
+                              "=" * 60,
+                              f"SHELL / CORRUPTED VERSION REPORT",
+                              "=" * 60,
+                              "",
+                              f"Version number    : {vnum}",
+                              f"Version ID        : {vid}",
+                              f"Loader            : {loader}",
+                              f"Minecraft version : {mc_version}",
+                              f"Date published    : {r.get('date_published', '?')[:10]}",
+                              f"Status            : SHELL",
+                              f"Reason            : {r.get('shell_reason', 'unknown')}",
+                              "",
+                              "This jar does not contain any actual mod code.",
+                              "It may be an accidental upload, an outdated build artifact,",
+                              "or a failed CI pipeline output. Do not use this version.",
+                              "",
+                              "=" * 60,
+                          ]
+                          (entry_dir / "health-report.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+                          continue
+
+                      # Working or launcher-tested version
+                      dirname = safe_dirname(vnum, loader, mc_version)
+                      entry_dir = OUT / dirname
+                      entry_dir.mkdir(parents=True, exist_ok=True)
+
+                      # Get launcher result if available
+                      lr = launcher_map.get((mc_version, loader), {})
+                      launcher_status = lr.get("status", "not_tested")
+                      crash_summary = lr.get("crash_summary", "")
+                      launcher_logs = lr.get("logs", "")
+
+                      # Code health analysis
+                      health_status, health_reason = check_code_health(r)
+
+                      # Copy jar file if available
+                      jar_dir = DOWNLOADS_DIR / vid
+                      if jar_dir.exists():
+                          jar_files = list(jar_dir.glob("*.jar"))
+                          if jar_files:
+                              jar_target = entry_dir / "jar"
+                              jar_target.mkdir(exist_ok=True)
+                              shutil.copy2(str(jar_files[0]), str(jar_target / jar_files[0].name))
+
+                      # Copy launcher logs if available
+                      safe_key = re.sub(r"[^A-Za-z0-9._-]+", "_", f"{loader}-{mc_version}").strip("_")
+                      if CRASH_DIR.exists():
+                          crash_entry = CRASH_DIR / safe_key
+                          if crash_entry.exists():
+                              log_target = entry_dir / "launcher-logs"
+                              shutil.copytree(str(crash_entry), str(log_target), dirs_exist_ok=True)
+
+                      # Write metadata.txt
+                      meta_lines = [
+                          "=" * 60,
+                          f"VERSION METADATA",
+                          "=" * 60,
+                          "",
+                          f"Version number    : {vnum}",
+                          f"Version ID        : {vid}",
+                          f"Version name      : {r.get('name', '')}",
+                          f"Version type      : {r.get('version_type', '')}",
+                          f"Date published    : {r.get('date_published', '?')[:10]}",
+                          f"Loader            : {loader}",
+                          f"Minecraft version : {mc_version}",
+                          f"Jar file          : {r.get('jar_name', '')}",
+                          f"Jar size          : {r.get('jar_size', 0):,} bytes",
+                          f"Download URL      : {r.get('file_url', '')}",
+                          "",
+                          "=" * 60,
+                      ]
+                      (entry_dir / "metadata.txt").write_text("\n".join(meta_lines) + "\n", encoding="utf-8")
+
+                      # Write health-report.txt
+                      health_lines = [
+                          "=" * 60,
+                          f"HEALTH REPORT",
+                          "=" * 60,
+                          "",
+                          f"Overall health    : {health_status}",
+                          f"Analysis notes    : {health_reason}",
+                          "",
+                          f"── CODE METRICS ──────────────────────────────────",
+                          f"  Class count          : {r.get('class_count', 0)}",
+                          f"  Method estimate      : {r.get('method_estimate', -1)}",
+                          f"  Mod metadata         : {r.get('mod_metadata', 'none')}",
+                          f"  Jar size             : {r.get('jar_size', 0):,} bytes",
+                          "",
+                          f"── LAUNCHER TEST ─────────────────────────────────",
+                          f"  Launcher status      : {launcher_status}",
+                      ]
+                      if launcher_status == "launcher_failed" and crash_summary:
+                          health_lines.append(f"  Crash summary        : {crash_summary[:300]}")
+                      health_lines.append("")
+                      health_lines.append("=" * 60)
+                      (entry_dir / "health-report.txt").write_text("\n".join(health_lines) + "\n", encoding="utf-8")
+
+          # ---- Create missing version entries ----
+          for pair in missing_pairs:
+              mc_ver = pair.get("mc_version", "")
+              loader = pair.get("loader", "")
+              if mc_ver and loader:
+                  dirname = f"missing-{mc_ver}-{loader}"
+                  entry_dir = OUT / dirname
+                  entry_dir.mkdir(parents=True, exist_ok=True)
+                  lines = [
+                      "=" * 60,
+                      f"MISSING VERSION REPORT",
+                      "=" * 60,
+                      "",
+                      f"Loader            : {loader}",
+                      f"Minecraft version : {mc_ver}",
+                      "",
+                      "This version+loader combination is NOT published on Modrinth.",
+                      "The ModCompiler repository has templates that can build for this",
+                      "target, but no corresponding version exists on the Modrinth project.",
+                      "",
+                      "Possible reasons:",
+                      "  - The mod was never built/ported for this version",
+                      "  - The version was removed from Modrinth",
+                      "  - The CI pipeline failed before publishing",
+                      "",
+                      "Action needed: Generate and upload a build for this target.",
+                      "",
+                      "=" * 60,
+                  ]
+                  (entry_dir / "missing.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+          # ---- Copy base diagnosis files ----
+          if (DIAG_DIR / "diagnosis.txt").exists():
+              shutil.copy2(str(DIAG_DIR / "diagnosis.txt"), str(OUT / "Diagnosis.txt"))
+
+          # ---- Build final summary table ----
+          SEP = "=" * 72
+          summary_lines = [
+              SEP,
+              f"MODRINTH PROJECT DIAGNOSIS — FINAL SUMMARY",
+              f"Project: {title}",
+              f"Slug: {slug}",
+              f"URL: https://modrinth.com/mod/{slug}",
+              f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+              SEP,
+              "",
+              "── HEALTH LEGEND ───────────────────────────────────────────────",
+              "  HEALTHY   = Has classes, methods, metadata, launcher test passed",
+              "  WARNING   = Minor concerns (few classes, small jar, etc.)",
+              "  UNHEALTHY = Multiple concerns or launcher test failed",
+              "  SHELL     = Corrupted/empty jar, no mod code",
+              "  MISSING   = Version+loader combo not published on Modrinth",
+              "  N/A       = Not tested or not applicable",
+              "",
+              "── VERSION STATUS TABLE ───────────────────────────────────────",
+              f"  {'Version/Combo':<40} {'Health':<12} {'Launcher':<12} {'Classes':>7} {'Methods':>7}",
+              f"  {'-'*40} {'-'*12} {'-'*12} {'-'*7} {'-'*7}",
+          ]
+
+          # Collect all entries for the table
+          table_entries = []
+          for r in records:
+              vnum = r.get("version_number", "unknown")
+              for loader in r.get("loaders", []):
+                  for mc_version in r.get("game_versions", []):
+                      is_shell = r.get("is_shell", False)
+                      if is_shell:
+                          health = "SHELL"
+                      else:
+                          h, _ = check_code_health(r)
+                          health = h
+                      lr = launcher_map.get((mc_version, loader), {})
+                      launcher = lr.get("status", "not_tested") if not is_shell else "N/A"
+                      label = f"{vnum} [{loader} {mc_version}]"
+                      table_entries.append((label, health, launcher, r.get("class_count", 0), r.get("method_estimate", -1)))
+
+          for pair in missing_pairs:
+              mc_ver = pair.get("mc_version", "")
+              loader = pair.get("loader", "")
+              label = f"[MISSING] {loader} {mc_ver}"
+              table_entries.append((label, "MISSING", "N/A", 0, -1))
+
+          # Sort: shells/missing last, then by version number
+          def sort_key(e):
+              label = e[0]
+              if label.startswith("[MISSING]"):
+                  return (2, label)
+              if e[1] == "SHELL":
+                  return (1, label)
+              return (0, label)
+
+          table_entries.sort(key=sort_key)
+          for label, health, launcher, classes, methods in table_entries:
+              mc = str(methods) if methods >= 0 else "?"
+              summary_lines.append(f"  {label:<40} {health:<12} {launcher:<12} {classes:>7} {mc:>7}")
+
+          summary_lines += [
+              "",
+              "── COUNTS ──────────────────────────────────────────────────────",
+              f"  HEALTHY   : {sum(1 for e in table_entries if e[1] == 'HEALTHY')}",
+              f"  WARNING   : {sum(1 for e in table_entries if e[1] == 'WARNING')}",
+              f"  UNHEALTHY : {sum(1 for e in table_entries if e[1] == 'UNHEALTHY')}",
+              f"  SHELL     : {sum(1 for e in table_entries if e[1] == 'SHELL')}",
+              f"  MISSING   : {sum(1 for e in table_entries if e[1] == 'MISSING')}",
+              f"  ─────────────────────────────",
+              f"  TOTAL     : {len(table_entries)}",
+              "",
+              SEP,
+          ]
+
+          (OUT / "Final-Diagnosis.txt").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+          print(f"Wrote Final-Diagnosis.txt ({len(summary_lines)} lines)")
+          print(f"DiagnosisLogs contains {len(table_entries)} entries")
+
+          # Summary counts
+          print(f"  HEALTHY  : {sum(1 for e in table_entries if e[1] == 'HEALTHY')}")
+          print(f"  WARNING  : {sum(1 for e in table_entries if e[1] == 'WARNING')}")
+          print(f"  UNHEALTHY: {sum(1 for e in table_entries if e[1] == 'UNHEALTHY')}")
+          print(f"  SHELL    : {sum(1 for e in table_entries if e[1] == 'SHELL')}")
+          print(f"  MISSING  : {sum(1 for e in table_entries if e[1] == 'MISSING')}")
+          PYEOF
+
+      - name: Upload DiagnosisLogs
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiagnosisLogs
+          path: .workflow_artifacts/DiagnosisLogs/
+          if-no-files-found: error
+
+      - name: Write step summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Modrinth Project Diagnosis Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Project:** [${{ needs.diagnose.outputs.project_title }}](https://modrinth.com/mod/${{ needs.diagnose.outputs.project_slug }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Artifact: DiagnosisLogs" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          find .workflow_artifacts/DiagnosisLogs/ -type f | sort | head -80 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

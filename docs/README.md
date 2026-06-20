@@ -118,7 +118,7 @@ When developing multiple mods in the same workspace without cleaning between the
 **Always clean the workspace before starting a new mod:**
 
 ```bash
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 ./clean_workspace.sh
 ```
 
@@ -146,7 +146,7 @@ Example scenario:
 ```
 1. Clean workspace (if previous mod exists)
    ↓
-2. Create mod in Mod Developement/1.12.2-forge/
+2. Create mod in Mod Development/1.12.2-forge/
    ↓
 3. Build and test locally
    ↓
@@ -171,7 +171,7 @@ Example scenario:
 
 ## Helper Scripts
 
-### In `Mod Developement/1.12.2-forge/`:
+### In `Mod Development/1.12.2-forge/`:
 
 - **`clean_workspace.sh`** - Clean workspace before new mod
 - **`build_no_hostile_mobs.sh`** - Build No Hostile Mobs mod
@@ -186,7 +186,7 @@ Example scenario:
 
 ### Start a New Mod
 ```bash
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 ./clean_workspace.sh
 mkdir -p src/main/java/com/mymod
 # ... create mod files ...

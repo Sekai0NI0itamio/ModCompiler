@@ -61,11 +61,11 @@ Mine entire ore veins at once! Highly optimized with no lag, smart item drops, a
 mkdir -p ToBeUploaded/21/ai_metadata ToBeUploaded/21/source
 
 # Copied mod jar
-cp "Mod Developement/1.12.2-forge/build/libs/Vein-Miner-1.0.0.jar" ToBeUploaded/21/
+cp "Mod Development/1.12.2-forge/build/libs/Vein-Miner-1.0.0.jar" ToBeUploaded/21/
 
 # Copied source code
-cp -r "Mod Developement/1.12.2-forge/src/main/java/asd" ToBeUploaded/21/source/
-cp "Mod Developement/1.12.2-forge/src/main/resources/mcmod.info" ToBeUploaded/21/source/
+cp -r "Mod Development/1.12.2-forge/src/main/java/asd" ToBeUploaded/21/source/
+cp "Mod Development/1.12.2-forge/src/main/resources/mcmod.info" ToBeUploaded/21/source/
 ```
 
 ### Step 2: Generate AI Metadata
@@ -110,10 +110,10 @@ python3 scripts/auto_create_modrinth_draft_projects.py create-drafts --only-bund
 ## Files
 
 **Local Files:**
-- Jar: `Mod Developement/1.12.2-forge/build/libs/Vein-Miner-1.0.0.jar`
+- Jar: `Mod Development/1.12.2-forge/build/libs/Vein-Miner-1.0.0.jar`
 - Source: `ToBeUploaded/21/source/`
 - Bundle: `AutoCreateModrinthBundles/vein-miner-1.0.0/`
-- README: `Mod Developement/1.12.2-forge/ReadyMods/VEIN_MINER_README.md`
+- README: `Mod Development/1.12.2-forge/ReadyMods/VEIN_MINER_README.md`
 
 ## Configuration
 

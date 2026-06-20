@@ -53,7 +53,7 @@ AI_TEMPERATURE = 0.2
 AI_REASONING_EFFORT = "high"
 MAX_RESPONSE_BYTES = 100_000
 
-LOCAL_WORKSPACE = ROOT / "Mod Developement" / "1.12.2-forge"
+LOCAL_WORKSPACE = ROOT / "Mod Development" / "1.12.2-forge"
 OUTPUT_ROOT = ROOT / "output" / "create_mod"
 INCOMING_DIR = ROOT / "incoming"
 BUILD_WORKFLOW_FILE = "build.yml"

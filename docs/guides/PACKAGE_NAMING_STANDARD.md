@@ -244,7 +244,7 @@ If you have mods with old package names (like `com.areadig`), follow these steps
 
 ### Step 1: Clean Workspace
 ```bash
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 ./clean_workspace.sh
 ```
 

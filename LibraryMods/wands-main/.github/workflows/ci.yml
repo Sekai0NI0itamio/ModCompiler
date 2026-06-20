@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.find.outputs.targets }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find build targets
+        id: find
+        run: |
+          targets=$(
+            for dir in mc*/; do
+              target=$(basename "$dir")
+              for loader in "$dir"*/; do
+                name=$(basename "$loader")
+                [ "$name" = "common" ] && continue
+                echo "{\"target\":\"$target\",\"loader\":\"$name\"}"
+              done
+            done | jq -s -c '.'
+          )
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.discover.outputs.targets) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Build ${{ matrix.target.target }}/${{ matrix.target.loader }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew -Ptarget=${{ matrix.target.target }} :${{ matrix.target.target }}:${{ matrix.target.loader }}:build -Pfabric.loom.disable_file_lock=true
+
+      - name: Upload JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: BuildingWands-${{ matrix.target.target }}-${{ matrix.target.loader }}-${{ github.sha }}
+          path: |
+            ${{ matrix.target.target }}/${{ matrix.target.loader }}/build/libs/BuildingWands-*-MC*-*.jar
+            !**/*-dev-shadow.jar
+            !**/*-sources.jar

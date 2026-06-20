@@ -1,0 +1,75 @@
+We need to output JSON with shape exactly as given. Must include accent_color, background_image, logo with fields: eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (array 2-4), stats (array of exactly 2 items), each stats has value, label, note.
+
+We must not include any extra text. Must be valid JSON.
+
+We need to pick background image filename that matches mood. The mod is about longer day/night, smooth sun movement, configurable. Mood maybe "purple flowers and sun set or sun rise.png" or "fire burning.jpg" or "sunset in grassfield.jpg". Probably "purple flowers and sun set or sun rise.png" fits sunrise/sunset vibe. Let's choose that.
+
+Accent color: maybe #ff7f2f (orange) as example. Could use same. Provide hex.
+
+Logo: eyebrow: short label maybe "Time Control". mark: maybe "LD". title: "Longer Day". subtitle: a short phrase describing mod: "Adjustable day/night cycles with smooth sun motion". rail_left: maybe "Smooth Sun". rail_right: "Configurable Night". Must describe actual behavior.
+
+Description: kicker: maybe "Utility Mod". title: "Longer Day". tagline: short tagline describing behavior. chips: 2-4 short labels, e.g., ["Time Control","Smooth Sun","Configurable Night"]. stats: two items with value and label and note. For example:
+
+- value "60" label "Day Length" note "Real minutes per cycle"
+- value "60" label "Night Length" note "Matches day when synced"
+
+But note must be one short sentence.
+
+Make sure stats array has exactly 2 objects.
+
+All strings concise and polished.
+
+Make sure no mention of draft, etc.
+
+Now construct JSON.
+
+Check required fields:
+
+{
+ "accent_color": "#ff7f2f",
+  "background_image": "purple flowers and sun set or sun rise.png",
+ "logo": {
+    "eyebrow": "...",
+    "mark": "...",
+    "title": "...",
+    "subtitle": "...",
+    "rail_left": "...",
+    "rail_right": "..."
+  },
+  "description": {
+    "kicker": "...",
+    "title": "...",
+    "tagline": "...",
+    "chips": [...],
+    "stats": [
+      {
+        "value": "...",
+        "label": "...",
+        "note": "..."
+      },
+      {
+        "value": "...",
+        "label": "...",
+       "note": "..."
+      }
+    ]
+ }
+}
+
+Make sure JSON is valid, no trailing commas.
+
+Now fill values.
+
+eyebrow: maybe "Time Control". mark: "LD". title: "Longer Day". subtitle: "Adjustable day/night cycles with smooth sun motion". rail_left: "Smooth Sun". rail_right: "Configurable Night".
+
+description.kicker: "Utility Mod". title: "Longer Day". tagline: "Extend daylight and night cycles with fluid sun movement, fully configurable." chips: maybe ["Time Control","Smooth Sun","Configurable Night"] (3 items). stats: two items.
+
+First stat: value "60" label "Day Length" note "Real minutes per full cycle". Second stat: value "60" label "Night Length" note "Matches day when synchronization is enabled."
+
+Make sure note is one short sentence, ends with period.
+
+Now produce JSON.
+
+Check that background_image must be exactly one of the options. The option list includes "purple flowers and sun set or sun rise.png". That's the exact filename. Use that.
+
+Now produce final JSON.

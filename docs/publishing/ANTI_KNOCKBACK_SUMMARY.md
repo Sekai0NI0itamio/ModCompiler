@@ -48,7 +48,7 @@ asd.itamio.antikb/
 
 ## Build Results
 - **JAR File**: `Anti-Knockback-1.0.0.jar`
-- **Location**: `Mod Developement/1.12.2-forge/ReadyMods/`
+- **Location**: `Mod Development/1.12.2-forge/ReadyMods/`
 - **Build Status**: ✅ SUCCESS (no errors)
 - **Diagnostics**: ✅ No issues found
 

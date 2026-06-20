@@ -1,0 +1,69 @@
+{
+  "cmp_version": 1,
+  "mod_info": {
+    "name": "Shop",
+    "slug": "shop",
+    "summary": "A server economy mod featuring GUI-based shops and recipe-based auto-pricing",
+    "project_type": "mod",
+    "categories": [
+      "economy",
+      "utility",
+      "management"
+    ],
+    "additional_categories": [],
+    "license_id": "MIT",
+    "license_url": "",
+    "donation_urls": []
+  },
+  "version_info": {
+    "mod_version": "1.0.0",
+    "loaders": [
+      "forge"
+    ],
+    "client_side": "required",
+    "server_side": "required",
+    "minecraft_versions": [
+      "1.12.2"
+    ],
+    "version_type": "release",
+    "changelog": "Initial release — full shop system with buy/sell GUIs, recipe-based pricing, and player payments.",
+    "dependencies": [],
+    "featured": false
+  },
+  "description": {
+    "body": "A complete in-game economy for multiplayer servers. Players buy and sell any item in the game through intuitive GUIs, with prices automatically calculated from crafting recipes — no manual price config needed.\n\n## Currency\n\nAll players start with a balance of **$0**. Earn money by selling items, spend it at the shop. Balances persist across sessions and are stored per-player on the server.\n\n## Commands\n\n- `/shop` — Opens the shop GUI with all items organized by creative tab\n- `/sellhand` — Sells all matching items in your hand instantly\n- `/sellgui` — Opens a drag-and-drop interface to sell items\n- `/balance` (or `/bal`) — Shows your current balance\n- `/pay <player> <amount>` — Transfer money to another player\n\n{{image:0}}\n\n## Shop System\n\n### Buying\n\nOpen `/shop` and browse items by creative tab category. The shop automatically detects modded items — no configuration required.\n\n- **Left-click** an item to open a detail buy menu with quantity input\n- **Right-click** an item to quick-buy a full stack (auto-calculated by your balance)\n- Toggle between **stack mode** and **single mode** in the detail view\n- Hit **Max Afford** to buy as many as your balance allows\n- Transparent GUI background so you can see the world while shopping\n\n### Selling\n\nTwo ways to sell items:\n\n**`/sellhand`** — Instantly sells all items matching the one in your hand.\n\n**`/sellgui`** — Opens a drag-and-drop interface:\n- Drag items from your inventory into the sell area\n- Left-click inventory items to move them to sell slots\n- Right-click to move just one item\n- Tooltips show per-item sell price and total stack value\n- Items are returned to your inventory if you close without selling\n\n## Pricing Engine\n\nPrices are **automatically calculated from crafting recipes** — zero manual configuration.\n\n- **Base materials** (raw resources with no recipe): **$2** each\n- **Crafted items**: priced from the sum of their ingredients\n- **Uncraftable items** (no recipe and no base): **$1,000** each\n- **Buy price**: 1.2× base price\n- **Sell price**: 0.8× base price\n\nThis means the economy is self-balancing — rarer items cost more, common items cost less, and the spread between buy/sell prevents infinite money loops.\n\n## Player-to-Player Payments\n\n`/pay <player> <amount>` transfers money directly. Features:\n- **Double-confirm** prompt to prevent accidental payments\n- **Offline support** — pay players who aren't currently online\n- **Transaction log** on the server console\n\n## Compatibility\n\n- **Server-side**: Required\n- **Client-side**: Required (custom GUIs)\n- **Modpacks**: Welcome — no special permission needed\n- **Works with**: All Forge 1.12.2 mods (auto-detects modded items)",
+    "images": [
+      {
+        "index": 0,
+        "file": "description_images/0.webp",
+        "caption": "Shop GUI with item categories and pricing"
+      }
+    ]
+  },
+  "icon": "icon.webp",
+  "gallery": [
+    {
+      "index": 0,
+      "file": "gallery/0.webp",
+      "featured": true,
+      "title": "Shop Interface",
+      "description": "The main shop GUI with items organized by creative tab"
+    }
+  ],
+  "files": {
+    "jar": "jar/Shop-1.0.0.jar",
+    "source": "source/"
+  },
+  "links": {
+    "issues_url": "",
+    "source_url": "",
+    "wiki_url": "",
+    "discord_url": ""
+  },
+  "publishing": {
+    "modrinth_project_id": "",
+    "github_owner": "stevennovak",
+    "github_repo_name": "shop",
+    "requested_status": ""
+  }
+}

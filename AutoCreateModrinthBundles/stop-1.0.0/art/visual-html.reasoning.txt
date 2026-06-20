@@ -1,0 +1,72 @@
+We need to output JSON with exact shape. Provide accent_color, background_image, logo with fields eyebrow, mark, title, subtitle, rail_left, rail_right. description with kicker, title, tagline, chips (2-4 items), stats (exactly 2 items each with value, label, note). Must be concise, polished, modern premium non-Minecraft-themed. Must match mod behavior: privacy-focused Fabric mod that protects files via decoy folders. So we need to describe behavior: "Decoy Folder Shield", "Zero Exposure", "Selective Visibility", etc. Provide stats: maybe "0% Exposure" and "100% Control". Provide notes short sentences.
+
+Background image: choose from options. The mod is privacy-focused, maybe "purple flowers and sun set or sun rise.png" fits? Or "fresh spring.png"? The recommended is purple flowers and sun set or sun rise.png. That seems appropriate for privacy? Could also be "mountain breeze with spring forest.png". But we should pick one that matches mood. The mod is about protecting privacy, maybe "purple flowers and sun set or sun rise.png" fits aesthetic. We'll choose that filename exactly: "purple flowers and sun set or sun rise.png". Must match exactly including spaces and case? The list shows filenames with spaces and capital letters. Use exactly as given.
+
+Accent color: choose a hex color. Could be #ff7f2f (orange) as example, but we can choose something else. Must be a single hex color. Let's pick #6a0dad (purple) maybe. But must be concise. Use #6a0dad.
+
+Logo: eyebrow: short phrase maybe "Privacy Shield". mark: short monogram maybe "ST". title: "STOP". subtitle: a short phrase describing mod: "Decoy folders hide your files from server scans". rail_left: "Selective Visibility". rail_right: "Zero Exposure". Must be actual mod behavior.
+
+Description: kicker: maybe "Privacy Mod". title: "STOP". tagline: short description: "Redirects server file queries to decoy folders, keeping your real data hidden." chips: 2-4 short labels: maybe "Decoy Routing", "Folder Control", "Fabric 1.20". stats: two items: first value "0%" label "Data Exposure". note: "No real paths are ever revealed." second value "10%" label "Control". note: "You decide exactly what servers see."
+
+Make sure each stats note is one short sentence. Provide value as string maybe "0%" and "100%". Provide label as "Data Exposure" and "Control". Provide note sentences.
+
+Make sure chips length 2-4. Provide maybe 3 chips: "Decoy Routing", "Folder Control", "Fabric 1.12". But must be short labels. Use 3.
+
+Now construct JSON exactly as shape.
+
+Check fields:
+
+{
+  "accent_color": "#6a0dad",
+  "background_image": "purple flowers and sun set or sun rise.png",
+  "logo": {
+    "eyebrow": "Privacy Shield",
+    "mark": "ST",
+    "title": "STOP",
+    "subtitle": "Decoy folders hide your files from server scans",
+    "rail_left": "Selective Visibility",
+    "rail_right": "Zero Exposure"
+  },
+  "description": {
+    "kicker": "Privacy Mod",
+    "title": "STOP",
+    "tagline": "Redirects server file queries to decoy folders, keeping your real data hidden.",
+    "chips": [
+      "Decoy Routing",
+      "Folder Control",
+      "Fabric 1.12"
+    ],
+    "stats": [
+      {
+       "value": "0%",
+        "label": "Data Exposure",
+        "note": "No real paths are ever revealed."
+      },
+      {
+        "value": "100%",
+       "label": "Control",
+        "note": "You decide exactly what servers see."
+      }
+    ]
+  }
+}
+
+Check constraints: accent_color single hex, ok. background_image exact filename from options, matches one of them: "purple flowers and sun set or sun rise.png". Yes.
+
+logo.mark is "ST" (2 chars). eyebrow phrase "Privacy Shield" (short). subtitle is a short phrase, okay.
+
+rail_left and rail_right describe actual behavior: "Selective Visibility", "Zero Exposure" - okay.
+
+description.kicker: "Privacy Mod". title: "STOP". tagline: short sentence, okay.
+
+chips: 3 items, each short label, okay.
+
+stats: exactly 2 items, each with value, label, note. notes are short sentences, okay.
+
+All strings concise and polished.
+
+Make sure no extra fields. Provide only JSON.
+
+Check that we didn't include any extra commentary. Provide only JSON.
+
+Now output.

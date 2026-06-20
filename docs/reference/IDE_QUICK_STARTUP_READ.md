@@ -29,7 +29,7 @@ In rough order of frequency:
    to every supported MC version and loader, build via GitHub Actions, publish.
 
 2. **"Create a new mod"** — build the first version locally in
-   `Mod Developement/1.12.2-forge/`, test it, then port to all versions.
+   `Mod Development/1.12.2-forge/`, test it, then port to all versions.
 
 3. **"Fix the failing builds"** — read build logs, fix compile errors, rerun
    only the failed targets.

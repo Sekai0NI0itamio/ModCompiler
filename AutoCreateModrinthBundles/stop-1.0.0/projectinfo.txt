@@ -1,0 +1,299 @@
+# Project Info
+
+generated_at=2026-06-01T05:07:12+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/34/STOP-1.0.0.jar
+jar_size_bytes=10252
+jar_sha1=78126a929e17d87be79e0794613bea43811f79e8
+
+## Detected Metadata
+
+jar_name=STOP-1.0.0.jar
+jar_display_name=STOP
+loader=fabric
+supported_minecraft=~1.21.1
+primary_mod_id=stop
+name=STOP
+mod_version=1.0.0
+description=Protects your privacy by serving decoy folders to servers instead of your real mod list, datapacks, and config files.
+authors=Itamio
+license=MIT
+entrypoint_class=com.itamio.stop.STOPMod
+group=com.itamio.stop
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/stop-1.0.0/source
+source_roots=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/stop-1.0.0/source/src/main/java,/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/stop-1.0.0/source/src/client/java
+source_file_count=5
+package_count=5
+packages=com.itamio.stop,com.itamio.stop.client,com.itamio.stop.client.mixin,com.itamio.stop.config,com.itamio.stop.mixin
+
+## Source Tree
+
+com/itamio/stop/STOPMod.java
+com/itamio/stop/config/DecoyConfig.java
+com/itamio/stop/mixin/FabricLoaderMixin.java
+com/itamio/stop/client/STOPClient.java
+com/itamio/stop/client/mixin/FabricLoaderClientMixin.java
+
+## Key Source Excerpts
+
+### com/itamio/stop/STOPMod.java
+```
+package com.itamio.stop;
+
+import com.itamio.stop.config.DecoyConfig;
+import net.fabricmc.api.ModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public class STOPMod implements ModInitializer {
+    public static final String MOD_ID = "stop";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    @Override
+    public void onInitialize() {
+        DecoyConfig.initialize();
+        LOGGER.info("STOP mod initialized - protecting your privacy");
+    }
+}
+```
+
+### com/itamio/stop/client/mixin/FabricLoaderClientMixin.java
+```
+package com.itamio.stop.client.mixin;
+
+import com.itamio.stop.STOPMod;
+import com.itamio.stop.config.DecoyConfig;
+import net.fabricmc.loader.api.ModContainer;
+import net.fabricmc.loader.impl.FabricLoaderImpl;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+@Mixin(FabricLoaderImpl.class)
+public class FabricLoaderClientMixin {
+
+    @Inject(method = "getModsDirectory0", at = @At("RETURN"), cancellable = true, remap = false)
+    private void onGetModsDirectory0(CallbackInfoReturnable<Path> cir) {
+        if (DecoyConfig.isProtectionEnabled()) {
+            cir.setReturnValue(DecoyConfig.resolveDecoyPath("mods"));
+        }
+    }
+
+    @Inject(method = "isModLoaded", at = @At("RETURN"), cancellable = true, remap = false)
+    private void onIsModLoaded(String id, CallbackInfoReturnable<Boolean> cir) {
+        if (!DecoyConfig.isProtectionEnabled()) return;
+
+        if (id.equals(STOPMod.MOD_ID)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
+        if (cir.getReturnValueZ()) {
+            cir.setReturnValue(false);
+            STOPMod.LOGGER.debug("Hiding mod from server query: {}", id);
+        }
+    }
+
+    @Inject(method = "getAllMods", at = @At("RETURN"), cancellable = true, remap = false)
+    private void onGetAllMods(CallbackInfoReturnable<Collection<ModContainer>> cir) {
+        if (!DecoyConfig.isProtectionEnabled()) return;
+
+        Collection<ModContainer> realMods = cir.getReturnValue();
+        List<ModContainer> filtered = new ArrayList<>();
+        for (ModContainer mod : realMods) {
+            if (mod.getMetadata().getId().equals(STOPMod.MOD_ID)) {
+                filtered.add(mod);
+            }
+        }
+
+        STOPMod.LOGGER.debug("Intercepted getAllMods: showing {} decoy mods instead of {} real mods",
+            filtered.size(), realMods.size());
+        cir.setReturnValue(filtered);
+    }
+}
+```
+
+### com/itamio/stop/client/STOPClient.java
+```
+package com.itamio.stop.client;
+
+import com.itamio.stop.STOPMod;
+import net.fabricmc.api.ClientModInitializer;
+
+public class STOPClient implements ClientModInitializer {
+
+    @Override
+    public void onInitializeClient() {
+        STOPMod.LOGGER.info("STOP client initialized - privacy protection active");
+    }
+}
+```
+
+### com/itamio/stop/config/DecoyConfig.java
+```
+package com.itamio.stop.config;
+
+import com.itamio.stop.STOPMod;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import net.fabricmc.loader.api.FabricLoader;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class DecoyConfig {
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static Path configDir;
+    private static Path decoyRoot;
+    private static ConfigData config;
+
+    public static void initialize() {
+        configDir = FabricLoader.getInstance().getConfigDir().resolve("stop");
+        try {
+            Files.createDirectories(configDir);
+        } catch (IOException e) {
+            STOPMod.LOGGER.error("Failed to create config directory", e);
+        }
+
+        decoyRoot = configDir.resolve("decoy");
+        try {
+            Files.createDirectories(decoyRoot);
+        } catch (IOException e) {
+            STOPMod.LOGGER.error("Failed to create decoy directory", e);
+        }
+
+        loadConfig();
+        createDefaultDecoyStructure();
+    }
+
+    private static void loadConfig() {
+        Path configFile = configDir.resolve("config.json");
+        if (Files.exists(configFile)) {
+            try {
+                String json = Files.readString(configFile);
+                config = GSON.fromJson(json, ConfigData.class);
+            } catch (Exception e) {
+                STOPMod.LOGGER.error("Failed to load config, creating default", e);
+                config = new ConfigData();
+            }
+        } else {
+            config = new ConfigData();
+        }
+        saveConfig();
+    }
+
+    private static void saveConfig() {
+        Path configFile = configDir.resolve("config.json");
+        try {
+            Files.writeString(configFile, GSON.toJson(config));
+        } catch (IOException e) {
+            STOPMod.LOGGER.error("Failed to save config", e);
+        }
+    }
+
+    private static void createDefaultDecoyStructure() {
+        try {
+            createDecoyDir("mods");
+            createDecoyDir("datapacks");
+            createDecoyDir("resourcepacks");
+            createDecoyDir("config");
+            createDecoyDir("saves");
+
+            Path readme = decoyRoot.resolve("README.txt");
+            if (!Files.exists(readme)) {
+                Files.writeString(readme, "This is the STOP mod decoy folder.\n" +
+                    "Place files here that you want servers to see instead of your real files.\n" +
+                    "The folder structure mirrors your Minecraft directory.\n" +
+                    "Any files placed in the mods/, datapacks/, config/ etc. subfolders\n" +
+                    "will be reported to servers instead of your actual files.\n");
+            }
+        } catch (IOException e) {
+            STOPMod.LOGGER.error("Failed to create default decoy structure", e);
+        }
+    }
+
+    private static void createDecoyDir(String name) throws IOException {
+        Path dir = decoyRoot.resolve(name);
+        if (!Files.exists(dir)) {
+            Files.createDirectories(dir);
+        }
+    }
+
+    public static Path getDecoyRoot() {
+        return decoyRoot;
+    }
+
+    public static Path getGameDir() {
+        return FabricLoader.getInstance().getGameDir();
+    }
+
+    public static boolean isProtectionEnabled() {
+        return config == null || config.enabled;
+    }
+
+    public static void setProtectionEnabled(boolean enabled) {
+        if (config != null) {
+            config.enabled = enabled;
+            saveConfig();
+        }
+    }
+
+    public static boolean shouldInterceptPath(String relativePath) {
+        if (!isProtectionEnabled()) return false;
+        for (String prefix : config.interceptedPaths) {
+            if (relativePath.startsWith(prefix)) return true;
+        }
+        return false;
+    }
+... truncated ...
+```
+
+### com/itamio/stop/mixin/FabricLoaderMixin.java
+```
+package com.itamio.stop.mixin;
+
+import com.itamio.stop.STOPMod;
+import com.itamio.stop.config.DecoyConfig;
+import net.fabricmc.loader.impl.FabricLoaderImpl;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.nio.file.Path;
+
+@Mixin(FabricLoaderImpl.class)
+public class FabricLoaderMixin {
+
+    @Inject(method = "getGameDir", at = @At("RETURN"), cancellable = true, remap = false)
+    private void onGetGameDir(CallbackInfoReturnable<Path> cir) {
+        if (DecoyConfig.isProtectionEnabled()) {
+            cir.setReturnValue(DecoyConfig.getDecoyRoot());
+        }
+    }
+
+    @Inject(method = "getConfigDir", at = @At("RETURN"), cancellable = true, remap = false)
+    private void onGetConfigDir(CallbackInfoReturnable<Path> cir) {
+        if (DecoyConfig.isProtectionEnabled()) {
+            cir.setReturnValue(DecoyConfig.resolveDecoyPath("config"));
+        }
+    }
+}
+```

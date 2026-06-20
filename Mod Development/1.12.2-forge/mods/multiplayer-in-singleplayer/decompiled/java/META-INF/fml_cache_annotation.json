@@ -1,0 +1,159 @@
+{
+  "asd/itamio/multiplayerlikesingleplayer/MultiplayerLikeSingleplayerMod": {
+    "name": "asd/itamio/multiplayerlikesingleplayer/MultiplayerLikeSingleplayerMod",
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/common/Mod;",
+        "target": "asd/itamio/multiplayerlikesingleplayer/MultiplayerLikeSingleplayerMod",
+        "values": {
+          "acceptableRemoteVersions": {
+            "value": "*"
+          },
+          "acceptedMinecraftVersions": {
+            "value": "[1.12.2]"
+          },
+          "modid": {
+            "value": "multiplayerinsingleplayer"
+          },
+          "name": {
+            "value": "MultiplayerInSingleplayer"
+          },
+          "version": {
+            "value": "1.0.0"
+          }
+        }
+      },
+      {
+        "type": "FIELD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$Instance;",
+        "target": "INSTANCE",
+        "value": {
+          "value": "multiplayerinsingleplayer"
+        }
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "preInit(Lnet/minecraftforge/fml/common/event/FMLPreInitializationEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/Mod$EventHandler;",
+        "target": "serverStarting(Lnet/minecraftforge/fml/common/event/FMLServerStartingEvent;)V"
+      }
+    ]
+  },
+  "asd/itamio/multiplayerlikesingleplayer/core/MLSPLoadingPlugin": {
+    "name": "asd/itamio/multiplayerlikesingleplayer/core/MLSPLoadingPlugin",
+    "interfaces": [
+      "net/minecraftforge/fml/relauncher/IFMLLoadingPlugin"
+    ],
+    "annotations": [
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/relauncher/IFMLLoadingPlugin$Name;",
+        "target": "asd/itamio/multiplayerlikesingleplayer/core/MLSPLoadingPlugin",
+        "value": {
+          "value": "MultiplayerLikeSingleplayerCore"
+        }
+      },
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/relauncher/IFMLLoadingPlugin$MCVersion;",
+        "target": "asd/itamio/multiplayerlikesingleplayer/core/MLSPLoadingPlugin",
+        "value": {
+          "value": "1.12.2"
+        }
+      },
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/relauncher/IFMLLoadingPlugin$SortingIndex;",
+        "target": "asd/itamio/multiplayerlikesingleplayer/core/MLSPLoadingPlugin",
+        "value": {
+          "type": "INT",
+          "value": "1001"
+        }
+      },
+      {
+        "type": "CLASS",
+        "name": "Lnet/minecraftforge/fml/relauncher/IFMLLoadingPlugin$TransformerExclusions;",
+        "target": "asd/itamio/multiplayerlikesingleplayer/core/MLSPLoadingPlugin",
+        "value": {
+          "values": [
+            "asd.itamio.multiplayerlikesingleplayer.core"
+          ]
+        }
+      }
+    ]
+  },
+  "asd/itamio/multiplayerlikesingleplayer/core/MLSPTransformer": {
+    "name": "asd/itamio/multiplayerlikesingleplayer/core/MLSPTransformer",
+    "interfaces": [
+      "net/minecraft/launchwrapper/IClassTransformer"
+    ]
+  },
+  "asd/itamio/multiplayerlikesingleplayer/event/MLSPClientEvents": {
+    "name": "asd/itamio/multiplayerlikesingleplayer/event/MLSPClientEvents",
+    "annotations": [
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onInitGui(Lnet/minecraftforge/client/event/GuiScreenEvent$InitGuiEvent$Post;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onButtonClick(Lnet/minecraftforge/client/event/GuiScreenEvent$ActionPerformedEvent$Pre;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onDrawScreen(Lnet/minecraftforge/client/event/GuiScreenEvent$DrawScreenEvent$Post;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onClientTick(Lnet/minecraftforge/fml/common/gameevent/TickEvent$ClientTickEvent;)V"
+      }
+    ]
+  },
+  "asd/itamio/multiplayerlikesingleplayer/event/MLSPCommonEvents": {
+    "name": "asd/itamio/multiplayerlikesingleplayer/event/MLSPCommonEvents",
+    "annotations": [
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onWorldLoad(Lnet/minecraftforge/event/world/WorldEvent$Load;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onPlayerLogin(Lnet/minecraftforge/fml/common/gameevent/PlayerEvent$PlayerLoggedInEvent;)V"
+      },
+      {
+        "type": "METHOD",
+        "name": "Lnet/minecraftforge/fml/common/eventhandler/SubscribeEvent;",
+        "target": "onPlayerLogout(Lnet/minecraftforge/fml/common/gameevent/PlayerEvent$PlayerLoggedOutEvent;)V"
+      }
+    ]
+  },
+  "asd/itamio/multiplayerlikesingleplayer/service/IdentityManager$1": {
+    "name": "asd/itamio/multiplayerlikesingleplayer/service/IdentityManager$1",
+    "interfaces": [
+      "java/util/Comparator"
+    ]
+  },
+  "asd/itamio/multiplayerlikesingleplayer/service/SubWindowManager$1": {
+    "name": "asd/itamio/multiplayerlikesingleplayer/service/SubWindowManager$1",
+    "interfaces": [
+      "java/lang/Runnable"
+    ]
+  },
+  "asd/itamio/multiplayerlikesingleplayer/service/SubWindowManager$2": {
+    "name": "asd/itamio/multiplayerlikesingleplayer/service/SubWindowManager$2",
+    "interfaces": [
+      "java/lang/Runnable"
+    ]
+  }
+}

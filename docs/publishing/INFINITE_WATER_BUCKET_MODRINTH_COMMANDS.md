@@ -51,8 +51,8 @@ python3 scripts/auto_create_modrinth_draft_projects.py create-drafts --only-bund
 3. Test the published version
 
 ## Files Location
-- Source: `Mod Developement/1.12.2-forge/src/main/java/asd/itamio/infinitebucket/`
-- JAR: `Mod Developement/1.12.2-forge/ReadyMods/Infinite-Water-Bucket-1.0.0.jar`
-- ModCollection: `Mod Developement/1.12.2-forge/ModCollection/Infinite-Water-Bucket-1.0.0.jar`
+- Source: `Mod Development/1.12.2-forge/src/main/java/asd/itamio/infinitebucket/`
+- JAR: `Mod Development/1.12.2-forge/ReadyMods/Infinite-Water-Bucket-1.0.0.jar`
+- ModCollection: `Mod Development/1.12.2-forge/ModCollection/Infinite-Water-Bucket-1.0.0.jar`
 - Bundle: `AutoCreateModrinthBundles/infinite-water-bucket-1.0.0/`
 - ToBeUploaded: `ToBeUploaded/15/`

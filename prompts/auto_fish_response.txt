@@ -1,0 +1,280 @@
+---FILE: src/main/java/asd/itamio/auto_fish/AutoFishMod.java---
+```java
+package asd.itamio.auto_fish;
+
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = AutoFishMod.MODID, name = AutoFishMod.NAME, version = AutoFishMod.VERSION, acceptedMinecraftVersions = "[1.12.2]")
+public class AutoFishMod
+{
+    public static final String MODID = "auto_fish";
+    public static final String NAME = "Auto Fish";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event)
+    {
+        logger = event.getModLog();
+        logger.info("Auto Fish mod is initializing...");
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event)
+    {
+        logger.info("Auto Fish mod initialization complete.");
+    }
+
+    @EventHandler
+    public void postInit(FMLPostInitializationEvent event)
+    {
+        logger.info("Auto Fish mod post-initialization complete.");
+    }
+
+    @EventHandler
+    public void onServerStarting(FMLServerStartingEvent event)
+    {
+        event.registerServerCommand(new FishCommand());
+        logger.info("Registered /autofish command.");
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/auto_fish/FishCommand.java---
+```java
+package asd.itamio.auto_fish;
+
+import net.minecraft.command.CommandBase;
+import net.minecraft.command.CommandException;
+import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
+
+public class FishCommand extends CommandBase
+{
+    @Override
+    public String getName()
+    {
+        return "autofish";
+    }
+
+    @Override
+    public String getUsage(ICommandSender sender)
+    {
+        return "/autofish";
+    }
+
+    @Override
+    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException
+    {
+        if (sender instanceof EntityPlayerMP)
+        {
+            EntityPlayerMP player = (EntityPlayerMP) sender;
+            boolean enabled = AutoFishHandler.toggleAutoFish(player);
+            String status = enabled ? "enabled" : "disabled";
+            player.sendMessage(new TextComponentString(TextFormatting.GREEN + "AutoFish " + status + "."));
+        }
+        else
+        {
+            sender.sendMessage(new TextComponentString(TextFormatting.RED + "This command can only be used by players."));
+        }
+    }
+
+    @Override
+    public int getRequiredPermissionLevel()
+    {
+        return 0;
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/auto_fish/AutoFishHandler.java---
+```java
+package asd.itamio.auto_fish;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.init.SoundEvents;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.world.World;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@Mod.EventBusSubscriber(modid = AutoFishMod.MODID, value = Side.CLIENT)
+public class AutoFishHandler
+{
+    private static final Map<UUID, Boolean> autoFishEnabled = new HashMap<>();
+    private static final Map<UUID, Integer> tickDelay = new HashMap<>();
+
+    public static boolean toggleAutoFish(EntityPlayer player)
+    {
+        UUID uuid = player.getUniqueID();
+        boolean newState = !autoFishEnabled.getOrDefault(uuid, false);
+        autoFishEnabled.put(uuid, newState);
+        if (newState)
+        {
+            tickDelay.put(uuid, 0);
+        }
+        return newState;
+    }
+
+    @SideOnly(Side.CLIENT)
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event)
+    {
+        if (event.phase != TickEvent.Phase.END) return;
+
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player == null || mc.world == null) return;
+
+        UUID uuid = mc.player.getUniqueID();
+        if (!autoFishEnabled.getOrDefault(uuid, false)) return;
+
+        // Handle tick delay to prevent rapid clicking
+        int delay = tickDelay.getOrDefault(uuid, 0);
+        if (delay > 0)
+        {
+            tickDelay.put(uuid, delay - 1);
+            return;
+        }
+
+        ItemStack mainHand = mc.player.getHeldItemMainhand();
+        if (mainHand.getItem() != Items.FISHING_ROD)
+        {
+            // Not holding fishing rod, skip
+            return;
+        }
+
+        // Perform fishing action
+        boolean fished = performFishing(mc);
+        if (fished)
+        {
+            // Reset delay after successful cast
+            tickDelay.put(uuid, 10); // Delay in ticks (0.5 seconds)
+        }
+    }
+
+    @SideOnly(Side.CLIENT)
+    private static boolean performFishing(Minecraft mc)
+    {
+        // Check if player is looking at water
+        RayTraceResult result = mc.objectMouseOver;
+        if (result == null || result.typeOfHit != RayTraceResult.Type.BLOCK)
+        {
+            return false;
+        }
+
+        World world = mc.world;
+        BlockPos pos = result.getBlockPos();
+        if (world.getBlockState(pos).getMaterial().isLiquid())
+        {
+            // Player is looking at water, cast the fishing rod
+            mc.playerController.processRightClick(mc.player, mc.world, EnumHand.MAIN_HAND);
+            mc.player.playSound(SoundEvents.ENTITY_BOBBER_THROW, 0.5F, 0.4F / (itemRand.nextFloat() * 0.4F + 0.8F));
+            return true;
+        }
+        return false;
+    }
+
+    @SideOnly(Side.CLIENT)
+    @SubscribeEvent
+    public static void onPlayerLogout(ClientPlayerNetworkEvent.Logout event)
+    {
+        // Clean up data when player logs out
+        UUID uuid = event.getPlayer().getUniqueID();
+        autoFishEnabled.remove(uuid);
+        tickDelay.remove(uuid);
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/auto_fish/KeyBindings.java---
+```java
+package asd.itamio.auto_fish;
+
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.InputEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import org.lwjgl.input.Keyboard;
+
+@Mod.EventBusSubscriber(modid = AutoFishMod.MODID, value = Side.CLIENT)
+public class KeyBindings
+{
+    public static final String KEY_CATEGORY = "key.category.auto_fish";
+    public static final String KEY_TOGGLE_AUTO_FISH = "key.auto_fish.toggle";
+
+    public static KeyBinding toggleAutoFishKey = new KeyBinding(KEY_TOGGLE_AUTO_FISH, Keyboard.KEY_F, KEY_CATEGORY);
+
+    public static void register()
+    {
+        ClientRegistry.registerKeyBinding(toggleAutoFishKey);
+    }
+
+    @SideOnly(Side.CLIENT)
+    @SubscribeEvent
+    public static void onKeyInput(InputEvent.KeyInputEvent event)
+    {
+        if (toggleAutoFishKey.isPressed())
+        {
+            // Toggle auto-fish when key is pressed
+            if (Minecraft.getMinecraft().player != null)
+            {
+                boolean enabled = AutoFishHandler.toggleAutoFish(Minecraft.getMinecraft().player);
+                String status = enabled ? "enabled" : "disabled";
+                Minecraft.getMinecraft().player.sendMessage(new TextComponentString(TextFormatting.GREEN + "AutoFish " + status + "."));
+            }
+        }
+    }
+}
+```
+
+---FILE: src/main/resources/mcmod.info---
+```json
+[
+  {
+    "modid": "auto_fish",
+    "name": "Auto Fish",
+    "description": "Automatically fishes for the player when holding fishing rod and looking at water source block",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["Itamio"],
+    "url": "",
+    "updateUrl": "",
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
+```
+
+---METADATA---
+group: asd.itamio.auto_fish
+archivesBaseName: Auto-Fish
+---

@@ -47,7 +47,7 @@ python3 scripts/auto_create_modrinth_draft_projects.py create-drafts --only-bund
 3. Test the published version
 
 ## Files Location
-- Source: `Mod Developement/1.12.2-forge/src/main/java/asd/itamio/autoeat/`
-- JAR: `Mod Developement/1.12.2-forge/ReadyMods/Auto-Eat-1.0.0.jar`
+- Source: `Mod Development/1.12.2-forge/src/main/java/asd/itamio/autoeat/`
+- JAR: `Mod Development/1.12.2-forge/ReadyMods/Auto-Eat-1.0.0.jar`
 - Bundle: `AutoCreateModrinthBundles/auto-eat-1.0.0/`
 - ToBeUploaded: `ToBeUploaded/13/`

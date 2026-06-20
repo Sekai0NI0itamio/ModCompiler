@@ -1,0 +1,440 @@
+Here's a complete, compilable Forge 1.12.2 mod that filters profanity and insults based on a user-defined sensitivity level, in the exact output format you requested.
+
+---
+
+---FILE: src/main/java/asd/itamio/no_bad_words/NoBadWordsMod.java---
+```java
+package asd.itamio.no_bad_words;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+import org.apache.logging.log4j.Logger;
+
+@Mod(modid = NoBadWordsMod.MODID, name = NoBadWordsMod.NAME, version = NoBadWordsMod.VERSION, clientSideOnly = true)
+public class NoBadWordsMod {
+    public static final String MODID = "no_bad_words";
+    public static final String NAME = "No Bad Words";
+    public static final String VERSION = "1.0.0";
+
+    public static Logger logger;
+
+    @EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        Config.init(event.getSuggestedConfigurationFile());
+        logger.info("Pre-initialization complete for " + NAME);
+    }
+
+    @EventHandler
+    public void init(FMLInitializationEvent event) {
+        MinecraftForge.EVENT_BUS.register(new ChatFilterEventHandler());
+        logger.info("Initialization complete for " + NAME);
+    }
+
+    @EventHandler
+    public void postInit(FMLPostInitializationEvent event) {
+        logger.info("Post-initialization complete for " + NAME);
+    }
+
+    @EventHandler
+    public void onServerStarting(FMLServerStartingEvent event) {
+        event.registerServerCommand(new CommandReload());
+        logger.info("Registered /nobadwords reload command.");
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/no_bad_words/Config.java---
+```java
+package asd.itamio.no_bad_words;
+
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.common.config.Property;
+import java.io.File;
+
+public class Config {
+    private static Configuration config;
+    public static int sensitivityLevel = 89;
+    public static boolean useIntelligentDetection = true;
+    public static boolean blockWholeMessage = true;
+
+    public static void init(File file) {
+        config = new Configuration(file);
+        syncConfig();
+    }
+
+    public static void syncConfig() {
+        String category = "general";
+        Property sensitivityProp = config.get(category, "sensitivityLevel", 89,
+                "Sensitivity level (0-100). Higher values block more messages.",
+                0, 100);
+        sensitivityLevel = sensitivityProp.getInt();
+        
+        Property intelligentProp = config.get(category, "useIntelligentDetection", true,
+                "Enable intelligent insult detection using pattern matching.");
+        useIntelligentDetection = intelligentProp.getBoolean();
+        
+        Property blockMessageProp = config.get(category, "blockWholeMessage", true,
+                "Block the entire message if any bad word or insult is detected.");
+        blockWholeMessage = blockMessageProp.getBoolean();
+        
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+    
+    public static Configuration getConfig() {
+        return config;
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/no_bad_words/CommandReload.java---
+```java
+package asd.itamio.no_bad_words;
+
+import net.minecraft.command.CommandBase;
+import net.minecraft.command.CommandException;
+import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class CommandReload extends CommandBase {
+    @Override
+    public String getName() {
+        return "nobadwords";
+    }
+
+    @Override
+    public String getUsage(ICommandSender sender) {
+        return "/nobadwords reload";
+    }
+
+    @Override
+    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        if (!(sender instanceof EntityPlayerMP)) {
+            sender.sendMessage(new TextComponentString(TextFormatting.RED + "This command can only be used by a player."));
+            return;
+        }
+        
+        EntityPlayerMP player = (EntityPlayerMP) sender;
+        
+        if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+            Config.syncConfig();
+            WordFilter.reloadWordList();
+            player.sendMessage(new TextComponentString(TextFormatting.GREEN + "Configuration and word list reloaded successfully!"));
+            NoBadWordsMod.logger.info("Configuration and word list reloaded by " + player.getName());
+        } else {
+            player.sendMessage(new TextComponentString(TextFormatting.YELLOW + "Usage: /nobadwords reload"));
+        }
+    }
+
+    @Override
+    public int getRequiredPermissionLevel() {
+        return 0;
+    }
+
+    @Override
+    public List<String> getAliases() {
+        List<String> aliases = new ArrayList<>();
+        aliases.add("nbw");
+        return aliases;
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/no_bad_words/ChatFilterEventHandler.java---
+```java
+package asd.itamio.no_bad_words;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraftforge.client.event.ClientChatEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+public class ChatFilterEventHandler {
+    @SubscribeEvent
+    public void onClientChat(ClientChatEvent event) {
+        String originalMessage = event.getMessage();
+        
+        if (originalMessage == null || originalMessage.trim().isEmpty()) {
+            return;
+        }
+        
+        // Check if the message should be blocked
+        if (WordFilter.isMessageBlocked(originalMessage)) {
+            event.setCanceled(true);
+            
+            // Notify the player that their message was blocked
+            Minecraft.getMinecraft().player.sendMessage(
+                new TextComponentString(TextFormatting.RED + "Your message was blocked by the No Bad Words filter.")
+            );
+            
+            // Optional: Add the original message to chat but filtered (if not blocking whole message)
+            if (!Config.blockWholeMessage) {
+                String filteredMessage = WordFilter.filterMessage(originalMessage);
+                Minecraft.getMinecraft().player.sendMessage(
+                    new TextComponentString(TextFormatting.GRAY + "Filtered message: " + filteredMessage)
+                );
+            }
+        }
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/no_bad_words/WordFilter.java---
+```java
+package asd.itamio.no_bad_words;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+public class WordFilter {
+    private static Set<String> badWords = new HashSet<>();
+    private static List<Pattern> badWordPatterns = new ArrayList<>();
+    private static List<Pattern> insultPatterns = new ArrayList<>();
+    
+    static {
+        reloadWordList();
+    }
+    
+    public static void reloadWordList() {
+        badWords.clear();
+        badWordPatterns.clear();
+        insultPatterns.clear();
+        
+        // Load bad words from a resource file
+        loadBadWordsFromFile();
+        
+        // If no words loaded, use a default list
+        if (badWords.isEmpty()) {
+            loadDefaultBadWords();
+        }
+        
+        // Compile patterns for each bad word (case-insensitive, whole word boundaries)
+        for (String word : badWords) {
+            if (word != null && !word.trim().isEmpty()) {
+                try {
+                    Pattern p = Pattern.compile("\\b" + Pattern.quote(word.trim()) + "\\b", Pattern.CASE_INSENSITIVE);
+                    badWordPatterns.add(p);
+                } catch (Exception e) {
+                    // Skip invalid patterns
+                }
+            }
+        }
+        
+        // Load insult patterns for intelligent detection
+        loadInsultPatterns();
+    }
+    
+    private static void loadBadWordsFromFile() {
+        try (InputStream is = WordFilter.class.getResourceAsStream("/assets/no_bad_words/badwords.txt");
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim().toLowerCase();
+                if (!line.isEmpty() && !line.startsWith("#")) {
+                    badWords.add(line);
+                }
+            }
+            NoBadWordsMod.logger.info("Loaded " + badWords.size() + " bad words from file.");
+        } catch (Exception e) {
+            NoBadWordsMod.logger.warn("Could not load badwords.txt, using default list.", e);
+        }
+    }
+    
+    private static void loadDefaultBadWords() {
+        String[] defaultWords = {
+            "fuck", "shit", "damn", "bitch", "asshole", "bastard", "cunt", "dick", "pussy",
+            "whore", "slut", "cock", "porn", "sex", "nigger", "faggot", "retard", "idiot",
+            "stupid", "dumb", "hate", "kill", "murder", "rape", "suck", "crap", "hell",
+            "bloody", "arse", "twat", "wanker", "prick", "darn", "freak"
+        };
+        for (String word : defaultWords) {
+            badWords.add(word);
+        }
+        NoBadWordsMod.logger.info("Loaded " + badWords.size() + " default bad words.");
+    }
+    
+    private static void loadInsultPatterns() {
+        // Common insult patterns for intelligent detection
+        String[] patterns = {
+            "you\\s+(are|\\'re|r)\\s+(a\\s+)?(stupid|dumb|idiotic|moronic|retarded|brainless|mindless|witless|foolish)\\b",
+            "you\\s+(are|\\'re|r)\\s+(a\\s+)?(fucking|bloody|freaking|damn)\\s+(idiot|moron|imbecile|cretin|simpleton)\\b",
+            "you\\s+(are|\\'re|r)\\s+(so|very|really)\\s+(stupid|dumb|dense|slow|thick)\\b",
+            "\\b(useless|worthless|pathetic|spineless|gutless|brainless)\\s+(piece\\s+of\\s+shit|bastard|fool)\\b",
+            "\\bshut\\s+up\\b",
+            "\\bfuck\\s+(you|off|yourself)\\b",
+            "\\bscrew\\s+you\\b",
+            "\\bbite\\s+me\\b",
+            "\\beat\\s+shit\\b",
+            "\\bkiss\\s+my\\s+ass\\b",
+            "\\bgo\\s+to\\s+hell\\b",
+            "\\bdrop\\s+dead\\b",
+            "\\byou\\s+suck\\b",
+            "\\byou\\s+blow\\b"
+        };
+        
+        for (String pattern : patterns) {
+            try {
+                insultPatterns.add(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE));
+            } catch (Exception e) {
+                // Skip invalid patterns
+            }
+        }
+        NoBadWordsMod.logger.info("Loaded " + insultPatterns.size() + " insult patterns.");
+    }
+    
+    public static boolean isMessageBlocked(String message) {
+        if (message == null || message.isEmpty()) {
+            return false;
+        }
+        
+        // Lower sensitivity check
+        int sensitivity = Config.sensitivityLevel;
+        if (sensitivity <= 0) {
+            return false;
+        }
+        
+        // Convert sensitivity to threshold (0-100)
+        double threshold = sensitivity / 100.0;
+        
+        // Check for bad words
+        int badWordScore = 0;
+        for (Pattern p : badWordPatterns) {
+            if (p.matcher(message).find()) {
+                badWordScore += 100;
+                break; // One bad word is enough for high score
+            }
+        }
+        
+        // Intelligent detection
+        int insultScore = 0;
+        if (Config.useIntelligentDetection) {
+            for (Pattern p : insultPatterns) {
+                if (p.matcher(message).find()) {
+                    insultScore += 80;
+                    break; // One insult pattern is enough
+                }
+            }
+        }
+        
+        // Calculate total score (0-100, with bad words having higher weight)
+        int totalScore = Math.min(100, badWordScore + insultScore);
+        
+        // Block if score exceeds threshold
+        return totalScore >= (threshold * 100);
+    }
+    
+    public static String filterMessage(String message) {
+        if (message == null || message.isEmpty()) {
+            return message;
+        }
+        
+        String filtered = message;
+        for (Pattern p : badWordPatterns) {
+            filtered = p.matcher(filtered).replaceAll("****");
+        }
+        return filtered;
+    }
+}
+```
+
+---FILE: src/main/java/asd/itamio/no_bad_words/package-info.java---
+```java
+@ParametersAreNonnullByDefault
+package asd.itamio.no_bad_words;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+```
+
+---FILE: src/main/resources/mcmod.info---
+```json
+[{
+  "modid": "no_bad_words",
+  "name": "No Bad Words",
+  "description": "A client side mod that blocks curse words and auto detects insults to maintain a clean chat experience.",
+  "version": "1.0.0",
+  "mcversion": "1.12.2",
+  "authorList": ["Itamio"],
+  "url": "",
+  "updateUrl": "",
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}]
+```
+
+---FILE: src/main/resources/assets/no_bad_words/badwords.txt---
+```json
+# Custom bad words list - add your own words below
+# Lines starting with # are ignored
+fuck
+shit
+damn
+bitch
+asshole
+bastard
+cunt
+dick
+pussy
+whore
+slut
+cock
+porn
+sex
+nigger
+faggot
+retard
+idiot
+stupid
+dumb
+hate
+kill
+murder
+rape
+suck
+crap
+hell
+bloody
+arse
+twat
+wanker
+prick
+darn
+freak
+```
+
+---METADATA---
+group: asd.itamio.no_bad_words
+archivesBaseName: No-Bad-Words
+---
+
+### Key Implementation Notes:
+1. **Configurable Sensitivity**: The mod's protection level can be set from 0 to 100 in the config file (`config/no_bad_words.cfg`). The default is 89%.
+2. **Intelligent Detection**: Beyond just word matching, the mod uses pattern recognition to detect common insults, ensuring comprehensive coverage.
+3. **Resource Loading**: The `badwords.txt` file in `assets/no_bad_words/` can be edited by users to customize their blocklist.
+4. **Client-Side Only**: The mod works entirely on the client, intercepting messages before they're sent to the server.
+5. **Command Support**: Use `/nobadwords reload` to reload the configuration and word list without restarting the game.
+6. **Forge 1.12.2 Compliance**: Uses `TextComponentString` and `TextFormatting` for messages, and follows all specified Forge API patterns.
+
+This mod creates a robust content filter that handles both simple word blocking and complex insult detection, all adjustable to the player's preference.

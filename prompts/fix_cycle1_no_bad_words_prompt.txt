@@ -1,0 +1,106 @@
+## FIX REQUEST — Build Errors
+
+The mod "No Bad Words" failed to compile. Fix the issues below.
+Return ONLY the files that need changes (not unchanged files).
+
+### Original description:
+Auto detects patterns of bad words in chat messages and auto removes them from rendering so the user or player dont see it at all
+
+### Build errors:
+Total time: 20.614 secs
+
+/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/Mod Development/1.12.2-forge/build/sources/main/java/asd/itamio/no_bad_words/ServerChatFilter.java:21: error: cannot find symbol
+            event.setMessage(filteredMessage);
+                 ^
+  symbol:   method setMessage(String)
+  location: variable event of type ServerChatEvent
+/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/Mod Development/1.12.2-forge/build/sources/main/java/asd/itamio/no_bad_words/ChatFilter.java:28: error: cannot find symbol
+        if (event.getType() == ClientChatReceivedEvent.MessageType.CHAT || 
+                                                      ^
+  symbol:   variable MessageType
+  location: class ClientChatReceivedEvent
+/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/Mod Development/1.12.2-forge/build/sources/main/java/asd/itamio/no_bad_words/ChatFilter.java:29: error: cannot find symbol
+            event.getType() == ClientChatReceivedEvent.MessageType.SYSTEM) {
+                                                      ^
+
+### Build log (last 8000 chars):
+```
+Cleaning workspace...
+Placing 5 source files...
+Updating build.gradle...
+Running ./gradlew build...
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.14/userguide/gradle_daemon.html.
+This mapping 'stable_39' was designed for MC 1.12! Use at your own peril.
+WARNING: You are using an unsupported version of ForgeGradle.
+Please consider upgrading to ForgeGradle 5 and helping in the efforts to get old versions working on the modern toolchain.
+See https://gist.github.com/TheCurle/fe7ad3ede188cbdd15c235cc75d52d4a for more info on contributing.
+#################################################
+         ForgeGradle 2.3.4-gfc67182        
+  https://github.com/MinecraftForge/ForgeGradle  
+#################################################
+                 Powered by MCP                  
+             http://modcoderpack.com             
+     by: Searge, ProfMobius, R4wk, ZeuX          
+     Fesh0r, IngisKahn, bspkrs, LexManos         
+#################################################
+:clean
+:deobfCompileDummyTask
+:getVersionJson
+:extractUserdev UP-TO-DATE
+:downloadClient SKIPPED
+:downloadServer SKIPPED
+:splitServerJar SKIPPED
+:mergeJars SKIPPED
+:applyBinaryPatches SKIPPED
+:deobfProvidedDummyTask
+:extractDependencyATs SKIPPED
+:extractMcpData SKIPPED
+:extractMcpMappings SKIPPED
+:genSrgs SKIPPED
+:deobfMcMCP SKIPPED
+:sourceApiJava
+:compileApiJava UP-TO-DATE
+:processApiResources UP-TO-DATE
+:apiClasses UP-TO-DATE
+:sourceMainJava
+:compileJava FAILED
+
+BUILD FAILED
+
+Total time: 20.614 secs
+
+/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/Mod Development/1.12.2-forge/build/sources/main/java/asd/itamio/no_bad_words/ServerChatFilter.java:21: error: cannot find symbol
+            event.setMessage(filteredMessage);
+                 ^
+  symbol:   method setMessage(String)
+  location: variable event of type ServerChatEvent
+/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/Mod Development/1.12.2-forge/build/sources/main/java/asd/itamio/no_bad_words/ChatFilter.java:28: error: cannot find symbol
+        if (event.getType() == ClientChatReceivedEvent.MessageType.CHAT || 
+                                                      ^
+  symbol:   variable MessageType
+  location: class ClientChatReceivedEvent
+/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/Mod Development/1.12.2-forge/build/sources/main/java/asd/itamio/no_bad_words/ChatFilter.java:29: error: cannot find symbol
+            event.getType() == ClientChatReceivedEvent.MessageType.SYSTEM) {
+                                                      ^
+  symbol:   variable MessageType
+  location: class ClientChatReceivedEvent
+3 errors
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+Run with --stacktrace option to get the stack trace. Run with --info or --debug option to get more log output.
+
+```
+
+## Instructions
+1. Analyze errors, fix only what's broken
+2. Return ONLY changed files using ---FILE: path--- format
+3. Include ---METADATA--- block with group + archivesBaseName
+4. Verify API signatures: https://github.com/Sekai0NI0itamio/ModCompiler/tree/main/DecompiledMinecraftSourceCode/1.12.2-forge
+
+Return corrected files now:

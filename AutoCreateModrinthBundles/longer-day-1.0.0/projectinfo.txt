@@ -1,0 +1,267 @@
+# Project Info
+
+generated_at=2026-06-01T05:01:07+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/33/Longer Day-1.0.0.jar
+jar_size_bytes=8032
+jar_sha1=60fca65f1a85f97875240c237abdbecca69e17df
+
+## Detected Metadata
+
+jar_name=Longer Day-1.0.0.jar
+jar_display_name=Longer Day
+loader=unknown
+supported_minecraft=
+primary_mod_id=longer day-1.0.0
+name=Longer Day-1.0.0
+mod_version=
+description=
+authors=
+license=
+warnings=No supported mod metadata file was found in the jar. | Could not confidently resolve this jar to a configured repo version folder.
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/longer-day-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/longer-day-1.0.0/source/src/main/java
+source_file_count=3
+package_count=2
+packages=com.itamio.longer_day,com.itamio.longer_day.handler
+
+## Source Tree
+
+com/itamio/longer_day/LongerDay.java
+com/itamio/longer_day/handler/ClientTimeHandler.java
+com/itamio/longer_day/handler/TimeHandler.java
+
+## Key Source Excerpts
+
+### com/itamio/longer_day/handler/ClientTimeHandler.java
+```
+package com.itamio.longer_day.handler;
+
+import com.itamio.longer_day.LongerDay;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.World;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+
+@SideOnly(Side.CLIENT)
+public class ClientTimeHandler {
+   private static final int VANILLA_DAY_TICKS = 12000;
+   private static final int VANILLA_CYCLE_TICKS = 24000;
+   private static final int TICKS_PER_MINUTE = 1200;
+
+   private double smoothDayTime = -1;
+   private long lastRawServerTime = -1;
+
+   @SubscribeEvent
+   public void onClientTick(TickEvent.ClientTickEvent event) {
+      if (event.phase != TickEvent.Phase.END) {
+         return;
+      }
+      Minecraft mc = Minecraft.getMinecraft();
+      if (mc.world == null) {
+         smoothDayTime = -1;
+         lastRawServerTime = -1;
+         return;
+      }
+
+      World world = mc.world;
+      long rawTime = world.getWorldTime();
+
+      if (smoothDayTime < 0 || lastRawServerTime < 0) {
+         smoothDayTime = rawTime;
+         lastRawServerTime = rawTime;
+         return;
+      }
+
+      long serverDelta = rawTime - lastRawServerTime;
+      if (serverDelta < -100 || serverDelta > 100) {
+         smoothDayTime = rawTime;
+         lastRawServerTime = rawTime;
+         return;
+      }
+
+      lastRawServerTime = rawTime;
+
+      long currentDayTime = ((long) smoothDayTime) % VANILLA_CYCLE_TICKS;
+      if (currentDayTime < 0) {
+         currentDayTime += VANILLA_CYCLE_TICKS;
+      }
+
+      boolean isDay = currentDayTime < VANILLA_DAY_TICKS;
+
+      int configuredRealTicks;
+      int vanillaTicks;
+      if (isDay) {
+         configuredRealTicks = LongerDay.dayLengthMinutes * TICKS_PER_MINUTE;
+         vanillaTicks = VANILLA_DAY_TICKS;
+      } else {
+         configuredRealTicks = LongerDay.nightLengthMinutes * TICKS_PER_MINUTE;
+         vanillaTicks = VANILLA_DAY_TICKS;
+      }
+
+      double ratio = (double) vanillaTicks / configuredRealTicks;
+      smoothDayTime += ratio;
+
+      double drift = smoothDayTime - rawTime;
+      if (drift > 3.0 || drift < -3.0) {
+         smoothDayTime = rawTime;
+      }
+
+      world.setWorldTime((long) Math.floor(smoothDayTime));
+   }
+}
+```
+
+### com/itamio/longer_day/handler/TimeHandler.java
+```
+package com.itamio.longer_day.handler;
+
+import com.itamio.longer_day.LongerDay;
+import net.minecraft.world.World;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class TimeHandler {
+   private static final int VANILLA_DAY_TICKS = 12000;
+   private static final int VANILLA_NIGHT_TICKS = 12000;
+   private static final int VANILLA_CYCLE_TICKS = 24000;
+   private static final int TICKS_PER_MINUTE = 1200;
+
+   private final Map<Integer, TimeState> worldStates = new HashMap<>();
+
+   private static final class TimeState {
+      double desiredWorldTime;
+      long lastSetTime;
+      boolean initialized = false;
+   }
+
+   @SubscribeEvent
+   public void onWorldTick(TickEvent.WorldTickEvent event) {
+      if (event.world.isRemote) {
+         return;
+      }
+      if (event.phase != TickEvent.Phase.START) {
+         return;
+      }
+
+      World world = event.world;
+      int dimId = world.provider.getDimension();
+      TimeState state = worldStates.computeIfAbsent(dimId, k -> new TimeState());
+
+      long currentWorldTime = world.getWorldTime();
+
+      if (!state.initialized) {
+         state.desiredWorldTime = currentWorldTime;
+         state.lastSetTime = currentWorldTime;
+         state.initialized = true;
+         return;
+      }
+
+      if (Math.abs(currentWorldTime - state.lastSetTime - 1) > 2) {
+         state.desiredWorldTime = currentWorldTime;
+      }
+
+      long currentDayTime = ((long) state.desiredWorldTime) % VANILLA_CYCLE_TICKS;
+      if (currentDayTime < 0) {
+         currentDayTime += VANILLA_CYCLE_TICKS;
+      }
+
+      boolean isDay = currentDayTime < VANILLA_DAY_TICKS;
+
+      int configuredRealTicks;
+      int vanillaTicks;
+      if (isDay) {
+         configuredRealTicks = LongerDay.dayLengthMinutes * TICKS_PER_MINUTE;
+         vanillaTicks = VANILLA_DAY_TICKS;
+      } else {
+         configuredRealTicks = LongerDay.nightLengthMinutes * TICKS_PER_MINUTE;
+         vanillaTicks = VANILLA_NIGHT_TICKS;
+      }
+
+      double ratio = (double) vanillaTicks / configuredRealTicks;
+      state.desiredWorldTime += ratio;
+
+      long newWorldTime = (long) Math.floor(state.desiredWorldTime);
+      world.setWorldTime(newWorldTime);
+      state.lastSetTime = newWorldTime;
+   }
+}
+```
+
+### com/itamio/longer_day/LongerDay.java
+```
+package com.itamio.longer_day;
+
+import com.itamio.longer_day.handler.ClientTimeHandler;
+import com.itamio.longer_day.handler.TimeHandler;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import org.apache.logging.log4j.Logger;
+
+@Mod(
+   modid = LongerDay.MODID,
+   name = LongerDay.NAME,
+   version = LongerDay.VERSION,
+   acceptedMinecraftVersions = "[1.12.2]"
+)
+public class LongerDay {
+   public static final String MODID = "longer_day";
+   public static final String NAME = "Longer Day";
+   public static final String VERSION = "1.0.0";
+   public static Logger logger;
+
+   public static int dayLengthMinutes = 60;
+   public static int nightLengthMinutes = 60;
+   public static boolean syncNightWithDay = true;
+
+   @EventHandler
+   public void preInit(FMLPreInitializationEvent event) {
+      logger = event.getModLog();
+
+      Configuration config = new Configuration(event.getSuggestedConfigurationFile());
+      try {
+         config.load();
+         dayLengthMinutes = config.getInt("dayLengthMinutes", Configuration.CATEGORY_GENERAL, 60, 1, 1440,
+               "Length of a Minecraft day in real minutes (vanilla is 10). Default: 60");
+         syncNightWithDay = config.getBoolean("syncNightWithDay", Configuration.CATEGORY_GENERAL, true,
+               "If true, night length automatically matches day length. Default: true");
+         nightLengthMinutes = config.getInt("nightLengthMinutes", Configuration.CATEGORY_GENERAL, 60, 1, 1440,
+               "Length of a Minecraft night in real minutes (vanilla is 10). Only used if syncNightWithDay is false. Default: 60");
+      } finally {
+         if (config.hasChanged()) {
+            config.save();
+         }
+      }
+
+      if (syncNightWithDay) {
+         nightLengthMinutes = dayLengthMinutes;
+      }
+
+      logger.info("Longer Day config: day={}min night={}min sync={}", dayLengthMinutes, nightLengthMinutes, syncNightWithDay);
+   }
+
+   @EventHandler
+   public void init(FMLInitializationEvent event) {
+      MinecraftForge.EVENT_BUS.register(new TimeHandler());
+      logger.info("Longer Day server handler registered");
+
+      if (event.getSide() == Side.CLIENT) {
+         MinecraftForge.EVENT_BUS.register(new ClientTimeHandler());
+         logger.info("Longer Day client time handler registered");
+      }
+   }
+}
+```

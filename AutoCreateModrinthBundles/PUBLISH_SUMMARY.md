@@ -1,13 +1,8 @@
 # Draft Upload Summary
 
-- Drafted at: `2026-04-10T23:53:36+00:00`
+- Drafted at: `2026-06-12T08:22:16+00:00`
 - Dry run: `False`
 
 | Bundle | Status | Project | Version | Note |
 | --- | --- | --- | --- | --- |
-| old-notch-apples-1.0.0 | draft_created | hb1QGHss | lIJtxVlH | Draft created via GitHub workflow run 24269455256. |
-
-## Modrinth Links
-
-- `old-notch-apples-1.0.0` project: https://modrinth.com/mod/old-notch-apples
-- `old-notch-apples-1.0.0` version: https://modrinth.com/mod/old-notch-apples/version/lIJtxVlH
+| shop-1.0.0 | draft_created | xLGCe8id | 608T0RhC | Draft project created and version uploaded. Warning: Preferred Modrinth slug `shop` is already used by another project, so this bundle will be renamed to `World Shop` (`world-shop`). |

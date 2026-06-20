@@ -1,0 +1,442 @@
+# Project Info
+
+generated_at=2026-06-12T08:16:10+00:00
+jar_absolute_path=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/ToBeUploaded/35/Shop-1.0.0.jar
+jar_size_bytes=47601
+jar_sha1=0e460d14590e12666c479bbb75e510a87b50f286
+
+## Detected Metadata
+
+jar_name=Shop-1.0.0.jar
+jar_display_name=Shop
+loader=forge
+supported_minecraft=1.12.2
+primary_mod_id=shop
+name=Shop
+mod_version=1.0.0
+description=Buy and sell items using /shop, /sellhand, /sellgui, and /balance commands.
+authors=Itamio
+license=
+
+## Source Summary
+
+source_origin=provided
+provided_source_dir=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/shop-1.0.0/source
+source_root=/Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/AutoCreateModrinthBundles/shop-1.0.0/source
+source_file_count=15
+package_count=1
+packages=asd.itamio.shop
+
+## Source Tree
+
+asd/itamio/shop/CommandBalance.java
+asd/itamio/shop/CommandPay.java
+asd/itamio/shop/CommandSellGui.java
+asd/itamio/shop/CommandSellHand.java
+asd/itamio/shop/CommandShop.java
+asd/itamio/shop/EconomyData.java
+asd/itamio/shop/GuiSellGui.java
+asd/itamio/shop/GuiShopCategories.java
+asd/itamio/shop/GuiShopItems.java
+asd/itamio/shop/PriceEngine.java
+asd/itamio/shop/ShopCategory.java
+asd/itamio/shop/ShopClientPacketHandler.java
+asd/itamio/shop/ShopMod.java
+asd/itamio/shop/ShopPacket.java
+asd/itamio/shop/ShopPacketHandler.java
+
+## Key Source Excerpts
+
+### asd/itamio/shop/ShopClientPacketHandler.java
+```
+package asd.itamio.shop;
+
+import net.minecraft.client.Minecraft;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
+import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+
+public class ShopClientPacketHandler implements IMessageHandler<ShopPacket, IMessage> {
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public IMessage onMessage(ShopPacket message, MessageContext ctx) {
+        Minecraft.getMinecraft().addScheduledTask(() -> {
+            switch (message.getType()) {
+                case ShopPacket.OPEN_SHOP:
+                    Minecraft.getMinecraft().displayGuiScreen(new GuiShopCategories());
+                    break;
+                case ShopPacket.OPEN_SELL_GUI:
+                    Minecraft.getMinecraft().displayGuiScreen(new GuiSellGui());
+                    break;
+            }
+        });
+        return null;
+    }
+}
+```
+
+### asd/itamio/shop/ShopPacketHandler.java
+```
+package asd.itamio.shop;
+
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.text.TextComponentString;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
+import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+
+import java.util.List;
+import java.util.UUID;
+
+public class ShopPacketHandler implements IMessageHandler<ShopPacket, IMessage> {
+
+    @Override
+    public IMessage onMessage(ShopPacket message, MessageContext ctx) {
+        EntityPlayerMP player = ctx.getServerHandler().player;
+        player.getServer().addScheduledTask(() -> {
+            switch (message.getType()) {
+                case ShopPacket.BUY_ITEM:
+                    handleBuy(player, message.getCategoryIndex(), message.getItemIndex(), message.getQuantity());
+                    break;
+                case ShopPacket.SELL_HAND:
+                    handleSellHand(player);
+                    break;
+                case ShopPacket.SELL_GUI_ITEMS:
+                    handleSellGuiItems(player, message.getItems());
+                    break;
+            }
+        });
+        return null;
+    }
+
+    private void handleBuy(EntityPlayerMP player, int categoryIndex, int itemIndex, int quantity) {
+        List<ShopCategory> categories = ShopMod.getCategories();
+        if (categoryIndex < 0 || categoryIndex >= categories.size()) {
+            player.sendMessage(new TextComponentString("\u00a7cInvalid category."));
+            return;
+        }
+
+        ShopCategory category = categories.get(categoryIndex);
+        List<ItemStack> items = category.getItems();
+        if (itemIndex < 0 || itemIndex >= items.size()) {
+            player.sendMessage(new TextComponentString("\u00a7cInvalid item."));
+            return;
+        }
+
+        ItemStack itemStack = items.get(itemIndex);
+        PriceEngine priceEngine = ShopMod.getPriceEngine();
+        double pricePerItem = priceEngine.getBuyPrice(itemStack);
+        double totalCost = pricePerItem * quantity;
+
+        EconomyData economy = EconomyData.get(player.getEntityWorld());
+        UUID uuid = player.getUniqueID();
+
+        if (!economy.subtractBalance(uuid, totalCost)) {
+            player.sendMessage(new TextComponentString("\u00a7cYou need $" + String.format("%.2f", totalCost) + " but have $" + String.format("%.2f", economy.getBalance(uuid)) + "."));
+            return;
+        }
+
+        int maxStackSize = itemStack.getMaxStackSize();
+        int remaining = quantity;
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, maxStackSize);
+            ItemStack toGive = itemStack.copy();
+            toGive.setCount(stackSize);
+            player.addItemStackToInventory(toGive);
+            remaining -= stackSize;
+        }
+
+        player.sendMessage(new TextComponentString("\u00a7aBought " + quantity + "x " + itemStack.getDisplayName() + " for $" + String.format("%.2f", totalCost) + "!"));
+        player.sendMessage(new TextComponentString("\u00a77Balance: $" + String.format("%.2f", economy.getBalance(uuid))));
+    }
+
+    private void handleSellHand(EntityPlayerMP player) {
+        ItemStack held = player.getHeldItemMainhand();
+        if (held.isEmpty()) {
+            player.sendMessage(new TextComponentString("\u00a7cYou are not holding any item."));
+            return;
+        }
+
+        PriceEngine priceEngine = ShopMod.getPriceEngine();
+        double sellPricePerItem = priceEngine.getSellPrice(held);
+
+        int totalSold = 0;
+        for (int i = 0; i < player.inventory.mainInventory.size(); i++) {
+            ItemStack slot = player.inventory.mainInventory.get(i);
+            if (!slot.isEmpty() && isSameItem(slot, held)) {
+                totalSold += slot.getCount();
+                player.inventory.mainInventory.set(i, ItemStack.EMPTY);
+            }
+        }
+
+        if (totalSold == 0) {
+            player.sendMe
+... truncated ...
+```
+
+### asd/itamio/shop/ShopMod.java
+```
+package asd.itamio.shop;
+
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+import net.minecraftforge.fml.common.network.NetworkRegistry;
+import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent;
+import net.minecraftforge.common.MinecraftForge;
+import org.apache.logging.log4j.Logger;
+
+import java.util.Collections;
+import java.util.List;
+
+@Mod(modid = ShopMod.MODID, name = ShopMod.NAME, version = ShopMod.VERSION)
+public class ShopMod {
+
+    public static final String MODID = "shop";
+    public static final String NAME = "Shop";
+    public static final String VERSION = "1.0.0";
+
+    @Mod.Instance(MODID)
+    public static ShopMod instance;
+
+    public static Logger logger;
+
+    public static SimpleNetworkWrapper NETWORK;
+
+    private static List<ShopCategory> categories = Collections.emptyList();
+    private static PriceEngine priceEngine = new PriceEngine();
+
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event) {
+        logger = event.getModLog();
+        logger.info("Shop mod initializing...");
+
+        NETWORK = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
+        NETWORK.registerMessage(ShopPacketHandler.class, ShopPacket.class, 0, Side.SERVER);
+        NETWORK.registerMessage(ShopClientPacketHandler.class, ShopPacket.class, 1, Side.CLIENT);
+
+        MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        buildShopCategories();
+        logger.info("Shop mod initialized with " + categories.size() + " categories");
+    }
+
+    @Mod.EventHandler
+    public void serverStarting(FMLServerStartingEvent event) {
+        event.registerServerCommand(new CommandShop());
+        event.registerServerCommand(new CommandSellHand());
+        event.registerServerCommand(new CommandSellGui());
+        event.registerServerCommand(new CommandBalance());
+        event.registerServerCommand(new CommandPay());
+
+        // Register /bal as alias
+        event.registerServerCommand(new CommandBalance() {
+            @Override
+            public String getName() {
+                return "bal";
+            }
+        });
+
+        // Rebuild categories in case recipes changed
+        buildShopCategories();
+        logger.info("Shop commands registered");
+    }
+
+    @SubscribeEvent
+    public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.player instanceof EntityPlayerMP) {
+            EntityPlayerMP player = (EntityPlayerMP) event.player;
+            EconomyData economy = EconomyData.get(player.getEntityWorld());
+            economy.registerPlayer(player.getName(), player.getUniqueID());
+            logger.info("Registered player {} -> {}", player.getName(), player.getUniqueID());
+        }
+    }
+
+    private void buildShopCategories() {
+        categories = ShopCategory.buildFromCreativeTabs();
+        priceEngine.clearCache();
+        logger.info("Built " + categories.size() + " shop categories from creative tabs");
+    }
+
+    public static List<ShopCategory> getCategories() {
+        return categories;
+    }
+
+    public static PriceEngine getPriceEngine() {
+        return priceEngine;
+    }
+}
+```
+
+### asd/itamio/shop/CommandSellGui.java
+```
+package asd.itamio.shop;
+
+import net.minecraft.command.CommandBase;
+import net.minecraft.command.CommandException;
+import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.text.TextComponentString;
+
+public class CommandSellGui extends CommandBase {
+
+    @Override
+    public String getName() {
+        return "sellgui";
+    }
+
+    @Override
+    public String getUsage(ICommandSender sender) {
+        return "/sellgui";
+    }
+
+    @Override
+    public int getRequiredPermissionLevel() {
+        return 0;
+    }
+
+    @Override
+    public boolean checkPermission(MinecraftServer server, ICommandSender sender) {
+        return true;
+    }
+
+    @Override
+    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+        if (!(sender instanceof EntityPlayerMP)) {
+            sender.sendMessage(new TextComponentString("\u00a7cOnly players can use this command."));
+            return;
+        }
+
+        EntityPlayerMP player = (EntityPlayerMP) sender;
+        ShopMod.NETWORK.sendTo(ShopPacket.openSellGui(), player);
+    }
+}
+```
+
+### asd/itamio/shop/GuiShopItems.java
+```
+package asd.itamio.shop;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.item.ItemStack;
+import org.lwjgl.input.Keyboard;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class GuiShopItems extends GuiScreen {
+
+    private final ShopCategory category;
+    private final int categoryIndex;
+    private final List<ItemStack> items;
+    private int scrollOffset = 0;
+
+    private static final int SLOT_SIZE = 22;
+    private static final int SPACING = 4;
+    private static final int COLUMNS = 9;
+    private static final int BOTTOM_BAR_HEIGHT = 50;
+
+    private boolean detailView = false;
+    private int detailItemIndex = -1;
+    private GuiTextField quantityField;
+    private boolean stackMode = false;
+
+    public GuiShopItems(ShopCategory category, int categoryIndex) {
+        this.category = category;
+        this.categoryIndex = categoryIndex;
+        this.items = category.getItems();
+    }
+
+    @Override
+    public void initGui() {
+        super.initGui();
+        Keyboard.enableRepeatEvents(true);
+        this.buttonList.clear();
+        rebuildButtons();
+    }
+
+    private void rebuildButtons() {
+        this.buttonList.clear();
+        if (detailView) {
+            int btnW = 95;
+            int btnH = 20;
+            int centerX = this.width / 2;
+            int bottomY = this.height - 10;
+
+            this.buttonList.add(new GuiButton(0, centerX - btnW - 2, bottomY - btnH * 2 - 8, btnW, btnH, "\u00a7aBuy"));
+            this.buttonList.add(new GuiButton(1, centerX + 2, bottomY - btnH * 2 - 8, btnW, btnH, "\u00a7cBack"));
+            this.buttonList.add(new GuiButton(2, centerX - btnW - 2, bottomY - btnH - 4, btnW, btnH, stackMode ? "\u00a77Mode: Stacks" : "\u00a77Mode: Items"));
+            this.buttonList.add(new GuiButton(3, centerX + 2, bottomY - btnH - 4, btnW, btnH, "\u00a7eMax Afford"));
+
+            int fieldW = 100;
+            int fieldH = 20;
+            this.quantityField = new GuiTextField(10, this.fontRenderer, centerX - fieldW / 2, 0, fieldW, fieldH);
+            this.quantityField.setText("1");
+            this.quantityField.setFocused(true);
+            this.quantityField.setMaxStringLength(5);
+        } else {
+            this.buttonList.add(new GuiButton(0, this.width / 2 - 100, this.height - 22, 200, 20, "\u00a7cBack to Categories"));
+        }
+    }
+
+    @Override
+    public void onGuiClosed() {
+        super.onGuiClosed();
+        Keyboard.enableRepeatEvents(false);
+    }
+
+    private void resetGlState() {
+        GlStateManager.disableLighting();
+        GlStateManager.disableDepth();
+        GlStateManager.disableBlend();
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        GlStateManager.enableTexture2D();
+    }
+
+    @Override
+    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        GlStateManager.enableBlend();
+        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        drawRect(0, 0, this.width, this.height, 0xCC1E1E1E);
+        GlStateManager.disableBlend();
+
+        if (detailView) {
+            drawDetailView(mouseX, mouseY);
+        } else {
+            drawGridView(mouseX, mouseY);
+        }
+
+        resetGlState();
+
+        for (GuiButton button : this.buttonList) {
+            button.drawButton(this.mc, mouseX, mouseY, partialTicks);
+        }
+    }
+
+    private void drawGridView(int mouseX, int mouseY) {
+        String title = "\u00a76\u00a7lShop - " + formatCategoryName(category.getName());
+        this.drawCenteredString(this.fontRenderer, title, this.width / 2, 8, 0xFFFFFF);
+
+        int cellSize = SLOT_SIZE + SPACING;
+        int g
+... truncated ...
+```

@@ -598,6 +598,13 @@ class ModrinthClient:
             extra_headers={"Content-Type": guess_content_type(image_path.name)},
         )
 
+    def delete_gallery_image(self, *, project_ref: str, image_url: str) -> None:
+        self.request_json(
+            "DELETE",
+            f"/project/{urllib.parse.quote(project_ref, safe='')}/gallery",
+            params={"url": image_url},
+        )
+
     def modify_version(self, *, version_id: str, payload: dict[str, Any]) -> None:
         self.request_json(
             "PATCH",

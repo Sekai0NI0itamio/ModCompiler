@@ -9,7 +9,7 @@
 ### 1. Save Current Mod (if any)
 
 ```bash
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 
 # Build current mod
 ./gradlew clean build
@@ -176,7 +176,7 @@ Save this as `clean_workspace.sh`:
 ```bash
 #!/bin/bash
 echo "Cleaning workspace for new mod..."
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 rm -rf src/main/java/com/*
 rm -rf src/main/resources/assets/*
 ./gradlew clean

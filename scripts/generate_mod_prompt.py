@@ -43,7 +43,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
-WORKSPACE = ROOT / "Mod Developement" / "1.12.2-forge"
+WORKSPACE = ROOT / "Mod Development" / "1.12.2-forge"
 
 
 # ── Prompt template sections ─────────────────────────────────────────────────
@@ -54,7 +54,7 @@ SYSTEM_CONTEXT = r"""You are an expert Minecraft mod developer creating a mod fo
 
 This is the ModCompiler project — a system for building Minecraft mods. The local 1.12.2 Forge workspace is at:
 
-    Mod Developement/1.12.2-forge/
+    Mod Development/1.12.2-forge/
 
 The workspace uses:
 - Forge 1.12.2-14.23.5.2847

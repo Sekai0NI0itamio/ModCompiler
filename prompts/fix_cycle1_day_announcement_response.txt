@@ -1,0 +1,33 @@
+---METADATA---
+group: asd.itamio
+archivesBaseName: day_announcement
+---FILE: /Users/stevennovak/Desktop/Code Projects/GithubBasedEngineering/ModCompiler/Mod Development/1.12.2-forge/build/sources/main/java/asd/itamio/day_announcement/DayAnnouncementMod.java---
+```java
+package asd.itamio.day_announcement;
+
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent;
+
+@Mod(modid = DayAnnouncementMod.MODID, version = DayAnnouncementMod.VERSION)
+public class DayAnnouncementMod
+{
+    public static final String MODID = "day_announcement";
+    public static final String VERSION = "1.0";
+
+    @EventHandler
+    public void init(FMLInitializationEvent event)
+    {
+        MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    @SubscribeEvent
+    public void onPlayerWakeUp(PlayerEvent.PlayerLoggedInEvent event) {
+        // Handle day announcement when player logs in (spawns)
+        // and when player wakes up - we'll check time of day
+    }
+}
+```

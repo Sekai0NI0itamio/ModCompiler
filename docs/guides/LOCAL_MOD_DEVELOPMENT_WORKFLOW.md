@@ -8,7 +8,7 @@ This document explains the proper workflow for developing multiple mods in the l
 
 ### The Problem
 
-When developing multiple mods sequentially in the same workspace (`Mod Developement/1.12.2-forge/`), old mod source files can remain in the `src/` directory and get compiled into new mods, causing:
+When developing multiple mods sequentially in the same workspace (`Mod Development/1.12.2-forge/`), old mod source files can remain in the `src/` directory and get compiled into new mods, causing:
 
 - Wrong mod loading (old mod appears instead of new mod)
 - Conflicting class definitions
@@ -38,13 +38,13 @@ Before creating a new mod, ALWAYS clean out old mod source files:
 
 ```bash
 # Remove all old mod packages from src
-rm -rf "Mod Developement/1.12.2-forge/src/main/java/com/"*
+rm -rf "Mod Development/1.12.2-forge/src/main/java/com/"*
 
 # Remove all old resource assets
-rm -rf "Mod Developement/1.12.2-forge/src/main/resources/assets/"*
+rm -rf "Mod Development/1.12.2-forge/src/main/resources/assets/"*
 
 # Clean build artifacts
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 ./gradlew clean
 ```
 
@@ -54,15 +54,15 @@ Before removing old source files, save the completed mod to `ModCollection`:
 
 ```bash
 # Copy the built jar
-cp "Mod Developement/1.12.2-forge/build/libs/Your-Mod-1.0.0.jar" \
-   "Mod Developement/1.12.2-forge/ModCollection/"
+cp "Mod Development/1.12.2-forge/build/libs/Your-Mod-1.0.0.jar" \
+   "Mod Development/1.12.2-forge/ModCollection/"
 
 # Save the source code
-mkdir -p "Mod Developement/1.12.2-forge/ModCollection/Your-Mod-Src"
-cp -r "Mod Developement/1.12.2-forge/src/main/java/com/yourmod" \
-      "Mod Developement/1.12.2-forge/ModCollection/Your-Mod-Src/"
-cp -r "Mod Developement/1.12.2-forge/src/main/resources" \
-      "Mod Developement/1.12.2-forge/ModCollection/Your-Mod-Src/"
+mkdir -p "Mod Development/1.12.2-forge/ModCollection/Your-Mod-Src"
+cp -r "Mod Development/1.12.2-forge/src/main/java/com/yourmod" \
+      "Mod Development/1.12.2-forge/ModCollection/Your-Mod-Src/"
+cp -r "Mod Development/1.12.2-forge/src/main/resources" \
+      "Mod Development/1.12.2-forge/ModCollection/Your-Mod-Src/"
 ```
 
 ### Step 3: Create the New Mod
@@ -71,7 +71,7 @@ Now you can safely create new mod files without conflicts:
 
 ```bash
 # Create new mod package
-mkdir -p "Mod Developement/1.12.2-forge/src/main/java/com/newmod"
+mkdir -p "Mod Development/1.12.2-forge/src/main/java/com/newmod"
 
 # Create new mod files
 # ... your mod development here ...
@@ -105,7 +105,7 @@ Update `src/main/resources/mcmod.info`:
 ### Step 5: Build and Test
 
 ```bash
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 ./gradlew clean build
 ```
 
@@ -167,15 +167,15 @@ If you need to build multiple mods and keep them all:
 
 ```bash
 # Create dedicated workspace for each mod
-cp -r "Mod Developement/1.12.2-forge" "Mod Developement/1.12.2-forge-mod1"
-cp -r "Mod Developement/1.12.2-forge" "Mod Developement/1.12.2-forge-mod2"
+cp -r "Mod Development/1.12.2-forge" "Mod Development/1.12.2-forge-mod1"
+cp -r "Mod Development/1.12.2-forge" "Mod Development/1.12.2-forge-mod2"
 ```
 
 ### Option 2: Build and Move Pattern
 
 ```bash
 # Build mod 1
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 ./gradlew clean build
 cp build/libs/Mod1.jar ReadyMods/
 
@@ -250,7 +250,7 @@ rm -rf src/main/java/com/oldmod
 
 ### Clean Workspace Completely
 ```bash
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 rm -rf src/main/java/com/*
 rm -rf src/main/resources/assets/*
 ./gradlew clean

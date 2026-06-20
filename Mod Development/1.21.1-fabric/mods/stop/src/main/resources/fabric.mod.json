@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"id": "stop",
+	"version": "${version}",
+	"name": "STOP",
+	"description": "Protects your privacy by serving decoy folders to servers instead of your real mod list, datapacks, and config files.",
+	"authors": [
+		"Itamio"
+	],
+	"contact": {},
+	"license": "MIT",
+	"icon": "assets/stop/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.itamio.stop.STOPMod"
+		],
+		"client": [
+			"com.itamio.stop.client.STOPClient"
+		]
+	},
+	"mixins": [
+		"stop.mixins.json",
+		{
+			"config": "stop.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.2",
+		"minecraft": "~1.21.1",
+		"java": ">=21"
+	}
+}

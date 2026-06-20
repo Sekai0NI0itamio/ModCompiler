@@ -48,7 +48,7 @@ from modcompiler.modrinth import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT_DIR = "ToBeUploaded"
 DEFAULT_OUTPUT_DIR = "AutoCreateModrinthBundles"
-DEFAULT_BACKGROUND_IMAGES_DIR = str(REPO_ROOT / "BackgroundImages")
+DEFAULT_BACKGROUND_IMAGES_DIR = str(REPO_ROOT / "assets" / "backgrounds")
 DEFAULT_MANIFEST = "version-manifest.json"
 DEFAULT_TEMPLATE_DIR = str(REPO_ROOT / "templatecreatemod")
 DEFAULT_C05_URL = "http://localhost:8129"

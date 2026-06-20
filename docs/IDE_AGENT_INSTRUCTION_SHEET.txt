@@ -30,8 +30,8 @@ The IDE agent is expected to understand:
 Core operating rules
 --------------------
 1. Treat the IDE agent as the main coding assistant for the user.
-2. Start new mod creation in the local 1.12.2 Forge workspace at `Mod Developement/1.12.2-forge/`.
-3. Before generating or changing code, inspect `Mod Developement/1.12.2-forge/ModCollection/` for previous related mod source and jar history.
+2. Start new mod creation in the local 1.12.2 Forge workspace at `Mod Development/1.12.2-forge/`.
+3. Before generating or changing code, inspect `Mod Development/1.12.2-forge/ModCollection/` for previous related mod source and jar history.
 4. Preserve previous source history. Do not overwrite or delete old mod snapshots unless the user explicitly asks.
 5. The first local mod iteration is allowed to be compiled and tested locally by the user in the 1.12.2 Forge workspace.
 6. Multi-version compilation is not supposed to happen locally. For cross-version builds, use the GitHub build pipeline only.
@@ -44,13 +44,13 @@ This repo is meant to let a user co-build a mod with an IDE agent, approve the f
 
 Main folders the agent must understand
 --------------------------------------
-`Mod Developement/1.12.2-forge/`
+`Mod Development/1.12.2-forge/`
 The active local Forge 1.12.2 development workspace.
 
-`Mod Developement/1.12.2-forge/src/main/`
+`Mod Development/1.12.2-forge/src/main/`
 The current live source tree for the mod being actively edited in the local 1.12.2 workflow.
 
-`Mod Developement/1.12.2-forge/ModCollection/`
+`Mod Development/1.12.2-forge/ModCollection/`
 Saved mod history. This contains previously built jars and previously saved source snapshots.
 
 Examples already present there show two storage styles:
@@ -107,13 +107,13 @@ Step 2: The agent inspects the current 1.12.2 Forge workspace.
 
 The agent should review:
 
-- `Mod Developement/1.12.2-forge/src/main/`
-- `Mod Developement/1.12.2-forge/build.gradle`
-- `Mod Developement/1.12.2-forge/src/main/resources/mcmod.info`
-- matching or related entries inside `Mod Developement/1.12.2-forge/ModCollection/`
+- `Mod Development/1.12.2-forge/src/main/`
+- `Mod Development/1.12.2-forge/build.gradle`
+- `Mod Development/1.12.2-forge/src/main/resources/mcmod.info`
+- matching or related entries inside `Mod Development/1.12.2-forge/ModCollection/`
 
 Step 3: The agent builds or edits the local first version inside:
-`Mod Developement/1.12.2-forge/`
+`Mod Development/1.12.2-forge/`
 
 The local 1.12.2 workspace is the place where the idea is shaped into the first playable version.
 
@@ -211,6 +211,151 @@ The agent is expected to:
 4. create the draft only after the bundle is verified
 
 The agent should not treat raw generated listing text as automatically final.
+
+Local 1.12.2 Forge Development (Mod Development/1.12.2-forge/)
+----------------------------------------------------------------
+The local 1.12.2 Forge workspace is where the IDE agent creates and iterates
+on the first version of a mod before it goes through any remote build or
+publishing pipeline.
+
+Directory layout:
+  Mod Development/1.12.2-forge/
+    engine/          Shared Gradle build engine (symlink-based isolation)
+    mods/            All mod source code (one folder per mod)
+    output/          Built JAR files
+    build_mod.sh     Build a single mod by name
+    build_all.sh     Build all mods
+    new_mod.sh       Create a new mod from template
+
+How to build a mod locally:
+  ./build_mod.sh <mod-name>
+
+This reads mods/<mod-name>/mod.properties, symlinks the source into engine/,
+runs Gradle, copies the JAR to output/, and cleans up.
+
+mod.properties format (required in every mod directory):
+  modid=<lowercase-id>
+  name=<Display-Name>
+  group=<com.example.modid>
+  version=<1.0.0>
+
+Key 1.12.2 Forge technical rules the agent MUST follow:
+
+1. SRG vs MCP names: When using ReflectionHelper.findField(), ALWAYS provide
+   both MCP and SRG names. Production builds use SRG names.
+   Example: findField(EntityMinecartFurnace.class, "fuel", "field_94110_c")
+   Known EntityMinecartFurnace SRG fields:
+     fuel   = field_94110_c
+     pushX  = field_94111_a
+     pushZ  = field_94109_b
+
+2. Entity lifecycle: Use isEntityAlive() NOT isAlive() (isAlive is 1.14+).
+
+3. Event registration: @EventBusSubscriber is unreliable in 1.12.2. Use
+   manual registration: MinecraftForge.EVENT_BUS.register(new MyHandler())
+
+4. Client-server communication: Key presses and other client input MUST use
+   network packets (SimpleNetworkWrapper). The server does not trust the client.
+   Register in preInit:
+     SimpleNetworkWrapper NETWORK = NetworkRegistry.INSTANCE.newSimpleChannel(MODID);
+     NETWORK.registerMessage(Handler.class, Packet.class, 0, Side.SERVER);
+   Send from client:
+     NETWORK.sendToServer(new Packet());
+   Handle on server (always use addScheduledTask):
+     player.getServer().addScheduledTask(() -> { ... });
+
+5. Client-side view control: The client is authoritative over player yaw.
+   Setting EntityPlayerMP.rotationYaw on the server has NO visible effect.
+   Use a @SideOnly(Side.CLIENT) tick handler and modify
+   Minecraft.getMinecraft().player.rotationYaw directly.
+   For additive rotation (preserving user look offset), track the entity's
+   direction delta each tick and add it to the player's current yaw.
+
+6. Vanilla minecart speed cap: getMaxSpeed() returns 0.4 blocks/tick.
+   To exceed this, use position correction after vanilla moves the cart.
+
+7. Action bar messages: Use player.sendStatusMessage(new TextComponentString(
+   "\u00a7a\u25b6 Cart: ON"), true) for toggle state display.
+   Color codes: \u00a7a=green, \u00a7c=red, \u00a76=gold
+
+8. Coremod development: For ASM bytecode transformation, create an
+   IFMLLoadingPlugin and add manifest attributes in build.gradle:
+     'FMLCorePlugin': 'com.example.MyLoadingPlugin'
+     'FMLCorePluginContainsFMLMod': 'true'
+
+9. Duplicate mod JARs: Only ONE JAR per modid should exist in the Minecraft
+   mods folder. Old JARs with the same modid will cause a crash on startup.
+
+Manual Modrinth Publishing (scripts/publish_manual.py)
+------------------------------------------------------
+For mods built locally in the 1.12.2 workspace, use the manual publish script
+instead of the auto-create draft flow. This gives full control over project info.
+
+The script is at: scripts/publish_manual.py (in the ModCompiler repo root)
+
+Prerequisites:
+- Modrinth API token in secrets.txt (one dir above ModCompiler repo) or
+  MODRINTH_TOKEN env variable
+- A built JAR file (from output/ after build_mod.sh)
+- Project metadata JSON files
+
+Step 1: Create the bundle directory
+  AutoCreateModrinthBundles/<mod-name>-<version>/
+    modrinth.project.json    Project listing (title, description, categories)
+    modrinth.version.json    Version info (game_versions, loaders, changelog)
+    bundle_metadata.json     Simple slug+version metadata
+    input/<Mod-Name>-<ver>.jar  The built JAR
+
+Step 2: Write modrinth.project.json
+  Required fields: slug, title, description, body, categories, client_side,
+  server_side, project_type, license_id
+  IMPORTANT: Remove empty URL fields (issues_url, source_url, wiki_url,
+  donation_urls) — the API rejects empty strings.
+  Common categories: game-mechanics, utility, adventure, storage, transportation
+  client_side/server_side: required, optional, or unsupported
+  license_id: MIT, Apache-2.0, All-Rights-Reserved
+
+Step 3: Write modrinth.version.json
+  Required fields: version_number, name, changelog, version_type, status,
+  game_versions, loaders, file_parts (must be ["file"]), dependencies
+  game_versions: ["1.12.2"]
+  loaders: ["forge"]
+
+Step 4: Run the publish script
+  python3 scripts/publish_manual.py \
+    --bundle-dir AutoCreateModrinthBundles/<mod-name>-<version> \
+    --jar "AutoCreateModrinthBundles/<mod-name>-<version>/input/<JAR>"
+
+  Options:
+    --dry-run                 Preview without uploading
+    --project-status draft|listed|unlisted|private
+    --version-status listed|unlisted|draft
+    --icon path/to/icon.png   Upload a project icon
+    --modrinth-token <token>  Provide token directly
+
+What the script does:
+1. Reads modrinth.project.json and modrinth.version.json
+2. Discovers the Modrinth API token
+3. Checks if a project with that slug already exists
+4. If not: creates a new project with initial_versions embedded
+   (Modrinth requires at least one version when creating a project)
+5. If yes: creates a new version under the existing project
+6. Prints the project URL and version ID on success
+
+Common issues:
+- "Invalid body: issues_url" → Remove empty URL fields from project JSON
+- "Duplicate mod" → Only one JAR per modid in Minecraft mods folder
+- Token not found → Check secrets.txt or pass --modrinth-token
+
+Full publishing workflow:
+  1. Build mod locally:     ./build_mod.sh my-mod
+  2. Create bundle dir:     AutoCreateModrinthBundles/my-mod-1.0.0/
+  3. Write project JSON:    modrinth.project.json
+  4. Write version JSON:    modrinth.version.json
+  5. Copy JAR to bundle:    input/My-Mod-1.0.0.jar
+  6. Dry run:               python3 scripts/publish_manual.py ... --dry-run
+  7. Publish:               python3 scripts/publish_manual.py ...
+  8. Review on Modrinth:    https://modrinth.com/mod/<slug>
 
 Mod Version Update
 ------------------
@@ -443,9 +588,9 @@ PATH B: Starting from local source (ModCollection or workspace)
 Step B-1: Locate the source.
 
   Check these locations in order:
-    1. Mod Developement/1.12.2-forge/ModCollection/<ModName>-Src/
-    2. Mod Developement/1.12.2-forge/ModCollection/<ModName>/src/
-    3. Mod Developement/1.12.2-forge/src/main/java/
+    1. Mod Development/1.12.2-forge/ModCollection/<ModName>-Src/
+    2. Mod Development/1.12.2-forge/ModCollection/<ModName>/src/
+    3. Mod Development/1.12.2-forge/src/main/java/
 
   Read mod_id, group, entrypoint_class, and version from:
     - mcmod.info or mods.toml in the local workspace resources
@@ -1295,7 +1440,7 @@ Final intended story
 The intended user experience is:
 
 1. The user asks the IDE agent to make a mod.
-2. The agent builds the first working version in `Mod Developement/1.12.2-forge/`.
+2. The agent builds the first working version in `Mod Development/1.12.2-forge/`.
 3. The user compiles and tests it locally.
 4. The agent keeps refining it until the user is happy.
 5. The approved jar and source are preserved so the mod can be reused later.

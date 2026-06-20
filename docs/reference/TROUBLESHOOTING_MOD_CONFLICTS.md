@@ -46,7 +46,7 @@ Minecraft shows the wrong mod name, description, or version in the mods list.
 
 ### Check What's in Your Source Directory
 ```bash
-ls -la "Mod Developement/1.12.2-forge/src/main/java/com/"
+ls -la "Mod Development/1.12.2-forge/src/main/java/com/"
 ```
 
 **Clean Output (good):**
@@ -63,28 +63,28 @@ nohostilemobs/
 
 ### Check What's in Your Built Jar
 ```bash
-jar tf "Mod Developement/1.12.2-forge/build/libs/Your-Mod.jar" | grep "\.class$"
+jar tf "Mod Development/1.12.2-forge/build/libs/Your-Mod.jar" | grep "\.class$"
 ```
 
 Look for class files from multiple packages. If you see classes from old mods, you have a conflict.
 
 ### Check Package Names in Jar
 ```bash
-jar tf "Mod Developement/1.12.2-forge/build/libs/Your-Mod.jar" | grep "com/" | cut -d'/' -f1-3 | sort -u
+jar tf "Mod Development/1.12.2-forge/build/libs/Your-Mod.jar" | grep "com/" | cut -d'/' -f1-3 | sort -u
 ```
 
 Should show ONLY your current mod's package.
 
 ### Check for Multiple mcmod.info Files
 ```bash
-find "Mod Developement/1.12.2-forge/src/main/resources" -name "mcmod.info"
+find "Mod Development/1.12.2-forge/src/main/resources" -name "mcmod.info"
 ```
 
 Should show only ONE file.
 
 ### Check for Multiple Asset Folders
 ```bash
-ls "Mod Developement/1.12.2-forge/src/main/resources/assets/"
+ls "Mod Development/1.12.2-forge/src/main/resources/assets/"
 ```
 
 Should show only YOUR mod's asset folder.
@@ -96,7 +96,7 @@ Should show only YOUR mod's asset folder.
 This fixes 90% of conflicts:
 
 ```bash
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 
 # Remove ALL old mod source files
 rm -rf src/main/java/com/*
@@ -119,10 +119,10 @@ If you know which old mod is causing issues:
 
 ```bash
 # Remove specific old mod package
-rm -rf "Mod Developement/1.12.2-forge/src/main/java/com/oldmodpackage"
+rm -rf "Mod Development/1.12.2-forge/src/main/java/com/oldmodpackage"
 
 # Remove specific old mod assets
-rm -rf "Mod Developement/1.12.2-forge/src/main/resources/assets/oldmodpackage"
+rm -rf "Mod Development/1.12.2-forge/src/main/resources/assets/oldmodpackage"
 
 # Clean and rebuild
 ./gradlew clean build
@@ -155,18 +155,18 @@ If conflicts persist, copy from the clean template:
 
 ```bash
 # Backup your current mod source
-cp -r "Mod Developement/1.12.2-forge/src/main/java/com/yourmod" /tmp/
+cp -r "Mod Development/1.12.2-forge/src/main/java/com/yourmod" /tmp/
 
 # Reset workspace from template
-rm -rf "Mod Developement/1.12.2-forge/src"
-cp -r "1.12-1.12.2/forge/template/src" "Mod Developement/1.12.2-forge/"
+rm -rf "Mod Development/1.12.2-forge/src"
+cp -r "1.12-1.12.2/forge/template/src" "Mod Development/1.12.2-forge/"
 
 # Clean template files
-rm -rf "Mod Developement/1.12.2-forge/src/main/java/com/"*
-rm -rf "Mod Developement/1.12.2-forge/src/main/resources/assets/"*
+rm -rf "Mod Development/1.12.2-forge/src/main/java/com/"*
+rm -rf "Mod Development/1.12.2-forge/src/main/resources/assets/"*
 
 # Restore your mod
-cp -r /tmp/yourmod "Mod Developement/1.12.2-forge/src/main/java/com/"
+cp -r /tmp/yourmod "Mod Development/1.12.2-forge/src/main/java/com/"
 
 # Rebuild
 ./gradlew clean build
@@ -179,7 +179,7 @@ cp -r /tmp/yourmod "Mod Developement/1.12.2-forge/src/main/java/com/"
 Always run this before creating a new mod:
 
 ```bash
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 rm -rf src/main/java/com/*
 rm -rf src/main/resources/assets/*
 ./gradlew clean
@@ -204,7 +204,7 @@ cp -r src/main/resources ModCollection/Completed-Mod-Src/
 Store completed, tested mods in a separate folder:
 
 ```bash
-mkdir -p "Mod Developement/1.12.2-forge/ReadyMods"
+mkdir -p "Mod Development/1.12.2-forge/ReadyMods"
 cp build/libs/Your-Mod.jar ReadyMods/
 ```
 
@@ -301,7 +301,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 1
 fi
 
-cd "Mod Developement/1.12.2-forge"
+cd "Mod Development/1.12.2-forge"
 
 echo "Removing old source files..."
 rm -rf src/main/java/com/*

@@ -36,7 +36,7 @@ _REPO_ROOT = _HERE.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-_VERSION_GUIDE_DIR = _REPO_ROOT / "Version guide"
+_VERSION_GUIDE_DIR = _REPO_ROOT / "docs" / "version-guides"
 _DECOMPILED_ROOT = _REPO_ROOT / "DecompiledMinecraftSourceCode"
 
 
