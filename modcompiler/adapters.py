@@ -426,6 +426,14 @@ def apply_mods_toml_forge_adapter(
                 lambda match: f"{match.group(1)}{effective_minecraft_version}-{forge_version}{match.group(2)}",
                 text,
             )
+        # For Forge 1.20.1-1.20.4, reobf MUST be enabled (SRG runtime).
+        # For 1.20.5+ (official mappings runtime), reobf = false is correct.
+        try:
+            _forge_ver = parse_version_tuple(effective_minecraft_version)
+            if len(_forge_ver) >= 3 and (_forge_ver[0], _forge_ver[1], _forge_ver[2]) < (1, 20, 5):
+                text = re.sub(r"reobf\s*=\s*false", "reobf = true", text)
+        except ValueError:
+            pass
         build_gradle.write_text(text, encoding="utf-8")
 
     mods_toml = workspace / "src/main/resources/META-INF/mods.toml"
@@ -511,11 +519,12 @@ def apply_neoforge_adapter(
 
 def build_pack_mcmeta(mod_id: str, minecraft_version: str) -> dict[str, Any]:
     if minecraft_version.startswith("1.21"):
+        # Use pack_format (not min_format/max_format) so both Forge and NeoForge can parse it.
+        # Forge 1.21.0-1.21.8 requires pack_format; NeoForge accepts pack_format as optionalFieldOf.
         return {
             "pack": {
                 "description": f"{mod_id} resources",
-                "max_format": 94,
-                "min_format": [94, 1],
+                "pack_format": 48,
             }
         }
     if minecraft_version in {"1.20.5", "1.20.6"}:
