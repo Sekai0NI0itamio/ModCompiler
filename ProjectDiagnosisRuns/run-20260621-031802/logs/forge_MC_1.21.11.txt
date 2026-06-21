@@ -1,0 +1,560 @@
+forge MC 1.21.11	Set up job	﻿2026-06-21T03:19:33.7314565Z Current runner version: '2.335.1'
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7339468Z ##[group]Runner Image Provisioner
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7340349Z Hosted Compute Agent
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7340947Z Version: 20260611.554
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7341669Z Commit: 5e0782fdc9014723d3be820dd114dd31555c2bd1
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7342422Z Build Date: 2026-06-11T21:40:46Z
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7343138Z Worker ID: {992f339e-6728-48d8-a9e6-8363f9cb70f4}
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7343926Z Azure Region: northcentralus
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7344811Z ##[endgroup]
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7346328Z ##[group]Operating System
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7347000Z Ubuntu
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7347869Z 24.04.4
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7348519Z LTS
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7349043Z ##[endgroup]
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7349679Z ##[group]Runner Image
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7350301Z Image: ubuntu-24.04
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7350898Z Version: 20260615.205.1
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7352031Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260615.205/images/ubuntu/Ubuntu2404-Readme.md
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7353752Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260615.205
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7355035Z ##[endgroup]
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7356207Z ##[group]GITHUB_TOKEN Permissions
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7358406Z Contents: read
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7359063Z Metadata: read
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7359725Z ##[endgroup]
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7361778Z Secret source: Actions
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7362840Z Prepare workflow directory
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7881154Z Prepare all required actions
+forge MC 1.21.11	Set up job	2026-06-21T03:19:33.7918312Z Getting action download info
+forge MC 1.21.11	Set up job	2026-06-21T03:19:34.1241537Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+forge MC 1.21.11	Set up job	2026-06-21T03:19:34.6695317Z Download action repository 'robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2' (SHA:a96f54c1b5f5e09e47d9504526e96febd949d4c2)
+forge MC 1.21.11	Set up job	2026-06-21T03:19:34.9605295Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+forge MC 1.21.11	Set up job	2026-06-21T03:19:35.0504722Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+forge MC 1.21.11	Set up job	2026-06-21T03:19:35.2709396Z Complete job name: forge MC 1.21.11
+forge MC 1.21.11	Run actions/setup-java@v4	﻿2026-06-21T03:19:35.3582603Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3594269Z ##[group]Run actions/setup-java@v4
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3595847Z with:
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3596871Z   distribution: temurin
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3597933Z   java-version: 21
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3598952Z   java-package: jdk
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3599987Z   check-latest: false
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3601002Z   server-id: github
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3601991Z   server-username: GITHUB_ACTOR
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3603198Z   server-password: GITHUB_TOKEN
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3604678Z   overwrite-settings: true
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3605819Z   job-status: success
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3615537Z   token: ***
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3616783Z env:
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3618014Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.3619531Z ##[endgroup]
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5304633Z ##[group]Installed distributions
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5341793Z Resolved Java 21.0.11+10 from tool-cache
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5343198Z Setting Java 21.0.11+10 as the default
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5352351Z (node:2107) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5355239Z (Use `node --trace-deprecation ...` to show where the warning was created)
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5357605Z Creating toolchains.xml for JDK version 21 from temurin
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5434656Z Writing to /home/runner/.m2/toolchains.xml
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5436111Z 
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5436823Z Java configuration:
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5437942Z   Distribution: temurin
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5439886Z   Version: 21.0.11+10
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5441310Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5442442Z 
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5443662Z ##[endgroup]
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5546996Z Creating settings.xml with server-id: github
+forge MC 1.21.11	Run actions/setup-java@v4	2026-06-21T03:19:35.5548505Z Writing to /home/runner/.m2/settings.xml
+forge MC 1.21.11	Download HeadlessMC launcher	﻿2026-06-21T03:19:35.5835428Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5841069Z ##[group]Run robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5842612Z with:
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5843426Z   repository: 3arthqu4ke/headlessmc
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5844705Z   tag: 2.9.0
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5845587Z   fileName: headlessmc-launcher-2.9.0.jar
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5846696Z   latest: false
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5847526Z   preRelease: false
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5848386Z   tarBall: false
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5849204Z   zipBall: false
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5850025Z   out-file-path: .
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5850857Z   extract: false
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5860278Z   token: ***
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5861202Z   github-api-url: https://api.github.com
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5862324Z env:
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5863302Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5865188Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5867054Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.5868526Z ##[endgroup]
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.6686285Z Fetching release 2.9.0 from repo 3arthqu4ke/headlessmc
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.6791242Z (node:2119) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:35.6795178Z (Use `node --trace-deprecation ...` to show where the warning was created)
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:36.0375245Z Found release tag: 2.9.0
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:36.0406212Z Downloading file: headlessmc-launcher-2.9.0.jar to: /home/runner/work/ModCompiler/ModCompiler
+forge MC 1.21.11	Download HeadlessMC launcher	2026-06-21T03:19:36.2856612Z Done: /home/runner/work/ModCompiler/ModCompiler/headlessmc-launcher-2.9.0.jar
+forge MC 1.21.11	Install xvfb deps	﻿2026-06-21T03:19:36.3002978Z ##[group]Run sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:36.3005516Z [36;1msudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils[0m
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:36.3210294Z shell: /usr/bin/bash -e {0}
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:36.3211273Z env:
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:36.3212256Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:36.3213924Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:36.3216089Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:36.3217589Z ##[endgroup]
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.1101888Z Reading package lists...
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.2611055Z Building dependency tree...
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.2622879Z Reading state information...
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.4025041Z Suggested packages:
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.4025724Z   nickle cairo-5c xorg-docs-core
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.4223389Z The following NEW packages will be installed:
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.4224446Z   x11-xserver-utils
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.4442604Z 0 upgraded, 1 newly installed, 0 to remove and 2 not upgraded.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.4443456Z Need to get 169 kB of archives.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.4444394Z After this operation, 573 kB of additional disk space will be used.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.4445282Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.5874550Z Get:2 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 x11-xserver-utils amd64 7.7+10build2 [169 kB]
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8335891Z Fetched 169 kB in 0s (1038 kB/s)
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8581286Z Selecting previously unselected package x11-xserver-utils.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8910489Z (Reading database ... 
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8911472Z (Reading database ... 5%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8912185Z (Reading database ... 10%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8912861Z (Reading database ... 15%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8913378Z (Reading database ... 20%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8913908Z (Reading database ... 25%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8914619Z (Reading database ... 30%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8915171Z (Reading database ... 35%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8915650Z (Reading database ... 40%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8916122Z (Reading database ... 45%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8916614Z (Reading database ... 50%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:37.8978515Z (Reading database ... 55%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.0048803Z (Reading database ... 60%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.1559552Z (Reading database ... 65%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.3603093Z (Reading database ... 70%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.4780819Z (Reading database ... 75%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.5406940Z (Reading database ... 80%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.6813167Z (Reading database ... 85%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.8181381Z (Reading database ... 90%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.9665035Z (Reading database ... 95%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.9665769Z (Reading database ... 100%
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.9666492Z (Reading database ... 202324 files and directories currently installed.)
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.9709156Z Preparing to unpack .../x11-xserver-utils_7.7+10build2_amd64.deb ...
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:38.9739012Z Unpacking x11-xserver-utils (7.7+10build2) ...
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.0253405Z Setting up x11-xserver-utils (7.7+10build2) ...
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.0297338Z Processing triggers for man-db (2.12.0-4build2) ...
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.0320519Z Not building database; man-db/auto-update is not 'true'.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6857637Z 
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6858288Z Running kernel seems to be up-to-date.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6858814Z 
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6859236Z No services need to be restarted.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6859572Z 
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6859739Z No containers need to be restarted.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6860124Z 
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6860354Z No user sessions are running outdated binaries.
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6860717Z 
+forge MC 1.21.11	Install xvfb deps	2026-06-21T03:19:39.6861260Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+forge MC 1.21.11	Cache ~/.minecraft	﻿2026-06-21T03:19:40.4112512Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4113831Z ##[group]Run actions/cache@v4
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4114343Z with:
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4114599Z   path: ~/.minecraft
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4114894Z   key: mc-runtime-test-diag-1.21.11-forge-27892011262
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4115342Z   restore-keys: mc-runtime-test-diag-1.21.11-forge-
+forge MC 1.21.11	Cache ~/.minecraft	mc-runtime-test-diag-
+forge MC 1.21.11	Cache ~/.minecraft	
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4115762Z   enableCrossOsArchive: false
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4116036Z   fail-on-cache-miss: false
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4116273Z   lookup-only: false
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4116486Z   save-always: false
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4116691Z env:
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4116977Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4117426Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4117965Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.4118348Z ##[endgroup]
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.5115718Z (node:2234) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.5116563Z (Use `node --trace-deprecation ...` to show where the warning was created)
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.6091479Z Cache hit for restore-key: mc-runtime-test-diag-1.21.11-forge-27891298371
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:40.6195404Z (node:2234) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:41.7505009Z Received 125829120 of 180372137 (69.8%), 120.0 MBs/sec
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:42.1515218Z Received 180372137 of 180372137 (100.0%), 122.3 MBs/sec
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:42.1518712Z Cache Size: ~172 MB (180372137 B)
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:42.1637846Z [command]/usr/bin/tar -xf /home/runner/work/_temp/5e5860f4-f0bf-4920-8a80-0b0e9a8a1c29/cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --use-compress-program unzstd
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:42.5846450Z Cache restored successfully
+forge MC 1.21.11	Cache ~/.minecraft	2026-06-21T03:19:42.6007401Z Cache restored from key: mc-runtime-test-diag-1.21.11-forge-27891298371
+forge MC 1.21.11	Run launcher test	﻿2026-06-21T03:19:42.6152836Z ##[group]Run mkdir -p launcher-result
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6153739Z [36;1mmkdir -p launcher-result[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6154042Z [36;1mpython3 - <<'PYEOF'[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6154772Z [36;1mimport json, os, subprocess, sys, shutil, re, time, urllib.request[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6155219Z [36;1mfrom pathlib import Path[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6155480Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6155703Z [36;1m# ---- Config from matrix ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6155994Z [36;1mGAME_VERSION = "1.21.11"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6156269Z [36;1mTEST_MC = "1.21.11"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6156521Z [36;1mLOADER = "forge"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6156772Z [36;1mORIGINAL_LOADER = "forge"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6157267Z [36;1mFILE_URL = "https://cdn.modrinth.com/data/9GikcByI/versions/ffw9w4qK/pingfix-1.0.0.jar"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6157762Z [36;1mFILE_NAME = "pingfix-1.0.0.jar"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6158048Z [36;1mVERSION_NUMBER = "1.0.0"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6158317Z [36;1mJAVA_VERSION = "21"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6158609Z [36;1mLOADER_REGEX = ".*forge.*"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6158881Z [36;1mMCRT_JAR = "lexforge"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6159140Z [36;1mSAFE_KEY = "forge-1.21.11"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6159398Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6159645Z [36;1mHMC_JAR = "headlessmc-launcher-2.9.0.jar"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6159968Z [36;1mMCRT_VERSION = "4.4.0"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6160260Z [36;1mMCRT_REPO = "headlesshq/mc-runtime-test"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6160687Z [36;1mLAUNCH_TIMEOUT = 120  # seconds to wait for game to load before killing[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6161175Z [36;1mGITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6161529Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6161730Z [36;1mlaunch_stdout = ""[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6162004Z [36;1mlaunch_stderr = ""[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6162240Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6162461Z [36;1mOUT_DIR = Path("launcher-result")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6162799Z [36;1mOUT_DIR.mkdir(parents=True, exist_ok=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6163104Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6163497Z [36;1mprint(f"::group::Test: {ORIGINAL_LOADER} MC {GAME_VERSION} (on {TEST_MC}, Java {JAVA_VERSION})")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6163956Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6164465Z [36;1mresult = {[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6164738Z [36;1m    "status": "launcher_failed",[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6165045Z [36;1m    "game_version": GAME_VERSION,[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6165383Z [36;1m    "loader": ORIGINAL_LOADER,[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6165812Z [36;1m    "test_mc": TEST_MC,[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6166110Z [36;1m    "version_number": VERSION_NUMBER,[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6166414Z [36;1m    "crash_summary": "",[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6166671Z [36;1m    "logs": "",[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6166893Z [36;1m}[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6167082Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6167282Z [36;1mdef cleanup():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6167543Z [36;1m    """Kill all related processes."""[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6168026Z [36;1m    for pat in ["headlessmc-launcher", "Xvfb", "net.minecraft", "net.neoforged", "cpw.mods"]:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6168596Z [36;1m        subprocess.run(["pkill", "-f", pat], capture_output=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6168972Z [36;1m    time.sleep(1)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6169329Z [36;1m    subprocess.run(["pkill", "-9", "-f", "java"], capture_output=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6169906Z [36;1m    time.sleep(1)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6170137Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6170338Z [36;1mdef find_java_home():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6170684Z [36;1m    tc = Path("/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6171043Z [36;1m    if tc.exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6171348Z [36;1m        for d in sorted(tc.iterdir(), reverse=True):[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6171750Z [36;1m            if d.is_dir() and d.name.split('.')[0] == JAVA_VERSION:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6172151Z [36;1m                if (d / "x64" / "bin" / "java").exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6172493Z [36;1m                    return str(d / "x64")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6172989Z [36;1m    return os.environ.get("JAVA_HOME", "")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6173280Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6173485Z [36;1mdef download_mcrt_jar():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6173876Z [36;1m    """Download mc-runtime-test jar for this MC version + loader type."""[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6174648Z [36;1m    mods_dir = Path("run/mods")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6175055Z [36;1m    mods_dir.mkdir(parents=True, exist_ok=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6175504Z [36;1m    pat = f"mc-runtime-test-{TEST_MC}-*-{MCRT_JAR}-release.jar"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6175903Z [36;1m    existing = list(mods_dir.glob(pat))[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6176206Z [36;1m    if existing:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6176455Z [36;1m        return existing[0].name[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6176729Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6177084Z [36;1m    url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6177562Z [36;1m    headers = {"User-Agent": "ModCompiler/1.0"}[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6177885Z [36;1m    if GITHUB_TOKEN:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6178581Z [36;1m        headers["Authorization"] = f"***"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6178978Z [36;1m    req = urllib.request.Request(url, headers=headers)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6179323Z [36;1m    try:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6179618Z [36;1m        with urllib.request.urlopen(req, timeout=30) as r:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6180024Z [36;1m            release = json.loads(r.read().decode())[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6180354Z [36;1m    except Exception as e:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6180742Z [36;1m        print(f"  WARNING: Could not fetch mc-runtime-test release: {e}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6181133Z [36;1m        return None[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6181365Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6181602Z [36;1m    for asset in release.get("assets", []):[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6181926Z [36;1m        name = asset.get("name", "")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6182429Z [36;1m        if re.match(f"mc-runtime-test-{re.escape(TEST_MC)}-.*-{re.escape(MCRT_JAR)}-release\\.jar$", name):[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6182981Z [36;1m            dl_url = asset.get("browser_download_url", "")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6183322Z [36;1m            if not dl_url:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6183582Z [36;1m                continue[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6183836Z [36;1m            try:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6184329Z [36;1m                urllib.request.urlretrieve(dl_url, str(mods_dir / name))[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6184784Z [36;1m                print(f"  Downloaded mc-runtime-test: {name}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6185132Z [36;1m                return name[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6185413Z [36;1m            except Exception as e:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6185776Z [36;1m                print(f"  WARNING: Download failed for {name}: {e}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6186130Z [36;1m                return None[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6186503Z [36;1m    print(f"  WARNING: No mc-runtime-test jar for {TEST_MC}/{MCRT_JAR}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6186891Z [36;1m    return None[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6187113Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6187302Z [36;1mtry:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6187516Z [36;1m    cleanup()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6187760Z [36;1m    java_home = find_java_home()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6188239Z [36;1m    os.environ["JAVA_HOME"] = java_home[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6188560Z [36;1m    print(f"  JAVA_HOME={java_home}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6188844Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6189070Z [36;1m    # ---- Setup run directory ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6189367Z [36;1m    run_dir = Path("run")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6189638Z [36;1m    if run_dir.exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6189911Z [36;1m        shutil.rmtree(run_dir)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6190190Z [36;1m    run_dir.mkdir()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6190451Z [36;1m    (run_dir / "mods").mkdir()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6190715Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6190923Z [36;1m    hmc_dir = Path("HeadlessMC")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6191210Z [36;1m    hmc_dir.mkdir(exist_ok=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6191663Z [36;1m    (hmc_dir / "config.properties").write_text([0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6192031Z [36;1m        f"hmc.java.versions={java_home}/bin/java\n"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6192380Z [36;1m        f"hmc.gamedir={Path.cwd()}/run\n"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6192683Z [36;1m        f"hmc.offline=true\n"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6193006Z [36;1m        f"hmc.rethrow.launch.exceptions=true\n"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6193363Z [36;1m        f"hmc.exit.on.failed.command=true\n"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6193684Z [36;1m        f"hmc.assets.dummy=true\n"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6193959Z [36;1m    )[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6194504Z [36;1m    (run_dir / "options.txt").write_text("onboardAccessibility:false\npauseOnLostFocus:false\n")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6194980Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6195183Z [36;1m    # ---- Download mod jar ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6195499Z [36;1m    print(f"  Downloading {FILE_NAME}...")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6195815Z [36;1m    for attempt in range(3):[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6196090Z [36;1m        r = subprocess.run([0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6196431Z [36;1m            ["curl", "-fsSL", "--retry", "3", "--retry-delay", "5",[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6196831Z [36;1m             FILE_URL, "-o", f"run/mods/{FILE_NAME}"],[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6197211Z [36;1m            capture_output=True, text=True, timeout=120[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6197532Z [36;1m        )[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6197764Z [36;1m        if r.returncode == 0:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6198033Z [36;1m            break[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6198276Z [36;1m        time.sleep(5)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6198517Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6198765Z [36;1m    if not (run_dir / "mods" / FILE_NAME).exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6199207Z [36;1m        result["crash_summary"] = f"Failed to download mod jar: {FILE_NAME}"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6199673Z [36;1m        print(f"  FAILED: Could not download {FILE_NAME}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6200027Z [36;1m        print("::endgroup::")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6200307Z [36;1m        # Write result and exit[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6200608Z [36;1m        entry_dir = OUT_DIR / SAFE_KEY[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6200957Z [36;1m        entry_dir.mkdir(parents=True, exist_ok=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6201463Z [36;1m        (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6201920Z [36;1m        sys.exit(0)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6202169Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6202472Z [36;1m    # ---- Download Minecraft + install modloader (if not cached) ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6203045Z [36;1m    mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6203558Z [36;1m    if not mc_json.exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6203892Z [36;1m        print(f"  Downloading Minecraft {TEST_MC}...")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6204345Z [36;1m        subprocess.run([0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6204695Z [36;1m            ["java", "-jar", HMC_JAR, "--command", "download", TEST_MC],[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6205107Z [36;1m            capture_output=True, text=True, timeout=300[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6205427Z [36;1m        )[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6205773Z [36;1m        print(f"  Installing {LOADER} for {TEST_MC} (Java {JAVA_VERSION})...")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6206314Z [36;1m        subprocess.run([0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6206709Z [36;1m            ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", JAVA_VERSION],[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6207177Z [36;1m            capture_output=True, text=True, timeout=600[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6207496Z [36;1m        )[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6207705Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6207939Z [36;1m    # ---- Download mc-runtime-test jar ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6208264Z [36;1m    mcrt_name = download_mcrt_jar()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6208558Z [36;1m    if not mcrt_name:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6208946Z [36;1m        result["crash_summary"] = f"No mc-runtime-test jar for {TEST_MC}/{MCRT_JAR}"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6209548Z [36;1m        print(f"  FAILED: No mc-runtime-test jar available")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6209900Z [36;1m        print("::endgroup::")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6210191Z [36;1m        entry_dir = OUT_DIR / SAFE_KEY[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6210542Z [36;1m        entry_dir.mkdir(parents=True, exist_ok=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6211037Z [36;1m        (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6211486Z [36;1m        sys.exit(0)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6211719Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6211948Z [36;1m    # ---- Launch game in BACKGROUND ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6212329Z [36;1m    print(f"  Launching Minecraft {TEST_MC} with {LOADER}...")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6212721Z [36;1m    launch_proc = subprocess.Popen([0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6213062Z [36;1m        ["xvfb-run", "java", "-Dhmc.check.xvfb=true",[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6213483Z [36;1m         "-jar", HMC_JAR, "--command", "launch", LOADER_REGEX, "-regex",[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6213893Z [36;1m         "--jvm", "-Djava.awt.headless=true"],[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6214436Z [36;1m        stdout=subprocess.PIPE, stderr=subprocess.PIPE[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6214769Z [36;1m    )[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6214971Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6215214Z [36;1m    # ---- Wait for game to load, then kill ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6215533Z [36;1m    game_started = False[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6215800Z [36;1m    crash_detected = False[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6216067Z [36;1m    waited = 0[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6216314Z [36;1m    poll_interval = 5[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6216558Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6239231Z [36;1m    while waited < LAUNCH_TIMEOUT:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6239789Z [36;1m        time.sleep(poll_interval)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6240304Z [36;1m        waited += poll_interval[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6240757Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6241174Z [36;1m        # Check if process exited on its own[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6241854Z [36;1m        if launch_proc.poll() is not None:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6242712Z [36;1m            print(f"  Game exited on its own after {waited}s (exit code {launch_proc.returncode})")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6243596Z [36;1m            game_started = True[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6244382Z [36;1m            break[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6244821Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6245203Z [36;1m        # Check for crash reports[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6245825Z [36;1m        crash_reports_dir = Path("run/crash-reports")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6246798Z [36;1m        crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else [][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6247780Z [36;1m        hs_err = list(Path("run").glob("hs_err_pid*.log"))[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6248351Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6248726Z [36;1m        if crash_files or hs_err:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6249307Z [36;1m            print(f"  CRASH DETECTED after {waited}s!")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6249926Z [36;1m            crash_detected = True[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6250521Z [36;1m            # Give it a moment to fully crash, then kill[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6251116Z [36;1m            time.sleep(5)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6251927Z [36;1m            if launch_proc.poll() is None:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6252557Z [36;1m                launch_proc.kill()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6253135Z [36;1m                launch_proc.wait(timeout=10)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6253681Z [36;1m            break[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6254385Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6254866Z [36;1m        # Check if game log shows title screen reached[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6255530Z [36;1m        log_path = Path("run/logs/latest.log")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6256099Z [36;1m        if log_path.exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6256792Z [36;1m            log_text = log_path.read_text(encoding="utf-8", errors="replace")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6257653Z [36;1m            if "Setting user:" in log_text or "Loaded" in log_text:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6258641Z [36;1m                if not game_started:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6259163Z [36;1m                    print(f"  Game reached title screen after {waited}s")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6259579Z [36;1m                    game_started = True[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6259955Z [36;1m                    # Give mc-runtime-test a few more seconds to work[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6260354Z [36;1m                    if waited < LAUNCH_TIMEOUT - 10:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6260706Z [36;1m                        time.sleep(10)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6261032Z [36;1m                        waited += 10[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6261333Z [36;1m                    break[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6261585Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6261812Z [36;1m    # ---- Kill if still running ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6262131Z [36;1m    if launch_proc.poll() is None:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6262508Z [36;1m        print(f"  Killing game after {waited}s (timeout)")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6262884Z [36;1m        launch_proc.kill()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6263145Z [36;1m        try:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6263399Z [36;1m            launch_proc.wait(timeout=10)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6263738Z [36;1m        except subprocess.TimeoutExpired:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6264285Z [36;1m            launch_proc.kill()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6264606Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6264887Z [36;1m    # ---- Capture stdout/stderr from the launch process ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6265261Z [36;1m    launch_stdout = ""[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6265516Z [36;1m    launch_stderr = ""[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6265760Z [36;1m    try:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6265985Z [36;1m        if launch_proc.stdout:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6266446Z [36;1m            launch_stdout = launch_proc.stdout.read().decode("utf-8", errors="replace")[:10000][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6266920Z [36;1m    except Exception:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6267181Z [36;1m        pass[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6267404Z [36;1m    try:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6267697Z [36;1m        if launch_proc.stderr:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6268385Z [36;1m            launch_stderr = launch_proc.stderr.read().decode("utf-8", errors="replace")[:10000][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6269117Z [36;1m    except Exception:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6269386Z [36;1m        pass[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6269592Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6269803Z [36;1m    # ---- Analyse results ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6270137Z [36;1m    crash_reports_dir = Path("run/crash-reports")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6270689Z [36;1m    crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else [][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6271255Z [36;1m    hs_err = list(Path("run").glob("hs_err_pid*.log"))[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6271582Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6271779Z [36;1m    # Collect game log[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6272030Z [36;1m    log_text = ""[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6272308Z [36;1m    log_path = Path("run/logs/latest.log")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6272633Z [36;1m    if log_path.exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6273024Z [36;1m        log_text = log_path.read_text(encoding="utf-8", errors="replace")[:5000][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6273468Z [36;1m    elif Path("run/latest.log").exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6274355Z [36;1m        log_text = Path("run/latest.log").read_text(encoding="utf-8", errors="replace")[:5000][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6274822Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6275166Z [36;1m    exit_code = launch_proc.returncode if launch_proc.poll() is not None else -9[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6275583Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6275793Z [36;1m    if crash_files or hs_err:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6276099Z [36;1m        result["status"] = "launcher_failed"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6276405Z [36;1m        if crash_files:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6276861Z [36;1m            result["crash_summary"] = crash_files[0].read_text(encoding="utf-8", errors="replace")[:500][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6277487Z [36;1m        elif hs_err:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6277924Z [36;1m            result["crash_summary"] = hs_err[0].read_text(encoding="utf-8", errors="replace")[:500][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6278394Z [36;1m        result["logs"] = log_text[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6278715Z [36;1m        print(f"  FAILED: Game crashed")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6279025Z [36;1m    elif crash_detected:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6279319Z [36;1m        result["status"] = "launcher_failed"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6279711Z [36;1m        result["crash_summary"] = "Crash detected during game load"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6280090Z [36;1m        result["logs"] = log_text[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6280400Z [36;1m        print(f"  FAILED: Crash detected")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6280767Z [36;1m    elif game_started and exit_code not in (0, -9):[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6281129Z [36;1m        # Game started but exited with error[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6281455Z [36;1m        result["status"] = "launcher_failed"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6281818Z [36;1m        crash_info = f"Game exited with code {exit_code}"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6282189Z [36;1m        if not log_text and launch_stderr:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6282551Z [36;1m            crash_info += f"\nStderr: {launch_stderr[:400]}"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6282922Z [36;1m        elif not log_text and launch_stdout:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6283280Z [36;1m            crash_info += f"\nStdout: {launch_stdout[:400]}"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6283639Z [36;1m        result["crash_summary"] = crash_info[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6283957Z [36;1m        result["logs"] = log_text[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6284497Z [36;1m        result["launch_stdout"] = launch_stdout[:2000][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6284877Z [36;1m        result["launch_stderr"] = launch_stderr[:2000][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6285269Z [36;1m        print(f"  FAILED: Game exited with code {exit_code}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6285617Z [36;1m    else:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6286016Z [36;1m        # Game loaded successfully (reached title screen) or mc-runtime-test quit normally[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6286499Z [36;1m        result["status"] = "passed"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6286800Z [36;1m        result["logs"] = log_text[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6287089Z [36;1m        print(f"  PASSED")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6287348Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6287551Z [36;1mexcept Exception as e:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6287845Z [36;1m    result["crash_summary"] = str(e)[:500][0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6288160Z [36;1m    print(f"  ERROR: {e}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6288430Z [36;1m    cleanup()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6288652Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6288845Z [36;1mcleanup()[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6289056Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6289260Z [36;1m# ---- Write result ----[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6289542Z [36;1mentry_dir = OUT_DIR / SAFE_KEY[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6289867Z [36;1mentry_dir.mkdir(parents=True, exist_ok=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6290351Z [36;1m(entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6290795Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6291006Z [36;1m# Also save crash logs if any[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6291328Z [36;1mcrash_reports_dir = Path("run/crash-reports")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6291659Z [36;1mif crash_reports_dir.exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6292104Z [36;1m    crash_target = entry_dir / "crash-logs"[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6292556Z [36;1m    shutil.copytree(str(crash_reports_dir), str(crash_target), dirs_exist_ok=True)[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6293041Z [36;1mfor f in Path("run").glob("hs_err_pid*.log"):[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6293403Z [36;1m    shutil.copy2(str(f), str(entry_dir / f.name))[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6293757Z [36;1mlog_path = Path("run/logs/latest.log")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6294275Z [36;1mif log_path.exists():[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6294647Z [36;1m    shutil.copy2(str(log_path), str(entry_dir / "latest.log"))[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6295060Z [36;1m# Also save stdout/stderr from launch process[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6295502Z [36;1mif launch_stdout:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6295906Z [36;1m    (entry_dir / "launcher-stdout.log").write_text(launch_stdout, encoding="utf-8")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6296357Z [36;1mif launch_stderr:[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6296744Z [36;1m    (entry_dir / "launcher-stderr.log").write_text(launch_stderr, encoding="utf-8")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6297174Z [36;1m[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6297406Z [36;1mprint(f"  Result: {result['status']}")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6297713Z [36;1mprint("::endgroup::")[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6297969Z [36;1mPYEOF[0m
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6332268Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6332640Z env:
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6333418Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6333895Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6334759Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6337900Z   GITHUB_TOKEN: ***
+forge MC 1.21.11	Run launcher test	2026-06-21T03:19:42.6338145Z ##[endgroup]
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3609840Z ##[group]Test: forge MC 1.21.11 (on 1.21.11, Java 21)
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3610856Z   JAVA_HOME=/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3611793Z   Downloading pingfix-1.0.0.jar...
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3612702Z   Downloaded mc-runtime-test: mc-runtime-test-1.21.11-4.4.0-lexforge-release.jar
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3613680Z   Launching Minecraft 1.21.11 with forge...
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3614629Z   Game reached title screen after 30s
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3615156Z   Killing game after 40s (timeout)
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3615469Z   PASSED
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3615731Z   Result: passed
+forge MC 1.21.11	Run launcher test	2026-06-21T03:20:55.3616603Z ##[endgroup]
+forge MC 1.21.11	Upload launcher result	﻿2026-06-21T03:20:55.3767009Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3768330Z ##[group]Run actions/upload-artifact@v4
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3768605Z with:
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3768821Z   name: launcher-result-forge-1.21.11
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3769124Z   path: launcher-result/
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3769369Z   if-no-files-found: warn
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3769615Z   compression-level: 6
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3769843Z   overwrite: false
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3770073Z   include-hidden-files: false
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3770315Z env:
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3770583Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3771037Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3771569Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.3772006Z ##[endgroup]
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.5383128Z (node:2523) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.5383891Z (Use `node --trace-deprecation ...` to show where the warning was created)
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.5441964Z With the provided path, there will be 3 files uploaded
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.5447742Z Artifact name is valid!
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.5448647Z Root directory input is valid!
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.7672947Z Beginning upload of artifact content to blob storage
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.7956011Z (node:2523) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.9379297Z Uploaded bytes 28473
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.9784611Z Finished uploading artifact content to blob storage!
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.9786089Z SHA256 digest of uploaded artifact zip is 708af6ca8e31f9a8dd8be58db5cc9e2db48d69665077c3119f6e4c313dad43e2
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:55.9787471Z Finalizing artifact upload
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:56.1440546Z Artifact launcher-result-forge-1.21.11.zip successfully finalized. Artifact ID 7771362808
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:56.1441877Z Artifact launcher-result-forge-1.21.11 has been successfully uploaded! Final size is 28473 bytes. Artifact ID is 7771362808
+forge MC 1.21.11	Upload launcher result	2026-06-21T03:20:56.1447759Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/27892011262/artifacts/7771362808
+forge MC 1.21.11	Post Cache ~/.minecraft	﻿2026-06-21T03:20:56.1616639Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+forge MC 1.21.11	Post Cache ~/.minecraft	2026-06-21T03:20:56.1617923Z Post job cleanup.
+forge MC 1.21.11	Post Cache ~/.minecraft	2026-06-21T03:20:56.2721193Z (node:2535) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+forge MC 1.21.11	Post Cache ~/.minecraft	2026-06-21T03:20:56.2722270Z (Use `node --trace-deprecation ...` to show where the warning was created)
+forge MC 1.21.11	Post Cache ~/.minecraft	2026-06-21T03:20:56.2881181Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --files-from manifest.txt --use-compress-program zstdmt
+forge MC 1.21.11	Post Cache ~/.minecraft	2026-06-21T03:20:57.0075998Z (node:2535) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+forge MC 1.21.11	Post Cache ~/.minecraft	2026-06-21T03:20:57.9959519Z Sent 113251085 of 180359949 (62.8%), 108.1 MBs/sec
+forge MC 1.21.11	Post Cache ~/.minecraft	2026-06-21T03:20:58.3039767Z Sent 180359949 of 180359949 (100.0%), 131.6 MBs/sec
+forge MC 1.21.11	Post Cache ~/.minecraft	2026-06-21T03:20:58.4071091Z Cache saved with key: mc-runtime-test-diag-1.21.11-forge-27892011262
+forge MC 1.21.11	Post Run actions/setup-java@v4	﻿2026-06-21T03:20:58.4209469Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+forge MC 1.21.11	Post Run actions/setup-java@v4	2026-06-21T03:20:58.4210889Z Post job cleanup.
+forge MC 1.21.11	Post Run actions/setup-java@v4	2026-06-21T03:20:58.5512792Z (node:2556) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+forge MC 1.21.11	Post Run actions/setup-java@v4	2026-06-21T03:20:58.5514404Z (Use `node --trace-deprecation ...` to show where the warning was created)
+forge MC 1.21.11	Complete job	﻿2026-06-21T03:20:58.5687200Z Cleaning up orphan processes
+forge MC 1.21.11	Complete job	2026-06-21T03:20:58.5973088Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache@v4, actions/setup-java@v4, actions/upload-artifact@v4, robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

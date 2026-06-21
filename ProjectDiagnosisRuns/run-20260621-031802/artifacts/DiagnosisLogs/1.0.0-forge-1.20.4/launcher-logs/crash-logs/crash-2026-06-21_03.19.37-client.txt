@@ -1,0 +1,164 @@
+---- Minecraft Crash Report ----
+// I blame Dinnerbone.
+
+Time: 2026-06-21 03:19:37
+Description: Unexpected error
+
+java.lang.NoSuchMethodError: 'net.minecraft.client.Minecraft net.minecraft.client.Minecraft.getInstance()'
+	at com.itamio.pingfix.forge.PingFixForgeClient.onClientTick(PingFixForgeClient.java:24) ~[pingfix-1.0.0.jar!/:1.0.0] {re:classloading}
+	at net.minecraftforge.eventbus.EventBus.doCastFilter(EventBus.java:267) ~[eventbus-6.2.33.jar:?] {}
+	at net.minecraftforge.eventbus.EventBus.lambda$addListener$4(EventBus.java:258) ~[eventbus-6.2.33.jar:?] {}
+	at net.minecraftforge.eventbus.EventBus.post(EventBus.java:312) ~[eventbus-6.2.33.jar:?] {}
+	at net.minecraftforge.eventbus.EventBus.post(EventBus.java:298) ~[eventbus-6.2.33.jar:?] {}
+	at net.minecraftforge.event.ForgeEventFactory.post(ForgeEventFactory.java:161) ~[forge-1.20.4-49.2.7-universal.jar:?] {re:classloading}
+	at net.minecraftforge.event.ForgeEventFactory.onPostClientTick(ForgeEventFactory.java:742) ~[forge-1.20.4-49.2.7-universal.jar:?] {re:classloading}
+	at net.minecraft.client.Minecraft.m_91398_(Minecraft.java:1983) ~[forge-1.20.4-49.2.7-client.jar:?] {re:mixin,pl:accesstransformer:B,re:classloading,pl:accesstransformer:B,pl:mixin:APP:mc_runtime_test.mixins.json:MixinMinecraft,pl:mixin:A}
+	at net.minecraft.client.Minecraft.m_91383_(Minecraft.java:1216) ~[forge-1.20.4-49.2.7-client.jar:?] {re:mixin,pl:accesstransformer:B,re:classloading,pl:accesstransformer:B,pl:mixin:APP:mc_runtime_test.mixins.json:MixinMinecraft,pl:mixin:A}
+	at net.minecraft.client.Minecraft.m_91374_(Minecraft.java:801) ~[forge-1.20.4-49.2.7-client.jar:?] {re:mixin,pl:accesstransformer:B,re:classloading,pl:accesstransformer:B,pl:mixin:APP:mc_runtime_test.mixins.json:MixinMinecraft,pl:mixin:A}
+	at net.minecraft.client.main.Main.main(Main.java:234) ~[forge-1.20.4-49.2.7-client.jar:?] {re:classloading}
+	at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?] {}
+	at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77) ~[?:?] {}
+	at jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?] {}
+	at java.lang.reflect.Method.invoke(Method.java:569) ~[?:?] {}
+	at net.minecraftforge.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:91) ~[fmlloader-1.20.4-49.2.7.jar:?] {}
+	at net.minecraftforge.fml.loading.targets.CommonLaunchHandler.lambda$makeService$0(CommonLaunchHandler.java:75) ~[fmlloader-1.20.4-49.2.7.jar:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:54) ~[modlauncher-10.1.2.jar:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:74) ~[modlauncher-10.1.2.jar:?] {}
+	at cpw.mods.modlauncher.Launcher.run(Launcher.java:114) ~[modlauncher-10.1.2.jar:?] {}
+	at cpw.mods.modlauncher.Launcher.main(Launcher.java:73) ~[modlauncher-10.1.2.jar:?] {}
+	at cpw.mods.modlauncher.BootstrapEntry.main(BootstrapEntry.java:17) ~[modlauncher-10.1.2.jar:?] {}
+	at net.minecraftforge.bootstrap.Bootstrap.moduleMain(Bootstrap.java:188) ~[bootstrap-2.1.8.jar!/:?] {}
+	at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?] {}
+	at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77) ~[?:?] {}
+	at jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?] {}
+	at java.lang.reflect.Method.invoke(Method.java:569) ~[?:?] {}
+	at net.minecraftforge.bootstrap.Bootstrap.bootstrapMain(Bootstrap.java:133) ~[bootstrap-2.1.8.jar!/:?] {}
+	at net.minecraftforge.bootstrap.Bootstrap.start(Bootstrap.java:53) ~[bootstrap-2.1.8.jar!/:?] {}
+	at net.minecraftforge.bootstrap.ForgeBootstrap.main(ForgeBootstrap.java:19) ~[bootstrap-2.1.8.jar!/:?] {}
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Render thread
+Suspected Mod: 
+	PingFix (pingfix), Version: 1.0.0
+		at TRANSFORMER/pingfix@1.0.0/com.itamio.pingfix.forge.PingFixForgeClient.onClientTick(PingFixForgeClient.java:24)
+Stacktrace:
+	at com.itamio.pingfix.forge.PingFixForgeClient.onClientTick(PingFixForgeClient.java:24) ~[pingfix-1.0.0.jar!/:1.0.0] {re:classloading}
+	at net.minecraftforge.eventbus.EventBus.doCastFilter(EventBus.java:267) ~[eventbus-6.2.33.jar!/:?] {}
+	at net.minecraftforge.eventbus.EventBus.lambda$addListener$4(EventBus.java:258) ~[eventbus-6.2.33.jar!/:?] {}
+	at net.minecraftforge.eventbus.EventBus.post(EventBus.java:312) ~[eventbus-6.2.33.jar!/:?] {}
+	at net.minecraftforge.eventbus.EventBus.post(EventBus.java:298) ~[eventbus-6.2.33.jar!/:?] {}
+	at net.minecraftforge.event.ForgeEventFactory.post(ForgeEventFactory.java:161) ~[forge-1.20.4-49.2.7-universal.jar!/:?] {re:classloading}
+	at net.minecraftforge.event.ForgeEventFactory.onPostClientTick(ForgeEventFactory.java:742) ~[forge-1.20.4-49.2.7-universal.jar!/:?] {re:classloading}
+-- Uptime --
+Details:
+	JVM uptime: 27.233s
+	Wall uptime: 14.095s
+	High-res time: 24.508s
+	Client ticks: 90 ticks / 4.500s
+Stacktrace:
+	at net.minecraft.client.Minecraft.m_91354_(Minecraft.java:2465) ~[forge-1.20.4-49.2.7-client.jar:?] {re:mixin,pl:accesstransformer:B,re:classloading,pl:accesstransformer:B,pl:mixin:APP:mc_runtime_test.mixins.json:MixinMinecraft,pl:mixin:A}
+	at net.minecraft.client.Minecraft.m_306708_(Minecraft.java:926) ~[forge-1.20.4-49.2.7-client.jar:?] {re:mixin,pl:accesstransformer:B,re:classloading,pl:accesstransformer:B,pl:mixin:APP:mc_runtime_test.mixins.json:MixinMinecraft,pl:mixin:A}
+	at net.minecraft.client.Minecraft.m_91374_(Minecraft.java:822) ~[forge-1.20.4-49.2.7-client.jar:?] {re:mixin,pl:accesstransformer:B,re:classloading,pl:accesstransformer:B,pl:mixin:APP:mc_runtime_test.mixins.json:MixinMinecraft,pl:mixin:A}
+	at net.minecraft.client.main.Main.main(Main.java:234) ~[forge-1.20.4-49.2.7-client.jar:?] {re:classloading}
+	at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?] {}
+	at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77) ~[?:?] {}
+	at jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?] {}
+	at java.lang.reflect.Method.invoke(Method.java:569) ~[?:?] {}
+	at net.minecraftforge.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:91) ~[fmlloader-1.20.4-49.2.7.jar:?] {}
+	at net.minecraftforge.fml.loading.targets.CommonLaunchHandler.lambda$makeService$0(CommonLaunchHandler.java:75) ~[fmlloader-1.20.4-49.2.7.jar:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:54) ~[modlauncher-10.1.2.jar:?] {}
+	at cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:74) ~[modlauncher-10.1.2.jar:?] {}
+	at cpw.mods.modlauncher.Launcher.run(Launcher.java:114) ~[modlauncher-10.1.2.jar:?] {}
+	at cpw.mods.modlauncher.Launcher.main(Launcher.java:73) ~[modlauncher-10.1.2.jar:?] {}
+	at cpw.mods.modlauncher.BootstrapEntry.main(BootstrapEntry.java:17) ~[modlauncher-10.1.2.jar:?] {}
+	at net.minecraftforge.bootstrap.Bootstrap.moduleMain(Bootstrap.java:188) ~[bootstrap-2.1.8.jar!/:?] {}
+	at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?] {}
+	at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77) ~[?:?] {}
+	at jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?] {}
+	at java.lang.reflect.Method.invoke(Method.java:569) ~[?:?] {}
+	at net.minecraftforge.bootstrap.Bootstrap.bootstrapMain(Bootstrap.java:133) ~[bootstrap-2.1.8.jar!/:?] {}
+	at net.minecraftforge.bootstrap.Bootstrap.start(Bootstrap.java:53) ~[bootstrap-2.1.8.jar!/:?] {}
+	at net.minecraftforge.bootstrap.ForgeBootstrap.main(ForgeBootstrap.java:19) ~[bootstrap-2.1.8.jar!/:?] {}
+
+
+-- Last reload --
+Details:
+	Reload number: 1
+	Reload reason: initial
+	Finished: Yes
+	Packs: vanilla, mod_resources
+
+-- System Details --
+Details:
+	Minecraft Version: 1.20.4
+	Minecraft Version ID: 1.20.4
+	Operating System: Linux (amd64) version 6.17.0-1018-azure
+	Java Version: 17.0.19, Eclipse Adoptium
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Eclipse Adoptium
+	Memory: 916763736 bytes (874 MiB) / 1660944384 bytes (1584 MiB) up to 4192206848 bytes (3998 MiB)
+	CPUs: 4
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD EPYC 9V74 80-Core Processor
+	Identifier: AuthenticAMD Family 25 Model 17 Stepping 1
+	Microarchitecture: Zen 3
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 2
+	Number of logical CPUs: 4
+	Graphics card #0 name: hyperv_drmdrmfb
+	Graphics card #0 vendor: unknown
+	Graphics card #0 VRAM (MB): 0.00
+	Graphics card #0 deviceId: unknown
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MB): 11066.85
+	Virtual memory used (MB): 2533.80
+	Swap memory total (MB): 3072.00
+	Swap memory used (MB): 0.00
+	JVM Flags: 1 total; -Xss1M
+	Launched Version: 1.20.4-forge-49.2.7
+	Launcher name: HeadlessMc
+	Backend library: LWJGL version 3.3.2+13
+	Backend API: llvmpipe (LLVM 20.1.2, 256 bits) GL version 4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.2, Mesa
+	Window size: 854x480
+	GL Caps: Using framebuffer using OpenGL 3.2
+	GL debug messages: 
+	Using VBOs: Yes
+	Is Modded: Definitely; Client brand changed to 'forge'
+	Universe: 400921fb54442d18
+	Type: Client (map_client.txt)
+	Graphics mode: fancy
+	Render Distance: 12/12 chunks
+	Resource Packs: 
+	Current Language: en_us
+	Locale: en
+	CPU: 4x AMD EPYC 9V74 80-Core Processor
+	ModLauncher: 10.1.2
+	ModLauncher launch target: forge_client
+	ModLauncher naming: srg
+	ModLauncher services: 
+		/ slf4jfixer PLUGINSERVICE 
+		/ runtimedistcleaner PLUGINSERVICE 
+		/ runtime_enum_extender PLUGINSERVICE 
+		/ object_holder_definalize PLUGINSERVICE 
+		/ capability_token_subclass PLUGINSERVICE 
+		/ accesstransformer PLUGINSERVICE 
+		/ eventbus PLUGINSERVICE 
+		/ mixin PLUGINSERVICE 
+		/ fml TRANSFORMATIONSERVICE 
+		/ mixin TRANSFORMATIONSERVICE 
+	FML Language Providers: 
+		lowcodefml@49
+		minecraft@1.0
+		javafml@49.2.7
+	Mod List: 
+		forge-1.20.4-49.2.7-client.jar                    |Minecraft                     |minecraft                     |1.20.4              |DONE      |Manifest: NOSIGNATURE
+		forge-1.20.4-49.2.7-universal.jar                 |Forge                         |forge                         |49.2.7              |DONE      |Manifest: 84:ce:76:e8:45:35:e4:0e:63:86:df:47:59:80:0f:67:6c:c1:5f:6e:5f:4d:b3:54:47:1a:9f:7f:ed:5e:f2:90
+		pingfix-1.0.0.jar                                 |PingFix                       |pingfix                       |1.0.0               |DONE      |Manifest: NOSIGNATURE
+		mc-runtime-test-1.20.4-4.4.0-lexforge-release.jar |MC-Runtime-Test               |mc_runtime_test               |1.20.4-4.4.0        |DONE      |Manifest: NOSIGNATURE
+	Crash Report UUID: d281078f-e5bb-424a-9a51-fa4ac5552dd9
+	FML: 0.0
+	Forge: net.minecraftforge:49.2.7

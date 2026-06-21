@@ -785,7 +785,8 @@ jobs:
                   (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
                   sys.exit(0)
 
-              # ---- Download Minecraft + install modloader (if not cached) ----
+              # ---- Download Minecraft + install modloader ----
+              # Always run install to ensure the correct loader version is available
               mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"
               if not mc_json.exists():
                   print(f"  Downloading Minecraft {TEST_MC}...")
@@ -793,15 +794,45 @@ jobs:
                       ["java", "-jar", HMC_JAR, "--command", "download", TEST_MC],
                       capture_output=True, text=True, timeout=300
                   )
-                  print(f"  Installing {LOADER} for {TEST_MC} (Java {JAVA_VERSION})...")
-                  subprocess.run(
-                      ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", JAVA_VERSION],
-                      capture_output=True, text=True, timeout=600
-                  )
+
+              print(f"  Installing {LOADER} for {TEST_MC} (Java {JAVA_VERSION})...")
+              install_result = subprocess.run(
+                  ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", JAVA_VERSION],
+                  capture_output=True, text=True, timeout=600
+              )
+              if install_result.returncode != 0:
+                  install_stderr = (install_result.stderr or "")[:300]
+                  install_stdout = (install_result.stdout or "")[:300]
+                  print(f"  WARNING: {LOADER} install for {TEST_MC} returned code {install_result.returncode}")
+                  if install_stderr:
+                      print(f"  Install stderr: {install_stderr}")
+                  if install_stdout:
+                      print(f"  Install stdout: {install_stdout}")
+
+              # Verify the installation exists by listing available versions
+              list_result = subprocess.run(
+                  ["java", "-jar", HMC_JAR, "--command", "list", LOADER_REGEX],
+                  capture_output=True, text=True, timeout=30
+              )
+              list_output = (list_result.stdout or "").strip()
+              if not list_output or "Couldn't find" in list_output or "No" in list_output:
+                  result["status"] = "not_tested"
+                  reason = f"No {LOADER} installation found for {TEST_MC}"
+                  if install_result.returncode != 0:
+                      reason += f" (install failed with code {install_result.returncode})"
+                  result["crash_summary"] = reason
+                  result["launch_stderr"] = (install_result.stderr or "")[:2000]
+                  print(f"  SKIPPED: {reason}")
+                  print("::endgroup::")
+                  entry_dir = OUT_DIR / SAFE_KEY
+                  entry_dir.mkdir(parents=True, exist_ok=True)
+                  (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+                  sys.exit(0)
 
               # ---- Download mc-runtime-test jar ----
               mcrt_name = download_mcrt_jar()
               if not mcrt_name:
+                  result["status"] = "not_tested"
                   result["crash_summary"] = f"No mc-runtime-test jar for {TEST_MC}/{MCRT_JAR}"
                   print(f"  FAILED: No mc-runtime-test jar available")
                   print("::endgroup::")
@@ -1097,6 +1128,12 @@ jobs:
               # Determine final health with launcher integration
               if launcher_failed:
                   return "UNHEALTHY", "; ".join(issues + positives + [f"Launcher: {launcher_status}"])
+              elif launcher_status == "not_tested":
+                  # Couldn't test (system limitation) — don't penalize, report what we know
+                  if not issues:
+                      return "HEALTHY", "; ".join(positives + ["Launcher: not_tested"])
+                  else:
+                      return "WARNING", "; ".join(issues + positives + ["Launcher: not_tested"])
               elif launcher_passed:
                   # Mod works! Code metric issues are downgraded to WARNING
                   if not issues:
@@ -1236,6 +1273,8 @@ jobs:
                       ]
                       if launcher_status == "launcher_failed" and crash_summary:
                           health_lines.append(f"  Crash summary        : {crash_summary[:300]}")
+                      elif launcher_status == "not_tested" and crash_summary:
+                          health_lines.append(f"  Skip reason          : {crash_summary[:300]}")
                       health_lines.append("")
                       health_lines.append("=" * 60)
                       (entry_dir / "health-report.txt").write_text("\n".join(health_lines) + "\n", encoding="utf-8")

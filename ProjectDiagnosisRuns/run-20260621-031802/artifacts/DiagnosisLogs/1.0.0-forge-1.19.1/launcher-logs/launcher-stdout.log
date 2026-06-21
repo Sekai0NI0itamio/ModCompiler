@@ -1,0 +1,74 @@
+[03:19:14] [main/WARNING] [Main]: Not running from the headlessmc-launcher-wrapper. No plugin support and in-memory launching.
+Launching version 1.19.1-forge-42.0.9, 3fa7be6b-1c40-4cb8-b97f-3241b641bdf4
+[03:19:14] [main/INFO] [XvfbService]: Running with xvfb
+[03:19:14] [main/INFO] [LaunchOptions]: You are offline but running with xvfb, not using headless mode.
+[03:19:14] [main/INFO] [Log4jPatcher]: Patching lookup in org/apache/logging/log4j/core/lookup/Interpolator
+[03:19:15] [main/INFO] [Log4jPatcher]: Patching lookup in org/apache/logging/log4j/core/lookup/JndiLookup
+[03:19:17] [main/INFO] [ParallelIOService]: Download took 1931.501369ms, parallel: true
+[03:19:17] [main/INFO] [ProcessFactory]: Game will run in /home/runner/work/ModCompiler/ModCompiler/run
+2026-06-21 03:19:18,468 main WARN Error while converting string [HeadlessMc prevented Log4j lookup!] to type [class org.apache.logging.log4j.core.Filter$Result]. Using default value [null]. java.lang.IllegalArgumentException: No enum constant org.apache.logging.log4j.core.Filter.Result.HEADLESSMC PREVENTED LOG4J LOOKUP!
+	at java.base/java.lang.Enum.valueOf(Enum.java:273)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.util.EnglishEnums.valueOf(EnglishEnums.java:67)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.util.EnglishEnums.valueOf(EnglishEnums.java:50)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.convert.EnumConverter.convert(EnumConverter.java:36)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.convert.EnumConverter.convert(EnumConverter.java:27)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.convert.TypeConverters.convert(TypeConverters.java:420)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.visitors.AbstractPluginVisitor.convert(AbstractPluginVisitor.java:149)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.visitors.PluginAttributeVisitor.visit(PluginAttributeVisitor.java:44)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.util.PluginBuilder.generateParameters(PluginBuilder.java:262)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.util.PluginBuilder.build(PluginBuilder.java:135)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.createPluginObject(AbstractConfiguration.java:1120)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.createConfiguration(AbstractConfiguration.java:1045)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.createConfiguration(AbstractConfiguration.java:1037)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.doConfigure(AbstractConfiguration.java:651)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.initialize(AbstractConfiguration.java:247)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.start(AbstractConfiguration.java:293)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.LoggerContext.setConfiguration(LoggerContext.java:626)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.LoggerContext.reconfigure(LoggerContext.java:699)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.LoggerContext.reconfigure(LoggerContext.java:716)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.LoggerContext.start(LoggerContext.java:270)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.impl.Log4jContextFactory.getContext(Log4jContextFactory.java:155)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.impl.Log4jContextFactory.getContext(Log4jContextFactory.java:47)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.LogManager.getContext(LogManager.java:196)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.LogManager.getLogger(LogManager.java:599)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.LogManager.getLogger(LogManager.java:585)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.8/cpw.mods.modlauncher.Launcher.main(Launcher.java:76)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.8/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.8/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23)
+	at cpw.mods.bootstraplauncher@1.1.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:141)
+
+2026-06-21 03:19:18,477 main WARN Error while converting string [HeadlessMc prevented Log4j lookup!] to type [class org.apache.logging.log4j.core.Filter$Result]. Using default value [null]. java.lang.IllegalArgumentException: No enum constant org.apache.logging.log4j.core.Filter.Result.HEADLESSMC PREVENTED LOG4J LOOKUP!
+	at java.base/java.lang.Enum.valueOf(Enum.java:273)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.util.EnglishEnums.valueOf(EnglishEnums.java:67)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.util.EnglishEnums.valueOf(EnglishEnums.java:50)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.convert.EnumConverter.convert(EnumConverter.java:36)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.convert.EnumConverter.convert(EnumConverter.java:27)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.convert.TypeConverters.convert(TypeConverters.java:420)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.visitors.AbstractPluginVisitor.convert(AbstractPluginVisitor.java:149)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.visitors.PluginAttributeVisitor.visit(PluginAttributeVisitor.java:44)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.util.PluginBuilder.generateParameters(PluginBuilder.java:262)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.plugins.util.PluginBuilder.build(PluginBuilder.java:135)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.createPluginObject(AbstractConfiguration.java:1120)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.createConfiguration(AbstractConfiguration.java:1045)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.createConfiguration(AbstractConfiguration.java:1037)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.doConfigure(AbstractConfiguration.java:651)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.initialize(AbstractConfiguration.java:247)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.config.AbstractConfiguration.start(AbstractConfiguration.java:293)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.LoggerContext.setConfiguration(LoggerContext.java:626)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.LoggerContext.reconfigure(LoggerContext.java:699)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.LoggerContext.reconfigure(LoggerContext.java:716)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.LoggerContext.start(LoggerContext.java:270)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.impl.Log4jContextFactory.getContext(Log4jContextFactory.java:155)
+	at MC-BOOTSTRAP/org.apache.logging.log4j.core@2.17.0/org.apache.logging.log4j.core.impl.Log4jContextFactory.getContext(Log4jContextFactory.java:47)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.LogManager.getContext(LogManager.java:196)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.LogManager.getLogger(LogManager.java:599)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.LogManager.getLogger(LogManager.java:585)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.8/cpw.mods.modlauncher.Launcher.main(Launcher.java:76)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.8/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26)
+	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.8/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23)
+	at cpw.mods.bootstraplauncher@1.1.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:141)
+
+2026-06-21 03:19:18,478 main WARN Error while converting string [HeadlessMc prevented Log4j lookup!] to type [class org.apache.logging.log4j.core.Filter$Result]. Using default value [null]. java.lang.IllegalArgumentException: No enum constant org.apache.logging.log4j.core.Filter.Result.HEADLESSMC PREVENTED LOG4J LOOKUP!
+	at java.base/java.lang.Enum.valueOf(Enum.java:273)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/org.apache.logging.log4j.util.EnglishEnums.valueOf(EnglishEnums.java:67)
+	at MC-BOOTSTRAP/org.apache.logging.log4j@2.17.0/

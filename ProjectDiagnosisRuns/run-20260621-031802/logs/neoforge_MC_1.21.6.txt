@@ -1,0 +1,560 @@
+neoforge MC 1.21.6	Set up job	﻿2026-06-21T03:20:16.1052803Z Current runner version: '2.335.1'
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1080882Z ##[group]Runner Image Provisioner
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1081776Z Hosted Compute Agent
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1082480Z Version: 20260611.554
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1083362Z Commit: 5e0782fdc9014723d3be820dd114dd31555c2bd1
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1084166Z Build Date: 2026-06-11T21:40:46Z
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1084927Z Worker ID: {3ab2e53a-0e4e-4052-ba70-40b7bd266e18}
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1086086Z Azure Region: eastus2
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1086751Z ##[endgroup]
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1088676Z ##[group]Operating System
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1089377Z Ubuntu
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1090515Z 24.04.4
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1091752Z LTS
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1092596Z ##[endgroup]
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1093514Z ##[group]Runner Image
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1094434Z Image: ubuntu-24.04
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1095272Z Version: 20260615.205.1
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1096862Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260615.205/images/ubuntu/Ubuntu2404-Readme.md
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1098754Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260615.205
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1099773Z ##[endgroup]
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1100960Z ##[group]GITHUB_TOKEN Permissions
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1103857Z Contents: read
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1104506Z Metadata: read
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1105217Z ##[endgroup]
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1107772Z Secret source: Actions
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1109039Z Prepare workflow directory
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1620066Z Prepare all required actions
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.1658162Z Getting action download info
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.4094080Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.7300030Z Download action repository 'robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2' (SHA:a96f54c1b5f5e09e47d9504526e96febd949d4c2)
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.8845759Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:16.9801101Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+neoforge MC 1.21.6	Set up job	2026-06-21T03:20:17.1995147Z Complete job name: neoforge MC 1.21.6
+neoforge MC 1.21.6	Run actions/setup-java@v4	﻿2026-06-21T03:20:17.2755707Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2766031Z ##[group]Run actions/setup-java@v4
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2767198Z with:
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2767826Z   distribution: temurin
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2768513Z   java-version: 21
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2769244Z   java-package: jdk
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2769946Z   check-latest: false
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2770636Z   server-id: github
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2771285Z   server-username: GITHUB_ACTOR
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2772045Z   server-password: GITHUB_TOKEN
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2772855Z   overwrite-settings: true
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2773584Z   job-status: success
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2779266Z   token: ***
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2780319Z env:
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2781156Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.2782261Z ##[endgroup]
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4529377Z ##[group]Installed distributions
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4559741Z Resolved Java 21.0.11+10 from tool-cache
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4560780Z Setting Java 21.0.11+10 as the default
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4571051Z (node:2191) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4572759Z (Use `node --trace-deprecation ...` to show where the warning was created)
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4574507Z Creating toolchains.xml for JDK version 21 from temurin
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4646253Z Writing to /home/runner/.m2/toolchains.xml
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4647251Z 
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4647670Z Java configuration:
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4648356Z   Distribution: temurin
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4649483Z   Version: 21.0.11+10
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4650708Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4651440Z 
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4652276Z ##[endgroup]
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4754195Z Creating settings.xml with server-id: github
+neoforge MC 1.21.6	Run actions/setup-java@v4	2026-06-21T03:20:17.4755385Z Writing to /home/runner/.m2/settings.xml
+neoforge MC 1.21.6	Download HeadlessMC launcher	﻿2026-06-21T03:20:17.5002574Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5007274Z ##[group]Run robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5008320Z with:
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5008883Z   repository: 3arthqu4ke/headlessmc
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5009561Z   tag: 2.9.0
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5010125Z   fileName: headlessmc-launcher-2.9.0.jar
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5010849Z   latest: false
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5011399Z   preRelease: false
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5011961Z   tarBall: false
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5012516Z   zipBall: false
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5013065Z   out-file-path: .
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5013630Z   extract: false
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5019388Z   token: ***
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5020000Z   github-api-url: https://api.github.com
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5020784Z env:
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5021427Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5022496Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5023742Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5024710Z ##[endgroup]
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.5891295Z Fetching release 2.9.0 from repo 3arthqu4ke/headlessmc
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.6000916Z (node:2203) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.6003839Z (Use `node --trace-deprecation ...` to show where the warning was created)
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.8667007Z Found release tag: 2.9.0
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:17.8695542Z Downloading file: headlessmc-launcher-2.9.0.jar to: /home/runner/work/ModCompiler/ModCompiler
+neoforge MC 1.21.6	Download HeadlessMC launcher	2026-06-21T03:20:18.1470296Z Done: /home/runner/work/ModCompiler/ModCompiler/headlessmc-launcher-2.9.0.jar
+neoforge MC 1.21.6	Install xvfb deps	﻿2026-06-21T03:20:18.1654790Z ##[group]Run sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:18.1657987Z [36;1msudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils[0m
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:18.1839532Z shell: /usr/bin/bash -e {0}
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:18.1840897Z env:
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:18.1842190Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:18.1844245Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:18.1846741Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:18.1848697Z ##[endgroup]
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.0217853Z Reading package lists...
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.2265756Z Building dependency tree...
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.2276920Z Reading state information...
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4010140Z Suggested packages:
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4010688Z   nickle cairo-5c xorg-docs-core
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4208722Z The following NEW packages will be installed:
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4209400Z   x11-xserver-utils
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4455282Z 0 upgraded, 1 newly installed, 0 to remove and 2 not upgraded.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4456826Z Need to get 169 kB of archives.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4457433Z After this operation, 573 kB of additional disk space will be used.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4458254Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.4713946Z Get:2 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 x11-xserver-utils amd64 7.7+10build2 [169 kB]
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7435801Z Fetched 169 kB in 0s (3837 kB/s)
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7707991Z Selecting previously unselected package x11-xserver-utils.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7945665Z (Reading database ... 
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7946471Z (Reading database ... 5%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7946758Z (Reading database ... 10%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7947031Z (Reading database ... 15%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7947290Z (Reading database ... 20%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7947568Z (Reading database ... 25%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7947834Z (Reading database ... 30%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7948178Z (Reading database ... 35%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7948411Z (Reading database ... 40%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7948688Z (Reading database ... 45%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7948922Z (Reading database ... 50%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.7992614Z (Reading database ... 55%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:19.8956027Z (Reading database ... 60%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.0849050Z (Reading database ... 65%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.2886004Z (Reading database ... 70%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.3851463Z (Reading database ... 75%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.4305195Z (Reading database ... 80%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.6062791Z (Reading database ... 85%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.7291485Z (Reading database ... 90%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.8972581Z (Reading database ... 95%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.8972972Z (Reading database ... 100%
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.8973353Z (Reading database ... 202324 files and directories currently installed.)
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.9024803Z Preparing to unpack .../x11-xserver-utils_7.7+10build2_amd64.deb ...
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.9051511Z Unpacking x11-xserver-utils (7.7+10build2) ...
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.9596945Z Setting up x11-xserver-utils (7.7+10build2) ...
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.9627654Z Processing triggers for man-db (2.12.0-4build2) ...
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:20.9647924Z Not building database; man-db/auto-update is not 'true'.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:21.6339674Z 
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:21.6340262Z Running kernel seems to be up-to-date.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:21.6340630Z 
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:21.6340786Z No services need to be restarted.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:22.5780257Z 
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:22.5780518Z No containers need to be restarted.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:22.5780872Z 
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:22.5781062Z No user sessions are running outdated binaries.
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:22.5781382Z 
+neoforge MC 1.21.6	Install xvfb deps	2026-06-21T03:20:22.5781655Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+neoforge MC 1.21.6	Cache ~/.minecraft	﻿2026-06-21T03:20:22.5876026Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5877274Z ##[group]Run actions/cache@v4
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5877528Z with:
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5877729Z   path: ~/.minecraft
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5878033Z   key: mc-runtime-test-diag-1.21.6-neoforge-27892011262
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5878510Z   restore-keys: mc-runtime-test-diag-1.21.6-neoforge-
+neoforge MC 1.21.6	Cache ~/.minecraft	mc-runtime-test-diag-
+neoforge MC 1.21.6	Cache ~/.minecraft	
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5878931Z   enableCrossOsArchive: false
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5879206Z   fail-on-cache-miss: false
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5879450Z   lookup-only: false
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5879672Z   save-always: false
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5879880Z env:
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5880147Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5880609Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5881161Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.5881544Z ##[endgroup]
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.6938126Z (node:2319) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.6939291Z (Use `node --trace-deprecation ...` to show where the warning was created)
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.7746183Z Cache hit for restore-key: mc-runtime-test-diag-1.21.6-neoforge-27891298371
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:22.7854187Z (node:2319) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:23.8275132Z Received 268435456 of 345875858 (77.6%), 255.7 MBs/sec
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:24.0111238Z Received 345875858 of 345875858 (100.0%), 278.6 MBs/sec
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:24.0113678Z Cache Size: ~330 MB (345875858 B)
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:24.0233481Z [command]/usr/bin/tar -xf /home/runner/work/_temp/4a7a3af2-c3c6-4b41-b2da-b21a7a25779a/cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --use-compress-program unzstd
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:24.8151374Z Cache restored successfully
+neoforge MC 1.21.6	Cache ~/.minecraft	2026-06-21T03:20:24.8413288Z Cache restored from key: mc-runtime-test-diag-1.21.6-neoforge-27891298371
+neoforge MC 1.21.6	Run launcher test	﻿2026-06-21T03:20:24.8580658Z ##[group]Run mkdir -p launcher-result
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8581599Z [36;1mmkdir -p launcher-result[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8581890Z [36;1mpython3 - <<'PYEOF'[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8582275Z [36;1mimport json, os, subprocess, sys, shutil, re, time, urllib.request[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8582704Z [36;1mfrom pathlib import Path[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8582969Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8583204Z [36;1m# ---- Config from matrix ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8583499Z [36;1mGAME_VERSION = "1.21.6"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8583768Z [36;1mTEST_MC = "1.21.6"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8584023Z [36;1mLOADER = "neoforge"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8584287Z [36;1mORIGINAL_LOADER = "neoforge"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8584806Z [36;1mFILE_URL = "https://cdn.modrinth.com/data/9GikcByI/versions/ThzgPKfE/pingfix-1.0.0.jar"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8585340Z [36;1mFILE_NAME = "pingfix-1.0.0.jar"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8585926Z [36;1mVERSION_NUMBER = "1.0.0"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8586204Z [36;1mJAVA_VERSION = "21"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8586512Z [36;1mLOADER_REGEX = ".*neoforge.*"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8586808Z [36;1mMCRT_JAR = "neoforge"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8587076Z [36;1mSAFE_KEY = "neoforge-1.21.6"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8587350Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8587602Z [36;1mHMC_JAR = "headlessmc-launcher-2.9.0.jar"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8587933Z [36;1mMCRT_VERSION = "4.4.0"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8589092Z [36;1mMCRT_REPO = "headlesshq/mc-runtime-test"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8589533Z [36;1mLAUNCH_TIMEOUT = 120  # seconds to wait for game to load before killing[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8590226Z [36;1mGITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8590591Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8590806Z [36;1mlaunch_stdout = ""[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8591087Z [36;1mlaunch_stderr = ""[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8591327Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8591556Z [36;1mOUT_DIR = Path("launcher-result")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8591892Z [36;1mOUT_DIR.mkdir(parents=True, exist_ok=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8592288Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8592693Z [36;1mprint(f"::group::Test: {ORIGINAL_LOADER} MC {GAME_VERSION} (on {TEST_MC}, Java {JAVA_VERSION})")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8593156Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8593359Z [36;1mresult = {[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8593607Z [36;1m    "status": "launcher_failed",[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8593913Z [36;1m    "game_version": GAME_VERSION,[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8594215Z [36;1m    "loader": ORIGINAL_LOADER,[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8594497Z [36;1m    "test_mc": TEST_MC,[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8594786Z [36;1m    "version_number": VERSION_NUMBER,[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8595092Z [36;1m    "crash_summary": "",[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8595364Z [36;1m    "logs": "",[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8595878Z [36;1m}[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8596163Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8596461Z [36;1mdef cleanup():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8596857Z [36;1m    """Kill all related processes."""[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8597591Z [36;1m    for pat in ["headlessmc-launcher", "Xvfb", "net.minecraft", "net.neoforged", "cpw.mods"]:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8598233Z [36;1m        subprocess.run(["pkill", "-f", pat], capture_output=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8598625Z [36;1m    time.sleep(1)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8598987Z [36;1m    subprocess.run(["pkill", "-9", "-f", "java"], capture_output=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8599610Z [36;1m    time.sleep(1)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8599866Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8600078Z [36;1mdef find_java_home():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8600432Z [36;1m    tc = Path("/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8600799Z [36;1m    if tc.exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8601113Z [36;1m        for d in sorted(tc.iterdir(), reverse=True):[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8601518Z [36;1m            if d.is_dir() and d.name.split('.')[0] == JAVA_VERSION:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8601914Z [36;1m                if (d / "x64" / "bin" / "java").exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8602256Z [36;1m                    return str(d / "x64")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8602753Z [36;1m    return os.environ.get("JAVA_HOME", "")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8603059Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8603272Z [36;1mdef download_mcrt_jar():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8603660Z [36;1m    """Download mc-runtime-test jar for this MC version + loader type."""[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8604075Z [36;1m    mods_dir = Path("run/mods")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8604409Z [36;1m    mods_dir.mkdir(parents=True, exist_ok=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8604806Z [36;1m    pat = f"mc-runtime-test-{TEST_MC}-*-{MCRT_JAR}-release.jar"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8605224Z [36;1m    existing = list(mods_dir.glob(pat))[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8605799Z [36;1m    if existing:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8606055Z [36;1m        return existing[0].name[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8606320Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8606682Z [36;1m    url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8607154Z [36;1m    headers = {"User-Agent": "ModCompiler/1.0"}[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8607483Z [36;1m    if GITHUB_TOKEN:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8608097Z [36;1m        headers["Authorization"] = f"***"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8608487Z [36;1m    req = urllib.request.Request(url, headers=headers)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8608843Z [36;1m    try:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8609140Z [36;1m        with urllib.request.urlopen(req, timeout=30) as r:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8609530Z [36;1m            release = json.loads(r.read().decode())[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8609860Z [36;1m    except Exception as e:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8610236Z [36;1m        print(f"  WARNING: Could not fetch mc-runtime-test release: {e}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8610634Z [36;1m        return None[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8610892Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8611135Z [36;1m    for asset in release.get("assets", []):[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8611463Z [36;1m        name = asset.get("name", "")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8611970Z [36;1m        if re.match(f"mc-runtime-test-{re.escape(TEST_MC)}-.*-{re.escape(MCRT_JAR)}-release\\.jar$", name):[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8612505Z [36;1m            dl_url = asset.get("browser_download_url", "")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8612842Z [36;1m            if not dl_url:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8613098Z [36;1m                continue[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8613369Z [36;1m            try:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8613712Z [36;1m                urllib.request.urlretrieve(dl_url, str(mods_dir / name))[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8614149Z [36;1m                print(f"  Downloaded mc-runtime-test: {name}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8614488Z [36;1m                return name[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8614775Z [36;1m            except Exception as e:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8615144Z [36;1m                print(f"  WARNING: Download failed for {name}: {e}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8615666Z [36;1m                return None[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8616032Z [36;1m    print(f"  WARNING: No mc-runtime-test jar for {TEST_MC}/{MCRT_JAR}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8616412Z [36;1m    return None[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8616653Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8616851Z [36;1mtry:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8617067Z [36;1m    cleanup()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8617318Z [36;1m    java_home = find_java_home()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8617804Z [36;1m    os.environ["JAVA_HOME"] = java_home[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8618137Z [36;1m    print(f"  JAVA_HOME={java_home}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8618427Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8618656Z [36;1m    # ---- Setup run directory ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8618955Z [36;1m    run_dir = Path("run")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8619241Z [36;1m    if run_dir.exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8619516Z [36;1m        shutil.rmtree(run_dir)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8619797Z [36;1m    run_dir.mkdir()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8620055Z [36;1m    (run_dir / "mods").mkdir()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8620312Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8620531Z [36;1m    hmc_dir = Path("HeadlessMC")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8620968Z [36;1m    hmc_dir.mkdir(exist_ok=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8621306Z [36;1m    (hmc_dir / "config.properties").write_text([0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8621687Z [36;1m        f"hmc.java.versions={java_home}/bin/java\n"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8622047Z [36;1m        f"hmc.gamedir={Path.cwd()}/run\n"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8622371Z [36;1m        f"hmc.offline=true\n"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8622696Z [36;1m        f"hmc.rethrow.launch.exceptions=true\n"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8623047Z [36;1m        f"hmc.exit.on.failed.command=true\n"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8623371Z [36;1m        f"hmc.assets.dummy=true\n"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8623664Z [36;1m    )[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8624081Z [36;1m    (run_dir / "options.txt").write_text("onboardAccessibility:false\npauseOnLostFocus:false\n")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8624546Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8624767Z [36;1m    # ---- Download mod jar ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8625089Z [36;1m    print(f"  Downloading {FILE_NAME}...")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8625572Z [36;1m    for attempt in range(3):[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8625950Z [36;1m        r = subprocess.run([0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8626296Z [36;1m            ["curl", "-fsSL", "--retry", "3", "--retry-delay", "5",[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8626699Z [36;1m             FILE_URL, "-o", f"run/mods/{FILE_NAME}"],[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8627096Z [36;1m            capture_output=True, text=True, timeout=120[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8627424Z [36;1m        )[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8627659Z [36;1m        if r.returncode == 0:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8627930Z [36;1m            break[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8628193Z [36;1m        time.sleep(5)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8628445Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8628702Z [36;1m    if not (run_dir / "mods" / FILE_NAME).exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8629161Z [36;1m        result["crash_summary"] = f"Failed to download mod jar: {FILE_NAME}"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8629625Z [36;1m        print(f"  FAILED: Could not download {FILE_NAME}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8629989Z [36;1m        print("::endgroup::")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8630274Z [36;1m        # Write result and exit[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8630574Z [36;1m        entry_dir = OUT_DIR / SAFE_KEY[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8630926Z [36;1m        entry_dir.mkdir(parents=True, exist_ok=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8631432Z [36;1m        (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8631878Z [36;1m        sys.exit(0)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8632116Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8632419Z [36;1m    # ---- Download Minecraft + install modloader (if not cached) ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8632986Z [36;1m    mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8633444Z [36;1m    if not mc_json.exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8633765Z [36;1m        print(f"  Downloading Minecraft {TEST_MC}...")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8634098Z [36;1m        subprocess.run([0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8634451Z [36;1m            ["java", "-jar", HMC_JAR, "--command", "download", TEST_MC],[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8634865Z [36;1m            capture_output=True, text=True, timeout=300[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8635183Z [36;1m        )[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8635715Z [36;1m        print(f"  Installing {LOADER} for {TEST_MC} (Java {JAVA_VERSION})...")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8636310Z [36;1m        subprocess.run([0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8636727Z [36;1m            ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", JAVA_VERSION],[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8637185Z [36;1m            capture_output=True, text=True, timeout=600[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8637505Z [36;1m        )[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8637721Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8637975Z [36;1m    # ---- Download mc-runtime-test jar ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8638308Z [36;1m    mcrt_name = download_mcrt_jar()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8638615Z [36;1m    if not mcrt_name:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8639011Z [36;1m        result["crash_summary"] = f"No mc-runtime-test jar for {TEST_MC}/{MCRT_JAR}"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8639629Z [36;1m        print(f"  FAILED: No mc-runtime-test jar available")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8639978Z [36;1m        print("::endgroup::")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8640277Z [36;1m        entry_dir = OUT_DIR / SAFE_KEY[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8640629Z [36;1m        entry_dir.mkdir(parents=True, exist_ok=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8641112Z [36;1m        (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8641564Z [36;1m        sys.exit(0)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8641809Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8642039Z [36;1m    # ---- Launch game in BACKGROUND ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8642422Z [36;1m    print(f"  Launching Minecraft {TEST_MC} with {LOADER}...")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8642812Z [36;1m    launch_proc = subprocess.Popen([0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8643155Z [36;1m        ["xvfb-run", "java", "-Dhmc.check.xvfb=true",[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8643572Z [36;1m         "-jar", HMC_JAR, "--command", "launch", LOADER_REGEX, "-regex",[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8643977Z [36;1m         "--jvm", "-Djava.awt.headless=true"],[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8644353Z [36;1m        stdout=subprocess.PIPE, stderr=subprocess.PIPE[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8644684Z [36;1m    )[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8644892Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8645146Z [36;1m    # ---- Wait for game to load, then kill ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8645723Z [36;1m    game_started = False[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8646016Z [36;1m    crash_detected = False[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8646290Z [36;1m    waited = 0[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8646540Z [36;1m    poll_interval = 5[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8646793Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8670444Z [36;1m    while waited < LAUNCH_TIMEOUT:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8670822Z [36;1m        time.sleep(poll_interval)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8671154Z [36;1m        waited += poll_interval[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8671441Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8671704Z [36;1m        # Check if process exited on its own[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8672053Z [36;1m        if launch_proc.poll() is not None:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8672553Z [36;1m            print(f"  Game exited on its own after {waited}s (exit code {launch_proc.returncode})")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8673041Z [36;1m            game_started = True[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8673320Z [36;1m            break[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8673588Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8673811Z [36;1m        # Check for crash reports[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8674163Z [36;1m        crash_reports_dir = Path("run/crash-reports")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8674702Z [36;1m        crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else [][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8675282Z [36;1m        hs_err = list(Path("run").glob("hs_err_pid*.log"))[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8675895Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8676119Z [36;1m        if crash_files or hs_err:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8676466Z [36;1m            print(f"  CRASH DETECTED after {waited}s!")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8676825Z [36;1m            crash_detected = True[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8677160Z [36;1m            # Give it a moment to fully crash, then kill[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8677501Z [36;1m            time.sleep(5)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8677988Z [36;1m            if launch_proc.poll() is None:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8678315Z [36;1m                launch_proc.kill()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8678634Z [36;1m                launch_proc.wait(timeout=10)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8678939Z [36;1m            break[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8679179Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8679444Z [36;1m        # Check if game log shows title screen reached[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8679818Z [36;1m        log_path = Path("run/logs/latest.log")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8680135Z [36;1m        if log_path.exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8680516Z [36;1m            log_text = log_path.read_text(encoding="utf-8", errors="replace")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8681145Z [36;1m            if "Setting user:" in log_text or "Loaded" in log_text:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8681546Z [36;1m                if not game_started:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8681932Z [36;1m                    print(f"  Game reached title screen after {waited}s")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8682316Z [36;1m                    game_started = True[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8682685Z [36;1m                    # Give mc-runtime-test a few more seconds to work[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8683091Z [36;1m                    if waited < LAUNCH_TIMEOUT - 10:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8683443Z [36;1m                        time.sleep(10)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8683751Z [36;1m                        waited += 10[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8684040Z [36;1m                    break[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8684299Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8684535Z [36;1m    # ---- Kill if still running ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8684856Z [36;1m    if launch_proc.poll() is None:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8685218Z [36;1m        print(f"  Killing game after {waited}s (timeout)")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8685880Z [36;1m        launch_proc.kill()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8686179Z [36;1m        try:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8686440Z [36;1m            launch_proc.wait(timeout=10)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8686778Z [36;1m        except subprocess.TimeoutExpired:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8687101Z [36;1m            launch_proc.kill()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8687369Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8687660Z [36;1m    # ---- Capture stdout/stderr from the launch process ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8688025Z [36;1m    launch_stdout = ""[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8688293Z [36;1m    launch_stderr = ""[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8688539Z [36;1m    try:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8688775Z [36;1m        if launch_proc.stdout:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8689222Z [36;1m            launch_stdout = launch_proc.stdout.read().decode("utf-8", errors="replace")[:10000][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8689685Z [36;1m    except Exception:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8689955Z [36;1m        pass[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8690188Z [36;1m    try:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8690418Z [36;1m        if launch_proc.stderr:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8690856Z [36;1m            launch_stderr = launch_proc.stderr.read().decode("utf-8", errors="replace")[:10000][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8691295Z [36;1m    except Exception:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8691543Z [36;1m        pass[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8691764Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8691979Z [36;1m    # ---- Analyse results ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8692315Z [36;1m    crash_reports_dir = Path("run/crash-reports")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8692839Z [36;1m    crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else [][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8693356Z [36;1m    hs_err = list(Path("run").glob("hs_err_pid*.log"))[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8693682Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8693888Z [36;1m    # Collect game log[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8694137Z [36;1m    log_text = ""[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8694405Z [36;1m    log_path = Path("run/logs/latest.log")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8694728Z [36;1m    if log_path.exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8695117Z [36;1m        log_text = log_path.read_text(encoding="utf-8", errors="replace")[:5000][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8695669Z [36;1m    elif Path("run/latest.log").exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8696263Z [36;1m        log_text = Path("run/latest.log").read_text(encoding="utf-8", errors="replace")[:5000][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8696696Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8697034Z [36;1m    exit_code = launch_proc.returncode if launch_proc.poll() is not None else -9[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8697433Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8697642Z [36;1m    if crash_files or hs_err:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8697949Z [36;1m        result["status"] = "launcher_failed"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8698257Z [36;1m        if crash_files:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8698709Z [36;1m            result["crash_summary"] = crash_files[0].read_text(encoding="utf-8", errors="replace")[:500][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8699290Z [36;1m        elif hs_err:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8699697Z [36;1m            result["crash_summary"] = hs_err[0].read_text(encoding="utf-8", errors="replace")[:500][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8700160Z [36;1m        result["logs"] = log_text[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8700479Z [36;1m        print(f"  FAILED: Game crashed")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8700782Z [36;1m    elif crash_detected:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8701075Z [36;1m        result["status"] = "launcher_failed"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8701465Z [36;1m        result["crash_summary"] = "Crash detected during game load"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8701833Z [36;1m        result["logs"] = log_text[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8702126Z [36;1m        print(f"  FAILED: Crash detected")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8702472Z [36;1m    elif game_started and exit_code not in (0, -9):[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8702824Z [36;1m        # Game started but exited with error[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8703158Z [36;1m        result["status"] = "launcher_failed"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8703516Z [36;1m        crash_info = f"Game exited with code {exit_code}"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8703877Z [36;1m        if not log_text and launch_stderr:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8704224Z [36;1m            crash_info += f"\nStderr: {launch_stderr[:400]}"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8704612Z [36;1m        elif not log_text and launch_stdout:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8704970Z [36;1m            crash_info += f"\nStdout: {launch_stdout[:400]}"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8705328Z [36;1m        result["crash_summary"] = crash_info[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8705853Z [36;1m        result["logs"] = log_text[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8706194Z [36;1m        result["launch_stdout"] = launch_stdout[:2000][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8706557Z [36;1m        result["launch_stderr"] = launch_stderr[:2000][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8706936Z [36;1m        print(f"  FAILED: Game exited with code {exit_code}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8707274Z [36;1m    else:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8707667Z [36;1m        # Game loaded successfully (reached title screen) or mc-runtime-test quit normally[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8708151Z [36;1m        result["status"] = "passed"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8708449Z [36;1m        result["logs"] = log_text[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8708732Z [36;1m        print(f"  PASSED")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8708998Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8709212Z [36;1mexcept Exception as e:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8709504Z [36;1m    result["crash_summary"] = str(e)[:500][0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8709811Z [36;1m    print(f"  ERROR: {e}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8710080Z [36;1m    cleanup()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8710316Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8710527Z [36;1mcleanup()[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8710748Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8710955Z [36;1m# ---- Write result ----[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8711231Z [36;1mentry_dir = OUT_DIR / SAFE_KEY[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8711561Z [36;1mentry_dir.mkdir(parents=True, exist_ok=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8712035Z [36;1m(entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8712467Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8712667Z [36;1m# Also save crash logs if any[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8712989Z [36;1mcrash_reports_dir = Path("run/crash-reports")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8713474Z [36;1mif crash_reports_dir.exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8713785Z [36;1m    crash_target = entry_dir / "crash-logs"[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8714233Z [36;1m    shutil.copytree(str(crash_reports_dir), str(crash_target), dirs_exist_ok=True)[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8714700Z [36;1mfor f in Path("run").glob("hs_err_pid*.log"):[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8715062Z [36;1m    shutil.copy2(str(f), str(entry_dir / f.name))[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8715519Z [36;1mlog_path = Path("run/logs/latest.log")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8715837Z [36;1mif log_path.exists():[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8716177Z [36;1m    shutil.copy2(str(log_path), str(entry_dir / "latest.log"))[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8716589Z [36;1m# Also save stdout/stderr from launch process[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8717035Z [36;1mif launch_stdout:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8717437Z [36;1m    (entry_dir / "launcher-stdout.log").write_text(launch_stdout, encoding="utf-8")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8717866Z [36;1mif launch_stderr:[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8718245Z [36;1m    (entry_dir / "launcher-stderr.log").write_text(launch_stderr, encoding="utf-8")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8718655Z [36;1m[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8718879Z [36;1mprint(f"  Result: {result['status']}")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8719171Z [36;1mprint("::endgroup::")[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8719421Z [36;1mPYEOF[0m
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8755828Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8756203Z env:
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8756509Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8756963Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8757470Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8760666Z   GITHUB_TOKEN: ***
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:20:24.8760906Z ##[endgroup]
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7854468Z ##[group]Test: neoforge MC 1.21.6 (on 1.21.6, Java 21)
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7855306Z   JAVA_HOME=/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7856176Z   Downloading pingfix-1.0.0.jar...
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7856783Z   Downloaded mc-runtime-test: mc-runtime-test-1.21.6-4.4.0-neoforge-release.jar
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7857425Z   Launching Minecraft 1.21.6 with neoforge...
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7857858Z   Game reached title screen after 30s
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7858260Z   Killing game after 40s (timeout)
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7858631Z   PASSED
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7858901Z   Result: passed
+neoforge MC 1.21.6	Run launcher test	2026-06-21T03:21:37.7859468Z ##[endgroup]
+neoforge MC 1.21.6	Upload launcher result	﻿2026-06-21T03:21:37.8021905Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8023149Z ##[group]Run actions/upload-artifact@v4
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8023429Z with:
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8023709Z   name: launcher-result-neoforge-1.21.6
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8024014Z   path: launcher-result/
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8024262Z   if-no-files-found: warn
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8024511Z   compression-level: 6
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8024743Z   overwrite: false
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8024972Z   include-hidden-files: false
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8025218Z env:
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8025726Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8026227Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8026732Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.8027149Z ##[endgroup]
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.9688499Z (node:2598) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.9689417Z (Use `node --trace-deprecation ...` to show where the warning was created)
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.9746403Z With the provided path, there will be 3 files uploaded
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.9750878Z Artifact name is valid!
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:37.9751712Z Root directory input is valid!
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.1523402Z Beginning upload of artifact content to blob storage
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.1776034Z (node:2598) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.2296621Z Uploaded bytes 26811
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.2486289Z Finished uploading artifact content to blob storage!
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.2487290Z SHA256 digest of uploaded artifact zip is 1ef082b5069544e38eb926535863aa7e1238ec3ded523588e6ed95f9d53258e1
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.2490834Z Finalizing artifact upload
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.3951893Z Artifact launcher-result-neoforge-1.21.6.zip successfully finalized. Artifact ID 7771368900
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.3952974Z Artifact launcher-result-neoforge-1.21.6 has been successfully uploaded! Final size is 26811 bytes. Artifact ID is 7771368900
+neoforge MC 1.21.6	Upload launcher result	2026-06-21T03:21:38.3959053Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/27892011262/artifacts/7771368900
+neoforge MC 1.21.6	Post Cache ~/.minecraft	﻿2026-06-21T03:21:38.4128705Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+neoforge MC 1.21.6	Post Cache ~/.minecraft	2026-06-21T03:21:38.4129927Z Post job cleanup.
+neoforge MC 1.21.6	Post Cache ~/.minecraft	2026-06-21T03:21:38.5243582Z (node:2611) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+neoforge MC 1.21.6	Post Cache ~/.minecraft	2026-06-21T03:21:38.5244390Z (Use `node --trace-deprecation ...` to show where the warning was created)
+neoforge MC 1.21.6	Post Cache ~/.minecraft	2026-06-21T03:21:38.5400873Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --files-from manifest.txt --use-compress-program zstdmt
+neoforge MC 1.21.6	Post Cache ~/.minecraft	2026-06-21T03:21:39.6841974Z (node:2611) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+neoforge MC 1.21.6	Post Cache ~/.minecraft	2026-06-21T03:21:40.6710469Z Sent 211637661 of 345855389 (61.2%), 201.8 MBs/sec
+neoforge MC 1.21.6	Post Cache ~/.minecraft	2026-06-21T03:21:40.7390179Z Sent 345855389 of 345855389 (100.0%), 308.8 MBs/sec
+neoforge MC 1.21.6	Post Cache ~/.minecraft	2026-06-21T03:21:40.8230667Z Cache saved with key: mc-runtime-test-diag-1.21.6-neoforge-27892011262
+neoforge MC 1.21.6	Post Run actions/setup-java@v4	﻿2026-06-21T03:21:40.8414598Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+neoforge MC 1.21.6	Post Run actions/setup-java@v4	2026-06-21T03:21:40.8416116Z Post job cleanup.
+neoforge MC 1.21.6	Post Run actions/setup-java@v4	2026-06-21T03:21:40.9822930Z (node:2631) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+neoforge MC 1.21.6	Post Run actions/setup-java@v4	2026-06-21T03:21:40.9823779Z (Use `node --trace-deprecation ...` to show where the warning was created)
+neoforge MC 1.21.6	Complete job	﻿2026-06-21T03:21:41.0025316Z Cleaning up orphan processes
+neoforge MC 1.21.6	Complete job	2026-06-21T03:21:41.0306819Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache@v4, actions/setup-java@v4, actions/upload-artifact@v4, robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

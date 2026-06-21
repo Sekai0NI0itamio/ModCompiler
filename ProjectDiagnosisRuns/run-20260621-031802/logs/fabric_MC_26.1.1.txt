@@ -1,0 +1,222 @@
+fabric MC 26.1.1	Set up job	﻿2026-06-21T03:21:03.3179633Z Current runner version: '2.335.1'
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3205093Z ##[group]Runner Image Provisioner
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3205958Z Hosted Compute Agent
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3206548Z Version: 20260611.554
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3207280Z Commit: 5e0782fdc9014723d3be820dd114dd31555c2bd1
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3208048Z Build Date: 2026-06-11T21:40:46Z
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3208827Z Worker ID: {35c08eb1-d15f-4630-81c0-e6f29a530316}
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3209556Z Azure Region: westus
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3210356Z ##[endgroup]
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3212228Z ##[group]Operating System
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3212900Z Ubuntu
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3213520Z 24.04.4
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3214056Z LTS
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3214569Z ##[endgroup]
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3215501Z ##[group]Runner Image
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3216125Z Image: ubuntu-24.04
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3216713Z Version: 20260615.205.1
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3217840Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260615.205/images/ubuntu/Ubuntu2404-Readme.md
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3219607Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260615.205
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3220864Z ##[endgroup]
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3222050Z ##[group]GITHUB_TOKEN Permissions
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3224138Z Contents: read
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3224757Z Metadata: read
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3225411Z ##[endgroup]
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3227492Z Secret source: Actions
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3228756Z Prepare workflow directory
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3811814Z Prepare all required actions
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.3850139Z Getting action download info
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:03.7855611Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:04.3552560Z Download action repository 'robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2' (SHA:a96f54c1b5f5e09e47d9504526e96febd949d4c2)
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:04.7037343Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:04.8503827Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+fabric MC 26.1.1	Set up job	2026-06-21T03:21:05.0846187Z Complete job name: fabric MC 26.1.1
+fabric MC 26.1.1	Run actions/setup-java@v4	﻿2026-06-21T03:21:05.1725086Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1737300Z ##[group]Run actions/setup-java@v4
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1738752Z with:
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1739983Z   distribution: temurin
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1741136Z   java-version: 25
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1742160Z   java-package: jdk
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1743255Z   check-latest: false
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1744284Z   server-id: github
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1745340Z   server-username: GITHUB_ACTOR
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1746600Z   server-password: GITHUB_TOKEN
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1747790Z   overwrite-settings: true
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1748984Z   job-status: success
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1759276Z   token: ***
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1760807Z env:
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1762043Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.1763519Z ##[endgroup]
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3516171Z ##[group]Installed distributions
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3556096Z Resolved Java 25.0.3+9 from tool-cache
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3558315Z Setting Java 25.0.3+9 as the default
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3568478Z (node:2162) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3571782Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3573675Z Creating toolchains.xml for JDK version 25 from temurin
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3649618Z Writing to /home/runner/.m2/toolchains.xml
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3651222Z 
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3651739Z Java configuration:
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3652902Z   Distribution: temurin
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3654797Z   Version: 25.0.3+9
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3656391Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3657518Z 
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3658753Z ##[endgroup]
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3759682Z Creating settings.xml with server-id: github
+fabric MC 26.1.1	Run actions/setup-java@v4	2026-06-21T03:21:05.3762160Z Writing to /home/runner/.m2/settings.xml
+fabric MC 26.1.1	Download HeadlessMC launcher	﻿2026-06-21T03:21:05.4139562Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4145221Z ##[group]Run robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4146782Z with:
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4147715Z   repository: 3arthqu4ke/headlessmc
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4148729Z   tag: 2.9.0
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4149594Z   fileName: headlessmc-launcher-2.9.0.jar
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4150874Z   latest: false
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4151702Z   preRelease: false
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4152541Z   tarBall: false
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4153366Z   zipBall: false
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4154198Z   out-file-path: .
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4155059Z   extract: false
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4165209Z   token: ***
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4166120Z   github-api-url: https://api.github.com
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4167232Z env:
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4168209Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4169966Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4171812Z   JAVA_HOME_25_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.4173277Z ##[endgroup]
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.5012714Z Fetching release 2.9.0 from repo 3arthqu4ke/headlessmc
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.5118580Z (node:2174) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:05.5124335Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:06.1314700Z Found release tag: 2.9.0
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:06.1344582Z Downloading file: headlessmc-launcher-2.9.0.jar to: /home/runner/work/ModCompiler/ModCompiler
+fabric MC 26.1.1	Download HeadlessMC launcher	2026-06-21T03:21:06.4313129Z Done: /home/runner/work/ModCompiler/ModCompiler/headlessmc-launcher-2.9.0.jar
+fabric MC 26.1.1	Install xvfb deps	﻿2026-06-21T03:21:06.4451975Z ##[group]Run sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:06.4452770Z [36;1msudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils[0m
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:06.4647377Z shell: /usr/bin/bash -e {0}
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:06.4647723Z env:
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:06.4648139Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:06.4648651Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:06.4649204Z   JAVA_HOME_25_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:06.4649649Z ##[endgroup]
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.2893240Z Reading package lists...
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.4529048Z Building dependency tree...
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.4540252Z Reading state information...
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.5896474Z Suggested packages:
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.5896890Z   nickle cairo-5c xorg-docs-core
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.6154861Z The following NEW packages will be installed:
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.6155839Z   x11-xserver-utils
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.6381364Z 0 upgraded, 1 newly installed, 0 to remove and 2 not upgraded.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.6382162Z Need to get 169 kB of archives.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.6382765Z After this operation, 573 kB of additional disk space will be used.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.6383586Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.7320775Z Get:2 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 x11-xserver-utils amd64 7.7+10build2 [169 kB]
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:07.9762560Z Fetched 169 kB in 0s (1544 kB/s)
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0020862Z Selecting previously unselected package x11-xserver-utils.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0329826Z (Reading database ... 
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0331061Z (Reading database ... 5%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0332041Z (Reading database ... 10%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0332579Z (Reading database ... 15%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0333139Z (Reading database ... 20%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0333646Z (Reading database ... 25%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0334190Z (Reading database ... 30%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0334755Z (Reading database ... 35%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0335267Z (Reading database ... 40%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0335773Z (Reading database ... 45%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0336293Z (Reading database ... 50%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.0403954Z (Reading database ... 55%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.1265668Z (Reading database ... 60%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.3312091Z (Reading database ... 65%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.5359806Z (Reading database ... 70%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.6345138Z (Reading database ... 75%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.6990161Z (Reading database ... 80%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.8560093Z (Reading database ... 85%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:08.9795081Z (Reading database ... 90%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.1469352Z (Reading database ... 95%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.1514437Z (Reading database ... 100%
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.1514882Z (Reading database ... 202324 files and directories currently installed.)
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.1515373Z Preparing to unpack .../x11-xserver-utils_7.7+10build2_amd64.deb ...
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.1546439Z Unpacking x11-xserver-utils (7.7+10build2) ...
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.2115378Z Setting up x11-xserver-utils (7.7+10build2) ...
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.2157243Z Processing triggers for man-db (2.12.0-4build2) ...
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.2186016Z Not building database; man-db/auto-update is not 'true'.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9085953Z 
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9086493Z Running kernel seems to be up-to-date.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9086807Z 
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9086943Z No services need to be restarted.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9087175Z 
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9087307Z No containers need to be restarted.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9087557Z 
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9087716Z No user sessions are running outdated binaries.
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9087975Z 
+fabric MC 26.1.1	Install xvfb deps	2026-06-21T03:21:09.9088218Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+fabric MC 26.1.1	Cache ~/.minecraft	﻿2026-06-21T03:21:10.6721566Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6722844Z ##[group]Run actions/cache@v4
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6723079Z with:
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6723266Z   path: ~/.minecraft
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6723526Z   key: mc-runtime-test-diag-26.1.1-fabric-27892011262
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6724056Z   restore-keys: mc-runtime-test-diag-26.1.1-fabric-
+fabric MC 26.1.1	Cache ~/.minecraft	mc-runtime-test-diag-
+fabric MC 26.1.1	Cache ~/.minecraft	
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6724611Z   enableCrossOsArchive: false
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6724850Z   fail-on-cache-miss: false
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6725091Z   lookup-only: false
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6725289Z   save-always: false
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6725478Z env:
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6725723Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6726150Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6726646Z   JAVA_HOME_25_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.6727012Z ##[endgroup]
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.7735102Z (node:2293) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:10.7736430Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:11.0254076Z Cache hit for restore-key: mc-runtime-test-diag-26.1.1-fabric-27891298371
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:11.0355869Z (node:2293) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:12.3252503Z Received 4194304 of 334178538 (1.3%), 4.0 MBs/sec
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:13.3269455Z Received 125829120 of 334178538 (37.7%), 59.9 MBs/sec
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:14.3390756Z Received 268435456 of 334178538 (80.3%), 84.9 MBs/sec
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:14.7785968Z Received 334178538 of 334178538 (100.0%), 92.2 MBs/sec
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:14.7788630Z Cache Size: ~319 MB (334178538 B)
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:14.7833390Z [command]/usr/bin/tar -xf /home/runner/work/_temp/066386ba-6f5d-4bd3-9b37-1ad10c9d2fc2/cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --use-compress-program unzstd
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:15.5950758Z Cache restored successfully
+fabric MC 26.1.1	Cache ~/.minecraft	2026-06-21T03:21:15.6177474Z Cache restored from key: mc-runtime-test-diag-26.1.1-fabric-27891298371
+fabric MC 26.1.1	Upload launcher result	﻿2026-06-21T03:21:30.7863671Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7864928Z ##[group]Run actions/upload-artifact@v4
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7865206Z with:
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7865416Z   name: launcher-result-fabric-26.1.1
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7865691Z   path: launcher-result/
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7865926Z   if-no-files-found: warn
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7866159Z   compression-level: 6
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7866373Z   overwrite: false
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7866589Z   include-hidden-files: false
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7866816Z env:
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7867063Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7867499Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7867968Z   JAVA_HOME_25_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/25.0.3-9/x64
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.7868366Z ##[endgroup]
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.9532765Z (node:2467) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.9533494Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.9594989Z With the provided path, there will be 3 files uploaded
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.9600850Z Artifact name is valid!
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:30.9601617Z Root directory input is valid!
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.3268895Z Beginning upload of artifact content to blob storage
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.3495054Z (node:2467) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.6457430Z Uploaded bytes 3011
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.7275098Z Finished uploading artifact content to blob storage!
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.7276372Z SHA256 digest of uploaded artifact zip is 4abc29ba9137dc731ea90362d962a7c96526bd64d9e16452f3621e4191cc65de
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.7277416Z Finalizing artifact upload
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.9339297Z Artifact launcher-result-fabric-26.1.1.zip successfully finalized. Artifact ID 7771367889
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.9340966Z Artifact launcher-result-fabric-26.1.1 has been successfully uploaded! Final size is 3011 bytes. Artifact ID is 7771367889
+fabric MC 26.1.1	Upload launcher result	2026-06-21T03:21:31.9347206Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/27892011262/artifacts/7771367889
+fabric MC 26.1.1	Post Cache ~/.minecraft	﻿2026-06-21T03:21:31.9509107Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:31.9510690Z Post job cleanup.
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:32.0660442Z (node:2479) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:32.0661711Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:32.0838473Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --files-from manifest.txt --use-compress-program zstdmt
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:33.4252034Z (node:2479) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:34.4088169Z Sent 0 of 334180279 (0.0%), 0.0 MBs/sec
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:35.4084792Z Sent 67108864 of 334180279 (20.1%), 32.0 MBs/sec
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:35.5728705Z Sent 334180279 of 334180279 (100.0%), 147.3 MBs/sec
+fabric MC 26.1.1	Post Cache ~/.minecraft	2026-06-21T03:21:35.7139529Z Cache saved with key: mc-runtime-test-diag-26.1.1-fabric-27892011262
+fabric MC 26.1.1	Post Run actions/setup-java@v4	﻿2026-06-21T03:21:35.7277069Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 26.1.1	Post Run actions/setup-java@v4	2026-06-21T03:21:35.7278305Z Post job cleanup.
+fabric MC 26.1.1	Post Run actions/setup-java@v4	2026-06-21T03:21:35.8676799Z (node:2499) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 26.1.1	Post Run actions/setup-java@v4	2026-06-21T03:21:35.8678062Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 26.1.1	Complete job	﻿2026-06-21T03:21:35.8814232Z Cleaning up orphan processes
+fabric MC 26.1.1	Complete job	2026-06-21T03:21:35.9028424Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache@v4, actions/setup-java@v4, actions/upload-artifact@v4, robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
