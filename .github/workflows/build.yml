@@ -729,15 +729,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: test-result-*
-        path: .workflow_downloads/test-results
-        merge-multiple: true
+          path: .workflow_downloads/test-results
+          merge-multiple: true
 
       - uses: actions/download-artifact@v4
         with:
           pattern: crash-*
-        path: .workflow_downloads/crash-logs
-        merge-multiple: true
-        if-no-files-found: ignore
+          path: .workflow_downloads/crash-logs
+          merge-multiple: true
+          if-no-files-found: ignore
 
       - id: collect
         shell: bash
