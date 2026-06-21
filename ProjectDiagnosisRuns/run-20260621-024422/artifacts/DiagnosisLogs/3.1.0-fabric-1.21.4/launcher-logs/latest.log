@@ -1,0 +1,469 @@
+[02:47:20] [main/INFO]: Loading Minecraft 1.21.4 with Fabric Loader 0.19.3
+[02:47:20] [main/INFO]: Fabric is preparing JARs on first launch, this may take a few seconds...
+[02:47:20] [main/INFO]: Loading 6 mods:
+	- fabricloader 0.19.3
+	   \-- mixinextras 0.5.4
+	- java 21
+	- mc_runtime_test 1.21.4-4.4.0
+	- minecraft 1.21.4
+	- pingfix 3.1.0
+[02:47:20] [main/INFO]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=file:/home/runner/.minecraft/libraries/net/fabricmc/sponge-mixin/0.17.3+mixin.0.8.7/sponge-mixin-0.17.3+mixin.0.8.7.jar Service=Knot/Fabric Env=CLIENT
+[02:47:20] [main/INFO]: Compatibility level set to JAVA_21
+[02:47:21] [Datafixer Bootstrap/INFO]: 243 Datafixer optimizations took 270 milliseconds
+[02:47:24] [Render thread/INFO]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.4).
+[02:47:24] [Render thread/INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[02:47:24] [Render thread/INFO]: Setting user: Offline
+[02:47:24] [Render thread/INFO]: ==========================================
+[02:47:24] [Render thread/INFO]:              PingFix v3.1.0
+[02:47:24] [Render thread/INFO]: ------------------------------------------
+[02:47:24] [Render thread/INFO]:  Author      : itamio
+[02:47:24] [Render thread/INFO]:  Description : Get it together ping!! (fixes Minecraft's buggy ping)
+[02:47:24] [Render thread/INFO]: ==========================================
+[02:47:24] [Render thread/INFO]: Backend library: LWJGL version 3.3.3-snapshot
+[02:47:25] [Download-2/ERROR]: Failed to fetch user properties
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at knot/com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:59) ~[authlib-6.0.57.jar:?]
+	at knot/com.mojang.authlib.yggdrasil.YggdrasilUserApiService.fetchProperties(YggdrasilUserApiService.java:150) ~[authlib-6.0.57.jar:?]
+	at knot/net.minecraft.class_310.method_55608(class_310.java:457) ~[client-intermediary.jar:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1768) ~[?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[?:?]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[?:?]
+	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+	at knot/com.mojang.authlib.minecraft.client.MinecraftClient.readInputStream(MinecraftClient.java:103) ~[authlib-6.0.57.jar:?]
+	at knot/com.mojang.authlib.minecraft.client.MinecraftClient.get(MinecraftClient.java:56) ~[authlib-6.0.57.jar:?]
+	at knot/com.mojang.authlib.yggdrasil.YggdrasilUserApiService.fetchProperties(YggdrasilUserApiService.java:121) ~[authlib-6.0.57.jar:?]
+	... 5 more
+[02:47:25] [Render thread/ERROR]: Error while loading the narrator
+com.mojang.text2speech.Narrator$InitializeException: Failed to load library flite
+	at knot/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:69) ~[text2speech-1.17.9.jar:?]
+	at knot/com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:18) ~[text2speech-1.17.9.jar:?]
+	at knot/com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41) [text2speech-1.17.9.jar:?]
+	at knot/net.minecraft.class_333.<init>(class_333.java:19) [client-intermediary.jar:?]
+	at knot/net.minecraft.class_310.<init>(class_310.java:687) [client-intermediary.jar:?]
+	at knot/net.minecraft.client.main.Main.main(Main.java:250) [client-intermediary.jar:?]
+	at net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:514) [fabric-loader-0.19.3.jar:?]
+	at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:72) [fabric-loader-0.19.3.jar:?]
+	at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23) [fabric-loader-0.19.3.jar:?]
+Caused by: java.lang.UnsatisfiedLinkError: Unable to load library 'flite':
+libflite.so: cannot open shared object file: No such file or directory
+libflite.so: cannot open shared object file: No such file or directory
+Native library (linux-x86-64/libflite.so) not found in resource path (/home/runner/.minecraft/libraries/com/fasterxml/jackson/core/jackson-annotations/2.13.4/jackson-annotations-2.13.4.jar:/home/runner/.minecraft/libraries/com/fasterxml/jackson/core/jackson-core/2.13.4/jackson-core-2.13.4.jar:/home/runner/.minecraft/libraries/com/fasterxml/jackson/core/jackson-databind/2.13.4.2/jackson-databind-2.13.4.2.jar:/home/runner/.minecraft/libraries/com/github/oshi/oshi-core/6.6.5/oshi-core-6.6.5.jar:/home/runner/.minecraft/libraries/com/github/stephenc/jcip/jcip-annotations/1.0-1/jcip-annotations-1.0-1.jar:/home/runner/.minecraft/libraries/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar:/home/runner/.minecraft/libraries/com/google/guava/failureaccess/1.0.2/failureaccess-1.0.2.jar:/home/runner/.minecraft/libraries/com/google/guava/guava/33.3.1-jre/guava-33.3.1-jre.jar:/home/runner/.minecraft/libraries/com/ibm/icu/icu4j/76.1/icu4j-76.1.jar:/home/runner/.minecraft/libraries/com/microsoft/azure/msal4j/1.17.2/msal4j-1.17.2.jar:/home/runner/.minecraft/libraries/com/mojang/authlib/6.0.57/authlib-6.0.57.jar:/home/runner/.minecraft/libraries/com/mojang/blocklist/1.0.10/blocklist-1.0.10.jar:/home/runner/.minecraft/libraries/com/mojang/brigadier/1.3.10/brigadier-1.3.10.jar:/home/runner/.minecraft/libraries/com/mojang/datafixerupper/8.0.16/datafixerupper-8.0.16.jar:/home/runner/.minecraft/libraries/com/mojang/jtracy/1.0.29/jtracy-1.0.29.jar:/home/runner/.minecraft/libraries/com/mojang/jtracy/1.0.29/jtracy-1.0.29-natives-linux.jar:/home/runner/.minecraft/libraries/com/mojang/logging/1.5.10/logging-1.5.10.jar:/home/runner/.minecraft/libraries/com/mojang/patchy/2.2.10/patchy-2.2.10.jar:/home/runner/.minecraft/libraries/com/mojang/text2speech/1.17.9/text2speech-1.17.9.jar:/home/runner/.minecraft/libraries/com/nimbusds/content-type/2.3/content-type-2.3.jar:/home/runner/.minecraft/libraries/com/nimbusds/lang-tag/1.7/lang-tag-1.7.jar:/home/runner/.minecraft/libraries/com/nimbusds/nimbus-jose-jwt/9.40/nimbus-jose-jwt-9.40.jar:/home/runner/.minecraft/libraries/com/nimbusds/oauth2-oidc-sdk/11.18/oauth2-oidc-sdk-11.18.jar:/home/runner/.minecraft/libraries/commons-codec/commons-codec/1.17.1/commons-codec-1.17.1.jar:/home/runner/.minecraft/libraries/commons-io/commons-io/2.17.0/commons-io-2.17.0.jar:/home/runner/.minecraft/libraries/commons-logging/commons-logging/1.3.4/commons-logging-1.3.4.jar:/home/runner/.minecraft/libraries/io/netty/netty-buffer/4.1.115.Final/netty-buffer-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-codec/4.1.115.Final/netty-codec-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-common/4.1.115.Final/netty-common-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-handler/4.1.115.Final/netty-handler-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-resolver/4.1.115.Final/netty-resolver-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport-classes-epoll/4.1.115.Final/netty-transport-classes-epoll-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport-native-epoll/4.1.115.Final/netty-transport-native-epoll-4.1.115.Final-linux-aarch_64.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport-native-epoll/4.1.115.Final/netty-transport-native-epoll-4.1.115.Final-linux-x86_64.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport-native-unix-common/4.1.115.Final/netty-transport-native-unix-common-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport/4.1.115.Final/netty-transport-4.1.115.Final.jar:/home/runner/.minecraft/libraries/it/unimi/dsi/fastutil/8.5.15/fastutil-8.5.15.jar:/home/runner/.minecraft/libraries/net/java/dev/jna/jna-platform/5.15.0/jna-platform-5.15.0.jar:/home/runner/.minecraft/libraries/net/java/dev/jna/jna/5.15.0/jna-5.15.0.jar:/home/runner/.minecraft/libraries/net/minidev/accessors-smart/2.5.1/accessors-smart-2.5.1.jar:/home/runner/.minecraft/libraries/net/minidev/json-smart/2.5.1/json-smart-2.5.1.jar:/home/runner/.minecraft/libraries/net/sf/jopt-simple/jopt-simple/5.0.4/jopt-simple-5.0.4.jar:/home/runner/.minecraft/libraries/org/apache/commons/commons-compress/1.27.1/commons-compress-1.27.1.jar:/home/runner/.minecraft/libraries/org/apache/commons/commons-lang3/3.17.0/commons-lang3-3.17.0.jar:/home/runner/.minecraft/libraries/org/apache/httpcomponents/httpclient/4.5.14/httpclient-4.5.14.jar:/home/runner/.minecraft/libraries/org/apache/httpcomponents/httpcore/4.4.16/httpcore-4.4.16.jar:/home/runner/work/ModCompiler/ModCompiler/HeadlessMC/a79cffa1-aa5f-42c9-a205-6ae43a0e631c/log4j-api-2.24.1.jar:/home/runner/work/ModCompiler/ModCompiler/HeadlessMC/a79cffa1-aa5f-42c9-a205-6ae43a0e631c/log4j-core-2.24.1.jar:/home/runner/work/ModCompiler/ModCompiler/HeadlessMC/a79cffa1-aa5f-42c9-a205-6ae43a0e631c/log4j-slf4j2-impl-2.24.1.jar:/home/runner/.minecraft/libraries/org/jcraft/jorbis/0.0.17/jorbis-0.0.17.jar:/home/runner/.minecraft/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-freetype/3.3.3/lwjgl-freetype-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-freetype/3.3.3/lwjgl-freetype-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-glfw/3.3.3/lwjgl-glfw-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-glfw/3.3.3/lwjgl-glfw-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-jemalloc/3.3.3/lwjgl-jemalloc-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-jemalloc/3.3.3/lwjgl-jemalloc-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-openal/3.3.3/lwjgl-openal-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-openal/3.3.3/lwjgl-openal-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-opengl/3.3.3/lwjgl-opengl-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-opengl/3.3.3/lwjgl-opengl-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-stb/3.3.3/lwjgl-stb-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-stb/3.3.3/lwjgl-stb-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-tinyfd/3.3.3/lwjgl-tinyfd-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-tinyfd/3.3.3/lwjgl-tinyfd-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0.jar:/home/runner/.minecraft/libraries/org/slf4j/slf4j-api/2.0.16/slf4j-api-2.0.16.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm-analysis/9.10.1/asm-analysis-9.10.1.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm-commons/9.10.1/asm-commons-9.10.1.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm-tree/9.10.1/asm-tree-9.10.1.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm-util/9.10.1/asm-util-9.10.1.jar:/home/runner/.minecraft/libraries/net/fabricmc/sponge-mixin/0.17.3+mixin.0.8.7/sponge-mixin-0.17.3+mixin.0.8.7.jar:/home/runner/.minecraft/libraries/net/fabricmc/intermediary/1.21.4/intermediary-1.21.4.jar:/home/runner/.minecraft/libraries/net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar:/home/runner/.minecraft/versions/fabric-loader-0.19.3-1.21.4/fabric-loader-0.19.3-1.21.4.jar)
+	at knot/com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:325) ~[jna-5.15.0.jar:?]
+	at knot/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481) ~[jna-5.15.0.jar:?]
+	at knot/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423) ~[jna-5.15.0.jar:?]
+	at knot/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:67) ~[text2speech-1.17.9.jar:?]
+	... 8 more
+	Suppressed: java.lang.UnsatisfiedLinkError: libflite.so: cannot open shared object file: No such file or directory
+		at knot/com.sun.jna.Native.open(Native Method) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:213) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423) ~[jna-5.15.0.jar:?]
+		at knot/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:67) ~[text2speech-1.17.9.jar:?]
+		at knot/com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:18) ~[text2speech-1.17.9.jar:?]
+		at knot/com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41) [text2speech-1.17.9.jar:?]
+		at knot/net.minecraft.class_333.<init>(class_333.java:19) [client-intermediary.jar:?]
+		at knot/net.minecraft.class_310.<init>(class_310.java:687) [client-intermediary.jar:?]
+		at knot/net.minecraft.client.main.Main.main(Main.java:250) [client-intermediary.jar:?]
+		at net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:514) [fabric-loader-0.19.3.jar:?]
+		at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:72) [fabric-loader-0.19.3.jar:?]
+		at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23) [fabric-loader-0.19.3.jar:?]
+	Suppressed: java.lang.UnsatisfiedLinkError: libflite.so: cannot open shared object file: No such file or directory
+		at knot/com.sun.jna.Native.open(Native Method) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:226) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423) ~[jna-5.15.0.jar:?]
+		at knot/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:67) ~[text2speech-1.17.9.jar:?]
+		at knot/com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:18) ~[text2speech-1.17.9.jar:?]
+		at knot/com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41) [text2speech-1.17.9.jar:?]
+		at knot/net.minecraft.class_333.<init>(class_333.java:19) [client-intermediary.jar:?]
+		at knot/net.minecraft.class_310.<init>(class_310.java:687) [client-intermediary.jar:?]
+		at knot/net.minecraft.client.main.Main.main(Main.java:250) [client-intermediary.jar:?]
+		at net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:514) [fabric-loader-0.19.3.jar:?]
+		at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:72) [fabric-loader-0.19.3.jar:?]
+		at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23) [fabric-loader-0.19.3.jar:?]
+	Suppressed: java.io.IOException: Native library (linux-x86-64/libflite.so) not found in resource path (/home/runner/.minecraft/libraries/com/fasterxml/jackson/core/jackson-annotations/2.13.4/jackson-annotations-2.13.4.jar:/home/runner/.minecraft/libraries/com/fasterxml/jackson/core/jackson-core/2.13.4/jackson-core-2.13.4.jar:/home/runner/.minecraft/libraries/com/fasterxml/jackson/core/jackson-databind/2.13.4.2/jackson-databind-2.13.4.2.jar:/home/runner/.minecraft/libraries/com/github/oshi/oshi-core/6.6.5/oshi-core-6.6.5.jar:/home/runner/.minecraft/libraries/com/github/stephenc/jcip/jcip-annotations/1.0-1/jcip-annotations-1.0-1.jar:/home/runner/.minecraft/libraries/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar:/home/runner/.minecraft/libraries/com/google/guava/failureaccess/1.0.2/failureaccess-1.0.2.jar:/home/runner/.minecraft/libraries/com/google/guava/guava/33.3.1-jre/guava-33.3.1-jre.jar:/home/runner/.minecraft/libraries/com/ibm/icu/icu4j/76.1/icu4j-76.1.jar:/home/runner/.minecraft/libraries/com/microsoft/azure/msal4j/1.17.2/msal4j-1.17.2.jar:/home/runner/.minecraft/libraries/com/mojang/authlib/6.0.57/authlib-6.0.57.jar:/home/runner/.minecraft/libraries/com/mojang/blocklist/1.0.10/blocklist-1.0.10.jar:/home/runner/.minecraft/libraries/com/mojang/brigadier/1.3.10/brigadier-1.3.10.jar:/home/runner/.minecraft/libraries/com/mojang/datafixerupper/8.0.16/datafixerupper-8.0.16.jar:/home/runner/.minecraft/libraries/com/mojang/jtracy/1.0.29/jtracy-1.0.29.jar:/home/runner/.minecraft/libraries/com/mojang/jtracy/1.0.29/jtracy-1.0.29-natives-linux.jar:/home/runner/.minecraft/libraries/com/mojang/logging/1.5.10/logging-1.5.10.jar:/home/runner/.minecraft/libraries/com/mojang/patchy/2.2.10/patchy-2.2.10.jar:/home/runner/.minecraft/libraries/com/mojang/text2speech/1.17.9/text2speech-1.17.9.jar:/home/runner/.minecraft/libraries/com/nimbusds/content-type/2.3/content-type-2.3.jar:/home/runner/.minecraft/libraries/com/nimbusds/lang-tag/1.7/lang-tag-1.7.jar:/home/runner/.minecraft/libraries/com/nimbusds/nimbus-jose-jwt/9.40/nimbus-jose-jwt-9.40.jar:/home/runner/.minecraft/libraries/com/nimbusds/oauth2-oidc-sdk/11.18/oauth2-oidc-sdk-11.18.jar:/home/runner/.minecraft/libraries/commons-codec/commons-codec/1.17.1/commons-codec-1.17.1.jar:/home/runner/.minecraft/libraries/commons-io/commons-io/2.17.0/commons-io-2.17.0.jar:/home/runner/.minecraft/libraries/commons-logging/commons-logging/1.3.4/commons-logging-1.3.4.jar:/home/runner/.minecraft/libraries/io/netty/netty-buffer/4.1.115.Final/netty-buffer-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-codec/4.1.115.Final/netty-codec-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-common/4.1.115.Final/netty-common-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-handler/4.1.115.Final/netty-handler-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-resolver/4.1.115.Final/netty-resolver-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport-classes-epoll/4.1.115.Final/netty-transport-classes-epoll-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport-native-epoll/4.1.115.Final/netty-transport-native-epoll-4.1.115.Final-linux-aarch_64.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport-native-epoll/4.1.115.Final/netty-transport-native-epoll-4.1.115.Final-linux-x86_64.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport-native-unix-common/4.1.115.Final/netty-transport-native-unix-common-4.1.115.Final.jar:/home/runner/.minecraft/libraries/io/netty/netty-transport/4.1.115.Final/netty-transport-4.1.115.Final.jar:/home/runner/.minecraft/libraries/it/unimi/dsi/fastutil/8.5.15/fastutil-8.5.15.jar:/home/runner/.minecraft/libraries/net/java/dev/jna/jna-platform/5.15.0/jna-platform-5.15.0.jar:/home/runner/.minecraft/libraries/net/java/dev/jna/jna/5.15.0/jna-5.15.0.jar:/home/runner/.minecraft/libraries/net/minidev/accessors-smart/2.5.1/accessors-smart-2.5.1.jar:/home/runner/.minecraft/libraries/net/minidev/json-smart/2.5.1/json-smart-2.5.1.jar:/home/runner/.minecraft/libraries/net/sf/jopt-simple/jopt-simple/5.0.4/jopt-simple-5.0.4.jar:/home/runner/.minecraft/libraries/org/apache/commons/commons-compress/1.27.1/commons-compress-1.27.1.jar:/home/runner/.minecraft/libraries/org/apache/commons/commons-lang3/3.17.0/commons-lang3-3.17.0.jar:/home/runner/.minecraft/libraries/org/apache/httpcomponents/httpclient/4.5.14/httpclient-4.5.14.jar:/home/runner/.minecraft/libraries/org/apache/httpcomponents/httpcore/4.4.16/httpcore-4.4.16.jar:/home/runner/work/ModCompiler/ModCompiler/HeadlessMC/a79cffa1-aa5f-42c9-a205-6ae43a0e631c/log4j-api-2.24.1.jar:/home/runner/work/ModCompiler/ModCompiler/HeadlessMC/a79cffa1-aa5f-42c9-a205-6ae43a0e631c/log4j-core-2.24.1.jar:/home/runner/work/ModCompiler/ModCompiler/HeadlessMC/a79cffa1-aa5f-42c9-a205-6ae43a0e631c/log4j-slf4j2-impl-2.24.1.jar:/home/runner/.minecraft/libraries/org/jcraft/jorbis/0.0.17/jorbis-0.0.17.jar:/home/runner/.minecraft/libraries/org/joml/joml/1.10.8/joml-1.10.8.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-freetype/3.3.3/lwjgl-freetype-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-freetype/3.3.3/lwjgl-freetype-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-glfw/3.3.3/lwjgl-glfw-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-glfw/3.3.3/lwjgl-glfw-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-jemalloc/3.3.3/lwjgl-jemalloc-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-jemalloc/3.3.3/lwjgl-jemalloc-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-openal/3.3.3/lwjgl-openal-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-openal/3.3.3/lwjgl-openal-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-opengl/3.3.3/lwjgl-opengl-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-opengl/3.3.3/lwjgl-opengl-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-stb/3.3.3/lwjgl-stb-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-stb/3.3.3/lwjgl-stb-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-tinyfd/3.3.3/lwjgl-tinyfd-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl-tinyfd/3.3.3/lwjgl-tinyfd-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3.jar:/home/runner/.minecraft/libraries/org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3-natives-linux.jar:/home/runner/.minecraft/libraries/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0.jar:/home/runner/.minecraft/libraries/org/slf4j/slf4j-api/2.0.16/slf4j-api-2.0.16.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm-analysis/9.10.1/asm-analysis-9.10.1.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm-commons/9.10.1/asm-commons-9.10.1.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm-tree/9.10.1/asm-tree-9.10.1.jar:/home/runner/.minecraft/libraries/org/ow2/asm/asm-util/9.10.1/asm-util-9.10.1.jar:/home/runner/.minecraft/libraries/net/fabricmc/sponge-mixin/0.17.3+mixin.0.8.7/sponge-mixin-0.17.3+mixin.0.8.7.jar:/home/runner/.minecraft/libraries/net/fabricmc/intermediary/1.21.4/intermediary-1.21.4.jar:/home/runner/.minecraft/libraries/net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar:/home/runner/.minecraft/versions/fabric-loader-0.19.3-1.21.4/fabric-loader-0.19.3-1.21.4.jar)
+		at knot/com.sun.jna.Native.extractFromResourcePath(Native.java:1141) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.loadLibrary(NativeLibrary.java:297) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:481) ~[jna-5.15.0.jar:?]
+		at knot/com.sun.jna.NativeLibrary.getInstance(NativeLibrary.java:423) ~[jna-5.15.0.jar:?]
+		at knot/com.mojang.text2speech.NarratorLinux$FliteLibrary.loadNative(NarratorLinux.java:67) ~[text2speech-1.17.9.jar:?]
+		at knot/com.mojang.text2speech.NarratorLinux.<init>(NarratorLinux.java:18) ~[text2speech-1.17.9.jar:?]
+		at knot/com.mojang.text2speech.Narrator.getNarrator(Narrator.java:41) [text2speech-1.17.9.jar:?]
+		at knot/net.minecraft.class_333.<init>(class_333.java:19) [client-intermediary.jar:?]
+		at knot/net.minecraft.class_310.<init>(class_310.java:687) [client-intermediary.jar:?]
+		at knot/net.minecraft.client.main.Main.main(Main.java:250) [client-intermediary.jar:?]
+		at net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:514) [fabric-loader-0.19.3.jar:?]
+		at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:72) [fabric-loader-0.19.3.jar:?]
+		at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23) [fabric-loader-0.19.3.jar:?]
+[02:47:25] [Render thread/INFO]: Reloading ResourceManager: vanilla
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Worker-Main-1/WARN]: Unable to load font 'minecraft:include/unifont' in fonts.json in resourcepack: 'vanilla'
+com.google.gson.JsonParseException: No key providers in MapLike[{}]
+	at knot/com.mojang.serialization.DataResult$Error.getOrThrow(DataResult.java:287) ~[datafixerupper-8.0.16.jar:?]
+	at knot/net.minecraft.class_378.method_51619(class_378.java:304) ~[client-intermediary.jar:?]
+	at knot/net.minecraft.class_378.method_51623(class_378.java:170) ~[client-intermediary.jar:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1768) [?:?]
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.exec(CompletableFuture.java:1760) [?:?]
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:387) [?:?]
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1312) [?:?]
+	at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1843) [?:?]
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1808) [?:?]
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:188) [?:?]
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:25] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:25] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:26] [Render thread/INFO]: Waiting for overlay to disappear...
+[02:47:26] [Render thread/INFO]: Waiting for player to load...
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.allay.ambient_with_item
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.allay.ambient_without_item
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.allay.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.allay.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.allay.item_given
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.allay.item_taken
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.allay.item_thrown
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.cave
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.basalt_deltas.additions
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.basalt_deltas.loop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.basalt_deltas.mood
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.crimson_forest.additions
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.crimson_forest.loop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.crimson_forest.mood
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.nether_wastes.additions
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.nether_wastes.loop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.nether_wastes.mood
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.soul_sand_valley.additions
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.soul_sand_valley.loop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.soul_sand_valley.mood
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.warped_forest.additions
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.warped_forest.loop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.warped_forest.mood
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.underwater.enter
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.underwater.exit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.underwater.loop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.underwater.loop.additions
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.underwater.loop.additions.rare
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ambient.underwater.loop.additions.ultra_rare
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_block.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_block.chime
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_block.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_block.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_block.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_block.resonate
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_block.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_cluster.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_cluster.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_cluster.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_cluster.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.amethyst_cluster.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.ancient_debris.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.ancient_debris.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.ancient_debris.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.ancient_debris.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.ancient_debris.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.anvil.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.anvil.destroy
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.anvil.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.anvil.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.anvil.land
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.anvil.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.anvil.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.anvil.use
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.eat
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.hurt_reduced
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.roll
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.land
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.scute_drop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.unroll_finish
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.peek
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.unroll_start
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armadillo.brush
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_chain
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_diamond
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_elytra
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_generic
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_gold
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_iron
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_leather
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_netherite
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_turtle
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.equip_wolf
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.armor.unequip_wolf
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armor_stand.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armor_stand.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armor_stand.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.armor_stand.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.arrow.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.arrow.hit_player
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.arrow.shoot
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.axe.strip
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.axe.scrape
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.axe.wax_off
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.axolotl.attack
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.axolotl.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.axolotl.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.axolotl.idle_air
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.axolotl.idle_water
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.axolotl.splash
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.axolotl.swim
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea_leaves.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea_leaves.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea_leaves.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea_leaves.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.azalea_leaves.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_sapling.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_sapling.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_sapling.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_door.close
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_door.open
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_trapdoor.close
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_trapdoor.open
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_button.click_off
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_button.click_on
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_pressure_plate.click_off
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_pressure_plate.click_on
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_fence_gate.close
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bamboo_wood_fence_gate.open
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.barrel.close
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.barrel.open
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.basalt.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.basalt.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.basalt.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.basalt.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.basalt.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bat.ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bat.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bat.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bat.loop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bat.takeoff
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beacon.activate
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beacon.ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beacon.deactivate
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beacon.power_select
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bee.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bee.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bee.loop_aggressive
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bee.loop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bee.sting
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bee.pollinate
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beehive.drip
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beehive.enter
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beehive.exit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beehive.shear
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.beehive.work
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bell.use
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bell.resonate
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.big_dripleaf.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.big_dripleaf.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.big_dripleaf.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.big_dripleaf.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.big_dripleaf.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.blaze.ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.blaze.burn
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.blaze.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.blaze.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.blaze.shoot
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.boat.paddle_land
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.boat.paddle_water
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bogged.ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bogged.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bogged.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bogged.shear
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.bogged.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bone_block.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bone_block.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bone_block.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bone_block.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bone_block.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bone_meal.use
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.book.page_turn
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.book.put
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.blastfurnace.fire_crackle
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bottle.empty
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bottle.fill
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bottle.fill_dragonbreath
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.charge
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.deflect
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.inhale
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.idle_ground
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.idle_air
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.shoot
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.jump
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.land
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.slide
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.whirl
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.breeze.wind_burst
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.brewing_stand.brew
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.brush.brushing.generic
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.brush.brushing.sand
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.brush.brushing.gravel
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.brush.brushing.sand.complete
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.brush.brushing.gravel.complete
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bubble_column.bubble_pop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bubble_column.upwards_ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bubble_column.upwards_inside
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bubble_column.whirlpool_ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.bubble_column.whirlpool_inside
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:ui.hud.bubble_pop
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.empty
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.empty_axolotl
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.empty_fish
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.empty_lava
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.empty_powder_snow
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.empty_tadpole
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.fill
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.fill_axolotl
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.fill_fish
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.fill_lava
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.fill_powder_snow
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bucket.fill_tadpole
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bundle.drop_contents
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bundle.insert
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bundle.insert_fail
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:item.bundle.remove_one
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cake.add_candle
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.calcite.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.calcite.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.calcite.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.calcite.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.calcite.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.dash
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.dash_ready
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.eat
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.saddle
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.sit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.stand
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.camel.step_sand
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.campfire.crackle
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.candle.ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.candle.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.candle.extinguish
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.candle.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.candle.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.candle.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.candle.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.stray_ambient
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.death
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.eat
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.hiss
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.beg_for_food
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.hurt
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.purr
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:entity.cat.purreow
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cave_vines.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cave_vines.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cave_vines.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cave_vines.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cave_vines.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cave_vines.pick_berries
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.chain.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.chain.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.chain.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.chain.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.chain.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_wood.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_wood.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_wood.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_wood.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_wood.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_sapling.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_sapling.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_sapling.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_sapling.place
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_sapling.step
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_leaves.break
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_leaves.fall
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_leaves.hit
+[02:47:27] [Render thread/WARN]: Missing sound for event: minecraft:block.cherry_leaves.place

@@ -1,0 +1,19 @@
+[02:46:15] [main/INFO]: Loading Minecraft 1.20.6 with Fabric Loader 0.19.3
+[02:46:15] [main/INFO]: Fabric is preparing JARs on first launch, this may take a few seconds...
+[02:46:15] [main/WARN]: Mod resolution failed
+[02:46:15] [main/INFO]: Immediate reason: [HARD_DEP_INCOMPATIBLE_PRESELECTED pingfix 1.0.0 {depends minecraft @ [1.20.5]}, ROOT_FORCELOAD_SINGLE pingfix 1.0.0]
+[02:46:15] [main/INFO]: Reason: [HARD_DEP pingfix 1.0.0 {depends minecraft @ [1.20.5]}, HARD_DEP pingfix 1.0.0 {depends fabric-api @ [*]}]
+[02:46:15] [main/INFO]: Fix: add [add:fabric-api 1 ([(-∞,∞)])], remove [], replace [[minecraft 1.20.6] -> add:minecraft 1.20.5 ([[1.20.5,1.20.5]])]
+[02:46:15] [main/ERROR]: Incompatible mods found!
+net.fabricmc.loader.impl.FormattedException: Some of your mods are incompatible with the game or each other!
+A potential solution has been determined, this may resolve your problem:
+	 - Install fabric-api, any version.
+	 - Replace 'Minecraft' (minecraft) 1.20.6 with version 1.20.5.
+More details:
+	 - Mod 'PingFix' (pingfix) 1.0.0 requires version 1.20.5 of 'Minecraft' (minecraft), but only the wrong version is present: 1.20.6!
+	 - Mod 'PingFix' (pingfix) 1.0.0 requires any version of fabric-api, which is missing!
+	at net.fabricmc.loader.impl.FormattedException.ofLocalized(FormattedException.java:51) ~[fabric-loader-0.19.3.jar:?]
+	at net.fabricmc.loader.impl.FabricLoaderImpl.load(FabricLoaderImpl.java:202) ~[fabric-loader-0.19.3.jar:?]
+	at net.fabricmc.loader.impl.launch.knot.Knot.init(Knot.java:142) ~[fabric-loader-0.19.3.jar:?]
+	at net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:66) [fabric-loader-0.19.3.jar:?]
+	at net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23) [fabric-loader-0.19.3.jar:?]

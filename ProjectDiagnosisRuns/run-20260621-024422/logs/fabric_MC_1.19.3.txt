@@ -1,0 +1,528 @@
+fabric MC 1.19.3	Set up job	﻿2026-06-21T02:46:03.0623537Z Current runner version: '2.335.1'
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0649163Z ##[group]Runner Image Provisioner
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0650219Z Hosted Compute Agent
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0650924Z Version: 20260611.554
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0651666Z Commit: 5e0782fdc9014723d3be820dd114dd31555c2bd1
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0652451Z Build Date: 2026-06-11T21:40:46Z
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0653527Z Worker ID: {4e8a652d-e7bf-4219-bea9-3a86551c1ded}
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0654492Z Azure Region: westus
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0655111Z ##[endgroup]
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0656954Z ##[group]Operating System
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0657760Z Ubuntu
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0658335Z 24.04.4
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0659002Z LTS
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0659563Z ##[endgroup]
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0660463Z ##[group]Runner Image
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0661232Z Image: ubuntu-24.04
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0661856Z Version: 20260615.205.1
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0663027Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260615.205/images/ubuntu/Ubuntu2404-Readme.md
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0665116Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260615.205
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0666210Z ##[endgroup]
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0667392Z ##[group]GITHUB_TOKEN Permissions
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0669627Z Contents: read
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0670304Z Metadata: read
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0670969Z ##[endgroup]
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0673415Z Secret source: Actions
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.0674730Z Prepare workflow directory
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.1207589Z Prepare all required actions
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.1245591Z Getting action download info
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:03.4791437Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:04.0923040Z Download action repository 'robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2' (SHA:a96f54c1b5f5e09e47d9504526e96febd949d4c2)
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:04.4270400Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:04.5707229Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+fabric MC 1.19.3	Set up job	2026-06-21T02:46:04.7755226Z Complete job name: fabric MC 1.19.3
+fabric MC 1.19.3	Run actions/setup-java@v4	﻿2026-06-21T02:46:04.8511723Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8521425Z ##[group]Run actions/setup-java@v4
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8522760Z with:
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8523624Z   distribution: temurin
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8524349Z   java-version: 17
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8524953Z   java-package: jdk
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8525543Z   check-latest: false
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8526129Z   server-id: github
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8526681Z   server-username: GITHUB_ACTOR
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8527355Z   server-password: GITHUB_TOKEN
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8528034Z   overwrite-settings: true
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8528659Z   job-status: success
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8533392Z   token: ***
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8534327Z env:
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8535053Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:04.8535920Z ##[endgroup]
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0252447Z ##[group]Installed distributions
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0449901Z Resolved Java 17.0.19+10 from tool-cache
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0450848Z Setting Java 17.0.19+10 as the default
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0461416Z (node:2160) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0462875Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0465451Z Creating toolchains.xml for JDK version 17 from temurin
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0546798Z Writing to /home/runner/.m2/toolchains.xml
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0547685Z 
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0554449Z Java configuration:
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0555301Z   Distribution: temurin
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0556519Z   Version: 17.0.19+10
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0557442Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0558086Z 
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0559123Z ##[endgroup]
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0661613Z Creating settings.xml with server-id: github
+fabric MC 1.19.3	Run actions/setup-java@v4	2026-06-21T02:46:05.0662668Z Writing to /home/runner/.m2/settings.xml
+fabric MC 1.19.3	Download HeadlessMC launcher	﻿2026-06-21T02:46:05.0896923Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0900177Z ##[group]Run robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0901024Z with:
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0901532Z   repository: 3arthqu4ke/headlessmc
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0902121Z   tag: 2.9.0
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0902654Z   fileName: headlessmc-launcher-2.9.0.jar
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0903789Z   latest: false
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0904313Z   preRelease: false
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0904822Z   tarBall: false
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0905327Z   zipBall: false
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0905835Z   out-file-path: .
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0906327Z   extract: false
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0910622Z   token: ***
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0911153Z   github-api-url: https://api.github.com
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0911830Z env:
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0912419Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0913615Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0914627Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.0915429Z ##[endgroup]
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.1872380Z Fetching release 2.9.0 from repo 3arthqu4ke/headlessmc
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.1981065Z (node:2172) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.1984849Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.7794496Z Found release tag: 2.9.0
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:05.7825076Z Downloading file: headlessmc-launcher-2.9.0.jar to: /home/runner/work/ModCompiler/ModCompiler
+fabric MC 1.19.3	Download HeadlessMC launcher	2026-06-21T02:46:06.1256129Z Done: /home/runner/work/ModCompiler/ModCompiler/headlessmc-launcher-2.9.0.jar
+fabric MC 1.19.3	Install xvfb deps	﻿2026-06-21T02:46:06.1433815Z ##[group]Run sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:06.1436863Z [36;1msudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils[0m
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:06.1620204Z shell: /usr/bin/bash -e {0}
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:06.1621505Z env:
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:06.1622711Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:06.1624958Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:06.1627305Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:06.1629244Z ##[endgroup]
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.0424551Z Reading package lists...
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.2524337Z Building dependency tree...
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.2537730Z Reading state information...
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.4519469Z Suggested packages:
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.4520100Z   nickle cairo-5c xorg-docs-core
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.4749436Z The following NEW packages will be installed:
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.4750247Z   x11-xserver-utils
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.4988271Z 0 upgraded, 1 newly installed, 0 to remove and 2 not upgraded.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.4989113Z Need to get 169 kB of archives.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.4989795Z After this operation, 573 kB of additional disk space will be used.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.4990563Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.5976777Z Get:2 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 x11-xserver-utils amd64 7.7+10build2 [169 kB]
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.8619588Z Fetched 169 kB in 0s (1349 kB/s)
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.8886906Z Selecting previously unselected package x11-xserver-utils.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9160043Z (Reading database ... 
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9160898Z (Reading database ... 5%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9161582Z (Reading database ... 10%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9162028Z (Reading database ... 15%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9162414Z (Reading database ... 20%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9162989Z (Reading database ... 25%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9163757Z (Reading database ... 30%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9164243Z (Reading database ... 35%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9164654Z (Reading database ... 40%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9165059Z (Reading database ... 45%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9165488Z (Reading database ... 50%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:07.9212130Z (Reading database ... 55%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:08.0092197Z (Reading database ... 60%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:08.2135877Z (Reading database ... 65%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:08.4042136Z (Reading database ... 70%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:08.5014287Z (Reading database ... 75%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:08.5629533Z (Reading database ... 80%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:08.7695028Z (Reading database ... 85%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:08.9585111Z (Reading database ... 90%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.1155208Z (Reading database ... 95%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.1156241Z (Reading database ... 100%
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.1157240Z (Reading database ... 202324 files and directories currently installed.)
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.1198472Z Preparing to unpack .../x11-xserver-utils_7.7+10build2_amd64.deb ...
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.1226816Z Unpacking x11-xserver-utils (7.7+10build2) ...
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.2034934Z Setting up x11-xserver-utils (7.7+10build2) ...
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.2086532Z Processing triggers for man-db (2.12.0-4build2) ...
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.2112546Z Not building database; man-db/auto-update is not 'true'.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8645424Z 
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8646377Z Running kernel seems to be up-to-date.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8664302Z 
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8664864Z No services need to be restarted.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8665285Z 
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8665485Z No containers need to be restarted.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8665842Z 
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8666044Z No user sessions are running outdated binaries.
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8666417Z 
+fabric MC 1.19.3	Install xvfb deps	2026-06-21T02:46:09.8666924Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+fabric MC 1.19.3	Cache ~/.minecraft	﻿2026-06-21T02:46:10.7468494Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7469846Z ##[group]Run actions/cache@v4
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7470089Z with:
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7470279Z   path: ~/.minecraft
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7470559Z   key: mc-runtime-test-diag-1.19.3-fabric-27891298371
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7471011Z   restore-keys: mc-runtime-test-diag-1.19.3-fabric-
+fabric MC 1.19.3	Cache ~/.minecraft	mc-runtime-test-diag-
+fabric MC 1.19.3	Cache ~/.minecraft	
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7471435Z   enableCrossOsArchive: false
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7471702Z   fail-on-cache-miss: false
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7471938Z   lookup-only: false
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7472151Z   save-always: false
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7472352Z env:
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7472607Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7473065Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7474018Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.7474420Z ##[endgroup]
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.8520496Z (node:2290) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:10.8521855Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:11.0988455Z Cache hit for restore-key: mc-runtime-test-diag-1.20.3-fabric-27891298371
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:11.1101590Z (node:2290) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:12.3995924Z Received 0 of 81807985 (0.0%), 0.0 MBs/sec
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:13.2634249Z Received 81807985 of 81807985 (100.0%), 41.8 MBs/sec
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:13.2636611Z Cache Size: ~78 MB (81807985 B)
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:13.2705432Z [command]/usr/bin/tar -xf /home/runner/work/_temp/848c48ce-68d5-4bba-b06f-2fe1821bdde2/cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --use-compress-program unzstd
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:13.5195019Z Cache restored successfully
+fabric MC 1.19.3	Cache ~/.minecraft	2026-06-21T02:46:13.5316213Z Cache restored from key: mc-runtime-test-diag-1.20.3-fabric-27891298371
+fabric MC 1.19.3	Run launcher test	﻿2026-06-21T02:46:13.5446055Z ##[group]Run mkdir -p launcher-result
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5446952Z [36;1mmkdir -p launcher-result[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5447256Z [36;1mpython3 - <<'PYEOF'[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5447648Z [36;1mimport json, os, subprocess, sys, shutil, re, time, urllib.request[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5448110Z [36;1mfrom pathlib import Path[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5448391Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5448603Z [36;1m# ---- Config from matrix ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5448883Z [36;1mGAME_VERSION = "1.19.3"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5449145Z [36;1mTEST_MC = "1.19.3"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5449387Z [36;1mLOADER = "fabric"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5449636Z [36;1mORIGINAL_LOADER = "fabric"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5450128Z [36;1mFILE_URL = "https://cdn.modrinth.com/data/9GikcByI/versions/cUDDzgPD/pingfix-1.0.0.jar"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5450636Z [36;1mFILE_NAME = "pingfix-1.0.0.jar"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5450920Z [36;1mVERSION_NUMBER = "1.0.0"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5451183Z [36;1mJAVA_VERSION = "17"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5451469Z [36;1mLOADER_REGEX = ".*fabric.*"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5451739Z [36;1mMCRT_JAR = "fabric"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5451988Z [36;1mSAFE_KEY = "fabric-1.19.3"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5452245Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5452488Z [36;1mHMC_JAR = "headlessmc-launcher-2.9.0.jar"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5452817Z [36;1mMCRT_VERSION = "4.4.0"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5453395Z [36;1mMCRT_REPO = "headlesshq/mc-runtime-test"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5454105Z [36;1mLAUNCH_TIMEOUT = 120  # seconds to wait for game to load before killing[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5454515Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5454741Z [36;1mOUT_DIR = Path("launcher-result")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5455083Z [36;1mOUT_DIR.mkdir(parents=True, exist_ok=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5455385Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5455783Z [36;1mprint(f"::group::Test: {ORIGINAL_LOADER} MC {GAME_VERSION} (on {TEST_MC}, Java {JAVA_VERSION})")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5456244Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5456427Z [36;1mresult = {[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5456660Z [36;1m    "status": "launcher_failed",[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5456987Z [36;1m    "game_version": GAME_VERSION,[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5457278Z [36;1m    "loader": ORIGINAL_LOADER,[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5457555Z [36;1m    "test_mc": TEST_MC,[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5457843Z [36;1m    "version_number": VERSION_NUMBER,[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5458142Z [36;1m    "crash_summary": "",[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5458406Z [36;1m    "logs": "",[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5458625Z [36;1m}[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5458809Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5458998Z [36;1mdef cleanup():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5459261Z [36;1m    """Kill all related processes."""[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5459772Z [36;1m    for pat in ["headlessmc-launcher", "Xvfb", "net.minecraft", "net.neoforged", "cpw.mods"]:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5460354Z [36;1m        subprocess.run(["pkill", "-f", pat], capture_output=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5460733Z [36;1m    time.sleep(1)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5461097Z [36;1m    subprocess.run(["pkill", "-9", "-f", "java"], capture_output=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5461507Z [36;1m    time.sleep(1)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5461746Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5461944Z [36;1mdef find_java_home():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5462296Z [36;1m    tc = Path("/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5462864Z [36;1m    if tc.exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5463521Z [36;1m        for d in sorted(tc.iterdir(), reverse=True):[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5463983Z [36;1m            if d.is_dir() and d.name.split('.')[0] == JAVA_VERSION:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5464405Z [36;1m                if (d / "x64" / "bin" / "java").exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5464758Z [36;1m                    return str(d / "x64")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5465093Z [36;1m    return os.environ.get("JAVA_HOME", "")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5465387Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5465591Z [36;1mdef download_mcrt_jar():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5465983Z [36;1m    """Download mc-runtime-test jar for this MC version + loader type."""[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5466601Z [36;1m    mods_dir = Path("run/mods")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5466930Z [36;1m    mods_dir.mkdir(parents=True, exist_ok=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5467337Z [36;1m    pat = f"mc-runtime-test-{TEST_MC}-*-{MCRT_JAR}-release.jar"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5467740Z [36;1m    existing = list(mods_dir.glob(pat))[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5468048Z [36;1m    if existing:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5468367Z [36;1m        return existing[0].name[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5468650Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5469004Z [36;1m    url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5469594Z [36;1m    req = urllib.request.Request(url, headers={"User-Agent": "ModCompiler/1.0"})[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5470014Z [36;1m    try:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5470303Z [36;1m        with urllib.request.urlopen(req, timeout=30) as r:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5470698Z [36;1m            release = json.loads(r.read().decode())[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5471035Z [36;1m    except Exception as e:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5471411Z [36;1m        print(f"  WARNING: Could not fetch mc-runtime-test release: {e}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5471806Z [36;1m        return None[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5472044Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5472283Z [36;1m    for asset in release.get("assets", []):[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5472614Z [36;1m        name = asset.get("name", "")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5473433Z [36;1m        if re.match(f"mc-runtime-test-{re.escape(TEST_MC)}-.*-{re.escape(MCRT_JAR)}-release\\.jar$", name):[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5474024Z [36;1m            dl_url = asset.get("browser_download_url", "")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5474387Z [36;1m            if not dl_url:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5474652Z [36;1m                continue[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5474906Z [36;1m            try:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5475248Z [36;1m                urllib.request.urlretrieve(dl_url, str(mods_dir / name))[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5475701Z [36;1m                print(f"  Downloaded mc-runtime-test: {name}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5476061Z [36;1m                return name[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5476342Z [36;1m            except Exception as e:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5476706Z [36;1m                print(f"  WARNING: Download failed for {name}: {e}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5477066Z [36;1m                return None[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5477444Z [36;1m    print(f"  WARNING: No mc-runtime-test jar for {TEST_MC}/{MCRT_JAR}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5477830Z [36;1m    return None[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5478050Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5478231Z [36;1mtry:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5478432Z [36;1m    cleanup()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5478679Z [36;1m    java_home = find_java_home()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5478985Z [36;1m    os.environ["JAVA_HOME"] = java_home[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5479305Z [36;1m    print(f"  JAVA_HOME={java_home}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5479581Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5479802Z [36;1m    # ---- Setup run directory ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5480106Z [36;1m    run_dir = Path("run")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5480372Z [36;1m    if run_dir.exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5480645Z [36;1m        shutil.rmtree(run_dir)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5480916Z [36;1m    run_dir.mkdir()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5481313Z [36;1m    (run_dir / "mods").mkdir()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5481568Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5481771Z [36;1m    hmc_dir = Path("HeadlessMC")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5482060Z [36;1m    hmc_dir.mkdir(exist_ok=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5482387Z [36;1m    (hmc_dir / "config.properties").write_text([0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5482766Z [36;1m        f"hmc.java.versions={java_home}/bin/java\n"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5483549Z [36;1m        f"hmc.gamedir={Path.cwd()}/run\n"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5483920Z [36;1m        f"hmc.offline=true\n"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5484259Z [36;1m        f"hmc.rethrow.launch.exceptions=true\n"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5484794Z [36;1m        f"hmc.exit.on.failed.command=true\n"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5485130Z [36;1m        f"hmc.assets.dummy=true\n"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5485413Z [36;1m    )[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5485847Z [36;1m    (run_dir / "options.txt").write_text("onboardAccessibility:false\npauseOnLostFocus:false\n")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5486334Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5486552Z [36;1m    # ---- Download mod jar ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5486879Z [36;1m    print(f"  Downloading {FILE_NAME}...")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5487193Z [36;1m    for attempt in range(3):[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5487468Z [36;1m        r = subprocess.run([0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5487815Z [36;1m            ["curl", "-fsSL", "--retry", "3", "--retry-delay", "5",[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5488225Z [36;1m             FILE_URL, "-o", f"run/mods/{FILE_NAME}"],[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5488613Z [36;1m            capture_output=True, text=True, timeout=120[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5488935Z [36;1m        )[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5489171Z [36;1m        if r.returncode == 0:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5489438Z [36;1m            break[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5489672Z [36;1m        time.sleep(5)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5489905Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5490150Z [36;1m    if not (run_dir / "mods" / FILE_NAME).exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5490608Z [36;1m        result["crash_summary"] = f"Failed to download mod jar: {FILE_NAME}"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5491085Z [36;1m        print(f"  FAILED: Could not download {FILE_NAME}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5491439Z [36;1m        print("::endgroup::")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5491717Z [36;1m        # Write result and exit[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5492020Z [36;1m        entry_dir = OUT_DIR / SAFE_KEY[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5492371Z [36;1m        entry_dir.mkdir(parents=True, exist_ok=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5492887Z [36;1m        (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5493719Z [36;1m        sys.exit(0)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5493968Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5494284Z [36;1m    # ---- Download Minecraft + install modloader (if not cached) ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5494868Z [36;1m    mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5495348Z [36;1m    if not mc_json.exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5495681Z [36;1m        print(f"  Downloading Minecraft {TEST_MC}...")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5496018Z [36;1m        subprocess.run([0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5496363Z [36;1m            ["java", "-jar", HMC_JAR, "--command", "download", TEST_MC],[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5496782Z [36;1m            capture_output=True, text=True, timeout=300[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5497101Z [36;1m        )[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5497449Z [36;1m        print(f"  Installing {LOADER} for {TEST_MC} (Java {JAVA_VERSION})...")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5497857Z [36;1m        subprocess.run([0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5498252Z [36;1m            ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", JAVA_VERSION],[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5498735Z [36;1m            capture_output=True, text=True, timeout=600[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5499059Z [36;1m        )[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5499260Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5499494Z [36;1m    # ---- Download mc-runtime-test jar ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5499967Z [36;1m    mcrt_name = download_mcrt_jar()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5500258Z [36;1m    if not mcrt_name:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5500661Z [36;1m        result["crash_summary"] = f"No mc-runtime-test jar for {TEST_MC}/{MCRT_JAR}"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5501167Z [36;1m        print(f"  FAILED: No mc-runtime-test jar available")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5501522Z [36;1m        print("::endgroup::")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5501814Z [36;1m        entry_dir = OUT_DIR / SAFE_KEY[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5502167Z [36;1m        entry_dir.mkdir(parents=True, exist_ok=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5502671Z [36;1m        (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5503513Z [36;1m        sys.exit(0)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5503808Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5504042Z [36;1m    # ---- Launch game in BACKGROUND ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5504435Z [36;1m    print(f"  Launching Minecraft {TEST_MC} with {LOADER}...")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5504834Z [36;1m    launch_proc = subprocess.Popen([0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5505178Z [36;1m        ["xvfb-run", "java", "-Dhmc.check.xvfb=true",[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5505596Z [36;1m         "-jar", HMC_JAR, "--command", "launch", LOADER_REGEX, "-regex",[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5506025Z [36;1m         "--jvm", "-Djava.awt.headless=true"],[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5506405Z [36;1m        stdout=subprocess.PIPE, stderr=subprocess.PIPE[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5506734Z [36;1m    )[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5506926Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5507168Z [36;1m    # ---- Wait for game to load, then kill ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5507493Z [36;1m    game_started = False[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5507758Z [36;1m    crash_detected = False[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5508018Z [36;1m    waited = 0[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5508251Z [36;1m    poll_interval = 5[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5508489Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5508695Z [36;1m    while waited < LAUNCH_TIMEOUT:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5509004Z [36;1m        time.sleep(poll_interval)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5509295Z [36;1m        waited += poll_interval[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5509554Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5509786Z [36;1m        # Check if process exited on its own[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5510116Z [36;1m        if launch_proc.poll() is not None:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5510604Z [36;1m            print(f"  Game exited on its own after {waited}s (exit code {launch_proc.returncode})")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5511079Z [36;1m            game_started = True[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5511354Z [36;1m            break[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5511576Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5511784Z [36;1m        # Check for crash reports[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5512121Z [36;1m        crash_reports_dir = Path("run/crash-reports")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5534362Z [36;1m        crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else [][0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5535018Z [36;1m        hs_err = list(Path("run").glob("hs_err_pid*.log"))[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5535391Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5535623Z [36;1m        if crash_files or hs_err:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5535985Z [36;1m            print(f"  CRASH DETECTED after {waited}s!")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5536341Z [36;1m            crash_detected = True[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5536709Z [36;1m            # Give it a moment to fully crash, then kill[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5537048Z [36;1m            time.sleep(5)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5537343Z [36;1m            if launch_proc.poll() is None:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5537660Z [36;1m                launch_proc.kill()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5537981Z [36;1m                launch_proc.wait(timeout=10)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5538275Z [36;1m            break[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5538506Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5538755Z [36;1m        # Check if game log shows title screen reached[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5539130Z [36;1m        log_path = Path("run/logs/latest.log")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5539635Z [36;1m        if log_path.exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5540026Z [36;1m            log_text = log_path.read_text(encoding="utf-8", errors="replace")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5540507Z [36;1m            if "Setting user:" in log_text or "Loaded" in log_text:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5540885Z [36;1m                if not game_started:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5541257Z [36;1m                    print(f"  Game reached title screen after {waited}s")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5541648Z [36;1m                    game_started = True[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5542009Z [36;1m                    # Give mc-runtime-test a few more seconds to work[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5542514Z [36;1m                    if waited < LAUNCH_TIMEOUT - 10:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5542849Z [36;1m                        time.sleep(10)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5543309Z [36;1m                        waited += 10[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5543613Z [36;1m                    break[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5543893Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5544116Z [36;1m    # ---- Kill if still running ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5544458Z [36;1m    if launch_proc.poll() is None:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5544866Z [36;1m        print(f"  Killing game after {waited}s (timeout)")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5545228Z [36;1m        launch_proc.kill()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5545488Z [36;1m        try:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5545737Z [36;1m            launch_proc.wait(timeout=10)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5546077Z [36;1m        except subprocess.TimeoutExpired:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5546403Z [36;1m            launch_proc.kill()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5546667Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5546881Z [36;1m    # ---- Analyse results ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5547220Z [36;1m    crash_reports_dir = Path("run/crash-reports")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5547765Z [36;1m    crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else [][0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5548356Z [36;1m    hs_err = list(Path("run").glob("hs_err_pid*.log"))[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5548684Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5548884Z [36;1m    # Collect game log[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5549137Z [36;1m    log_text = ""[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5549418Z [36;1m    log_path = Path("run/logs/latest.log")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5549731Z [36;1m    if log_path.exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5550129Z [36;1m        log_text = log_path.read_text(encoding="utf-8", errors="replace")[:5000][0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5550578Z [36;1m    elif Path("run/latest.log").exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5551062Z [36;1m        log_text = Path("run/latest.log").read_text(encoding="utf-8", errors="replace")[:5000][0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5551508Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5551872Z [36;1m    exit_code = launch_proc.returncode if launch_proc.poll() is not None else -9[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5552303Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5552504Z [36;1m    if crash_files or hs_err:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5552805Z [36;1m        result["status"] = "launcher_failed"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5553244Z [36;1m        if crash_files:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5553712Z [36;1m            result["crash_summary"] = crash_files[0].read_text(encoding="utf-8", errors="replace")[:500][0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5554210Z [36;1m        elif hs_err:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5554641Z [36;1m            result["crash_summary"] = hs_err[0].read_text(encoding="utf-8", errors="replace")[:500][0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5555114Z [36;1m        result["logs"] = log_text[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5555424Z [36;1m        print(f"  FAILED: Game crashed")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5555727Z [36;1m    elif crash_detected:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5556024Z [36;1m        result["status"] = "launcher_failed"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5556421Z [36;1m        result["crash_summary"] = "Crash detected during game load"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5556803Z [36;1m        result["logs"] = log_text[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5557108Z [36;1m        print(f"  FAILED: Crash detected")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5557587Z [36;1m    elif game_started and exit_code not in (0, -9):[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5557939Z [36;1m        # Game started but exited with error[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5558265Z [36;1m        result["status"] = "launcher_failed"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5558665Z [36;1m        result["crash_summary"] = f"Game exited with code {exit_code}"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5559064Z [36;1m        result["logs"] = log_text[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5559411Z [36;1m        print(f"  FAILED: Game exited with code {exit_code}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5559747Z [36;1m    else:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5560148Z [36;1m        # Game loaded successfully (reached title screen) or mc-runtime-test quit normally[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5560738Z [36;1m        result["status"] = "passed"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5561041Z [36;1m        result["logs"] = log_text[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5561322Z [36;1m        print(f"  PASSED")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5561575Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5561774Z [36;1mexcept Exception as e:[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5562072Z [36;1m    result["crash_summary"] = str(e)[:500][0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5562376Z [36;1m    print(f"  ERROR: {e}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5562635Z [36;1m    cleanup()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5562850Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5563027Z [36;1mcleanup()[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5563360Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5563560Z [36;1m# ---- Write result ----[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5563831Z [36;1mentry_dir = OUT_DIR / SAFE_KEY[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5564151Z [36;1mentry_dir.mkdir(parents=True, exist_ok=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5564630Z [36;1m(entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5565074Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5565271Z [36;1m# Also save crash logs if any[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5565593Z [36;1mcrash_reports_dir = Path("run/crash-reports")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5565926Z [36;1mif crash_reports_dir.exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5566249Z [36;1m    crash_target = entry_dir / "crash-logs"[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5566716Z [36;1m    shutil.copytree(str(crash_reports_dir), str(crash_target), dirs_exist_ok=True)[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5567196Z [36;1mfor f in Path("run").glob("hs_err_pid*.log"):[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5567558Z [36;1m    shutil.copy2(str(f), str(entry_dir / f.name))[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5567914Z [36;1mlog_path = Path("run/logs/latest.log")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5568223Z [36;1mif log_path.exists():[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5568566Z [36;1m    shutil.copy2(str(log_path), str(entry_dir / "latest.log"))[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5568922Z [36;1m[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5569140Z [36;1mprint(f"  Result: {result['status']}")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5569449Z [36;1mprint("::endgroup::")[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5569693Z [36;1mPYEOF[0m
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5602944Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5603440Z env:
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5603745Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5604244Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5604770Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:13.5605170Z ##[endgroup]
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4214052Z ##[group]Test: fabric MC 1.19.3 (on 1.19.3, Java 17)
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4214885Z   JAVA_HOME=/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4215618Z   Downloading pingfix-1.0.0.jar...
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4216086Z   Downloading Minecraft 1.19.3...
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4216622Z   Installing fabric for 1.19.3 (Java 17)...
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4217455Z   Downloaded mc-runtime-test: mc-runtime-test-1.19.3-4.4.0-fabric-release.jar
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4218270Z   Launching Minecraft 1.19.3 with fabric...
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4218829Z   Game exited on its own after 15s (exit code 1)
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4219373Z   FAILED: Game exited with code 1
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4219854Z   Result: launcher_failed
+fabric MC 1.19.3	Run launcher test	2026-06-21T02:46:40.4221102Z ##[endgroup]
+fabric MC 1.19.3	Upload launcher result	﻿2026-06-21T02:46:40.4369128Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4370466Z ##[group]Run actions/upload-artifact@v4
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4370747Z with:
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4370962Z   name: launcher-result-fabric-1.19.3
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4371251Z   path: launcher-result/
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4371494Z   if-no-files-found: warn
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4371740Z   compression-level: 6
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4371963Z   overwrite: false
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4372186Z   include-hidden-files: false
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4372430Z env:
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4372683Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4373366Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4373921Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.4374347Z ##[endgroup]
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.6011728Z (node:2611) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.6012523Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.6070023Z With the provided path, there will be 2 files uploaded
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.6075866Z Artifact name is valid!
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.6076777Z Root directory input is valid!
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:40.9879271Z Beginning upload of artifact content to blob storage
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:41.0091345Z (node:2611) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:41.3067303Z Uploaded bytes 1961
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:41.3872829Z Finished uploading artifact content to blob storage!
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:41.3874475Z SHA256 digest of uploaded artifact zip is 38f21ca1a63c99250b27b263db3556716cf09a5aaed72f20c990844a9c30657a
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:41.3875913Z Finalizing artifact upload
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:41.6175121Z Artifact launcher-result-fabric-1.19.3.zip successfully finalized. Artifact ID 7771134214
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:41.6176753Z Artifact launcher-result-fabric-1.19.3 has been successfully uploaded! Final size is 1961 bytes. Artifact ID is 7771134214
+fabric MC 1.19.3	Upload launcher result	2026-06-21T02:46:41.6183391Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/27891298371/artifacts/7771134214
+fabric MC 1.19.3	Post Cache ~/.minecraft	﻿2026-06-21T02:46:41.6347978Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:41.6349318Z Post job cleanup.
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:41.7492296Z (node:2625) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:41.7493863Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:41.7664561Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/ModCompiler/ModCompiler --files-from manifest.txt --use-compress-program zstdmt
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:42.3240012Z (node:2625) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:43.3164485Z Sent 19726336 of 82343748 (24.0%), 18.8 MBs/sec
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:44.3160643Z Sent 74317824 of 82343748 (90.3%), 35.4 MBs/sec
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:44.6733908Z Sent 82343748 of 82343748 (100.0%), 33.3 MBs/sec
+fabric MC 1.19.3	Post Cache ~/.minecraft	2026-06-21T02:46:44.7954278Z Cache saved with key: mc-runtime-test-diag-1.19.3-fabric-27891298371
+fabric MC 1.19.3	Post Run actions/setup-java@v4	﻿2026-06-21T02:46:44.8117399Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+fabric MC 1.19.3	Post Run actions/setup-java@v4	2026-06-21T02:46:44.8118729Z Post job cleanup.
+fabric MC 1.19.3	Post Run actions/setup-java@v4	2026-06-21T02:46:44.9442622Z (node:2645) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+fabric MC 1.19.3	Post Run actions/setup-java@v4	2026-06-21T02:46:44.9444304Z (Use `node --trace-deprecation ...` to show where the warning was created)
+fabric MC 1.19.3	Complete job	﻿2026-06-21T02:46:44.9584201Z Cleaning up orphan processes
+fabric MC 1.19.3	Complete job	2026-06-21T02:46:44.9895255Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/cache@v4, actions/setup-java@v4, actions/upload-artifact@v4, robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

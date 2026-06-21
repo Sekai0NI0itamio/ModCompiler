@@ -1,0 +1,981 @@
+Diagnose Modrinth Project	Set up job	﻿2026-06-21T02:44:32.3033611Z Current runner version: '2.335.1'
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3059056Z ##[group]Runner Image Provisioner
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3060097Z Hosted Compute Agent
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3060700Z Version: 20260611.554
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3061460Z Commit: 5e0782fdc9014723d3be820dd114dd31555c2bd1
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3062213Z Build Date: 2026-06-11T21:40:46Z
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3063808Z Worker ID: {6e325f90-b849-4e7f-b607-bdb2088b2ae7}
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3064620Z Azure Region: eastus
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3065197Z ##[endgroup]
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3066805Z ##[group]Operating System
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3067469Z Ubuntu
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3068083Z 24.04.4
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3068612Z LTS
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3069125Z ##[endgroup]
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3069772Z ##[group]Runner Image
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3070383Z Image: ubuntu-24.04
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3070931Z Version: 20260615.205.1
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3072074Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260615.205/images/ubuntu/Ubuntu2404-Readme.md
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3074308Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260615.205
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3075386Z ##[endgroup]
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3076567Z ##[group]GITHUB_TOKEN Permissions
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3078793Z Contents: read
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3079543Z Metadata: read
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3080109Z ##[endgroup]
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3083319Z Secret source: Actions
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3084392Z Prepare workflow directory
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3601236Z Prepare all required actions
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.3639008Z Getting action download info
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.6849209Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.7709604Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:32.8540121Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:33.0870465Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Diagnose Modrinth Project	Set up job	2026-06-21T02:44:33.2911952Z Complete job name: Diagnose Modrinth Project
+Diagnose Modrinth Project	Run actions/checkout@v4	﻿2026-06-21T02:44:33.3632846Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3641545Z ##[group]Run actions/checkout@v4
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3642377Z with:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3643140Z   repository: Sekai0NI0itamio/ModCompiler
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3647733Z   token: ***
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3648243Z   ssh-strict: true
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3648714Z   ssh-user: git
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3649202Z   persist-credentials: true
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3649727Z   clean: true
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3650214Z   sparse-checkout-cone-mode: true
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3650798Z   fetch-depth: 1
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3651288Z   fetch-tags: false
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3651774Z   show-progress: true
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3652263Z   lfs: false
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3652870Z   submodules: false
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3653413Z   set-safe-directory: true
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3654223Z env:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3654810Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.3655510Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4624708Z Syncing repository: Sekai0NI0itamio/ModCompiler
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4627051Z ##[group]Getting Git version info
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4627981Z Working directory is '/home/runner/work/ModCompiler/ModCompiler'
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4629181Z [command]/usr/bin/git version
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4709827Z git version 2.54.0
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4732100Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4747079Z Temporarily overriding HOME='/home/runner/work/_temp/324a89a0-383f-496d-8b47-18a6d0ba805b' before making global git config changes
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4749726Z Adding repository directory to the temporary git global config as a safe directory
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4753109Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4808001Z Deleting the contents of '/home/runner/work/ModCompiler/ModCompiler'
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4812242Z ##[group]Initializing the repository
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4817652Z [command]/usr/bin/git init /home/runner/work/ModCompiler/ModCompiler
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4935094Z hint: Using 'master' as the name for the initial branch. This default branch name
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4937409Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4939208Z hint: to use in all of your new repositories, which will suppress this warning,
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4940092Z hint: call:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4940611Z hint:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4941670Z hint: 	git config --global init.defaultBranch <name>
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4943112Z hint:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4944206Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4945693Z hint: 'development'. The just-created branch can be renamed via this command:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4946866Z hint:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4947831Z hint: 	git branch -m <name>
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4948418Z hint:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4949109Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4950243Z Initialized empty Git repository in /home/runner/work/ModCompiler/ModCompiler/.git/
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.4953783Z [command]/usr/bin/git remote add origin https://github.com/Sekai0NI0itamio/ModCompiler
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5003223Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5004134Z ##[group]Disabling automatic garbage collection
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5008478Z [command]/usr/bin/git config --local gc.auto 0
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5038888Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5040472Z ##[group]Setting up auth
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5046870Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5082122Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5467716Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5501126Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5721709Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5754450Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.5973859Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.6006819Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.6016284Z ##[group]Fetching the repository
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:33.6017820Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +34ffbea46d299f69866b6951d10462384dc3feda:refs/remotes/origin/main
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.5841015Z From https://github.com/Sekai0NI0itamio/ModCompiler
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.5841748Z  * [new ref]             34ffbea46d299f69866b6951d10462384dc3feda -> origin/main
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.5868021Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.5868831Z ##[group]Determining the checkout info
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.5869874Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.5875729Z [command]/usr/bin/git sparse-checkout disable
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.5921006Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.6010867Z ##[group]Checking out the ref
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:41.6011804Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:42.9570105Z Updating files:   2% (7040/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:43.0885269Z Updating files:   3% (9656/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:43.2254758Z Updating files:   4% (12874/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:43.3638487Z Updating files:   5% (16092/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:43.4916941Z Updating files:   6% (19311/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:43.6268410Z Updating files:   7% (22529/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:43.7470683Z Updating files:   8% (25748/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:43.8357007Z Updating files:   9% (28966/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:43.8779623Z Updating files:   9% (31179/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.0017853Z Updating files:  10% (32184/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.1227597Z Updating files:  11% (35403/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.2472276Z Updating files:  12% (38621/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.3669993Z Updating files:  13% (41839/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.4999986Z Updating files:  14% (45058/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.6352266Z Updating files:  15% (48276/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.7577897Z Updating files:  16% (51495/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.8356160Z Updating files:  17% (54713/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:44.8848187Z Updating files:  17% (56674/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.0189930Z Updating files:  18% (57931/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.1409905Z Updating files:  19% (61150/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.2672257Z Updating files:  20% (64368/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.4401891Z Updating files:  21% (67586/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.5634264Z Updating files:  22% (70805/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.6900463Z Updating files:  23% (74023/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.8138662Z Updating files:  24% (77242/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.8354161Z Updating files:  25% (80460/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:45.9378650Z Updating files:  25% (81034/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:46.0620531Z Updating files:  26% (83678/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:46.1875143Z Updating files:  27% (86897/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:46.3201032Z Updating files:  28% (90115/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:46.5128344Z Updating files:  29% (93334/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:46.6795667Z Updating files:  30% (96552/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:46.8272005Z Updating files:  31% (99770/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:46.8353951Z Updating files:  32% (102989/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:46.9768351Z Updating files:  32% (103144/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:47.1633669Z Updating files:  33% (106207/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:47.2937442Z Updating files:  34% (109425/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:47.4264959Z Updating files:  35% (112644/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:47.5552584Z Updating files:  36% (115862/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:47.6904460Z Updating files:  37% (119081/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:47.8296025Z Updating files:  38% (122299/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:47.8353524Z Updating files:  39% (125517/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:47.9899419Z Updating files:  39% (125658/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:48.1177808Z Updating files:  40% (128736/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:48.2432246Z Updating files:  41% (131954/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:48.3788148Z Updating files:  42% (135172/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:48.5160413Z Updating files:  43% (138391/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:48.6426599Z Updating files:  44% (141609/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:48.7838069Z Updating files:  45% (144828/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:48.8354955Z Updating files:  46% (148046/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:48.9128399Z Updating files:  46% (149199/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:49.0339513Z Updating files:  47% (151264/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:49.1616239Z Updating files:  48% (154483/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:49.2820946Z Updating files:  49% (157701/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:49.6361008Z Updating files:  50% (160919/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:49.7528686Z Updating files:  51% (164138/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:49.8354794Z Updating files:  52% (167356/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:49.8756228Z Updating files:  52% (169484/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:49.9940567Z Updating files:  53% (170575/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:50.1157502Z Updating files:  54% (173793/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:50.2380822Z Updating files:  55% (177011/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:50.3752632Z Updating files:  56% (180230/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:50.4919427Z Updating files:  57% (183448/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:50.6121629Z Updating files:  58% (186667/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:50.8753021Z Updating files:  59% (189885/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:50.8952392Z Updating files:  59% (192576/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.0141454Z Updating files:  60% (193103/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.1321508Z Updating files:  61% (196322/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.2501232Z Updating files:  62% (199540/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.3767664Z Updating files:  63% (202758/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.5744063Z Updating files:  64% (205977/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.7235835Z Updating files:  65% (209195/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.8354694Z Updating files:  66% (212414/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.8554239Z Updating files:  66% (215105/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:51.9913894Z Updating files:  67% (215632/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:52.1095067Z Updating files:  68% (218850/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:52.4272762Z Updating files:  69% (222069/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:52.5455205Z Updating files:  70% (225287/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:52.6708806Z Updating files:  71% (228505/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:52.7948309Z Updating files:  72% (231724/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:52.8354616Z Updating files:  73% (234942/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:52.9139423Z Updating files:  73% (236018/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.0966211Z Updating files:  74% (238161/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.2174219Z Updating files:  75% (241379/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.3368603Z Updating files:  76% (244597/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.4674135Z Updating files:  77% (247816/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.5905397Z Updating files:  78% (251034/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.7202993Z Updating files:  79% (254253/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.8355205Z Updating files:  80% (257471/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.8422748Z Updating files:  80% (260535/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:53.9785807Z Updating files:  81% (260689/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:54.1492621Z Updating files:  82% (263908/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:54.2922955Z Updating files:  83% (267126/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:54.5470472Z Updating files:  84% (270344/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:54.6790482Z Updating files:  85% (273563/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:54.8080924Z Updating files:  86% (276781/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:54.8354838Z Updating files:  87% (280000/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:54.9422227Z Updating files:  87% (280712/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:55.0719369Z Updating files:  88% (283218/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:55.1953790Z Updating files:  89% (286436/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:55.3232764Z Updating files:  90% (289655/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:55.4573732Z Updating files:  91% (292873/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:55.5856767Z Updating files:  92% (296091/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:55.7092315Z Updating files:  93% (299310/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:55.8355310Z Updating files:  94% (302528/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:55.8435429Z Updating files:  94% (305566/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:56.1722641Z Updating files:  95% (305747/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:56.3480372Z Updating files:  96% (308965/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:56.8354876Z Updating files:  97% (312183/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:56.8938546Z Updating files:  97% (314876/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:57.4477086Z Updating files:  98% (315402/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:57.8398484Z Updating files:  99% (318620/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:58.0838288Z Updating files:  99% (321826/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:58.0839162Z Updating files: 100% (321838/321838)
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:58.0839772Z Updating files: 100% (321838/321838), done.
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:58.4589663Z Switched to a new branch 'main'
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:58.4591995Z branch 'main' set up to track 'origin/main'.
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:58.4800258Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:58.4849907Z [command]/usr/bin/git log -1 --format=%H
+Diagnose Modrinth Project	Run actions/checkout@v4	2026-06-21T02:44:58.4883944Z 34ffbea46d299f69866b6951d10462384dc3feda
+Diagnose Modrinth Project	Run actions/setup-python@v5	﻿2026-06-21T02:44:58.5220068Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5221864Z ##[group]Run actions/setup-python@v5
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5222330Z with:
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5222878Z   python-version: 3.12
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5223138Z   check-latest: false
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5226060Z   token: ***
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5226298Z   update-environment: true
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5226559Z   allow-prereleases: false
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5226807Z   freethreaded: false
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5227028Z env:
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5227299Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.5227642Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.6811291Z ##[group]Installed versions
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.6933076Z (node:2288) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.6934422Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.6935140Z Successfully set up CPython (3.12.13)
+Diagnose Modrinth Project	Run actions/setup-python@v5	2026-06-21T02:44:58.6936026Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/setup-java@v4	﻿2026-06-21T02:44:58.7270012Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7272339Z ##[group]Run actions/setup-java@v4
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7273022Z with:
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7273382Z   distribution: temurin
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7273783Z   java-version: 21
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7274017Z   java-package: jdk
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7274242Z   check-latest: false
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7274474Z   server-id: github
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7274696Z   server-username: GITHUB_ACTOR
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7274959Z   server-password: GITHUB_TOKEN
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7275217Z   overwrite-settings: true
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7275454Z   job-status: success
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7279322Z   token: ***
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7279682Z env:
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7280140Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7280906Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7281693Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7282677Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7283398Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7284097Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7284809Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.7285398Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.9873735Z ##[group]Installed distributions
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.9961793Z Resolved Java 21.0.11+10 from tool-cache
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.9962629Z Setting Java 21.0.11+10 as the default
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.9973908Z (node:2296) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.9975433Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:58.9978708Z Creating toolchains.xml for JDK version 21 from temurin
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0060951Z Writing to /home/runner/.m2/toolchains.xml
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0061219Z 
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0061370Z Java configuration:
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0061657Z   Distribution: temurin
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0061912Z   Version: 21.0.11+10
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0062282Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0062893Z 
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0063500Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0074235Z Creating settings.xml with server-id: github
+Diagnose Modrinth Project	Run actions/setup-java@v4	2026-06-21T02:44:59.0083203Z Writing to /home/runner/.m2/settings.xml
+Diagnose Modrinth Project	Mask Modrinth token	﻿2026-06-21T02:44:59.0268020Z ##[group]Run if [ -n "$MODRINTH_TOKEN" ]; then
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0268672Z [36;1mif [ -n "$MODRINTH_TOKEN" ]; then[0m
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0269231Z [36;1m  echo "::add-mask::$MODRINTH_TOKEN"[0m
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0269735Z [36;1mfi[0m
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0537338Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0538212Z env:
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0538703Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0539415Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0540175Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0540934Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0541617Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0542313Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0543258Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0544116Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0545018Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0546188Z   MODRINTH_TOKEN: ***
+Diagnose Modrinth Project	Mask Modrinth token	2026-06-21T02:44:59.0546585Z ##[endgroup]
+Diagnose Modrinth Project	Run diagnosis	﻿2026-06-21T02:44:59.0745806Z ##[group]Run mkdir -p .workflow_artifacts/diagnosis
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0747180Z [36;1mmkdir -p .workflow_artifacts/diagnosis[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0747731Z [36;1mpython3 - <<'PY'[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0748453Z [36;1mimport json, os, re, sys, time, urllib.parse, urllib.request, urllib.error, zipfile[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0749256Z [36;1mfrom pathlib import Path[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0749746Z [36;1mfrom datetime import datetime[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0750178Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0772829Z [36;1msys.path.insert(0, str(Path.cwd()))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0773441Z [36;1mfrom modcompiler.modrinth import ([0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0773921Z [36;1m    ModrinthClient, build_modrinth_user_agent,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0774380Z [36;1m    normalize_modrinth_project_ref, select_primary_modrinth_file,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0774765Z [36;1m)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0775011Z [36;1mfrom modcompiler.common import load_json[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0775323Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0775633Z [36;1mTOKEN = os.environ.get("MODRINTH_TOKEN", "").strip()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0776055Z [36;1mRAW_URL = "https://modrinth.com/mod/pingfix"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0776676Z [36;1mOUT = Path(".workflow_artifacts/diagnosis")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0777284Z [36;1mOUT.mkdir(parents=True, exist_ok=True)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0777803Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0778163Z [36;1m# ---- Resolve project ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0778715Z [36;1mref = normalize_modrinth_project_ref(RAW_URL)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0779576Z [36;1mclient = ModrinthClient(token=TOKEN or None, user_agent=build_modrinth_user_agent())[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0780429Z [36;1mproject = client.resolve_project(ref)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0780970Z [36;1mslug = project.get("slug", ref)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0781488Z [36;1mtitle = project.get("title", slug)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0782031Z [36;1mprint(f"Project: {title} ({slug})")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0782706Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0783069Z [36;1m# ---- Fetch ALL versions ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0783611Z [36;1mall_versions = client.request_json([0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0784281Z [36;1m    "GET", f"/project/{urllib.parse.quote(ref, safe='')}/version",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0784788Z [36;1m    params={"include_changelog": "false"},[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0785082Z [36;1m)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0785321Z [36;1mif not isinstance(all_versions, list):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0785624Z [36;1m    all_versions = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0785987Z [36;1mprint(f"Total versions on Modrinth: {len(all_versions)}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0786395Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0786672Z [36;1m# ---- Helper: parse version number for sorting ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0787036Z [36;1mdef parse_vnum(s):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0787284Z [36;1m    parts = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0787566Z [36;1m    for t in re.split(r"[.\-_]", str(s).strip()):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0787891Z [36;1m        if t.isdigit():[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0788163Z [36;1m            parts.append(int(t))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0788449Z [36;1m        elif t:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0788875Z [36;1m            parts.append(t)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0789191Z [36;1m    return tuple(parts) if parts else (0,)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0789492Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0789799Z [36;1m# ---- Select the LATEST version per (loader, MC version) slot ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0790182Z [36;1mbest = {}[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0790411Z [36;1mfor v in all_versions:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0790806Z [36;1m    loaders = [str(l) for l in v.get("loaders", []) if str(l).strip()][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0791286Z [36;1m    gvs = [str(g) for g in v.get("game_versions", []) if str(g).strip()][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0791686Z [36;1m    if not loaders or not gvs:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0791959Z [36;1m        continue[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0792252Z [36;1m    vnum = str(v.get("version_number", "")).strip()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0792837Z [36;1m    vkey = parse_vnum(vnum)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0793342Z [36;1m    pub = v.get("date_published", "") or ""[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0793664Z [36;1m    for loader in loaders:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0793934Z [36;1m        for gv in gvs:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0794318Z [36;1m            key = (loader, gv)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0794807Z [36;1m            cur = best.get(key)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0795285Z [36;1m            if cur is None:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0795825Z [36;1m                best[key] = {"v": v, "key": vkey, "pub": pub}[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0796400Z [36;1m            else:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0796800Z [36;1m                try:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0797260Z [36;1m                    is_newer = vkey > cur["key"][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0797820Z [36;1m                except TypeError:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0798379Z [36;1m                    is_newer = str(vkey) > str(cur["key"])[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0799082Z [36;1m                if is_newer or (vkey == cur["key"] and pub > cur["pub"]):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0799824Z [36;1m                    best[key] = {"v": v, "key": vkey, "pub": pub}[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0800405Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0800984Z [36;1m# Deduplicate by version ID (same version can cover multiple loader+MC slots)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0801727Z [36;1mseen = set()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0802108Z [36;1mselected = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0802708Z [36;1mfor entry in best.values():[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0803189Z [36;1m    vid = entry["v"]["id"][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0803647Z [36;1m    if vid not in seen:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0804089Z [36;1m        seen.add(vid)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0804383Z [36;1m        selected.append(entry["v"])[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0804808Z [36;1mprint(f"Selected {len(selected)} versions (latest per loader+MC slot)")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0805204Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0805456Z [36;1m# ---- Helper: count .class files in a jar ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0805791Z [36;1mdef jar_class_count(path):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0806052Z [36;1m    try:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0806301Z [36;1m        with zipfile.ZipFile(path) as z:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0806608Z [36;1m            return sum([0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0806894Z [36;1m                1 for e in z.infolist()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0807262Z [36;1m                if not e.is_dir() and e.filename.endswith(".class")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0807612Z [36;1m            )[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0807846Z [36;1m    except Exception:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0808103Z [36;1m        return -1[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0808339Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0808588Z [36;1m# ---- Helper: count total methods via javap ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0808939Z [36;1mdef jar_method_count(path):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0809207Z [36;1m    try:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0809423Z [36;1m        import subprocess[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0809706Z [36;1m        with zipfile.ZipFile(path) as z:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0810007Z [36;1m            class_entries = [[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0810296Z [36;1m                e for e in z.infolist()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0810810Z [36;1m                if not e.is_dir() and e.filename.endswith(".class")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0811181Z [36;1m                and "$" not in e.filename[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0811472Z [36;1m            ][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0811698Z [36;1m        total_methods = 0[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0811959Z [36;1m        inspected = 0[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0812228Z [36;1m        for entry in class_entries[:50]:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0812767Z [36;1m            try:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0813035Z [36;1m                z2 = zipfile.ZipFile(path)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0813363Z [36;1m                data = z2.read(entry.filename)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0813674Z [36;1m                z2.close()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0813952Z [36;1m                result = subprocess.run([0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0814436Z [36;1m                    ["javap", "-p", "-cp", path, entry.filename.replace("/", ".").replace(".class", "")],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0815103Z [36;1m                    capture_output=True, text=True, timeout=15[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0815443Z [36;1m                )[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0816029Z [36;1m                method_lines = [ln for ln in result.stdout.splitlines() if ln.strip().startswith(("  public", "  private", "  protected", "  static"))][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0817230Z [36;1m                total_methods += len(method_lines)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0817791Z [36;1m                inspected += 1[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0818273Z [36;1m            except Exception:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0818739Z [36;1m                pass[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0819040Z [36;1m        if inspected == 0:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0819304Z [36;1m            return 0[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0819579Z [36;1m        avg = total_methods / inspected[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0819905Z [36;1m        return int(avg * len(class_entries))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0820279Z [36;1m    except Exception:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0820733Z [36;1m        return -1[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0821137Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0821608Z [36;1m# ---- Helper: check for mod metadata files inside jar ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0822265Z [36;1mdef jar_has_mod_metadata(path):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0822930Z [36;1m    try:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0823350Z [36;1m        with zipfile.ZipFile(path) as z:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0823905Z [36;1m            names = set(z.namelist())[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0824734Z [36;1m            for marker in ["fabric.mod.json", "META-INF/mods.toml", "META-INF/neoforge.mods.toml",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0825775Z [36;1m                            "mcmod.info", "META-INF/jarcontainersilence", "quilt.mod.json",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0826614Z [36;1m                            "META-INF/plugin.xml"]:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0827182Z [36;1m                if marker in names:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0827697Z [36;1m                    return marker[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0828172Z [36;1m        return None[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0828606Z [36;1m    except Exception:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0829006Z [36;1m        return None[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0829239Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0829492Z [36;1m# ---- Download & analyse each selected version ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0829821Z [36;1mrecords = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0830046Z [36;1mshells = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0830261Z [36;1mworking = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0830499Z [36;1mdownloads_dir = OUT / "downloads"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0830935Z [36;1mdownloads_dir.mkdir(parents=True, exist_ok=True)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0831508Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0831850Z [36;1mfor v in selected:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0832269Z [36;1m    vid = v["id"][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0832900Z [36;1m    vnum = v.get("version_number", vid)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0833548Z [36;1m    fi = select_primary_modrinth_file(v.get("files", []))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0834142Z [36;1m    jar_name = ""[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0834543Z [36;1m    jar_url = ""[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0834954Z [36;1m    jar_size = 0[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0835543Z [36;1m    class_count = -1[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0835978Z [36;1m    method_count = -1[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0836411Z [36;1m    mod_metadata = ""[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0836844Z [36;1m    is_shell = False[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0837097Z [36;1m    shell_reason = ""[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0837330Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0837527Z [36;1m    if fi:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0837759Z [36;1m        jar_name = fi["filename"][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0838045Z [36;1m        jar_url = fi["url"][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0838345Z [36;1m        jar_dest = downloads_dir / vid / jar_name[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0838759Z [36;1m        jar_dest.parent.mkdir(parents=True, exist_ok=True)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0839311Z [36;1m        req = urllib.request.Request(jar_url, headers={"User-Agent": build_modrinth_user_agent()})[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0839785Z [36;1m        try:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0840081Z [36;1m            with urllib.request.urlopen(req, timeout=60) as r:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0840599Z [36;1m                jar_dest.write_bytes(r.read())[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0840932Z [36;1m            jar_size = jar_dest.stat().st_size[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0841319Z [36;1m            print(f"  Downloaded {vnum}: {jar_name} ({jar_size:,}B)")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0841690Z [36;1m        except Exception as e:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0842013Z [36;1m            print(f"  Download FAILED for {vnum}: {e}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0842327Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0842784Z [36;1m        if jar_dest.exists():[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0843107Z [36;1m            class_count = jar_class_count(jar_dest)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0843427Z [36;1m            if class_count > 0:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0843752Z [36;1m                method_count = jar_method_count(jar_dest)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0844139Z [36;1m            mod_metadata = jar_has_mod_metadata(jar_dest) or ""[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0844474Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0844681Z [36;1m        if class_count == 0:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0844957Z [36;1m            is_shell = True[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0845258Z [36;1m            shell_reason = "no .class files in jar"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0845579Z [36;1m        elif class_count == -1:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0845849Z [36;1m            is_shell = True[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0846165Z [36;1m            shell_reason = "jar unreadable or corrupt"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0846480Z [36;1m    else:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0846702Z [36;1m        is_shell = True[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0847007Z [36;1m        shell_reason = "no primary file in version"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0847311Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0847502Z [36;1m    rec = {[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0847722Z [36;1m        "id": vid,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0847972Z [36;1m        "version_number": vnum,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0848409Z [36;1m        "name": v.get("name", ""),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0848793Z [36;1m        "version_type": v.get("version_type", ""),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0849173Z [36;1m        "date_published": v.get("date_published", ""),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0849590Z [36;1m        "game_versions": [str(g) for g in v.get("game_versions", [])],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0850016Z [36;1m        "loaders": [str(l) for l in v.get("loaders", [])],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0850488Z [36;1m        "jar_name": jar_name,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0850815Z [36;1m        "file_url": jar_url,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0851080Z [36;1m        "jar_size": jar_size,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0851368Z [36;1m        "class_count": class_count,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0851832Z [36;1m        "method_estimate": method_count,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0852553Z [36;1m        "mod_metadata": mod_metadata,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0853078Z [36;1m        "is_shell": is_shell,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0853578Z [36;1m        "shell_reason": shell_reason,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0854063Z [36;1m    }[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0854428Z [36;1m    records.append(rec)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0855060Z [36;1m    if is_shell:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0855489Z [36;1m        shells.append(rec)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0855934Z [36;1m    else:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0856314Z [36;1m        working.append(rec)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0856756Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0857193Z [36;1m# ---- Determine missing version+loader combos ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0857895Z [36;1mmanifest = load_json(Path("version-manifest.json"))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0858495Z [36;1mrepo_caps = set()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0858938Z [36;1mfor rng in manifest["ranges"]:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0859493Z [36;1m    for loader, lcfg in rng["loaders"].items():[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0860105Z [36;1m        svs = lcfg.get("supported_versions", [])[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0860425Z [36;1m        if not svs:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0860683Z [36;1m            svs = [rng["min_version"]][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0860972Z [36;1m        for sv in svs:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0861387Z [36;1m            repo_caps.add((sv, loader))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0861686Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0861894Z [36;1mpublished_pairs = set()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0862148Z [36;1mfor r in records:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0862585Z [36;1m    if not r["is_shell"]:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0862912Z [36;1m        for loader in r["loaders"]:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0863224Z [36;1m            for gv in r["game_versions"]:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0863563Z [36;1m                published_pairs.add((gv, loader))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0863879Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0864141Z [36;1mmissing_pairs = sorted(repo_caps - published_pairs)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0864491Z [36;1mmissing_by_loader = {}[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0864759Z [36;1mfor gv, ldr in missing_pairs:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0865095Z [36;1m    missing_by_loader.setdefault(ldr, []).append(gv)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0865410Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0865613Z [36;1m# ---- Print summary ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0865953Z [36;1mprint(f"\n{'='*60}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0866410Z [36;1mprint(f"DIAGNOSIS SUMMARY:")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0867014Z [36;1mprint(f"  Total versions fetched : {len(all_versions)}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0867738Z [36;1mprint(f"  Slots (latest per slot) : {len(selected)}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0868418Z [36;1mprint(f"  Working                 : {len(working)}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0869086Z [36;1mprint(f"  Shell/corrupted         : {len(shells)}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0869791Z [36;1mprint(f"  Missing (repo can build): {len(missing_pairs)}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0870415Z [36;1mprint(f"{'='*60}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0870813Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0871210Z [36;1m# ---- Write machine-readable outputs ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0871570Z [36;1mdiag = {[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0871782Z [36;1m    "slug": slug,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0872017Z [36;1m    "title": title,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0872259Z [36;1m    "project_ref": ref,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0872752Z [36;1m    "total_versions": len(all_versions),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0873095Z [36;1m    "analysed_slots": len(selected),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0873401Z [36;1m    "working_count": len(working),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0873691Z [36;1m    "shell_count": len(shells),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0873990Z [36;1m    "missing_count": len(missing_pairs),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0874358Z [36;1m    "has_issues": len(shells) > 0 or len(missing_pairs) > 0,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0874715Z [36;1m    "version_records": records,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0875127Z [36;1m    "missing_pairs": [{"mc_version": gv, "loader": l} for gv, l in missing_pairs],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0875669Z [36;1m    "missing_by_loader": {k: sorted(v) for k, v in missing_by_loader.items()},[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0876063Z [36;1m}[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0876454Z [36;1m(OUT / "diagnosis.json").write_text(json.dumps(diag, indent=2, default=str), encoding="utf-8")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0876916Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0877163Z [36;1m# ---- Write human-readable diagnosis.txt ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0877625Z [36;1mSEP = "=" * 72[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0877852Z [36;1mlines = [[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0878067Z [36;1m    SEP,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0878302Z [36;1m    f"MODRINTH PROJECT DIAGNOSIS",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0878589Z [36;1m    f"Project: {title}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0878843Z [36;1m    f"Slug: {slug}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0879139Z [36;1m    f"URL: https://modrinth.com/mod/{slug}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0879576Z [36;1m    f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0880178Z [36;1m    SEP,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0880531Z [36;1m    "",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0881089Z [36;1m    "── OVERVIEW ─────────────────────────────────────────────────────",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0881873Z [36;1m    f"  Total versions published : {len(all_versions)}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0882734Z [36;1m    f"  Analysed slots           : {len(selected)}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0883483Z [36;1m    f"  Working jars             : {len(working)}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0884146Z [36;1m    f"  Shell/corrupted jars     : {len(shells)}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0884826Z [36;1m    f"  Missing (repo can build) : {len(missing_pairs)}",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0885408Z [36;1m    "",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0885748Z [36;1m][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0886074Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0886626Z [36;1mlines += ["── ALL ANALYSED SLOTS ──────────────────────────────────────────"][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0887789Z [36;1mlines.append(f"  {'Version':<24} {'Date':<12} {'Loaders':<18} {'MC':<18} {'Status':<10} {'Classes':>7} {'Methods':>7} {'Metadata'}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0888940Z [36;1mlines.append(f"  {'-'*24} {'-'*12} {'-'*18} {'-'*18} {'-'*10} {'-'*7} {'-'*7} {'-'*20}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0889414Z [36;1mfor r in records:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0889695Z [36;1m    status = "SHELL" if r["is_shell"] else "OK"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0890025Z [36;1m    ldrs = ",".join(r["loaders"])[:16][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0890351Z [36;1m    gvs = ",".join(r["game_versions"])[:16][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0890679Z [36;1m    meta = r.get("mod_metadata", "")[:18][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0891091Z [36;1m    mc = r["method_estimate"] if r["method_estimate"] >= 0 else -1[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0891463Z [36;1m    lines.append([0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0891787Z [36;1m        f"  {r['version_number']:<24} {r['date_published'][:10]:<12} "[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0892180Z [36;1m        f"{ldrs:<18} {gvs:<18} {status:<10} "[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0892747Z [36;1m        f"{r['class_count']:>7} {mc:>7} {meta:<20}"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0893063Z [36;1m    )[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0893284Z [36;1mlines.append("")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0893521Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0893712Z [36;1mif shells:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0894066Z [36;1m    lines += ["── SHELL / CORRUPTED VERSIONS ─────────────────────────────────"][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0894488Z [36;1m    for r in shells:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0894747Z [36;1m        lines.append([0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0895087Z [36;1m            f"  {r['version_number']:<22} {r['date_published'][:10]}  "[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0895543Z [36;1m            f"loaders={','.join(r['loaders'])}  reason={r['shell_reason']}"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0895922Z [36;1m        )[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0896142Z [36;1m    lines.append("")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0896378Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0896574Z [36;1mif missing_pairs:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0896951Z [36;1m    lines += ["── MISSING VERSION+LOADER COMBOS (repo can build) ─────────────"][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0897412Z [36;1m    for ldr in sorted(missing_by_loader.keys()):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0897842Z [36;1m        lines.append(f"  [{ldr}]  {', '.join(sorted(missing_by_loader[ldr]))}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0898406Z [36;1m    lines.append("")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0898817Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0899152Z [36;1mlines.append(SEP)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0899792Z [36;1m(OUT / "diagnosis.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0900802Z [36;1mprint(f"Wrote diagnosis.txt ({len(lines)} lines)")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0901372Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0901847Z [36;1m# ---- Build launcher test matrix for working versions ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0902760Z [36;1mprint("\nBuilding launcher test matrix...")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0903299Z [36;1mtry:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0903688Z [36;1m    req = urllib.request.Request([0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0904555Z [36;1m        "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json",[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0905577Z [36;1m        headers={"User-Agent": "ModCompilerLauncherDiagnosis/1.0"},[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0906232Z [36;1m    )[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0906654Z [36;1m    with urllib.request.urlopen(req, timeout=30) as resp:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0907058Z [36;1m        ci_data = json.loads(resp.read().decode())[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0907385Z [36;1mexcept Exception as e:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0907843Z [36;1m    print(f"WARNING: Could not fetch ci-data.json: {e}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0908203Z [36;1m    ci_data = {"run_data": []}[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0908465Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0908692Z [36;1mrun_data = ci_data.get("run_data", [])[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0909008Z [36;1msupported = {}[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0909251Z [36;1mfor entry in run_data:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0909510Z [36;1m    mc = entry.get("mc")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0909774Z [36;1m    ltype = entry.get("type")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0910071Z [36;1m    modloader = entry.get("modloader")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0910370Z [36;1m    regex = entry.get("regex")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0910652Z [36;1m    java_str = entry.get("java")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0910996Z [36;1m    if not all([mc, ltype, modloader, regex, java_str]):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0911337Z [36;1m        continue[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0911567Z [36;1m    try:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0911787Z [36;1m        java = int(java_str)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0912084Z [36;1m    except (ValueError, TypeError):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0912370Z [36;1m        java = 17[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0912853Z [36;1m    supported[(mc, modloader)] = {[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0913167Z [36;1m        "mc": mc, "modloader": modloader,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0913523Z [36;1m        "mcrt_jar": ltype, "regex": regex, "java": java,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0913839Z [36;1m    }[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0914036Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0914243Z [36;1mdef parse_mc_version(v):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0914497Z [36;1m    parts = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0914784Z [36;1m    for token in re.split(r'[.\-_]', str(v).strip()):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0915121Z [36;1m        if token.isdigit():[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0915419Z [36;1m            parts.append(int(token))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0915703Z [36;1m        else:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0915926Z [36;1m            break[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0916198Z [36;1m    return tuple(parts) if parts else (0,)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0916499Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0916690Z [36;1mdef minor_key(v):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0916932Z [36;1m    p = parse_mc_version(v)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0917400Z [36;1m    if p[0] == 1 and len(p) >= 2:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0917889Z [36;1m        return (1, p[1])[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0918330Z [36;1m    return p[:2][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0918719Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0919050Z [36;1mby_minor = {}[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0919525Z [36;1mfor (mc, modloader), cfg in supported.items():[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0920121Z [36;1m    key = (minor_key(mc), modloader)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0920916Z [36;1m    if key not in by_minor or parse_mc_version(mc) > parse_mc_version(by_minor[key]["mc"]):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0921718Z [36;1m        by_minor[key] = cfg[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0922157Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0922679Z [36;1mdef map_loader(loader):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0923242Z [36;1m    return "fabric" if loader == "quilt" else loader[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0923978Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0924339Z [36;1mdef find_test_config(gv, loader):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0924860Z [36;1m    if (gv, loader) in supported:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0925362Z [36;1m        return supported[(gv, loader)][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0925666Z [36;1m    mk = minor_key(gv)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0925927Z [36;1m    if (mk, loader) in by_minor:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0926223Z [36;1m        return by_minor[(mk, loader)][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0926512Z [36;1m    return None[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0926770Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0926993Z [36;1mdef safe_artifact_key(loader, gv):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0927388Z [36;1m    return re.sub(r"[^A-Za-z0-9._-]+", "_", f"{loader}-{gv}").strip("_")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0927762Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0927959Z [36;1mmatrix_entries = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0928204Z [36;1mskipped = [][0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0928429Z [36;1mfor r in working:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0928809Z [36;1m    file_url = r.get("file_url", "")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0929118Z [36;1m    file_name = r.get("jar_name", "")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0929428Z [36;1m    if not file_url or not file_name:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0929706Z [36;1m        continue[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0929967Z [36;1m    for gv in r.get("game_versions", []):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0930320Z [36;1m        if not isinstance(gv, str) or not gv.strip():[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0930643Z [36;1m            continue[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0930888Z [36;1m        gv = gv.strip()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0931170Z [36;1m        for loader in r.get("loaders", []):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0931553Z [36;1m            if not isinstance(loader, str) or not loader.strip():[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0931913Z [36;1m                continue[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0932185Z [36;1m            loader = loader.strip()[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0932721Z [36;1m            test_loader = map_loader(loader)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0933102Z [36;1m            if test_loader not in ("fabric", "forge", "neoforge"):[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0933549Z [36;1m                skipped.append((gv, loader, "unsupported loader"))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0933909Z [36;1m                continue[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0934225Z [36;1m            test_config = find_test_config(gv, test_loader)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0934572Z [36;1m            if test_config is None:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0934971Z [36;1m                skipped.append((gv, test_loader, "no mc-runtime-test support"))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0935460Z [36;1m                continue[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0935932Z [36;1m            matrix_entries.append({[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0936453Z [36;1m                "game_version": gv,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0936992Z [36;1m                "test_mc": test_config["mc"],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0937578Z [36;1m                "loader": test_config["modloader"],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0938161Z [36;1m                "original_loader": loader,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0938706Z [36;1m                "file_url": file_url,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0939242Z [36;1m                "file_name": file_name,[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0939847Z [36;1m                "version_number": r.get("version_number", ""),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0940509Z [36;1m                "java_version": test_config["java"],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0941132Z [36;1m                "loader_regex": test_config["regex"],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0941742Z [36;1m                "mcrt_jar": test_config["mcrt_jar"],[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0942548Z [36;1m                "safe_key": safe_artifact_key(loader, gv),[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0943166Z [36;1m            })[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0943542Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0944079Z [36;1mmatrix_entries.sort(key=lambda e: (e["game_version"], e["loader"]))[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0944898Z [36;1mmatrix_json = json.dumps({"include": matrix_entries})[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0945721Z [36;1m(OUT / "launcher-matrix.json").write_text(matrix_json, encoding="utf-8")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0946430Z [36;1mprint(f"Launcher test matrix: {len(matrix_entries)} entries")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0946807Z [36;1mfor entry in matrix_entries:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0947281Z [36;1m    mapped = "" if entry["game_version"] == entry["test_mc"] else f" (tested on {entry['test_mc']})"[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0947993Z [36;1m    print(f"  {entry['original_loader']:>8} MC {entry['game_version']:<12}{mapped} Java {entry['java_version']}")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0948497Z [36;1m[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0948708Z [36;1m# ---- Write GitHub outputs ----[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0949047Z [36;1moutput_path = Path(os.environ["GITHUB_OUTPUT"])[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0949436Z [36;1mwith output_path.open("a", encoding="utf-8") as f:[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0949811Z [36;1m    f.write(f"project_slug={slug}\n")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0950135Z [36;1m    f.write(f"project_title={title}\n")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0950485Z [36;1m    f.write(f"total_slots={len(selected)}\n")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0950999Z [36;1m    f.write(f"has_working={'true' if working else 'false'}\n")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0951413Z [36;1m    f.write(f"matrix_count={len(matrix_entries)}\n")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0951881Z [36;1m    # Use multiline syntax for the matrix JSON (so it can contain newlines safely)[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0952633Z [36;1m    f.write(f"launcher_matrix<<MATRIX_EOF\n{matrix_json}\nMATRIX_EOF\n")[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0953045Z [36;1mPY[0m
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0993490Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0993854Z env:
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0994141Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0994557Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0995003Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0995441Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0995834Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0996242Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0996634Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0997070Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0997572Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0998238Z   MODRINTH_TOKEN: ***
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:44:59.0998467Z ##[endgroup]
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3046788Z <stdin>:267: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3189793Z Project: FIX MY PINGGGGG (pingfix)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3190398Z Total versions on Modrinth: 77
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3190875Z Selected 74 versions (latest per loader+MC slot)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3191424Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,393B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3191972Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3192705Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,525B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3193237Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,389B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3193730Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,388B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3194247Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,389B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3194742Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3195227Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3195720Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3196204Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3196731Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3197243Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3197738Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,391B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3198236Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,390B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3198729Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,391B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3199497Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3199994Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,390B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3200493Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,391B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3200969Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3201481Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,392B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3201979Z   Downloaded 1.0.0: pingfix-1.0.0.jar (2,766B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3202707Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,677B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3203216Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,675B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3203697Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,672B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3204213Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,799B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3204714Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,798B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3205191Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,792B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3205675Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,989B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3206373Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,989B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3206854Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,989B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3207342Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,988B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3207817Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,987B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3208292Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,012B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3208776Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,012B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3209269Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,012B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3209746Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,012B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3210223Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,011B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3210710Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,011B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3211220Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,767B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3211740Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,454B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3212315Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,452B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3213108Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,452B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3213682Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,451B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3214237Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,451B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3214795Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,764B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3215371Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,763B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3215924Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,764B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3216647Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,762B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3217219Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,761B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3217778Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,753B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3218341Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,753B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3218908Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,751B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3219476Z   Downloaded 1.0.0: modid-1.0.0.jar (3,654B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3220032Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,828B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3220595Z   Downloaded 1.0.0: pingfix-1.0.0.jar (3,027B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3221138Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,791B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3221691Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,792B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3222230Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,793B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3222956Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,792B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3223522Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,792B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3224060Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,792B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3224591Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,767B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3225061Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,768B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3225617Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,767B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3226076Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,766B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3226586Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,764B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3227131Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,766B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3227704Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,766B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3228232Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,764B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3228982Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,766B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3229548Z   Downloaded 1.0.0: pingfix-1.0.0.jar (5,763B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3230144Z   Downloaded 3.0.0: fixmyping-1.0.0.jar (18,284B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3230743Z   Downloaded 3.1.0: pingfix-3.1.0.jar (21,490B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3231342Z   Downloaded 3.0.0: pingfix-3.0.0.jar (18,524B)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3231720Z 
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3231924Z ============================================================
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3232659Z DIAGNOSIS SUMMARY:
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3233076Z   Total versions fetched : 77
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3233544Z   Slots (latest per slot) : 74
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3234007Z   Working                 : 74
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3234455Z   Shell/corrupted         : 0
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3234926Z   Missing (repo can build): 0
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3235404Z ============================================================
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3236145Z Wrote diagnosis.txt (94 lines)
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3236452Z 
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3236644Z Building launcher test matrix...
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3237130Z Launcher test matrix: 81 entries
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3237639Z      forge MC 1.12         (tested on 1.12.2) Java 8
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3238151Z      forge MC 1.12.2       Java 8
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3238598Z     fabric MC 1.16.5       Java 8
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3239020Z      forge MC 1.16.5       Java 8
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3239498Z     fabric MC 1.17         (tested on 1.17.1) Java 16
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3240058Z     fabric MC 1.17.1       Java 16
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3240528Z      forge MC 1.17.1       Java 16
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3241103Z     fabric MC 1.18         (tested on 1.18.2) Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3241702Z      forge MC 1.18         (tested on 1.18.2) Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3242269Z     fabric MC 1.18.1       (tested on 1.18.2) Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3243041Z      forge MC 1.18.1       (tested on 1.18.2) Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3243577Z     fabric MC 1.18.2       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3244024Z      forge MC 1.18.2       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3244408Z     fabric MC 1.19         Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3244778Z      forge MC 1.19         Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3245177Z     fabric MC 1.19.1       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3245576Z      forge MC 1.19.1       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3246031Z     fabric MC 1.19.2       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3246490Z      forge MC 1.19.2       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3247298Z     fabric MC 1.19.3       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3247857Z      forge MC 1.19.3       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3248481Z     fabric MC 1.19.4       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3249078Z      forge MC 1.19.4       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3249724Z     fabric MC 1.20.1       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3250381Z      forge MC 1.20.1       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3250972Z     fabric MC 1.20.2       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3251633Z      forge MC 1.20.2       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3252240Z   neoforge MC 1.20.2       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3253067Z     fabric MC 1.20.3       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3317474Z      forge MC 1.20.3       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3318029Z     fabric MC 1.20.4       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3318505Z      forge MC 1.20.4       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3318985Z   neoforge MC 1.20.4       Java 17
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3319502Z     fabric MC 1.20.5       (tested on 1.20.6) Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3320115Z   neoforge MC 1.20.5       (tested on 1.20.6) Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3320635Z     fabric MC 1.20.6       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3321059Z      forge MC 1.20.6       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3321478Z   neoforge MC 1.20.6       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3321939Z     fabric MC 1.21         Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3322364Z      forge MC 1.21         Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3323052Z   neoforge MC 1.21         Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3323514Z     fabric MC 1.21.1       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3323971Z      forge MC 1.21.1       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3324414Z   neoforge MC 1.21.1       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3325122Z     fabric MC 1.21.10      Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3325564Z      forge MC 1.21.10      Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3326004Z   neoforge MC 1.21.10      Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3326417Z     fabric MC 1.21.11      Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3327021Z      forge MC 1.21.11      Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3327463Z   neoforge MC 1.21.11      Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3327936Z     fabric MC 1.21.2       (tested on 1.21.11) Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3328566Z   neoforge MC 1.21.2       (tested on 1.21.11) Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3329066Z     fabric MC 1.21.3       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3329507Z      forge MC 1.21.3       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3329918Z   neoforge MC 1.21.3       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3330348Z     fabric MC 1.21.4       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3330773Z      forge MC 1.21.4       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3331208Z   neoforge MC 1.21.4       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3331823Z     fabric MC 1.21.5       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3332258Z      forge MC 1.21.5       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3332895Z   neoforge MC 1.21.5       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3333332Z     fabric MC 1.21.6       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3333735Z      forge MC 1.21.6       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3334144Z   neoforge MC 1.21.6       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3334546Z     fabric MC 1.21.7       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3335109Z      forge MC 1.21.7       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3335518Z   neoforge MC 1.21.7       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3335930Z     fabric MC 1.21.8       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3336352Z      forge MC 1.21.8       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3336777Z   neoforge MC 1.21.8       Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3337265Z     fabric MC 1.21.9       (tested on 1.21.11) Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3337820Z      forge MC 1.21.9       (tested on 1.21.11) Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3338371Z   neoforge MC 1.21.9       (tested on 1.21.11) Java 21
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3339137Z      forge MC 1.8.9        Java 8
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3339624Z     fabric MC 26.1         Java 25
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3340094Z   neoforge MC 26.1         Java 25
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3340466Z     fabric MC 26.1.1       Java 25
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3340907Z   neoforge MC 26.1.1       Java 25
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3341297Z     fabric MC 26.1.2       Java 25
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3341723Z      forge MC 26.1.2       Java 25
+Diagnose Modrinth Project	Run diagnosis	2026-06-21T02:45:32.3342178Z   neoforge MC 26.1.2       Java 25
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	﻿2026-06-21T02:45:32.3441776Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3443476Z ##[group]Run actions/upload-artifact@v4
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3443769Z with:
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3443980Z   name: diagnosis-output
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3444242Z   path: .workflow_artifacts/diagnosis/
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3444541Z   if-no-files-found: error
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3444787Z   compression-level: 6
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3445013Z   overwrite: false
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3445249Z   include-hidden-files: false
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3445493Z env:
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3445758Z   MODRINTH_PROJECT_URL: https://modrinth.com/mod/pingfix
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3446160Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3446589Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3447056Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3447448Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3447829Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3448215Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3448649Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3449141Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.11-10/x64
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.3449748Z ##[endgroup]
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.5069398Z (node:4940) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.5074890Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.5430589Z With the provided path, there will be 77 files uploaded
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.5437591Z Artifact name is valid!
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.5438122Z Root directory input is valid!
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.7336104Z Beginning upload of artifact content to blob storage
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.8295458Z (node:4940) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.9020207Z Uploaded bytes 290946
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.9199599Z Finished uploading artifact content to blob storage!
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.9200715Z SHA256 digest of uploaded artifact zip is 5a1e0c7cea6b0cd2a3276765ad19ef2a8b70c9d156423c4451eec33ef3716401
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:32.9203009Z Finalizing artifact upload
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:33.0795753Z Artifact diagnosis-output.zip successfully finalized. Artifact ID 7771127292
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:33.0797385Z Artifact diagnosis-output has been successfully uploaded! Final size is 290946 bytes. Artifact ID is 7771127292
+Diagnose Modrinth Project	Run actions/upload-artifact@v4	2026-06-21T02:45:33.0803905Z Artifact download URL: https://github.com/Sekai0NI0itamio/ModCompiler/actions/runs/27891298371/artifacts/7771127292
+Diagnose Modrinth Project	Post Run actions/setup-java@v4	﻿2026-06-21T02:45:33.0990934Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Diagnose Modrinth Project	Post Run actions/setup-java@v4	2026-06-21T02:45:33.0992237Z Post job cleanup.
+Diagnose Modrinth Project	Post Run actions/setup-java@v4	2026-06-21T02:45:33.2270829Z (node:4952) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Diagnose Modrinth Project	Post Run actions/setup-java@v4	2026-06-21T02:45:33.2271751Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Diagnose Modrinth Project	Post Run actions/setup-python@v5	﻿2026-06-21T02:45:33.2414877Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Diagnose Modrinth Project	Post Run actions/setup-python@v5	2026-06-21T02:45:33.2416171Z Post job cleanup.
+Diagnose Modrinth Project	Post Run actions/setup-python@v5	2026-06-21T02:45:33.3603355Z (node:4960) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Diagnose Modrinth Project	Post Run actions/setup-python@v5	2026-06-21T02:45:33.3604290Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Diagnose Modrinth Project	Post Run actions/checkout@v4	﻿2026-06-21T02:45:33.3754877Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.3756602Z Post job cleanup.
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.4624281Z [command]/usr/bin/git version
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.4666258Z git version 2.54.0
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.4705186Z Temporarily overriding HOME='/home/runner/work/_temp/3e110f1a-b162-4915-97d7-5d842b3e2c9b' before making global git config changes
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.4706712Z Adding repository directory to the temporary git global config as a safe directory
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.4710371Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ModCompiler/ModCompiler
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.4750498Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.4788398Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.5247250Z fatal: No url found for submodule path 'LibraryMods/3arthh4ck' in .gitmodules
+Diagnose Modrinth Project	Post Run actions/checkout@v4	2026-06-21T02:45:33.5308972Z ##[warning]The process '/usr/bin/git' failed with exit code 128
+Diagnose Modrinth Project	Complete job	﻿2026-06-21T02:45:33.5421714Z Evaluate and set job outputs
+Diagnose Modrinth Project	Complete job	2026-06-21T02:45:33.5428615Z Set output 'project_slug'
+Diagnose Modrinth Project	Complete job	2026-06-21T02:45:33.5430302Z Set output 'project_title'
+Diagnose Modrinth Project	Complete job	2026-06-21T02:45:33.5430952Z Set output 'total_slots'
+Diagnose Modrinth Project	Complete job	2026-06-21T02:45:33.5431345Z Set output 'has_working'
+Diagnose Modrinth Project	Complete job	2026-06-21T02:45:33.5431682Z Set output 'matrix_count'
+Diagnose Modrinth Project	Complete job	2026-06-21T02:45:33.5514556Z Set output 'launcher_matrix'
+Diagnose Modrinth Project	Complete job	2026-06-21T02:45:33.5515371Z Cleaning up orphan processes
+Diagnose Modrinth Project	Complete job	2026-06-21T02:45:33.5927023Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-java@v4, actions/setup-python@v5, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

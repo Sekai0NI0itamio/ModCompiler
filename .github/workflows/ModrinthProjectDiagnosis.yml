@@ -172,8 +172,9 @@ jobs:
 
           # ---- Helper: count total methods via javap ----
           def jar_method_count(path):
+              """Count methods by parsing class file bytecode directly (no javap needed)."""
               try:
-                  import subprocess
+                  import struct
                   with zipfile.ZipFile(path) as z:
                       class_entries = [
                           e for e in z.infolist()
@@ -182,20 +183,87 @@ jobs:
                       ]
                   total_methods = 0
                   inspected = 0
-                  for entry in class_entries[:50]:
-                      try:
-                          z2 = zipfile.ZipFile(path)
-                          data = z2.read(entry.filename)
-                          z2.close()
-                          result = subprocess.run(
-                              ["javap", "-p", "-cp", path, entry.filename.replace("/", ".").replace(".class", "")],
-                              capture_output=True, text=True, timeout=15
-                          )
-                          method_lines = [ln for ln in result.stdout.splitlines() if ln.strip().startswith(("  public", "  private", "  protected", "  static"))]
-                          total_methods += len(method_lines)
-                          inspected += 1
-                      except Exception:
-                          pass
+                  with zipfile.ZipFile(path) as z:
+                      for entry in class_entries[:50]:
+                          try:
+                              data = z.read(entry.filename)
+                              # Skip past magic (4), minor/major version (4)
+                              # constant_pool_count is at offset 8 (u2)
+                              if len(data) < 10:
+                                  continue
+                              cp_count = struct.unpack(">H", data[8:10])[0]
+                              # Walk through constant pool to find method count
+                              # After constant pool: access_flags (2), this_class (2), super_class (2),
+                              # interfaces_count (2), interfaces (2*N), fields_count (2)
+                              idx = 10
+                              for _ in range(cp_count - 1):
+                                  if idx >= len(data):
+                                      break
+                                  tag = data[idx]
+                                  idx += 1
+                                  if tag in (1,):  # CONSTANT_Utf8
+                                      if idx + 2 > len(data):
+                                          break
+                                      length = struct.unpack(">H", data[idx:idx+2])[0]
+                                      idx += 2 + length
+                                  elif tag in (3, 4):  # CONSTANT_Integer, CONSTANT_Float
+                                      idx += 4
+                                  elif tag in (5, 6):  # CONSTANT_Long, CONSTANT_Double
+                                      idx += 8
+                                  elif tag in (7,):  # CONSTANT_Class
+                                      idx += 2
+                                  elif tag in (8,):  # CONSTANT_String
+                                      idx += 2
+                                  elif tag in (9, 10, 11):  # CONSTANT_Fieldref, Methodref, InterfaceMethodref
+                                      idx += 4
+                                  elif tag in (12,):  # CONSTANT_NameAndType
+                                      idx += 4
+                                  elif tag in (15,):  # CONSTANT_MethodHandle
+                                      idx += 3
+                                  elif tag in (16,):  # CONSTANT_MethodType
+                                      idx += 2
+                                  elif tag in (17, 18):  # CONSTANT_Dynamic, InvokeDynamic
+                                      idx += 4
+                                  elif tag in (19, 20):  # CONSTANT_Module, CONSTANT_Package
+                                      idx += 2
+                                  else:
+                                      break
+                              # After constant pool: access_flags(2) + this_class(2) + super_class(2)
+                              if idx + 6 > len(data):
+                                  continue
+                              idx += 6
+                              # interfaces_count (2) + interfaces (2*N)
+                              if idx + 2 > len(data):
+                                  continue
+                              iface_count = struct.unpack(">H", data[idx:idx+2])[0]
+                              idx += 2 + 2 * iface_count
+                              # fields_count (2) + fields
+                              if idx + 2 > len(data):
+                                  continue
+                              fields_count = struct.unpack(">H", data[idx:idx+2])[0]
+                              idx += 2
+                              # Skip fields (each field_info is variable length, but we need to walk attributes)
+                              # Each field: access_flags(2), name_index(2), descriptor_index(2), attributes_count(2), attributes
+                              for _ in range(fields_count):
+                                  if idx + 8 > len(data):
+                                      break
+                                  idx += 6  # access_flags + name_index + descriptor_index
+                                  attr_count = struct.unpack(">H", data[idx:idx+2])[0]
+                                  idx += 2
+                                  for _ in range(attr_count):
+                                      if idx + 6 > len(data):
+                                          break
+                                      idx += 2  # attribute_name_index
+                                      attr_len = struct.unpack(">I", data[idx:idx+4])[0]
+                                      idx += 4 + attr_len
+                              # methods_count (2)
+                              if idx + 2 > len(data):
+                                  continue
+                              methods_count = struct.unpack(">H", data[idx:idx+2])[0]
+                              total_methods += methods_count
+                              inspected += 1
+                          except Exception:
+                              pass
                   if inspected == 0:
                       return 0
                   avg = total_methods / inspected
@@ -571,6 +639,8 @@ jobs:
 
       - name: Run launcher test
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p launcher-result
           python3 - <<'PYEOF'
@@ -594,6 +664,10 @@ jobs:
           MCRT_VERSION = "4.4.0"
           MCRT_REPO = "headlesshq/mc-runtime-test"
           LAUNCH_TIMEOUT = 120  # seconds to wait for game to load before killing
+          GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+
+          launch_stdout = ""
+          launch_stderr = ""
 
           OUT_DIR = Path("launcher-result")
           OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -637,7 +711,10 @@ jobs:
                   return existing[0].name
 
               url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"
-              req = urllib.request.Request(url, headers={"User-Agent": "ModCompiler/1.0"})
+              headers = {"User-Agent": "ModCompiler/1.0"}
+              if GITHUB_TOKEN:
+                  headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+              req = urllib.request.Request(url, headers=headers)
               try:
                   with urllib.request.urlopen(req, timeout=30) as r:
                       release = json.loads(r.read().decode())
@@ -796,6 +873,20 @@ jobs:
                   except subprocess.TimeoutExpired:
                       launch_proc.kill()
 
+              # ---- Capture stdout/stderr from the launch process ----
+              launch_stdout = ""
+              launch_stderr = ""
+              try:
+                  if launch_proc.stdout:
+                      launch_stdout = launch_proc.stdout.read().decode("utf-8", errors="replace")[:10000]
+              except Exception:
+                  pass
+              try:
+                  if launch_proc.stderr:
+                      launch_stderr = launch_proc.stderr.read().decode("utf-8", errors="replace")[:10000]
+              except Exception:
+                  pass
+
               # ---- Analyse results ----
               crash_reports_dir = Path("run/crash-reports")
               crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else []
@@ -827,8 +918,15 @@ jobs:
               elif game_started and exit_code not in (0, -9):
                   # Game started but exited with error
                   result["status"] = "launcher_failed"
-                  result["crash_summary"] = f"Game exited with code {exit_code}"
+                  crash_info = f"Game exited with code {exit_code}"
+                  if not log_text and launch_stderr:
+                      crash_info += f"\nStderr: {launch_stderr[:400]}"
+                  elif not log_text and launch_stdout:
+                      crash_info += f"\nStdout: {launch_stdout[:400]}"
+                  result["crash_summary"] = crash_info
                   result["logs"] = log_text
+                  result["launch_stdout"] = launch_stdout[:2000]
+                  result["launch_stderr"] = launch_stderr[:2000]
                   print(f"  FAILED: Game exited with code {exit_code}")
               else:
                   # Game loaded successfully (reached title screen) or mc-runtime-test quit normally
@@ -858,6 +956,11 @@ jobs:
           log_path = Path("run/logs/latest.log")
           if log_path.exists():
               shutil.copy2(str(log_path), str(entry_dir / "latest.log"))
+          # Also save stdout/stderr from launch process
+          if launch_stdout:
+              (entry_dir / "launcher-stdout.log").write_text(launch_stdout, encoding="utf-8")
+          if launch_stderr:
+              (entry_dir / "launcher-stderr.log").write_text(launch_stderr, encoding="utf-8")
 
           print(f"  Result: {result['status']}")
           print("::endgroup::")
@@ -944,15 +1047,26 @@ jobs:
               s = f"{version_number}-{loader}-{mc_version}"
               return re.sub(r"[^A-Za-z0-9._-]+", "_", s).strip("_")
 
-          def check_code_health(r):
-              """Auto-analyse jar health and return a health score + notes."""
+          def check_code_health(r, launcher_status=""):
+              """Auto-analyse jar health and return a health score + notes.
+              
+              Launcher test results trump code metrics:
+              - If launcher test passed, the mod works → at worst WARNING
+              - If launcher test crashed, the mod is broken → UNHEALTHY regardless
+              - If launcher test failed with non-crash exit, still UNHEALTHY
+              - Code metrics alone determine HEALTHY/WARNING for untested or passed mods
+              """
               class_count = r.get("class_count", 0)
               method_est = r.get("method_estimate", 0)
               has_metadata = bool(r.get("mod_metadata", ""))
               jar_size = r.get("jar_size", 0)
 
               if r.get("is_shell", False):
-                  return "CRITICAL", f"Shell jar: {r.get('shell_reason', 'unknown')}"
+                  return "SHELL", f"Shell jar: {r.get('shell_reason', 'unknown')}"
+
+              # Launcher test results override code metrics
+              launcher_failed = launcher_status in ("launcher_failed", "crashed", "failed")
+              launcher_passed = launcher_status == "passed"
 
               issues = []
               positives = []
@@ -966,8 +1080,9 @@ jobs:
 
               if method_est > 0:
                   positives.append(f"Est. {method_est} methods")
-              else:
+              elif method_est == 0 and class_count > 0:
                   issues.append("Could not estimate methods")
+              # method_est == -1 means not attempted (e.g. shell), skip
 
               if has_metadata:
                   positives.append(f"Has mod metadata ({r['mod_metadata']})")
@@ -979,12 +1094,23 @@ jobs:
               elif jar_size > 0:
                   issues.append(f"Small jar ({jar_size/1024:.1f}KB)")
 
-              if not issues:
-                  return "HEALTHY", "; ".join(positives)
-              elif len(issues) <= 1:
-                  return "WARNING", "; ".join(issues + positives)
+              # Determine final health with launcher integration
+              if launcher_failed:
+                  return "UNHEALTHY", "; ".join(issues + positives + [f"Launcher: {launcher_status}"])
+              elif launcher_passed:
+                  # Mod works! Code metric issues are downgraded to WARNING
+                  if not issues:
+                      return "HEALTHY", "; ".join(positives + ["Launcher: passed"])
+                  else:
+                      return "WARNING", "; ".join(issues + positives + ["Launcher: passed"])
               else:
-                  return "UNHEALTHY", "; ".join(issues + positives)
+                  # No launcher test (not_tested, N/A, etc.) — rely on code metrics only
+                  if not issues:
+                      return "HEALTHY", "; ".join(positives)
+                  elif len(issues) <= 1:
+                      return "WARNING", "; ".join(issues + positives)
+                  else:
+                      return "UNHEALTHY", "; ".join(issues + positives)
 
           # ---- Process each version record ----
           for r in records:
@@ -1031,7 +1157,7 @@ jobs:
                       crash_summary = lr.get("crash_summary", "")
                       launcher_logs = lr.get("logs", "")
 
-                      health_status, health_reason = check_code_health(r)
+                      health_status, health_reason = check_code_health(r, launcher_status)
 
                       # Copy jar file if available
                       jar_dir = DOWNLOADS_DIR / vid
@@ -1061,6 +1187,13 @@ jobs:
                               log_target = entry_dir / "launcher-logs"
                               log_target.mkdir(exist_ok=True)
                               shutil.copy2(str(f), str(log_target / f.name))
+                          # Copy launcher stdout/stderr
+                          for log_name in ("launcher-stdout.log", "launcher-stderr.log"):
+                              p = launcher_result_dir / log_name
+                              if p.exists():
+                                  log_target = entry_dir / "launcher-logs"
+                                  log_target.mkdir(exist_ok=True)
+                                  shutil.copy2(str(p), str(log_target / log_name))
 
                       # Write metadata.txt
                       meta_lines = [
@@ -1175,7 +1308,9 @@ jobs:
                       if is_shell:
                           health = "SHELL"
                       else:
-                          h, _ = check_code_health(r)
+                          lr = launcher_map.get((mc_version, loader), {})
+                          launcher_status = lr.get("status", "not_tested")
+                          h, _ = check_code_health(r, launcher_status)
                           health = h
                       lr = launcher_map.get((mc_version, loader), {})
                       launcher = lr.get("status", "not_tested") if not is_shell else "N/A"
