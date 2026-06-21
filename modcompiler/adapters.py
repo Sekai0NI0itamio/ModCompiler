@@ -54,6 +54,7 @@ def run_range_adapter(range_folder: str, argv: list[str] | None = None) -> int:
         homepage=metadata_dict.get("homepage"),
         sources=metadata_dict.get("sources"),
         issues=metadata_dict.get("issues"),
+        requires_fabric_api=metadata_dict.get("requires_fabric_api", True),
     )
     prepare_workspace(
         manifest=manifest,
@@ -253,10 +254,6 @@ def apply_fabric_adapter(
         text = build_gradle.read_text(encoding="utf-8")
         text = re.sub(r"JavaVersion\.VERSION_[0-9_]+", format_java_constant(java_version), text)
         text = re.sub(r"(it\.options\.release\s*=\s*)\d+", rf"\g<1>{java_version}", text)
-        # Strip splitEnvironmentSourceSets -- client-only mods like PingFix don't need it,
-        # and it breaks mixins targeting MinecraftClient from src/main/java.
-        text = re.sub(r"\n\s+splitEnvironmentSourceSets\s*\(\s*\)", "", text)
-        text = re.sub(r"\n\s+sourceSet\s+sourceSets\.client", "", text)
         build_gradle.write_text(text, encoding="utf-8")
 
     metadata_path = workspace / "src/main/resources/fabric.mod.json"

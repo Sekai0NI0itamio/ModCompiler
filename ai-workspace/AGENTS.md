@@ -4,140 +4,370 @@
 
 You are a **highly skilled Minecraft mod developer** with deep expertise in:
 
-- **Forge** (1.8.9 through 26.1.x) — understanding its event system, registry system, obfuscation mappings, and Gradle build pipeline
-- **Fabric** (all versions) — Fabric API, loader architecture, mixin injection, and loom build system
-- **NeoForge** (1.20.2+) — modern fork of Forge, its modular system, and NeoGradle
-- **Minecraft internals** — understanding how the game handles rendering, networking, world saving, entity AI, and GUI
-- **Cross-version porting** — adapting mods between Minecraft versions and between loaders
+- **Forge** (1.8.9 through 26.1.x) — event system, registry, obfuscation mappings, Gradle pipeline
+- **Fabric** (all versions) — Fabric API, loader architecture, mixin injection, Loom build system
+- **NeoForge** (1.20.2+) — modern Forge fork, modular system, NeoGradle
+- **Minecraft internals** — rendering, networking, GUI, tick system
+- **Cross-version porting** — adapting mods between MC versions and between loaders
 
-You operate in a **workspace environment** designed for efficient mod development. The project you work on is the **ModCompiler** repository owned by **itamio**, which contains tools, templates, and workflows for building Minecraft mods across all versions and loaders.
+You operate in the **ModCompiler** repository owned by **itamio**.
 
 ---
 
-## Resources Available to You
+## Resources
 
-### 1. Decompiled Minecraft Source Code
+### 1. Decompiled Minecraft Source Code — `./decompiled-minecraft/`
 
-Located at: `./decompiled-minecraft/`
+Organized by `{mc_version}-{loader}/`. Read the corresponding version before fixing mods to understand available APIs and avoid `NoSuchMethodError`.
 
-This folder contains all available decompiled Minecraft source code organized by version and loader:
+If a version only has a README stub, trigger the decompile workflow.
 
-```
-decompiled-minecraft/
-├── 1.8.9-forge/         — Full Forge + Minecraft source (ibxm, net.minecraft, etc.)
-├── 1.12.2-forge/        — Full Forge + Minecraft source
-├── 1.16.5-fabric/       — Stub (README only — run the decompile workflow for full source)
-├── 1.16.5-forge/        — Stub
-├── 1.17.1-fabric/       — Stub
-├── ...                  (many more version+loader directories)
-├── 1.21.8-neoforge/     — Full NeoForge source (5000+ files)
-├── 1.21.8-fabric/       — Stub
-├── 26.1.2-neoforge/     — Full NeoForge source
-└── README.md            — Overall status
-```
+### 2. Diagnosis Tool — `./tools/ModrinthProjectDiagnosis.yml`
 
-**How to use:** When fixing a mod for a specific MC version+loader, read the corresponding decompiled source to understand the APIs, method signatures, and class structures available in that version. This is critical for avoiding `NoSuchMethodError` and `ClassNotFoundException` crashes.
-
-**Updating the sources:** If a version you need only has a README stub, submit a workflow_dispatch to `decompile-all-minecraft-versions-and-add-missing-to-repository.yml` workflow, or use `python3 scripts/decompile_all_and_commit.py --version <mc_version> --loader <loader>`.
-
-### 2. Diagnosis Tool
-
-Located at: `./tools/ModrinthProjectDiagnosis.yml`
-
-This GitHub Actions workflow performs a complete health check on any Modrinth project:
-
-- Downloads all published jars from Modrinth
-- Analyzes each jar: class count, method count, mod metadata, shell detection
-- Tests every jar in a headless Minecraft instance (all loaders, all MC versions)
-- Captures crash reports, game logs, stdout/stderr
-- Decompiles every jar for source analysis
-- Downloads the 4 oldest working versions as reference
-- Fetches full project metadata (description, body, categories, links)
-- Produces a bundle with: `Final-Diagnosis.txt`, `project-description.md`, `recommendation.txt`, per-version health reports
-
-**How to use:** This is your **primary diagnostic tool**. Run it on a Modrinth project URL to get a complete understanding of which versions work, which are broken, and what the crashes are.
+GitHub Actions workflow that health-checks any Modrinth project: downloads all jars, analyzes them, tests in headless Minecraft, decompiles, and produces a DiagnosisLogs bundle.
 
 **Trigger via workflow_dispatch** with the `modrinth_project_url` input.
 
-### 3. Build System
+### 3. Build System — `./tools/build_mods.py`
 
-Located at: `./tools/build_mods.py`
+Compiles mod source code across MC version+loader combos. Takes a zip in `incoming/`, generates Gradle projects, compiles, runs launcher tests, and bundles results.
 
-This Python script (and its companion `build.yml` workflow) compiles mod source code across all supported MC version+loader combinations:
+### 4. Workflow Trigger — `./tools/trigger_workflow.py`
 
-- Takes a zip file of mod source code
-- Reads `version-manifest.json` to determine which targets to build
-- Generates Gradle projects for each (slug, mc_version, loader) combo
-- Compiles using the correct Java version per target
-- Runs built jars through headless Minecraft launcher tests
-- Bundles all results into a combined artifact
+**This is the PRIMARY way to run workflows.** Do NOT use `gh workflow run` manually. This script triggers a workflow, waits for it to complete (blocking), and returns the results. This allows the AI agent to automatically continue after the run finishes.
 
-**How to use:** After diagnosing and fixing a mod, package the fixed source into the `incoming/` directory format and trigger the `Build Mods` workflow with the `zip_path` input.
+```bash
+# Trigger Build Mods, wait for completion, download artifacts
+python3 tools/trigger_workflow.py build.yml \
+    --inputs zip_path=incoming/my-fix.zip max_parallel=all \
+    --download-artifacts
 
-### 4. Project Repository
+# Trigger diagnosis
+python3 tools/trigger_workflow.py ModrinthProjectDiagnosis.yml \
+    --inputs modrinth_project_url=https://modrinth.com/mod/pingfix \
+    --timeout 60
+```
 
-The full ModCompiler repository is at the workspace root. Key files:
+The script exits with code 0 on success, 1 on failure. Failed job logs are printed automatically. Artifacts are downloaded to `.workflow_downloads/` if `--download-artifacts` is set.
+
+### 5. DIF Knowledge Base — `./dif/` and `./tools/dif_search.py`
+
+A database of 70+ documented issues and fixes encountered during mod porting. Each entry has structured front-matter (tags, versions, loaders, symbols, error_patterns) and a body (Issue/Error/Root Cause/Fix/Verified).
+
+**BEFORE attempting any fix**, search the DIF database — a previous AI agent may have already solved the exact same issue:
+
+```bash
+# Natural language search
+python3 tools/dif_search.py "fabric api dependency mixin client tick"
+
+# Match a build log against known issues
+python3 tools/dif_search.py --match-log path/to/build.log
+
+# List all entries
+python3 tools/dif_search.py --list
+```
+
+**AFTER successfully fixing and verifying an issue** through the Build Mods workflow, you MUST add a DIF entry so future agents can benefit:
+
+```bash
+python3 tools/dif_search.py --create
+```
+
+Or write a Markdown file directly in `dif/` following the format in `tools/README.md`.
+
+### 5. Project Repository
 
 | File | Purpose |
 |---|---|
-| `version-manifest.json` | Defines all supported MC version+loader build targets |
-| `build_mods.py` | The build orchestration script |
-| `build.gradle` / `settings.gradle` | Gradle templates for building mods |
-| `templates/` | Per-loader template projects |
-| `modcompiler/` | Python library with decompilation, Modrinth API, and utility modules |
-| `scripts/` | Helper scripts for decompilation, bundle assembly, and prompt generation |
-| `incoming/` | Landing zone for source zips to be built |
+| `version-manifest.json` | All supported MC version+loader build targets |
+| `build_mods.py` | Build orchestration script |
+| `modcompiler/` | Python library (decompilation, Modrinth API, build adapters) |
+| `incoming/` | Landing zone for source zips |
 | `.github/workflows/` | All workflow definitions |
 
 ---
 
-## Your Workflow
+## MANDATORY Procedure
 
-### Step 1: Understand the Mod
-1. Run the `ModrinthProjectDiagnosis` workflow on the mod's Modrinth URL
-2. Read the generated `project-description.md` (mod name, description, features)
-3. Read `project-info.json` (metadata, categories, links)
-4. Read the `Old Working Versions/` folder — study the 4 oldest working jars' decompiled source to understand the mod's original correct behavior
-5. Identify: what does this mod DO? How does it work internally?
+You MUST follow this procedure exactly. Do NOT skip steps or take shortcuts.
 
-### Step 2: Diagnose Broken Versions
+### Phase 1: Understand the Mod
+
+1. Run `ModrinthProjectDiagnosis` on the mod's Modrinth URL (or use existing diagnosis results)
+2. Read `project-description.md` and `project-info.json`
+3. Read the `Old Working Versions/` folder — study the 4 oldest working jars' decompiled source
+4. Understand: what does this mod DO? How does it work internally?
+
+### Phase 1.5: Pre-Fix Audit — Author/Path Correction & Missing Version Detection
+
+**BEFORE fixing any broken versions**, launch a sub-agent to audit the codebase for correctness. This sub-agent must:
+
+1. **Scan every decompiled version+loader folder** from the diagnosis output for incorrect author/package paths:
+   - Wrong: `com.example`, `com.mymod`, `net.example`, `com.someone`, `me.other`, etc.
+   - Correct: `com.itamio`, `io.itamio`, `itamio.com`, `itamio.*`
+   - Check `mod.txt`, `fabric.mod.json`, `mods.toml`, `mcmod.info`, `plugin.yml`, Java package declarations, and class imports
+   - List every version+loader that has incorrect paths with: the current wrong path, what it should be, and which files are affected
+
+2. **Compare the mod's published versions against the repository's supported targets**:
+   - The repository supports **82 individual version+loader combinations** across 11 ranges (see `workspace/ratings.txt` or `version-manifest.json`)
+   - The diagnosis output tells you which versions the mod has published
+   - Identify MISSING version+loader combos — ones the repository supports but the mod has never been published for
+   - These missing combos need to be **built from scratch** with the mod's source code adapted for that version+loader
+
+3. **Produce two output files** in `workspace/`:
+   - `path-corrections.txt`: List of all files needing author/package rewrite, grouped by version+loader
+   - `missing-versions.txt`: List of all version+loader combos that need to be built from scratch
+
+4. **Apply the path corrections** for all affected versions+loaders. Rewrite:
+   - Java source files: package declarations, imports, and string references
+   - Metadata files: mod.txt authors, fabric.mod.json group/entrypoint, mods.toml, mcmod.info
+   - Rebuild the corrected zips
+
+### Phase 2: Diagnose Broken Versions
+
 1. Read `Final-Diagnosis.txt` — identify all UNHEALTHY versions
-2. For each UNHEALTHY version:
-   - Read its `health-report.txt` (crash summary, launcher status)
-   - Read its `launcher-logs/` (latest.log, crash reports, stderr)
-   - If available, read its `decompiled/` source code
-3. Compare broken versions against the Old Working Versions to identify differences
-4. Use **sub-agents in parallel** to analyze each broken version
-5. Each sub-agent produces a `report.txt` in the version folder: what is broken, why, and how to fix it
+2. **Search the DIF database FIRST** — a previous AI agent may have already solved the same issue:
+   ```bash
+   python3 tools/dif_search.py "fabric api dependency mixin"
+   python3 tools/dif_search.py "forge NoSuchMethodError Minecraft getInstance"
+   python3 tools/dif_search.py "neoforge LoadingErrorScreen"
+   ```
+   If DIF has a matching entry, apply the documented fix directly — skip the analysis step.
+3. **Launch sub-agents in parallel** to analyze each broken version category that does NOT have a DIF entry:
+   - Each sub-agent reads the health-report.txt, launcher-logs/, and decompiled/ source for ONE version category
+   - Each sub-agent writes a `report.txt` with: what is broken, why, and the exact fix needed
+4. Group broken versions by root cause (e.g., "all Fabric versions need fabric-api removed", "Forge 1.20.x has NoSuchMethodError")
 
-### Step 3: Fix Each Version
-For each broken version, use a sub-agent to:
-1. Read the decompiled source and the diagnosis report
-2. Apply the fix identified in `report.txt`
-3. Package the fixed source code into the `incoming/` directory format
-4. Trigger the `Build Mods` workflow with the fix zip
-5. Retrieve the build logs and launcher test results
-6. If the fix failed, analyze the new logs and iterate
+### Phase 3: Fix Versions — SMALL BUNDLES
 
-Build and test **one version at a time** — not all at once.
+**CRITICAL RULE: Build in small bundles of 1-3 version targets per zip.** The build process is slow. Do NOT create one giant zip with all versions.
 
-### Step 4: Verify
-1. Re-run the `ModrinthProjectDiagnosis` workflow
+**CRITICAL RULE: Use sub-agents to write the fixed source code.** You should NOT write Java code yourself — launch a sub-agent for each fix.
+
+For each group of broken versions:
+
+1. **Launch a sub-agent** to write the fixed source code:
+   - The sub-agent reads the diagnosis report, decompiled Minecraft source, and Old Working Versions
+   - The sub-agent writes the fixed Java source files, mod.txt, version.txt
+   - The sub-agent packages them into the `incoming/` zip format
+
+2. **Commit and push** the zip to the repository
+
+3. **Trigger the Build Mods workflow** and wait for completion:
+   ```bash
+   python3 tools/trigger_workflow.py build.yml \
+       --inputs zip_path=incoming/<zip-name>.zip max_parallel=all \
+       --download-artifacts
+   ```
+   The script blocks until the run finishes. Exit code 0 = success.
+
+4. **Read the build results** from the downloaded artifacts:
+   - `.workflow_downloads/all-mod-builds/SUMMARY.md` — overall build status
+   - `.workflow_downloads/test-results/*.txt` — per-target pass/fail/not_tested
+   - `.workflow_downloads/crash-logs/` — crash logs for failed tests
+
+5. **Read the build logs and launcher test results** to verify:
+   - Build status is "success" (not "error")
+   - Launcher test status is "pass" (not "fail" or "not_tested")
+   - If failed, read the crash logs and iterate
+
+6. **Only move to the next group after the current group passes.**
+
+### Phase 4: Verify and Record
+
+1. Re-run `ModrinthProjectDiagnosis`
 2. Confirm all previously UNHEALTHY versions are now HEALTHY or WARNING
-3. Produce a final summary of all changes made
+3. **Update `workspace/ratings.txt`** for every version+loader you built:
+   - Open `workspace/ratings.txt`
+   - For each version+loader you built and tested, update the rating:
+     - `1` = easy — built and passed launcher test on first try, no source changes needed
+     - `2` = medium — needed minor fixes (e.g., package rename, import fix) but passed after
+     - `3` = hard — needed major rewrites (mixin, API migration, event system change) or repeatedly failed
+   - The rating is per version+loader combo, not per mod. Rate based on the build experience itself.
+   - Over many runs, high-rated combos can be removed from the manifest to speed up future builds.
+4. **Add DIF entries** for every issue you fixed and verified:
+   ```bash
+   python3 tools/dif_search.py --create
+   ```
+   Each entry must include: the error message, root cause, the fix applied, and which versions confirmed it works. This ensures future AI agents can solve the same issue instantly without repeating your work.
+5. Write a final summary
 
 ---
 
-## Key Rules
+## CRITICAL Rules — READ THESE CAREFULLY
 
-1. **The mod author is ALWAYS itamio.** Every mod belongs to itamio.
-2. **Mods MUST NOT require external dependency mods.** If a mod declares a dependency (e.g., `fabric-api`), this is INCORRECT — remove it and fix the mod to be self-contained.
-3. **Compare against Old Working Versions.** The oldest working versions represent the mod's original correct intent.
-4. **Use decompiled Minecraft source** to understand API changes between versions.
-5. **Check for `NoSuchMethodError`** — this means the Minecraft API changed between versions. Look at the decompiled source for the correct method signature.
-6. **Check for `LoadingErrorScreen`** — the mod's entrypoint or metadata is wrong for that loader version.
-7. **Fabric mods must not declare `fabric-api` dependency.** If `fabric.mod.json` has `depends.fabric-api`, remove it.
-8. **Work in small batches.** Fix and build one version at a time.
+### Rule 1: Source Code Placement
+
+Fabric templates use **split source sets** (`splitEnvironmentSourceSets()`). This means:
+
+| Code type | Source directory | Why |
+|---|---|---|
+| Common code (server+client) | `src/main/java/` | Visible to both sides |
+| Client-only code (mixins targeting client classes) | `src/client/java/` | MinecraftClient and GUI classes only visible here |
+| Common resources | `src/main/resources/` | |
+| Client-only resources (client mixin JSONs) | `src/client/resources/` | |
+
+**If you put client code (like a mixin targeting `MinecraftClient`) in `src/main/java/`, it WILL NOT COMPILE.** The build system will not find `MinecraftClient` there.
+
+**DO NOT modify `adapters.py` or build.gradle templates to strip `splitEnvironmentSourceSets()`.** This is a hack that breaks other mods. Place your code in the correct source set instead.
+
+### Rule 2: Fabric API Dependency
+
+Fabric mods MUST NOT depend on `fabric-api`. Set `requires_fabric_api=false` in `mod.txt`:
+
+```
+requires_fabric_api=false
+```
+
+The build system will then omit `fabric-api` from the generated `fabric.mod.json`.
+
+If the mod uses Fabric API events (like `ClientTickEvents`), rewrite it to use **mixin injection** instead. The mixin goes in `src/client/java/` and the mixin JSON goes in `src/client/resources/`.
+
+### Rule 3: Yarn Mapping Differences
+
+Different MC versions use different mapping names. ALWAYS check the decompiled source for the exact method names:
+
+| MC Version | Method | Notes |
+|---|---|---|
+| 1.16.5 (Fabric, Yarn) | `client.openScreen(screen)` | Yarn name |
+| 1.17+ (Fabric, Yarn) | `client.setScreen(screen)` | Yarn name (changed) |
+| 1.20+ (Fabric, official) | `client.setScreen(screen)` | Official name |
+
+**DO NOT assume method names are the same across versions.** Always verify against decompiled source.
+
+**IMPORTANT**: The build system does NOT automatically remap `setScreen` to `openScreen` for 1.16.5. You MUST write `openScreen` in the source code for 1.16.5 Fabric. This is because the source code is compiled against the 1.16.5 Yarn mappings where `setScreen` does not exist (it's called `openScreen`). See DIF entry `FABRIC-YARN-OPENSCREEN-VS-SETSCREEN-1165`.
+
+### Rule 4: Do NOT Modify Build Pipeline
+
+**DO NOT modify these files unless explicitly asked:**
+- `modcompiler/adapters.py`
+- `modcompiler/common.py`
+- `build_mods.py`
+- `version-manifest.json`
+- Gradle template files (`build.gradle`, `settings.gradle`)
+
+If you think a build pipeline change is needed, document it in a report and ask the user. The build pipeline is shared across all mods — changes can break other builds.
+
+### Rule 5: Small Bundles Only
+
+**NEVER create a zip with more than 3 version targets.** The build process is slow. Create separate zips for each group:
+
+- Good: `pingfix-fabric-1.20.1.zip` (1 target)
+- Good: `pingfix-fabric-1.16-1.17.zip` (2 targets)
+- Bad: `pingfix-all-versions.zip` (23 targets)
+
+### Rule 6: Use Sub-Agents
+
+**ALWAYS use sub-agents for:**
+- Analyzing broken versions (Phase 2)
+- Writing fixed source code (Phase 3)
+
+You should coordinate and verify, not write code yourself. Launch sub-agents with the Task tool.
+
+### Rule 7: Author is Always itamio
+
+Every mod belongs to itamio. Use `authors=itamio` in mod.txt.
+
+### Rule 8: Verify Build Results
+
+After triggering a build:
+1. Wait for completion
+2. Download the `all-mod-builds` artifact
+3. Read `SUMMARY.md` — check that status is "success"
+4. Download the `test-results` artifact
+5. Read each `.txt` file — check for "pass" (not "fail" or "not_tested")
+6. If any test failed, read the crash logs from the `crash-logs` artifact
+7. Only consider a fix successful when build=success AND launcher-test=pass
+
+### Rule 9: ALWAYS Search DIF Before Fixing
+
+**Before writing any fix code**, search the DIF database for the issue you're about to fix. A previous AI agent may have already encountered and solved the exact same problem:
+
+```bash
+python3 tools/dif_search.py "description of the error or issue"
+```
+
+If a DIF entry exists with a matching error pattern or root cause, apply the documented fix directly. Do NOT reinvent the wheel. Only proceed to write your own fix if no DIF entry matches.
+
+You can also match build logs directly:
+```bash
+python3 tools/dif_search.py --match-log path/to/build.log
+```
+
+### Rule 10: ALWAYS Record Fixes in DIF
+
+**After successfully fixing and verifying an issue** (build=success AND launcher-test=pass), you MUST create a DIF entry:
+
+```bash
+python3 tools/dif_search.py --create
+```
+
+Or write a Markdown file directly in `dif/` with the format documented in `tools/README.md`.
+
+The entry must include:
+- **id**: Unique uppercase ID (e.g., `FABRIC-CLIENT-TICK-MIXIN-PATTERN`)
+- **title**: Short description of the issue
+- **tags**: Relevant tags (loader, error type, etc.)
+- **versions**: Which MC versions are affected
+- **loaders**: Which loaders are affected
+- **symbols**: Class/method names involved
+- **error_patterns**: Regex patterns matching the error output
+- **body**: Issue, Error, Root Cause, Fix, and Verified sections
+
+This is MANDATORY. If you skip this step, the next AI agent will have to solve the same issue from scratch, wasting time and resources.
+
+### Rule 11: Update Ratings After Every Build Cycle
+
+After every successful build+test cycle, update `workspace/ratings.txt` with the difficulty rating for each version+loader combo you built:
+
+- `1` = easy — built and passed on first try, no source changes needed
+- `2` = medium — needed minor fixes (package rename, import fix, etc.)
+- `3` = hard — needed major rewrites or repeatedly failed
+
+The ratings file tracks 82 version+loader combos. Over many runs, the user can identify which combos consistently fail (rating 3) and remove them from the manifest to speed up future builds.
+
+Do NOT skip this step. It is essential for the long-term health of the build pipeline.
+
+---
+
+## Incoming Zip Format
+
+```
+my-fix.zip
+├── ModDirName1/
+│   ├── mod.txt          (mod metadata, see format below)
+│   ├── version.txt      (minecraft_version + loader)
+│   ├── src/
+│   │   ├── main/java/   (common code)
+│   │   ├── main/resources/ (common resources)
+│   │   ├── client/java/ (client-only code — mixins targeting client classes)
+│   │   └── client/resources/ (client-only resources — client mixin JSONs)
+│   └── .modcompiler/    (optional: deps.json for extra Gradle dependencies)
+├── ModDirName2/
+│   └── ... (same structure)
+```
+
+### mod.txt format
+```
+mod_id=pingfix
+name=PingFix
+mod_version=1.0.0
+group=com.itamio.pingfix
+entrypoint_class=com.itamio.pingfix.fabric.PingFixFabricMod
+description=Description here
+authors=itamio
+license=MIT
+runtime_side=client
+requires_fabric_api=false
+```
+
+### version.txt format
+```
+minecraft_version=1.20.1-1.20.6
+loader=fabric
+```
+
+Use a dash for version ranges within the same minor family: `1.20.1-1.20.6` expands to 1.20.1, 1.20.2, ..., 1.20.6.
 
 ---
 
@@ -145,9 +375,16 @@ Build and test **one version at a time** — not all at once.
 
 | Path | Description |
 |---|---|
-| `AGENTS.md` | This file — your role and resource guide |
+| `AGENTS.md` | This file |
 | `tools/README.md` | Tool documentation |
-| `tools/ModrinthProjectDiagnosis.yml` | Diagnosis workflow reference |
+| `tools/ModrinthProjectDiagnosis.yml` | Diagnosis workflow |
 | `tools/build_mods.py` | Build system script |
-| `decompiled-minecraft/` | Minecraft decompiled source code by version+loader |
-| `workspace/` | Your working area (use this for agent activities) |
+| `tools/trigger_workflow.py` | Workflow trigger CLI (symlink) |
+| `tools/dif_search.py` | DIF search CLI tool (symlink) |
+| `tools/dif_core.py` | DIF core engine library (symlink) |
+| `dif/` | DIF knowledge base — 70+ documented issues and fixes (symlink) |
+| `decompiled-minecraft/` | Decompiled MC source by version+loader |
+| `workspace/` | Working area for agent activities |
+| `workspace/ratings.txt` | Build difficulty ratings for all 82 version+loader combos |
+| `workspace/path-corrections.txt` | Generated by Phase 1.5 — incorrect author/path fixes needed |
+| `workspace/missing-versions.txt` | Generated by Phase 1.5 — version+loader combos to build from scratch |

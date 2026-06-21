@@ -165,25 +165,23 @@ jobs:
         shell: bash
         run: exit "${{ steps.bundle.outputs.exit_code }}"
 
-  launcher-test:
+  # ------------------------------------------------------------------
+  # Parallel launcher tests: prepare-tests -> launcher-test (matrix) -> collect-tests
+  # ------------------------------------------------------------------
+
+  prepare-tests:
     needs: [prepare, build]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    outputs:
+      matrix: ${{ steps.prepare-tests.outputs.matrix }}
+      total: ${{ steps.prepare-tests.outputs.total }}
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: |
-            8
-            16
-            17
-            21
-            25
+          python-version: "3.12"
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -191,46 +189,16 @@ jobs:
           pattern: mod-*
           path: .workflow_downloads/builds
 
-      - name: Cache Minecraft
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/.minecraft
-          key: mc-runtime-test-combined-${{ github.run_id }}
-          restore-keys: |
-            mc-runtime-test-combined-
-
-      - name: Get HeadlessMC
-        uses: robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2
-        with:
-          repository: 3arthqu4ke/headlessmc
-          tag: "2.9.0"
-          fileName: headlessmc-launcher-2.9.0.jar
-
-      - name: Install xvfb dependencies
-        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
-
-      - name: Run launcher tests sequentially
-        id: run-tests
+      - id: prepare-tests
         shell: bash
         env:
-          BUILD_DIR: .workflow_downloads/builds
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 - <<'PYEOF'
-          import json, os, subprocess, sys, shutil, re, time, urllib.request
+          import json, os, re, urllib.request
           from pathlib import Path
 
-          BUILD_DIR = Path(os.environ.get("BUILD_DIR", ".workflow_downloads/builds"))
-          RESULTS_DIR = Path("launcher-results")
-          CRASH_DIR = Path("crash-logs")
-          HMC_JAR = "headlessmc-launcher-2.9.0.jar"
-          MCRT_VERSION = "4.4.0"
-          MCRT_REPO = "headlesshq/mc-runtime-test"
-          LAUNCH_TIMEOUT = 120  # seconds to wait for game to load before killing
-          GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
-
-          RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-          CRASH_DIR.mkdir(parents=True, exist_ok=True)
+          BUILD_DIR = Path(".workflow_downloads/builds")
 
           def parse_mc_version(v):
               parts = []
@@ -250,6 +218,7 @@ jobs:
           def safe_artifact_key(loader, gv):
               return re.sub(r"[^A-Za-z0-9._-]+", "_", f"{loader}-{gv}").strip("_")
 
+          # Find successful builds
           build_entries = []
           for result_file in sorted(BUILD_DIR.rglob("result.json")):
               try:
@@ -257,45 +226,43 @@ jobs:
               except Exception:
                   continue
               if data.get("status") != "success":
-                  slug = data.get("slug", result_file.parent.name)
-                  (RESULTS_DIR / f"{slug}.txt").write_text("no-test-available", encoding="utf-8")
                   continue
               slug = data.get("slug", "")
               jar_names = data.get("jar_names", [])
               mc_version = data.get("minecraft_version", "")
               loader = data.get("loader", "")
-              java_version = data.get("java_version", "")
               if not jar_names or not mc_version or not loader:
-                  (RESULTS_DIR / f"{slug}.txt").write_text("no-test-available", encoding="utf-8")
                   continue
               build_entries.append({
                   "slug": slug,
                   "jar_name": jar_names[0],
                   "mc_version": mc_version,
                   "loader": loader,
-                  "java_version": java_version,
               })
 
           if not build_entries:
               print("No successful builds to test")
               with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-                  f.write("total=0\npassed=0\nfailed=0\n")
-              sys.exit(0)
+                  f.write('matrix={"include":[]}\n')
+                  f.write("total=0\n")
+              exit(0)
 
-          print(f"Found {len(build_entries)} successful builds, resolving test configs...")
-
+          # Fetch ci-data.json
           ci_url = "https://raw.githubusercontent.com/headlesshq/mc-runtime-test/main/ci-data.json"
+          GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+          headers = {"User-Agent": "ModCompiler/1.0"}
+          if GITHUB_TOKEN:
+              headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
           try:
-              req = urllib.request.Request(ci_url, headers={"User-Agent": "ModCompiler/1.0"})
+              req = urllib.request.Request(ci_url, headers=headers)
               with urllib.request.urlopen(req, timeout=30) as r:
                   ci_data = json.loads(r.read().decode())
           except Exception as e:
               print(f"ERROR: Could not fetch ci-data.json: {e}")
-              for entry in build_entries:
-                  (RESULTS_DIR / f"{entry['slug']}.txt").write_text("no-test-available", encoding="utf-8")
               with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-                  f.write("total=0\npassed=0\nfailed=0\n")
-              sys.exit(0)
+                  f.write('matrix={"include":[]}\n')
+                  f.write("total=0\n")
+              exit(0)
 
           run_data = ci_data.get("run_data", [])
           supported = {}
@@ -340,14 +307,6 @@ jobs:
               test_loader = map_loader(entry["loader"])
               test_config = find_test_config(entry["mc_version"], test_loader)
               if test_config is None:
-                  (RESULTS_DIR / f"{entry['slug']}.txt").write_text("no-test-available", encoding="utf-8")
-                  continue
-              jar_path = None
-              for p in BUILD_DIR.rglob(entry["jar_name"]):
-                  jar_path = p
-                  break
-              if not jar_path:
-                  (RESULTS_DIR / f"{entry['slug']}.txt").write_text("no-test-available", encoding="utf-8")
                   continue
               test_entries.append({
                   "slug": entry["slug"],
@@ -355,375 +314,489 @@ jobs:
                   "test_mc": test_config["mc"],
                   "loader": test_config["modloader"],
                   "original_loader": entry["loader"],
-                  "jar_path": str(jar_path),
                   "jar_name": entry["jar_name"],
-                  "java_version": test_config["java"],
+                  "java_version": str(test_config["java"]),
                   "loader_regex": test_config["regex"],
                   "mcrt_jar": test_config["mcrt_jar"],
                   "safe_key": safe_artifact_key(entry["loader"], entry["mc_version"]),
               })
 
-          if not test_entries:
-              print("No testable builds after resolving configs")
-              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-                  f.write("total=0\npassed=0\nfailed=0\n")
-              sys.exit(0)
+          matrix = {"include": test_entries}
+          matrix_json = json.dumps(matrix)
 
-          print(f"Will test {len(test_entries)} builds sequentially\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"matrix={matrix_json}\n")
+              f.write(f"total={len(test_entries)}\n")
 
-          def find_java_home(version):
-              tc = Path("/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk")
-              if tc.exists():
-                  for d in sorted(tc.iterdir(), reverse=True):
-                      if d.is_dir() and d.name.split('.')[0] == str(version):
-                          if (d / "x64" / "bin" / "java").exists():
-                              return str(d / "x64")
-              return os.environ.get("JAVA_HOME", "")
+          print(f"Prepared {len(test_entries)} test entries")
+          for e in test_entries:
+              print(f"  {e['original_loader']} MC {e['game_version']} -> test_mc={e['test_mc']} java={e['java_version']}")
+          PYEOF
 
-          def download_mcrt_jar(mc_version, loader_type):
-              mods_dir = Path("run/mods")
-              mods_dir.mkdir(parents=True, exist_ok=True)
-              pat = f"mc-runtime-test-{mc_version}-*-{loader_type}-release.jar"
-              existing = list(mods_dir.glob(pat))
-              if existing:
-                  return existing[0].name
-              url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"
-              headers = {"User-Agent": "ModCompiler/1.0"}
-              if GITHUB_TOKEN:
-                  headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
-              try:
-                  req = urllib.request.Request(url, headers=headers)
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      release = json.loads(r.read().decode())
-                  for asset in release.get("assets", []):
-                      name = asset.get("name", "")
-                      if re.match(f"mc-runtime-test-{re.escape(mc_version)}-.*-{re.escape(loader_type)}-release\\.jar$", name):
-                          dl_url = asset.get("browser_download_url", "")
-                          if not dl_url:
-                              continue
-                          urllib.request.urlretrieve(dl_url, str(mods_dir / name))
-                          print(f"  Downloaded mc-runtime-test: {name}")
-                          return name
-                  print(f"  WARNING: No mc-runtime-test jar for {mc_version}/{loader_type}")
-                  return None
-              except Exception as e:
-                  print(f"  WARNING: Could not fetch mc-runtime-test release: {e}")
-                  return None
+  launcher-test:
+    needs: [prepare-tests]
+    if: always() && needs.prepare-tests.outputs.total != '0' && needs.prepare-tests.outputs.total != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix: ${{ fromJson(needs.prepare-tests.outputs.matrix) }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-          def cleanup_processes():
-              for pat in ["crash-watcher.sh", "headlessmc-launcher", "Xvfb"]:
-                  subprocess.run(["pkill", "-f", pat], capture_output=True)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java_version }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mod-${{ matrix.slug }}
+          path: .workflow_downloads/builds
+
+      - name: Cache Minecraft
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.minecraft
+          key: mc-test-${{ matrix.test_mc }}-${{ matrix.loader }}
+
+      - name: Cache HeadlessMC
+        id: cache-hmc
+        uses: actions/cache@v4
+        with:
+          path: headlessmc-launcher-2.9.0.jar
+          key: hmc-2.9.0
+
+      - name: Get HeadlessMC
+        if: steps.cache-hmc.outputs.cache-hit != 'true'
+        uses: robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2
+        with:
+          repository: 3arthqu4ke/headlessmc
+          tag: "2.9.0"
+          fileName: headlessmc-launcher-2.9.0.jar
+
+      - name: Install xvfb dependencies
+        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
+
+      - name: Run launcher test
+        id: run-test
+        continue-on-error: true
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+          JAR_NAME: ${{ matrix.jar_name }}
+          GAME_VERSION: ${{ matrix.game_version }}
+          TEST_MC: ${{ matrix.test_mc }}
+          LOADER: ${{ matrix.loader }}
+          ORIGINAL_LOADER: ${{ matrix.original_loader }}
+          JAVA_VERSION: ${{ matrix.java_version }}
+          LOADER_REGEX: ${{ matrix.loader_regex }}
+          MCRT_JAR: ${{ matrix.mcrt_jar }}
+          SAFE_KEY: ${{ matrix.safe_key }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, subprocess, sys, shutil, re, time, urllib.request
+          from pathlib import Path
+
+          SLUG = os.environ["SLUG"]
+          JAR_NAME = os.environ["JAR_NAME"]
+          GAME_VERSION = os.environ["GAME_VERSION"]
+          TEST_MC = os.environ["TEST_MC"]
+          LOADER = os.environ["LOADER"]
+          ORIGINAL_LOADER = os.environ["ORIGINAL_LOADER"]
+          JAVA_VERSION = int(os.environ["JAVA_VERSION"])
+          LOADER_REGEX = os.environ["LOADER_REGEX"]
+          MCRT_JAR = os.environ["MCRT_JAR"]
+          SAFE_KEY = os.environ["SAFE_KEY"]
+          GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+          HMC_JAR = "headlessmc-launcher-2.9.0.jar"
+          MCRT_VERSION = "4.4.0"
+          MCRT_REPO = "headlesshq/mc-runtime-test"
+          LAUNCH_TIMEOUT = 120
+
+          RESULTS_DIR = Path("launcher-results")
+          CRASH_DIR = Path("crash-logs")
+          RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+          CRASH_DIR.mkdir(parents=True, exist_ok=True)
+
+          print(f"::group::Test: {ORIGINAL_LOADER} MC {GAME_VERSION} ({SLUG})")
+
+          result = {
+              "status": "launcher_failed",
+              "slug": SLUG,
+              "game_version": GAME_VERSION,
+              "loader": ORIGINAL_LOADER,
+              "test_mc": TEST_MC,
+              "crash_summary": "",
+          }
+
+          launch_stdout = ""
+          launch_stderr = ""
+
+          try:
+              # Kill any leftover processes
+              subprocess.run(["pkill", "-f", "java"], capture_output=True)
               time.sleep(1)
-              subprocess.run(["pkill", "-9", "-f", "java"], capture_output=True)
-              time.sleep(1)
 
-          def run_test(entry, index, total):
-              slug = entry["slug"]
-              gv = entry["game_version"]
-              loader = entry["loader"]
-              test_mc = entry["test_mc"]
-              java_ver = entry["java_version"]
-              jar_path = entry["jar_path"]
-              jar_name = entry["jar_name"]
-              loader_regex = entry["loader_regex"]
-              mcrt_jar_type = entry["mcrt_jar"]
-              safe_key = entry["safe_key"]
-              original_loader = entry.get("original_loader", loader)
+              java_home = os.environ.get("JAVA_HOME", "")
+              print(f"  Java home: {java_home}")
 
-              launch_stdout = ""
-              launch_stderr = ""
+              run_dir = Path("run")
+              if run_dir.exists():
+                  shutil.rmtree(run_dir)
+              run_dir.mkdir()
+              (run_dir / "mods").mkdir()
 
-              print(f"::group::Test {index+1}/{total}: {original_loader} MC {gv} ({slug})")
+              hmc_dir = Path("HeadlessMC")
+              hmc_dir.mkdir(exist_ok=True)
+              (hmc_dir / "config.properties").write_text(
+                  f"hmc.java.versions={java_home}/bin/java\n"
+                  f"hmc.gamedir={Path.cwd()}/run\n"
+                  f"hmc.offline=true\n"
+                  f"hmc.rethrow.launch.exceptions=true\n"
+                  f"hmc.exit.on.failed.command=true\n"
+                  f"hmc.assets.dummy=true\n"
+              )
 
-              result = {
-                  "status": "launcher_failed",
-                  "slug": slug,
-                  "game_version": gv,
-                  "loader": original_loader,
-                  "test_mc": test_mc,
-                  "crash_summary": "",
-              }
+              (run_dir / "options.txt").write_text("onboardAccessibility:false\npauseOnLostFocus:false\n")
 
-              try:
-                  cleanup_processes()
+              # Find the jar in the downloaded artifact
+              jar_path = None
+              for p in Path(".workflow_downloads/builds").rglob(JAR_NAME):
+                  jar_path = p
+                  break
+              if not jar_path:
+                  result["status"] = "not_tested"
+                  result["crash_summary"] = f"Jar {JAR_NAME} not found in artifact"
+                  print(f"  SKIPPED: {result['crash_summary']}")
+              else:
+                  print(f"  Copying {JAR_NAME}...")
+                  shutil.copy2(str(jar_path), str(run_dir / "mods" / JAR_NAME))
 
-                  java_home = find_java_home(java_ver)
-                  os.environ["JAVA_HOME"] = java_home
-
-                  run_dir = Path("run")
-                  if run_dir.exists():
-                      shutil.rmtree(run_dir)
-                  run_dir.mkdir()
-                  (run_dir / "mods").mkdir()
-
-                  hmc_dir = Path("HeadlessMC")
-                  hmc_dir.mkdir(exist_ok=True)
-                  (hmc_dir / "config.properties").write_text(
-                      f"hmc.java.versions={java_home}/bin/java\n"
-                      f"hmc.gamedir={Path.cwd()}/run\n"
-                      f"hmc.offline=true\n"
-                      f"hmc.rethrow.launch.exceptions=true\n"
-                      f"hmc.exit.on.failed.command=true\n"
-                      f"hmc.assets.dummy=true\n"
-                  )
-
-                  (run_dir / "options.txt").write_text("onboardAccessibility:false\npauseOnLostFocus:false\n")
-
-                  print(f"  Copying {jar_name}...")
-                  shutil.copy2(jar_path, str(run_dir / "mods" / jar_name))
-
-                  # ---- Download Minecraft + install modloader ----
-                  mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / test_mc / f"{test_mc}.json"
+                  # Download Minecraft
+                  mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"
                   if not mc_json.exists():
-                      print(f"  Downloading Minecraft {test_mc}...")
+                      print(f"  Downloading Minecraft {TEST_MC}...")
                       subprocess.run(
-                          ["java", "-jar", HMC_JAR, "--command", "download", test_mc],
+                          ["java", "-jar", HMC_JAR, "--command", "download", TEST_MC],
                           capture_output=True, text=True, timeout=300
                       )
 
-                  print(f"  Installing {loader} for {test_mc} (Java {java_ver})...")
+                  # Install modloader
+                  print(f"  Installing {LOADER} for {TEST_MC} (Java {JAVA_VERSION})...")
                   install_result = subprocess.run(
-                      ["java", "-jar", HMC_JAR, "--command", loader, test_mc, "--java", str(java_ver)],
+                      ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", str(JAVA_VERSION)],
                       capture_output=True, text=True, timeout=600
                   )
                   if install_result.returncode != 0:
-                      install_stderr = (install_result.stderr or "")[:300]
-                      install_stdout = (install_result.stdout or "")[:300]
-                      print(f"  WARNING: {loader} install for {test_mc} returned code {install_result.returncode}")
-                      if install_stderr:
-                          print(f"  Install stderr: {install_stderr}")
-                      if install_stdout:
-                          print(f"  Install stdout: {install_stdout}")
+                      print(f"  WARNING: {LOADER} install returned code {install_result.returncode}")
+                      if install_result.stderr:
+                          print(f"  Install stderr: {install_result.stderr[:300]}")
 
-                  # Verify the installation exists
+                  # Verify installation
                   list_result = subprocess.run(
-                      ["java", "-jar", HMC_JAR, "--command", "list", loader_regex],
+                      ["java", "-jar", HMC_JAR, "--command", "list", LOADER_REGEX],
                       capture_output=True, text=True, timeout=30
                   )
                   list_output = (list_result.stdout or "").strip()
                   if not list_output or "Couldn't find" in list_output or "No" in list_output:
                       result["status"] = "not_tested"
-                      reason = f"No {loader} installation found for {test_mc}"
+                      reason = f"No {LOADER} installation found for {TEST_MC}"
                       if install_result.returncode != 0:
                           reason += f" (install failed with code {install_result.returncode})"
                       result["crash_summary"] = reason
                       result["launch_stderr"] = (install_result.stderr or "")[:2000]
                       print(f"  SKIPPED: {reason}")
-                      print("::endgroup::")
-                      return result
+                  else:
+                      # Download mc-runtime-test jar
+                      mods_dir = Path("run/mods")
+                      pat = f"mc-runtime-test-{TEST_MC}-*-{MCRT_JAR}-release.jar"
+                      existing = list(mods_dir.glob(pat))
+                      mcrt_name = None
+                      if existing:
+                          mcrt_name = existing[0].name
+                      else:
+                          url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"
+                          headers = {"User-Agent": "ModCompiler/1.0"}
+                          if GITHUB_TOKEN:
+                              headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+                          try:
+                              req = urllib.request.Request(url, headers=headers)
+                              with urllib.request.urlopen(req, timeout=30) as r:
+                                  release = json.loads(r.read().decode())
+                              for asset in release.get("assets", []):
+                                  name = asset.get("name", "")
+                                  if re.match(f"mc-runtime-test-{re.escape(TEST_MC)}-.*-{re.escape(MCRT_JAR)}-release\\.jar$", name):
+                                      dl_url = asset.get("browser_download_url", "")
+                                      if dl_url:
+                                          urllib.request.urlretrieve(dl_url, str(mods_dir / name))
+                                          mcrt_name = name
+                                          print(f"  Downloaded mc-runtime-test: {name}")
+                                          break
+                          except Exception as e:
+                              print(f"  WARNING: Could not fetch mc-runtime-test: {e}")
 
-                  # ---- Download mc-runtime-test jar ----
-                  mcrt_name = download_mcrt_jar(test_mc, mcrt_jar_type)
-                  if not mcrt_name:
-                      result["status"] = "not_tested"
-                      result["crash_summary"] = f"No mc-runtime-test jar for {test_mc}/{mcrt_jar_type}"
-                      print(f"  SKIPPED: No mc-runtime-test jar available")
-                      print("::endgroup::")
-                      return result
+                      if not mcrt_name:
+                          result["status"] = "not_tested"
+                          result["crash_summary"] = f"No mc-runtime-test jar for {TEST_MC}/{MCRT_JAR}"
+                          print(f"  SKIPPED: No mc-runtime-test jar")
+                      else:
+                          # Launch game in BACKGROUND
+                          print(f"  Launching Minecraft {TEST_MC} with {LOADER}...")
+                          launch_proc = subprocess.Popen(
+                              ["xvfb-run", "java", "-Dhmc.check.xvfb=true",
+                               "-jar", HMC_JAR, "--command", "launch", LOADER_REGEX, "-regex",
+                               "--jvm", "-Djava.awt.headless=true"],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                          )
 
-                  # ---- Launch game in BACKGROUND ----
-                  print(f"  Launching Minecraft {test_mc} with {loader}...")
-                  launch_proc = subprocess.Popen(
-                      ["xvfb-run", "java", "-Dhmc.check.xvfb=true",
-                       "-jar", HMC_JAR, "--command", "launch", loader_regex, "-regex",
-                       "--jvm", "-Djava.awt.headless=true"],
-                      stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                  )
+                          # Wait for game to load, then kill
+                          game_started = False
+                          crash_detected = False
+                          waited = 0
+                          poll_interval = 5
 
-                  # ---- Wait for game to load, then kill ----
-                  game_started = False
-                  crash_detected = False
-                  waited = 0
-                  poll_interval = 5
+                          while waited < LAUNCH_TIMEOUT:
+                              time.sleep(poll_interval)
+                              waited += poll_interval
 
-                  while waited < LAUNCH_TIMEOUT:
-                      time.sleep(poll_interval)
-                      waited += poll_interval
-
-                      # Check if process exited on its own
-                      if launch_proc.poll() is not None:
-                          print(f"  Game exited on its own after {waited}s (exit code {launch_proc.returncode})")
-                          game_started = True
-                          break
-
-                      # Check for crash reports
-                      crash_reports_dir = Path("run/crash-reports")
-                      crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else []
-                      hs_err = list(Path("run").glob("hs_err_pid*.log"))
-
-                      if crash_files or hs_err:
-                          print(f"  CRASH DETECTED after {waited}s!")
-                          crash_detected = True
-                          time.sleep(5)
-                          if launch_proc.poll() is None:
-                              launch_proc.kill()
-                              launch_proc.wait(timeout=10)
-                          break
-
-                      # Check if game log shows title screen reached
-                      log_path = Path("run/logs/latest.log")
-                      if log_path.exists():
-                          log_text = log_path.read_text(encoding="utf-8", errors="replace")
-                          if "Setting user:" in log_text or "Loaded" in log_text:
-                              if not game_started:
-                                  print(f"  Game reached title screen after {waited}s")
+                              if launch_proc.poll() is not None:
+                                  print(f"  Game exited on its own after {waited}s (exit code {launch_proc.returncode})")
                                   game_started = True
-                                  if waited < LAUNCH_TIMEOUT - 10:
-                                      time.sleep(10)
-                                      waited += 10
                                   break
 
-                  # ---- Kill if still running ----
-                  if launch_proc.poll() is None:
-                      print(f"  Killing game after {waited}s (timeout)")
-                      launch_proc.kill()
-                      try:
-                          launch_proc.wait(timeout=10)
-                      except subprocess.TimeoutExpired:
-                          launch_proc.kill()
+                              crash_reports_dir = Path("run/crash-reports")
+                              crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else []
+                              hs_err = list(Path("run").glob("hs_err_pid*.log"))
 
-                  # ---- Capture stdout/stderr from the launch process ----
-                  try:
-                      if launch_proc.stdout:
-                          launch_stdout = launch_proc.stdout.read().decode("utf-8", errors="replace")[:10000]
-                  except Exception:
-                      pass
-                  try:
-                      if launch_proc.stderr:
-                          launch_stderr = launch_proc.stderr.read().decode("utf-8", errors="replace")[:10000]
-                  except Exception:
-                      pass
+                              if crash_files or hs_err:
+                                  print(f"  CRASH DETECTED after {waited}s!")
+                                  crash_detected = True
+                                  time.sleep(5)
+                                  if launch_proc.poll() is None:
+                                      launch_proc.kill()
+                                      launch_proc.wait(timeout=10)
+                                  break
 
-                  # ---- Analyse results ----
-                  crash_reports_dir = Path("run/crash-reports")
-                  crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else []
-                  hs_err = list(Path("run").glob("hs_err_pid*.log"))
+                              log_path = Path("run/logs/latest.log")
+                              if log_path.exists():
+                                  log_text = log_path.read_text(encoding="utf-8", errors="replace")
+                                  if "Setting user:" in log_text or "Loaded" in log_text:
+                                      if not game_started:
+                                          print(f"  Game reached title screen after {waited}s")
+                                          game_started = True
+                                          if waited < LAUNCH_TIMEOUT - 10:
+                                              time.sleep(10)
+                                              waited += 10
+                                          break
 
-                  # Collect game log
-                  log_text = ""
-                  log_path = Path("run/logs/latest.log")
-                  if log_path.exists():
-                      log_text = log_path.read_text(encoding="utf-8", errors="replace")[:5000]
-                  elif Path("run/latest.log").exists():
-                      log_text = Path("run/latest.log").read_text(encoding="utf-8", errors="replace")[:5000]
+                          # Kill if still running
+                          if launch_proc.poll() is None:
+                              print(f"  Killing game after {waited}s (timeout)")
+                              launch_proc.kill()
+                              try:
+                                  launch_proc.wait(timeout=10)
+                              except subprocess.TimeoutExpired:
+                                  launch_proc.kill()
 
-                  exit_code = launch_proc.returncode if launch_proc.poll() is not None else -9
+                          # Capture stdout/stderr
+                          try:
+                              if launch_proc.stdout:
+                                  launch_stdout = launch_proc.stdout.read().decode("utf-8", errors="replace")[:10000]
+                          except Exception:
+                              pass
+                          try:
+                              if launch_proc.stderr:
+                                  launch_stderr = launch_proc.stderr.read().decode("utf-8", errors="replace")[:10000]
+                          except Exception:
+                              pass
 
-                  if crash_files or hs_err:
-                      result["status"] = "launcher_failed"
-                      if crash_files:
-                          result["crash_summary"] = crash_files[0].read_text(encoding="utf-8", errors="replace")[:500]
-                          print(f"  FAILED: Crash report found")
-                      elif hs_err:
-                          result["crash_summary"] = hs_err[0].read_text(encoding="utf-8", errors="replace")[:500]
-                          print(f"  FAILED: JVM crash detected")
-                      result["launch_stdout"] = launch_stdout[:2000]
-                      result["launch_stderr"] = launch_stderr[:2000]
+                          # Analyse results
+                          crash_reports_dir = Path("run/crash-reports")
+                          crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else []
+                          hs_err = list(Path("run").glob("hs_err_pid*.log"))
 
-                      # Save crash logs
-                      cdir = CRASH_DIR / safe_key
-                      cdir.mkdir(parents=True, exist_ok=True)
-                      if Path("run/crash-reports").exists():
-                          shutil.copytree("run/crash-reports", cdir / "crash-reports", dirs_exist_ok=True)
-                      if Path("run/logs").exists():
-                          shutil.copytree("run/logs", cdir / "logs", dirs_exist_ok=True)
-                      for f in Path("run").glob("hs_err_pid*.log"):
-                          shutil.copy2(str(f), str(cdir / f.name))
-                      if Path("run/latest.log").exists():
-                          shutil.copy2("run/latest.log", str(cdir / "latest.log"))
+                          log_text = ""
+                          log_path = Path("run/logs/latest.log")
+                          if log_path.exists():
+                              log_text = log_path.read_text(encoding="utf-8", errors="replace")[:5000]
+                          elif Path("run/latest.log").exists():
+                              log_text = Path("run/latest.log").read_text(encoding="utf-8", errors="replace")[:5000]
 
-                  elif game_started and exit_code not in (0, -9):
-                      result["status"] = "launcher_failed"
-                      crash_info = f"Game exited with code {exit_code}"
-                      if not log_text and launch_stderr:
-                          crash_info += f"\nStderr: {launch_stderr[:400]}"
-                      elif not log_text and launch_stdout:
-                          crash_info += f"\nStdout: {launch_stdout[:400]}"
-                      result["crash_summary"] = crash_info
-                      result["launch_stdout"] = launch_stdout[:2000]
-                      result["launch_stderr"] = launch_stderr[:2000]
-                      print(f"  FAILED: Game exited with code {exit_code}")
+                          exit_code = launch_proc.returncode if launch_proc.poll() is not None else -9
 
-                      cdir = CRASH_DIR / safe_key
-                      cdir.mkdir(parents=True, exist_ok=True)
-                      if Path("run/logs").exists():
-                          shutil.copytree("run/logs", cdir / "logs", dirs_exist_ok=True)
-                      if launch_stdout:
-                          (cdir / "launcher-stdout.log").write_text(launch_stdout, encoding="utf-8")
-                      if launch_stderr:
-                          (cdir / "launcher-stderr.log").write_text(launch_stderr, encoding="utf-8")
+                          if crash_files or hs_err:
+                              result["status"] = "launcher_failed"
+                              if crash_files:
+                                  result["crash_summary"] = crash_files[0].read_text(encoding="utf-8", errors="replace")[:500]
+                                  print(f"  FAILED: Crash report found")
+                              elif hs_err:
+                                  result["crash_summary"] = hs_err[0].read_text(encoding="utf-8", errors="replace")[:500]
+                                  print(f"  FAILED: JVM crash detected")
+                              result["launch_stdout"] = launch_stdout[:2000]
+                              result["launch_stderr"] = launch_stderr[:2000]
 
-                  else:
-                      result["status"] = "passed"
-                      print(f"  PASSED")
+                              cdir = CRASH_DIR / SAFE_KEY
+                              cdir.mkdir(parents=True, exist_ok=True)
+                              if Path("run/crash-reports").exists():
+                                  shutil.copytree("run/crash-reports", cdir / "crash-reports", dirs_exist_ok=True)
+                              if Path("run/logs").exists():
+                                  shutil.copytree("run/logs", cdir / "logs", dirs_exist_ok=True)
+                              for f in Path("run").glob("hs_err_pid*.log"):
+                                  shutil.copy2(str(f), str(cdir / f.name))
 
-                  result["logs"] = log_text
+                          elif game_started and exit_code not in (0, -9):
+                              result["status"] = "launcher_failed"
+                              crash_info = f"Game exited with code {exit_code}"
+                              if not log_text and launch_stderr:
+                                  crash_info += f"\nStderr: {launch_stderr[:400]}"
+                              elif not log_text and launch_stdout:
+                                  crash_info += f"\nStdout: {launch_stdout[:400]}"
+                              result["crash_summary"] = crash_info
+                              result["launch_stdout"] = launch_stdout[:2000]
+                              result["launch_stderr"] = launch_stderr[:2000]
+                              print(f"  FAILED: Game exited with code {exit_code}")
 
-              except Exception as e:
-                  result["crash_summary"] = str(e)[:500]
-                  print(f"  ERROR: {e}")
+                              cdir = CRASH_DIR / SAFE_KEY
+                              cdir.mkdir(parents=True, exist_ok=True)
+                              if Path("run/logs").exists():
+                                  shutil.copytree("run/logs", cdir / "logs", dirs_exist_ok=True)
+                              if launch_stdout:
+                                  (cdir / "launcher-stdout.log").write_text(launch_stdout, encoding="utf-8")
+                              if launch_stderr:
+                                  (cdir / "launcher-stderr.log").write_text(launch_stderr, encoding="utf-8")
 
-              cleanup_processes()
-              print("::endgroup::")
-              return result
+                          else:
+                              result["status"] = "passed"
+                              print(f"  PASSED")
 
-          passed = 0
-          failed = 0
+                          result["logs"] = log_text
 
-          for i, entry in enumerate(test_entries):
-              result = run_test(entry, i, len(test_entries))
-              slug = entry["slug"]
-              safe_key = entry["safe_key"]
-              if result["status"] == "passed":
-                  status_text = "pass"
-                  passed += 1
-              elif result["status"] == "not_tested":
-                  status_text = "not_tested"
-                  print(f"  [{slug}] not_tested: {result.get('crash_summary', '')[:100]}")
-              else:
-                  status_text = "fail"
-                  failed += 1
-              (RESULTS_DIR / f"{slug}.txt").write_text(status_text, encoding="utf-8")
-              rdir = RESULTS_DIR / safe_key
-              rdir.mkdir(parents=True, exist_ok=True)
-              (rdir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+          except Exception as e:
+              result["crash_summary"] = str(e)[:500]
+              print(f"  ERROR: {e}")
 
-          print(f"\n{'='*60}")
-          print(f"SUMMARY: {passed} passed, {failed} failed out of {len(test_entries)} tests")
-          print(f"{'='*60}")
+          # Cleanup
+          subprocess.run(["pkill", "-f", "java"], capture_output=True)
+          time.sleep(1)
 
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write(f"total={len(test_entries)}\n")
-              f.write(f"passed={passed}\n")
-              f.write(f"failed={failed}\n")
+          # Write result
+          if result["status"] == "passed":
+              status_text = "pass"
+          elif result["status"] == "not_tested":
+              status_text = "not_tested"
+          else:
+              status_text = "fail"
+
+          (RESULTS_DIR / f"{SLUG}.txt").write_text(status_text, encoding="utf-8")
+          rdir = RESULTS_DIR / SAFE_KEY
+          rdir.mkdir(parents=True, exist_ok=True)
+          (rdir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+
+          print(f"  Status: {status_text}")
+          print("::endgroup::")
           PYEOF
 
-      - name: Upload launcher results
+      - name: Upload test result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: launcher-results
+          name: test-result-${{ matrix.slug }}
           path: launcher-results/
 
       - name: Upload crash logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: crash-logs
+          name: crash-${{ matrix.safe_key }}
           path: crash-logs/
           if-no-files-found: ignore
 
-      - name: Fail if any test failed
-        if: always() && steps.run-tests.outputs.failed != '0' && steps.run-tests.outputs.failed != ''
+  collect-tests:
+    needs: [launcher-test]
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.collect.outputs.passed }}
+      failed: ${{ steps.collect.outputs.failed }}
+      total: ${{ steps.collect.outputs.total }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: test-result-*
+        path: .workflow_downloads/test-results
+        merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: crash-*
+        path: .workflow_downloads/crash-logs
+        merge-multiple: true
+        if-no-files-found: ignore
+
+      - id: collect
         shell: bash
         run: |
-          echo "Launcher tests failed: ${{ steps.run-tests.outputs.failed }} out of ${{ steps.run-tests.outputs.total }}"
+          python3 - <<'PYEOF'
+          import os
+          from pathlib import Path
+
+          results_dir = Path(".workflow_downloads/test-results")
+          passed = 0
+          failed = 0
+          total = 0
+
+          if results_dir.exists():
+              for txt_file in sorted(results_dir.glob("*.txt")):
+                  total += 1
+                  content = txt_file.read_text(encoding="utf-8").strip()
+                  if content == "pass":
+                      passed += 1
+                  elif content == "fail":
+                      failed += 1
+                  print(f"  {txt_file.stem}: {content}")
+
+          print(f"\n{'='*60}")
+          print(f"SUMMARY: {passed} passed, {failed} failed out of {total} tests")
+          print(f"{'='*60}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"passed={passed}\n")
+              f.write(f"failed={failed}\n")
+              f.write(f"total={total}\n")
+          PYEOF
+
+      - name: Upload combined test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: .workflow_downloads/test-results
+
+      - name: Upload combined crash logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-logs
+          path: .workflow_downloads/crash-logs
+          if-no-files-found: ignore
+
+      - name: Fail if any test failed
+        if: always() && steps.collect.outputs.failed != '0' && steps.collect.outputs.failed != ''
+        shell: bash
+        run: |
+          echo "Launcher tests failed: ${{ steps.collect.outputs.failed }} out of ${{ steps.collect.outputs.total }}"
           exit 1
 
   publish-modrinth:
     needs:
       - bundle
-      - launcher-test
+      - collect-tests
     if: ${{ always() && inputs.modrinth_project_url != '' }}
     runs-on: ubuntu-latest
     steps:
@@ -741,7 +814,7 @@ jobs:
       - uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: launcher-results
+          name: test-results
           path: .workflow_downloads/launcher-results
 
       - name: Filter mods that failed launcher test

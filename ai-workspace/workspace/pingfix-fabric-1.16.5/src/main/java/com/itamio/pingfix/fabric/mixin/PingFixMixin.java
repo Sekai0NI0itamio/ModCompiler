@@ -27,7 +27,7 @@ public class PingFixMixin {
             trackedScreen = screen;
             if (screen instanceof MultiplayerScreen && now - lastRefreshMs >= SCREEN_OPEN_REFRESH_GUARD_MS) {
                 lastRefreshMs = now;
-                client.setScreen(new MultiplayerScreen(new TitleScreen()));
+                client.openScreen(new MultiplayerScreen(new TitleScreen()));
             }
             return;
         }
@@ -41,6 +41,6 @@ public class PingFixMixin {
         }
 
         lastRefreshMs = now;
-        client.setScreen(new MultiplayerScreen(new TitleScreen()));
+        client.openScreen(new MultiplayerScreen(new TitleScreen()));
     }
 }
