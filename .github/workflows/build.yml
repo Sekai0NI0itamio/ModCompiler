@@ -214,6 +214,7 @@ jobs:
         shell: bash
         env:
           BUILD_DIR: .workflow_downloads/builds
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 - <<'PYEOF'
           import json, os, subprocess, sys, shutil, re, time, urllib.request
@@ -225,7 +226,8 @@ jobs:
           HMC_JAR = "headlessmc-launcher-2.9.0.jar"
           MCRT_VERSION = "4.4.0"
           MCRT_REPO = "headlesshq/mc-runtime-test"
-          TEST_TIMEOUT = 600
+          LAUNCH_TIMEOUT = 120  # seconds to wait for game to load before killing
+          GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 
           RESULTS_DIR.mkdir(parents=True, exist_ok=True)
           CRASH_DIR.mkdir(parents=True, exist_ok=True)
@@ -369,21 +371,6 @@ jobs:
 
           print(f"Will test {len(test_entries)} builds sequentially\n")
 
-          _mcrt_release = None
-          def get_mcrt_release():
-              global _mcrt_release
-              if _mcrt_release is not None:
-                  return _mcrt_release
-              url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"
-              req = urllib.request.Request(url, headers={"User-Agent": "ModCompiler/1.0"})
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      _mcrt_release = json.loads(r.read().decode())
-              except Exception as e:
-                  print(f"  WARNING: Could not fetch mc-runtime-test release: {e}")
-                  _mcrt_release = {}
-              return _mcrt_release
-
           def find_java_home(version):
               tc = Path("/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk")
               if tc.exists():
@@ -400,22 +387,28 @@ jobs:
               existing = list(mods_dir.glob(pat))
               if existing:
                   return existing[0].name
-              release = get_mcrt_release()
-              for asset in release.get("assets", []):
-                  name = asset.get("name", "")
-                  if re.match(f"mc-runtime-test-{re.escape(mc_version)}-.*-{re.escape(loader_type)}-release\\.jar$", name):
-                      dl_url = asset.get("browser_download_url", "")
-                      if not dl_url:
-                          continue
-                      try:
+              url = f"https://api.github.com/repos/{MCRT_REPO}/releases/tags/{MCRT_VERSION}"
+              headers = {"User-Agent": "ModCompiler/1.0"}
+              if GITHUB_TOKEN:
+                  headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+              try:
+                  req = urllib.request.Request(url, headers=headers)
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      release = json.loads(r.read().decode())
+                  for asset in release.get("assets", []):
+                      name = asset.get("name", "")
+                      if re.match(f"mc-runtime-test-{re.escape(mc_version)}-.*-{re.escape(loader_type)}-release\\.jar$", name):
+                          dl_url = asset.get("browser_download_url", "")
+                          if not dl_url:
+                              continue
                           urllib.request.urlretrieve(dl_url, str(mods_dir / name))
                           print(f"  Downloaded mc-runtime-test: {name}")
                           return name
-                      except Exception as e:
-                          print(f"  WARNING: Download failed for {name}: {e}")
-                          return None
-              print(f"  WARNING: No mc-runtime-test jar for {mc_version}/{loader_type}")
-              return None
+                  print(f"  WARNING: No mc-runtime-test jar for {mc_version}/{loader_type}")
+                  return None
+              except Exception as e:
+                  print(f"  WARNING: Could not fetch mc-runtime-test release: {e}")
+                  return None
 
           def cleanup_processes():
               for pat in ["crash-watcher.sh", "headlessmc-launcher", "Xvfb"]:
@@ -436,6 +429,9 @@ jobs:
               mcrt_jar_type = entry["mcrt_jar"]
               safe_key = entry["safe_key"]
               original_loader = entry.get("original_loader", loader)
+
+              launch_stdout = ""
+              launch_stderr = ""
 
               print(f"::group::Test {index+1}/{total}: {original_loader} MC {gv} ({slug})")
 
@@ -476,6 +472,7 @@ jobs:
                   print(f"  Copying {jar_name}...")
                   shutil.copy2(jar_path, str(run_dir / "mods" / jar_name))
 
+                  # ---- Download Minecraft + install modloader ----
                   mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / test_mc / f"{test_mc}.json"
                   if not mc_json.exists():
                       print(f"  Downloading Minecraft {test_mc}...")
@@ -483,81 +480,147 @@ jobs:
                           ["java", "-jar", HMC_JAR, "--command", "download", test_mc],
                           capture_output=True, text=True, timeout=300
                       )
-                      print(f"  Installing {loader} for {test_mc} (Java {java_ver})...")
-                      subprocess.run(
-                          ["java", "-jar", HMC_JAR, "--command", loader, test_mc, "--java", str(java_ver)],
-                          capture_output=True, text=True, timeout=600
-                      )
 
-                  mcrt_name = download_mcrt_jar(test_mc, mcrt_jar_type)
-                  if not mcrt_name:
-                      result["crash_summary"] = f"No mc-runtime-test jar for {test_mc}/{mcrt_jar_type}"
-                      print(f"  FAILED: No mc-runtime-test jar available")
+                  print(f"  Installing {loader} for {test_mc} (Java {java_ver})...")
+                  install_result = subprocess.run(
+                      ["java", "-jar", HMC_JAR, "--command", loader, test_mc, "--java", str(java_ver)],
+                      capture_output=True, text=True, timeout=600
+                  )
+                  if install_result.returncode != 0:
+                      install_stderr = (install_result.stderr or "")[:300]
+                      install_stdout = (install_result.stdout or "")[:300]
+                      print(f"  WARNING: {loader} install for {test_mc} returned code {install_result.returncode}")
+                      if install_stderr:
+                          print(f"  Install stderr: {install_stderr}")
+                      if install_stdout:
+                          print(f"  Install stdout: {install_stdout}")
+
+                  # Verify the installation exists
+                  list_result = subprocess.run(
+                      ["java", "-jar", HMC_JAR, "--command", "list", loader_regex],
+                      capture_output=True, text=True, timeout=30
+                  )
+                  list_output = (list_result.stdout or "").strip()
+                  if not list_output or "Couldn't find" in list_output or "No" in list_output:
+                      result["status"] = "not_tested"
+                      reason = f"No {loader} installation found for {test_mc}"
+                      if install_result.returncode != 0:
+                          reason += f" (install failed with code {install_result.returncode})"
+                      result["crash_summary"] = reason
+                      result["launch_stderr"] = (install_result.stderr or "")[:2000]
+                      print(f"  SKIPPED: {reason}")
                       print("::endgroup::")
                       return result
 
-                  watcher_script = (
-                      '#!/bin/bash\n'
-                      'CRASH_DIR="run/crash-reports"\n'
-                      'MAX_WAIT=1200\n'
-                      'ELAPSED=0\n'
-                      'while [ $ELAPSED -lt $MAX_WAIT ]; do\n'
-                      '  if ls $CRASH_DIR/crash-*.txt 2>/dev/null || ls run/hs_err_pid*.log 2>/dev/null; then\n'
-                      '    echo "CRASH WATCHER: Crash detected!"\n'
-                      '    sleep 5\n'
-                      '    pkill -f \'headlessmc-launcher\' 2>/dev/null || true\n'
-                      '    pkill -f \'net.minecraft\' 2>/dev/null || true\n'
-                      '    pkill -f \'net.neoforged\' 2>/dev/null || true\n'
-                      '    pkill -f \'cpw.mods\' 2>/dev/null || true\n'
-                      '    pkill -f \'Xvfb\' 2>/dev/null || true\n'
-                      '    sleep 2\n'
-                      '    pkill -9 -f \'java\' 2>/dev/null || true\n'
-                      '    echo "CRASH WATCHER: Processes killed."\n'
-                      '    exit 0\n'
-                      '  fi\n'
-                      '  sleep 5\n'
-                      '  ELAPSED=$((ELAPSED + 5))\n'
-                      'done\n'
-                      'echo "CRASH WATCHER: Timeout"\n'
-                  )
-                  Path("/tmp/crash-watcher.sh").write_text(watcher_script)
-                  os.chmod("/tmp/crash-watcher.sh", 0o755)
-                  watcher_proc = subprocess.Popen(
-                      ["bash", "/tmp/crash-watcher.sh"],
+                  # ---- Download mc-runtime-test jar ----
+                  mcrt_name = download_mcrt_jar(test_mc, mcrt_jar_type)
+                  if not mcrt_name:
+                      result["status"] = "not_tested"
+                      result["crash_summary"] = f"No mc-runtime-test jar for {test_mc}/{mcrt_jar_type}"
+                      print(f"  SKIPPED: No mc-runtime-test jar available")
+                      print("::endgroup::")
+                      return result
+
+                  # ---- Launch game in BACKGROUND ----
+                  print(f"  Launching Minecraft {test_mc} with {loader}...")
+                  launch_proc = subprocess.Popen(
+                      ["xvfb-run", "java", "-Dhmc.check.xvfb=true",
+                       "-jar", HMC_JAR, "--command", "launch", loader_regex, "-regex",
+                       "--jvm", "-Djava.awt.headless=true"],
                       stdout=subprocess.PIPE, stderr=subprocess.PIPE
                   )
 
-                  print(f"  Launching Minecraft {test_mc} with {loader}...")
-                  try:
-                      launch_result = subprocess.run(
-                          ["xvfb-run", "java", "-Dhmc.check.xvfb=true",
-                           "-jar", HMC_JAR, "--command", "launch", loader_regex, "-regex",
-                           "--jvm", "-Djava.awt.headless=true"],
-                          capture_output=True, text=True, timeout=TEST_TIMEOUT
-                      )
-                      exit_code = launch_result.returncode
-                  except subprocess.TimeoutExpired:
-                      exit_code = -1
-                      print(f"  TIMEOUT: Test exceeded {TEST_TIMEOUT}s")
+                  # ---- Wait for game to load, then kill ----
+                  game_started = False
+                  crash_detected = False
+                  waited = 0
+                  poll_interval = 5
 
-                  subprocess.run(["pkill", "-f", "crash-watcher.sh"], capture_output=True)
-                  try:
-                      watcher_proc.wait(timeout=5)
-                  except subprocess.TimeoutExpired:
-                      watcher_proc.kill()
+                  while waited < LAUNCH_TIMEOUT:
+                      time.sleep(poll_interval)
+                      waited += poll_interval
 
-                  crash_reports = list(Path("run/crash-reports").glob("crash-*.txt")) if Path("run/crash-reports").exists() else []
+                      # Check if process exited on its own
+                      if launch_proc.poll() is not None:
+                          print(f"  Game exited on its own after {waited}s (exit code {launch_proc.returncode})")
+                          game_started = True
+                          break
+
+                      # Check for crash reports
+                      crash_reports_dir = Path("run/crash-reports")
+                      crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else []
+                      hs_err = list(Path("run").glob("hs_err_pid*.log"))
+
+                      if crash_files or hs_err:
+                          print(f"  CRASH DETECTED after {waited}s!")
+                          crash_detected = True
+                          time.sleep(5)
+                          if launch_proc.poll() is None:
+                              launch_proc.kill()
+                              launch_proc.wait(timeout=10)
+                          break
+
+                      # Check if game log shows title screen reached
+                      log_path = Path("run/logs/latest.log")
+                      if log_path.exists():
+                          log_text = log_path.read_text(encoding="utf-8", errors="replace")
+                          if "Setting user:" in log_text or "Loaded" in log_text:
+                              if not game_started:
+                                  print(f"  Game reached title screen after {waited}s")
+                                  game_started = True
+                                  if waited < LAUNCH_TIMEOUT - 10:
+                                      time.sleep(10)
+                                      waited += 10
+                                  break
+
+                  # ---- Kill if still running ----
+                  if launch_proc.poll() is None:
+                      print(f"  Killing game after {waited}s (timeout)")
+                      launch_proc.kill()
+                      try:
+                          launch_proc.wait(timeout=10)
+                      except subprocess.TimeoutExpired:
+                          launch_proc.kill()
+
+                  # ---- Capture stdout/stderr from the launch process ----
+                  try:
+                      if launch_proc.stdout:
+                          launch_stdout = launch_proc.stdout.read().decode("utf-8", errors="replace")[:10000]
+                  except Exception:
+                      pass
+                  try:
+                      if launch_proc.stderr:
+                          launch_stderr = launch_proc.stderr.read().decode("utf-8", errors="replace")[:10000]
+                  except Exception:
+                      pass
+
+                  # ---- Analyse results ----
+                  crash_reports_dir = Path("run/crash-reports")
+                  crash_files = list(crash_reports_dir.glob("crash-*.txt")) if crash_reports_dir.exists() else []
                   hs_err = list(Path("run").glob("hs_err_pid*.log"))
 
-                  if crash_reports or hs_err or exit_code != 0:
+                  # Collect game log
+                  log_text = ""
+                  log_path = Path("run/logs/latest.log")
+                  if log_path.exists():
+                      log_text = log_path.read_text(encoding="utf-8", errors="replace")[:5000]
+                  elif Path("run/latest.log").exists():
+                      log_text = Path("run/latest.log").read_text(encoding="utf-8", errors="replace")[:5000]
+
+                  exit_code = launch_proc.returncode if launch_proc.poll() is not None else -9
+
+                  if crash_files or hs_err:
                       result["status"] = "launcher_failed"
-                      if crash_reports:
-                          result["crash_summary"] = crash_reports[0].read_text(encoding="utf-8", errors="replace")[:500]
+                      if crash_files:
+                          result["crash_summary"] = crash_files[0].read_text(encoding="utf-8", errors="replace")[:500]
+                          print(f"  FAILED: Crash report found")
                       elif hs_err:
                           result["crash_summary"] = hs_err[0].read_text(encoding="utf-8", errors="replace")[:500]
-                      else:
-                          result["crash_summary"] = f"Exit code: {exit_code}"
+                          print(f"  FAILED: JVM crash detected")
+                      result["launch_stdout"] = launch_stdout[:2000]
+                      result["launch_stderr"] = launch_stderr[:2000]
 
+                      # Save crash logs
                       cdir = CRASH_DIR / safe_key
                       cdir.mkdir(parents=True, exist_ok=True)
                       if Path("run/crash-reports").exists():
@@ -569,10 +632,32 @@ jobs:
                       if Path("run/latest.log").exists():
                           shutil.copy2("run/latest.log", str(cdir / "latest.log"))
 
-                      print(f"  FAILED: Game crashed (exit code {exit_code})")
+                  elif game_started and exit_code not in (0, -9):
+                      result["status"] = "launcher_failed"
+                      crash_info = f"Game exited with code {exit_code}"
+                      if not log_text and launch_stderr:
+                          crash_info += f"\nStderr: {launch_stderr[:400]}"
+                      elif not log_text and launch_stdout:
+                          crash_info += f"\nStdout: {launch_stdout[:400]}"
+                      result["crash_summary"] = crash_info
+                      result["launch_stdout"] = launch_stdout[:2000]
+                      result["launch_stderr"] = launch_stderr[:2000]
+                      print(f"  FAILED: Game exited with code {exit_code}")
+
+                      cdir = CRASH_DIR / safe_key
+                      cdir.mkdir(parents=True, exist_ok=True)
+                      if Path("run/logs").exists():
+                          shutil.copytree("run/logs", cdir / "logs", dirs_exist_ok=True)
+                      if launch_stdout:
+                          (cdir / "launcher-stdout.log").write_text(launch_stdout, encoding="utf-8")
+                      if launch_stderr:
+                          (cdir / "launcher-stderr.log").write_text(launch_stderr, encoding="utf-8")
+
                   else:
                       result["status"] = "passed"
                       print(f"  PASSED")
+
+                  result["logs"] = log_text
 
               except Exception as e:
                   result["crash_summary"] = str(e)[:500]
@@ -589,15 +674,19 @@ jobs:
               result = run_test(entry, i, len(test_entries))
               slug = entry["slug"]
               safe_key = entry["safe_key"]
-              status_text = "pass" if result["status"] == "passed" else "fail"
+              if result["status"] == "passed":
+                  status_text = "pass"
+                  passed += 1
+              elif result["status"] == "not_tested":
+                  status_text = "not_tested"
+                  print(f"  [{slug}] not_tested: {result.get('crash_summary', '')[:100]}")
+              else:
+                  status_text = "fail"
+                  failed += 1
               (RESULTS_DIR / f"{slug}.txt").write_text(status_text, encoding="utf-8")
               rdir = RESULTS_DIR / safe_key
               rdir.mkdir(parents=True, exist_ok=True)
               (rdir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
-              if result["status"] == "passed":
-                  passed += 1
-              else:
-                  failed += 1
 
           print(f"\n{'='*60}")
           print(f"SUMMARY: {passed} passed, {failed} failed out of {len(test_entries)} tests")

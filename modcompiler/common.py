@@ -21,7 +21,7 @@ MOD_REQUIRED_KEYS = {
     "authors",
     "license",
 }
-MOD_OPTIONAL_KEYS = {"homepage", "sources", "issues", "runtime_side"}
+MOD_OPTIONAL_KEYS = {"homepage", "sources", "issues", "runtime_side", "requires_fabric_api"}
 TEXT_FILE_SUFFIXES = {
     ".cfg",
     ".gradle",
@@ -59,6 +59,7 @@ class ModMetadata:
     homepage: str | None
     sources: str | None
     issues: str | None
+    requires_fabric_api: bool = True
 
 
 def load_json(path: Path) -> Any:
@@ -119,6 +120,7 @@ def load_mod_metadata(mod_txt: Path, version_txt: Path) -> tuple[ModMetadata, di
         homepage=mod_raw.get("homepage") or None,
         sources=mod_raw.get("sources") or None,
         issues=mod_raw.get("issues") or None,
+        requires_fabric_api=mod_raw.get("requires_fabric_api", "true").strip().lower() == "true",
     )
     return metadata, version_raw
 
@@ -365,6 +367,7 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
                         "homepage": metadata.homepage,
                         "sources": metadata.sources,
                         "issues": metadata.issues,
+                        "requires_fabric_api": metadata.requires_fabric_api,
                     },
                     "mod_dir": f"mods/{slug}",
                     "template_dir": template_dir,

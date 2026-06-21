@@ -275,6 +275,13 @@ def build_fabric_metadata(
         "client": "client",
         "server": "server",
     }[metadata.runtime_side]
+    depends: dict[str, str] = {
+        "fabricloader": "*",
+        "minecraft": minecraft_version,
+        "java": f">={java_version}",
+    }
+    if metadata.requires_fabric_api:
+        depends["fabric-api"] = "*"
     payload: dict[str, Any] = {
         "schemaVersion": 1,
         "id": metadata.mod_id,
@@ -285,12 +292,7 @@ def build_fabric_metadata(
         "license": metadata.license,
         "environment": environment,
         "entrypoints": {entrypoint_key: [metadata.entrypoint_class]},
-        "depends": {
-            "fabricloader": "*",
-            "minecraft": minecraft_version,
-            "java": f">={java_version}",
-            "fabric-api": "*",
-        },
+        "depends": depends,
     }
     contact = {key: value for key, value in {
         "homepage": metadata.homepage,
