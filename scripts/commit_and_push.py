@@ -49,6 +49,17 @@ def get_status() -> str:
     return result.stdout.strip()
 
 
+def get_ahead_count(branch: str) -> int:
+    """Return the number of commits the local branch is ahead of origin."""
+    result = run(["git", "rev-list", "--count", f"origin/{branch}..HEAD"], check=False, capture=True)
+    if result.returncode != 0:
+        return 0
+    try:
+        return int(result.stdout.strip())
+    except (ValueError, TypeError):
+        return 0
+
+
 def get_diff_stat() -> str:
     result = run(["git", "diff", "--cached", "--stat"])
     return result.stdout.strip()
@@ -463,6 +474,7 @@ def interactive_mode() -> None:
     status = get_status()
     if not status:
         print("\n  Working tree is clean. Nothing to commit.")
+        _push_if_ahead(branch, interactive=True)
         sys.exit(0)
 
     entries = parse_status_files(status)
@@ -593,6 +605,8 @@ def agent_mode(args: argparse.Namespace) -> None:
     status = get_status()
     if not status:
         print("Nothing to commit - working tree is clean.")
+        branch = get_current_branch()
+        _push_if_ahead(branch, interactive=False)
         sys.exit(0)
 
     # Auto-fix problematic paths before staging
@@ -655,6 +669,39 @@ def agent_mode(args: argparse.Namespace) -> None:
     print(f"\nDone. Committed and pushed to origin/{branch}.")
 
 
+def _push_if_ahead(branch: str, interactive: bool = False) -> bool:
+    """Push unpushed commits if the local branch is ahead of remote.
+    Returns True if a push was performed."""
+    ahead = get_ahead_count(branch)
+    if ahead <= 0:
+        return False
+
+    print(f"\n  Local branch is ahead of origin/{branch} by {ahead} commit(s).")
+    if interactive:
+        answer = input("  Push now? (Y/n): ").strip().lower()
+        if answer not in ("y", "yes", ""):
+            print("  Skipping push.")
+            return False
+
+    print(f"  Pushing {ahead} commit(s) to origin/{branch}...")
+    push_result = run(["git", "push", "origin", branch], check=False)
+    if push_result.returncode != 0:
+        stderr_lower = (push_result.stderr or "").lower()
+        if "rejected" in stderr_lower or "fetch first" in stderr_lower:
+            print("  Remote has new commits, rebasing...")
+            rebase_result = run(["git", "pull", "--rebase", "origin", branch], check=False)
+            if rebase_result.returncode == 0:
+                push_result = run(["git", "push", "origin", branch], check=False)
+        if push_result.returncode != 0:
+            push_result = run(["git", "push", "--set-upstream", "origin", branch], check=False)
+            if push_result.returncode != 0:
+                stderr = push_result.stderr.strip() if push_result.stderr else ""
+                print(f"  Push failed:\n{stderr}")
+                return False
+    print(f"  Pushed successfully.")
+    return True
+
+
 def quick_mode() -> None:
     """Run in quick mode: auto-commit and push without asking any questions.
 
@@ -675,6 +722,8 @@ def quick_mode() -> None:
     status = get_status()
     if not status:
         print("  Working tree is clean. Nothing to commit.")
+        if _push_if_ahead(branch, interactive=False):
+            print(f"\n  Done. Pushed to origin/{branch}.")
         sys.exit(0)
 
     # Parse the status to build the commit message BEFORE staging
