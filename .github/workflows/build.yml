@@ -238,6 +238,7 @@ jobs:
                   "jar_name": jar_names[0],
                   "mc_version": mc_version,
                   "loader": loader,
+                  "mod_java": data.get("java_version", 8),
               })
 
           if not build_entries:
@@ -308,6 +309,10 @@ jobs:
               test_config = find_test_config(entry["mc_version"], test_loader)
               if test_config is None:
                   continue
+              # Use the maximum of ci-data Java and mod's required Java
+              ci_java = int(test_config["java"])
+              mod_java = int(entry.get("mod_java", 8))
+              java_version = str(max(ci_java, mod_java))
               test_entries.append({
                   "slug": entry["slug"],
                   "game_version": entry["mc_version"],
@@ -315,7 +320,7 @@ jobs:
                   "loader": test_config["modloader"],
                   "original_loader": entry["loader"],
                   "jar_name": entry["jar_name"],
-                  "java_version": str(test_config["java"]),
+                  "java_version": java_version,
                   "loader_regex": test_config["regex"],
                   "mcrt_jar": test_config["mcrt_jar"],
                   "safe_key": safe_artifact_key(entry["loader"], entry["mc_version"]),
