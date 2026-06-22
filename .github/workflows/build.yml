@@ -405,7 +405,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 - <<'PYEOF'
-          import json, os, subprocess, sys, shutil, re, time, urllib.request
+          import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
 
           SLUG = os.environ["SLUG"]
@@ -445,12 +445,39 @@ jobs:
           launch_stdout = ""
           launch_stderr = ""
 
+          def find_java_home(version):
+              """Find the correct Java home for the given version."""
+              tc = Path("/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk")
+              if tc.exists():
+                  for d in sorted(tc.iterdir(), reverse=True):
+                      if d.is_dir() and d.name.split('.')[0] == str(version):
+                          if (d / "x64" / "bin" / "java").exists():
+                              return str(d / "x64")
+              # Fallback: try JAVA_HOME env var
+              env_home = os.environ.get("JAVA_HOME", "")
+              if env_home and Path(env_home, "bin", "java").exists():
+                  return env_home
+              # Fallback: parse java -XshowSettings
+              try:
+                  result = subprocess.run(
+                      ["java", "-XshowSettings:properties", "-version"],
+                      capture_output=True, text=True, timeout=10
+                  )
+                  for line in (result.stderr + result.stdout).splitlines():
+                      if "java.home" in line:
+                          return line.split("=", 1)[1].strip()
+              except Exception:
+                  pass
+              return ""
+
           try:
               # Kill any leftover processes
               subprocess.run(["pkill", "-f", "java"], capture_output=True)
               time.sleep(1)
 
-              java_home = os.environ.get("JAVA_HOME", "")
+              java_home = find_java_home(JAVA_VERSION)
+              if java_home:
+                  os.environ["JAVA_HOME"] = java_home
               print(f"  Java home: {java_home}")
 
               run_dir = Path("run")
@@ -484,6 +511,33 @@ jobs:
               else:
                   print(f"  Copying {JAR_NAME}...")
                   shutil.copy2(str(jar_path), str(run_dir / "mods" / JAR_NAME))
+
+                  # Patch fabric.mod.json if test_mc != game_version
+                  if LOADER == "fabric" and TEST_MC != GAME_VERSION:
+                      mod_jar = run_dir / "mods" / JAR_NAME
+                      try:
+                          with zipfile.ZipFile(mod_jar, 'r') as zf:
+                              fmj = json.loads(zf.read("fabric.mod.json").decode("utf-8"))
+                          deps = fmj.get("depends", {})
+                          mc_dep = deps.get("minecraft", "")
+                          if mc_dep and mc_dep == GAME_VERSION:
+                              deps["minecraft"] = TEST_MC
+                              fmj["depends"] = deps
+                              print(f"  Patched fabric.mod.json: minecraft {GAME_VERSION} -> {TEST_MC}")
+                              # Repack the jar
+                              tmp_jar = mod_jar.with_suffix(".tmp.jar")
+                              with zipfile.ZipFile(mod_jar, 'r') as zin:
+                                  with zipfile.ZipFile(tmp_jar, 'w', zipfile.ZIP_DEFLATED) as zout:
+                                      for item in zin.infolist():
+                                          if item.filename == "fabric.mod.json":
+                                              zout.writestr(item, json.dumps(fmj, indent=2))
+                                          else:
+                                              zout.writestr(item, zin.read(item.filename))
+                              tmp_jar.replace(mod_jar)
+                          else:
+                              print(f"  NOTE: fabric.mod.json minecraft dep is '{mc_dep}', not '{GAME_VERSION}' — skipping patch")
+                      except Exception as e:
+                          print(f"  WARNING: Could not patch fabric.mod.json: {e}")
 
                   # Download Minecraft
                   mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"
@@ -786,14 +840,41 @@ jobs:
           merge-multiple: true
           if-no-files-found: ignore
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: all-mod-builds
+          path: .workflow_downloads/combined
+
       - id: collect
         shell: bash
         run: |
           python3 - <<'PYEOF'
-          import os
+          import json, os
           from pathlib import Path
 
           results_dir = Path(".workflow_downloads/test-results")
+          summary_path = Path(".workflow_downloads/combined/run-summary.json")
+
+          # Load build results
+          build_results = {}
+          if summary_path.exists():
+              summary = json.loads(summary_path.read_text(encoding="utf-8"))
+              for mod in summary.get("mods", []):
+                  slug = mod.get("slug", "")
+                  if slug:
+                      build_results[slug] = {
+                          "mod_id": mod.get("metadata", {}).get("mod_id", slug),
+                          "name": mod.get("metadata", {}).get("name", slug),
+                          "mc": mod.get("minecraft_version", ""),
+                          "folder": mod.get("range_folder", ""),
+                          "loader": mod.get("loader", ""),
+                          "build_status": mod.get("status", "unknown"),
+                          "jar": ", ".join(mod.get("jar_names", [])) or "-",
+                          "log": mod.get("log_relpath", "-"),
+                      }
+
+          # Load launcher results
+          launcher_results = {}
           passed = 0
           failed = 0
           skipped = 0
@@ -803,6 +884,8 @@ jobs:
               for txt_file in sorted(results_dir.glob("*.txt")):
                   total += 1
                   content = txt_file.read_text(encoding="utf-8").strip()
+                  slug = txt_file.stem
+                  launcher_results[slug] = content
                   if content == "pass":
                       passed += 1
                   elif content == "fail":
@@ -810,11 +893,74 @@ jobs:
                   elif content == "not_tested":
                       skipped += 1
                       failed += 1  # not_tested is treated as failure
-                  print(f"  {txt_file.stem}: {content}")
+                  print(f"  {slug}: {content}")
 
-          print(f"\n{'='*60}")
-          print(f"SUMMARY: {passed} passed, {failed} failed ({skipped} skipped/not_tested) out of {total} tests")
-          print(f"{'='*60}")
+          # Build combined summary table
+          all_slugs = set(build_results.keys()) | set(launcher_results.keys())
+          rows = []
+          for slug in sorted(all_slugs):
+              br = build_results.get(slug, {})
+              lr = launcher_results.get(slug, "N/A")
+              rows.append({
+                  "slug": slug,
+                  "mod_id": br.get("mod_id", slug),
+                  "name": br.get("name", slug),
+                  "mc": br.get("mc", ""),
+                  "folder": br.get("folder", ""),
+                  "loader": br.get("loader", ""),
+                  "build": br.get("build_status", "N/A"),
+                  "launcher": lr,
+                  "jar": br.get("jar", "-"),
+                  "log": br.get("log", "-"),
+              })
+
+          # Print combined table
+          print(f"\n{'='*90}")
+          print(f"COMBINED BUILD & LAUNCHER SUMMARY")
+          print(f"{'='*90}")
+          header = f"  {'Mod ID':<16} {'Name':<16} {'MC':<10} {'Folder':<18} {'Loader':<8} {'Build':<10} {'Launcher':<10} {'Jar'}"
+          print(header)
+          print(f"  {'-'*16} {'-'*16} {'-'*10} {'-'*18} {'-'*8} {'-'*10} {'-'*10} {'-'*20}")
+          for r in rows:
+              print(f"  {r['mod_id']:<16} {r['name']:<16} {r['mc']:<10} {r['folder']:<18} {r['loader']:<8} {r['build']:<10} {r['launcher']:<10} {r['jar']:<20}")
+
+          # Overall status
+          build_failures = sum(1 for r in rows if r["build"] not in ("success", "N/A"))
+          print(f"\n  Build: {len(rows) - build_failures} success, {build_failures} failed")
+          print(f"  Launcher: {passed} passed, {failed} failed ({skipped} skipped/not_tested) out of {total} tests")
+          print(f"{'='*90}")
+
+          # Write GITHUB_STEP_SUMMARY with markdown table
+          summary_lines = [
+              "## Combined Build & Launcher Summary",
+              "",
+              "| Mod ID | Name | MC | Folder | Loader | Build | Launcher | Jar |",
+              "| --- | --- | --- | --- | --- | --- | --- | --- |",
+          ]
+          for r in rows:
+              b_emoji = {"success": "✅", "failed": "❌", "unknown": "⚠️"}.get(r["build"], "❓")
+              l_emoji = {"pass": "✅", "fail": "❌", "not_tested": "⚠️", "N/A": "➖"}.get(r["launcher"], "❓")
+              summary_lines.append(
+                  f"| {r['mod_id']} | {r['name']} | {r['mc']} | {r['folder']} | {r['loader']} | {b_emoji} {r['build']} | {l_emoji} {r['launcher']} | {r['jar']} |"
+              )
+          summary_lines += [
+              "",
+              f"**Build:** {len(rows) - build_failures} success, {build_failures} failed",
+              f"**Launcher:** {passed} passed, {failed} failed ({skipped} skipped/not_tested) out of {total} tests",
+              "",
+              "> ⚠️ **not_tested** = infrastructure limitation (e.g., Fabric installer failed), version is faulty and cannot be published",
+          ]
+          summary_md = "\n".join(summary_lines)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write(summary_md + "\n")
+
+          # Write combined summary JSON
+          combined = {
+              "passed": passed, "failed": failed, "skipped": skipped, "total": total,
+              "build_failures": build_failures,
+              "rows": rows,
+          }
+          Path(".workflow_downloads/combined-summary.json").write_text(json.dumps(combined, indent=2), encoding="utf-8")
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"passed={passed}\n")

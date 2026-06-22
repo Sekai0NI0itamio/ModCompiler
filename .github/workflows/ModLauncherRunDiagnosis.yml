@@ -297,7 +297,7 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PYEOF'
-          import json, os, subprocess, sys, shutil, re, time, urllib.request
+          import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
 
           MATRIX_FILE = "launcher-matrix.json"
@@ -434,6 +434,32 @@ jobs:
                       print("::endgroup::")
                       return result
 
+                  # Patch fabric.mod.json if test_mc != game_version
+                  if loader == "fabric" and test_mc != gv:
+                      mod_jar = run_dir / "mods" / file_name
+                      try:
+                          with zipfile.ZipFile(mod_jar, 'r') as zf:
+                              fmj = json.loads(zf.read("fabric.mod.json").decode("utf-8"))
+                          deps = fmj.get("depends", {})
+                          mc_dep = deps.get("minecraft", "")
+                          if mc_dep and mc_dep == gv:
+                              deps["minecraft"] = test_mc
+                              fmj["depends"] = deps
+                              print(f"  Patched fabric.mod.json: minecraft {gv} -> {test_mc}")
+                              tmp_jar = mod_jar.with_suffix(".tmp.jar")
+                              with zipfile.ZipFile(mod_jar, 'r') as zin:
+                                  with zipfile.ZipFile(tmp_jar, 'w', zipfile.ZIP_DEFLATED) as zout:
+                                      for item in zin.infolist():
+                                          if item.filename == "fabric.mod.json":
+                                              zout.writestr(item, json.dumps(fmj, indent=2))
+                                          else:
+                                              zout.writestr(item, zin.read(item.filename))
+                              tmp_jar.replace(mod_jar)
+                          else:
+                              print(f"  NOTE: fabric.mod.json minecraft dep is '{mc_dep}', not '{gv}' — skipping patch")
+                      except Exception as e:
+                          print(f"  WARNING: Could not patch fabric.mod.json: {e}")
+
                   mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / test_mc / f"{test_mc}.json"
                   if not mc_json.exists():
                       print(f"  Downloading Minecraft {test_mc}...")
@@ -443,13 +469,14 @@ jobs:
                       )
 
                   # Install modloader
+                  install_result = None
                   if loader == "fabric":
                       if not Path(FABRIC_INSTALLER_JAR).exists():
                           print(f"  Downloading Fabric installer...")
                           urllib.request.urlretrieve(FABRIC_INSTALLER_URL, FABRIC_INSTALLER_JAR)
                       minecraft_dir = os.path.expanduser("~/.minecraft")
                       print(f"  Installing Fabric for {test_mc} via Fabric Installer...")
-                      subprocess.run(
+                      install_result = subprocess.run(
                           ["java", "-jar", FABRIC_INSTALLER_JAR, "client",
                            "-dir", minecraft_dir,
                            "-mcversion", test_mc,
@@ -458,10 +485,44 @@ jobs:
                       )
                   else:
                       print(f"  Installing {loader} for {test_mc} (Java {java_ver})...")
-                      subprocess.run(
+                      install_result = subprocess.run(
                           ["java", "-jar", HMC_JAR, "--command", loader, test_mc, "--java", str(java_ver)],
                           capture_output=True, text=True, timeout=600
                       )
+
+                  # Verify installation
+                  if loader == "fabric":
+                      versions_dir = Path(os.path.expanduser("~/.minecraft/versions"))
+                      fabric_dirs = list(versions_dir.glob(f"fabric-loader-*-{test_mc}"))
+                      if not fabric_dirs:
+                          result["status"] = "not_tested"
+                          reason = f"No Fabric installation found for {test_mc}"
+                          if install_result and install_result.returncode != 0:
+                              reason += f" (installer failed with code {install_result.returncode})"
+                          result["crash_summary"] = reason
+                          result["launch_stderr"] = (install_result.stderr or "")[:2000] if install_result else ""
+                          print(f"  SKIPPED: {reason}")
+                          print("::endgroup::")
+                          return result
+                      else:
+                          version_id = fabric_dirs[0].name
+                          print(f"  Fabric installed: {version_id}")
+                  else:
+                      list_result = subprocess.run(
+                          ["java", "-jar", HMC_JAR, "--command", "list", loader_regex],
+                          capture_output=True, text=True, timeout=30
+                      )
+                      list_output = (list_result.stdout or "").strip()
+                      if not list_output or "Couldn't find" in list_output or "No" in list_output:
+                          result["status"] = "not_tested"
+                          reason = f"No {loader} installation found for {test_mc}"
+                          if install_result and install_result.returncode != 0:
+                              reason += f" (install failed with code {install_result.returncode})"
+                          result["crash_summary"] = reason
+                          result["launch_stderr"] = (install_result.stderr or "")[:2000] if install_result else ""
+                          print(f"  SKIPPED: {reason}")
+                          print("::endgroup::")
+                          return result
 
                   mcrt_name = download_mcrt_jar(test_mc, mcrt_jar_type)
                   if not mcrt_name:

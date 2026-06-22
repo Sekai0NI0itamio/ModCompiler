@@ -644,7 +644,7 @@ jobs:
         run: |
           mkdir -p launcher-result
           python3 - <<'PYEOF'
-          import json, os, subprocess, sys, shutil, re, time, urllib.request
+          import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
 
           # ---- Config from matrix ----
@@ -786,6 +786,32 @@ jobs:
                   entry_dir.mkdir(parents=True, exist_ok=True)
                   (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
                   sys.exit(0)
+
+              # Patch fabric.mod.json if test_mc != game_version
+              if LOADER == "fabric" and TEST_MC != GAME_VERSION:
+                  mod_jar = run_dir / "mods" / FILE_NAME
+                  try:
+                      with zipfile.ZipFile(mod_jar, 'r') as zf:
+                          fmj = json.loads(zf.read("fabric.mod.json").decode("utf-8"))
+                      deps = fmj.get("depends", {})
+                      mc_dep = deps.get("minecraft", "")
+                      if mc_dep and mc_dep == GAME_VERSION:
+                          deps["minecraft"] = TEST_MC
+                          fmj["depends"] = deps
+                          print(f"  Patched fabric.mod.json: minecraft {GAME_VERSION} -> {TEST_MC}")
+                          tmp_jar = mod_jar.with_suffix(".tmp.jar")
+                          with zipfile.ZipFile(mod_jar, 'r') as zin:
+                              with zipfile.ZipFile(tmp_jar, 'w', zipfile.ZIP_DEFLATED) as zout:
+                                  for item in zin.infolist():
+                                      if item.filename == "fabric.mod.json":
+                                          zout.writestr(item, json.dumps(fmj, indent=2))
+                                      else:
+                                          zout.writestr(item, zin.read(item.filename))
+                          tmp_jar.replace(mod_jar)
+                      else:
+                          print(f"  NOTE: fabric.mod.json minecraft dep is '{mc_dep}', not '{GAME_VERSION}' — skipping patch")
+                  except Exception as e:
+                      print(f"  WARNING: Could not patch fabric.mod.json: {e}")
 
               # ---- Download Minecraft + install modloader ----
               # Always run install to ensure the correct loader version is available
