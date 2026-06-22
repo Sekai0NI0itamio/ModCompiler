@@ -275,9 +275,15 @@ After triggering a build:
 2. Download the `all-mod-builds` artifact
 3. Read `SUMMARY.md` — check that status is "success"
 4. Download the `test-results` artifact
-5. Read each `.txt` file — check for "pass" (not "fail" or "not_tested")
-6. If any test failed, read the crash logs from the `crash-logs` artifact
-7. Only consider a fix successful when build=success AND launcher-test=pass
+5. Read each `.txt` file — check for "pass"
+
+**IMPORTANT**: Both `fail` and `not_tested` mean the version+loader is faulty and CANNOT be published to Modrinth. A version is only considered "working" when BOTH build=success AND launcher-test=pass.
+
+Build status and launcher test status are tracked separately:
+- **build=success, launcher=pass** → Version works, can be published
+- **build=success, launcher=fail** → Mod compiled but crashes at runtime — needs fix
+- **build=success, launcher=not_tested** → Mod compiled but couldn't be tested — infrastructure issue, needs fix
+- **build=fail** → Mod doesn't compile — needs fix
 
 ### Rule 9: ALWAYS Search DIF Before Fixing
 
