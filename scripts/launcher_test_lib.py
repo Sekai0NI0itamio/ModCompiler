@@ -5,6 +5,7 @@ Contains reusable functions: resolve_dependencies, find_java_home.
 
 import json
 import os
+import re
 import subprocess
 import urllib.parse
 import urllib.request

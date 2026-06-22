@@ -428,6 +428,7 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
+          PYTHONUNBUFFERED: "1"
           SLUG: ${{ matrix.slug }}
           JAR_NAME: ${{ matrix.jar_name }}
           GAME_VERSION: ${{ matrix.game_version }}
@@ -440,9 +441,11 @@ jobs:
           SAFE_KEY: ${{ matrix.safe_key }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 - <<'PYEOF'
-          import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
+          python3 -u - <<'PYEOF'
+          import json, os, socket, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
+          # Defensive network timeout so stalled downloads cannot hang the job
+          socket.setdefaulttimeout(120)
           exec(compile(open("scripts/launcher_test_lib.py").read(), "scripts/launcher_test_lib.py", "exec"))
           dep_resolve = resolve_dependencies
 
