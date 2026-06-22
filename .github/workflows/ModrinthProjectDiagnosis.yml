@@ -783,7 +783,10 @@ jobs:
                   result["crash_summary"] = f"Unresolved dependencies: {', '.join(unresolved)}"
                   print(f"  FAILED: Unresolved dependencies: {unresolved}")
                   print("::endgroup::")
-                  return result
+                  entry_dir = OUT_DIR / SAFE_KEY
+                  entry_dir.mkdir(parents=True, exist_ok=True)
+                  (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+                  sys.exit(0)
 
               if not (run_dir / "mods" / FILE_NAME).exists():
                   result["crash_summary"] = f"Failed to download mod jar: {FILE_NAME}"

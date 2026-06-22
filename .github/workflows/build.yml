@@ -489,91 +489,91 @@ jobs:
                   print(f"  Copying {JAR_NAME}...")
                   shutil.copy2(str(jar_path), str(run_dir / "mods" / JAR_NAME))
 
+                  skip_launch = False
+
                   # Resolve mod dependencies (fabric-api, etc.)
                   unresolved = dep_resolve(run_dir / "mods", TEST_MC, LOADER)
                   if unresolved:
                       result["status"] = "dep_unresolved"
                       result["crash_summary"] = f"Unresolved dependencies: {', '.join(unresolved)}"
                       print(f"  FAILED: Unresolved dependencies: {unresolved}")
-                      print("::endgroup::")
-                      return result
-
-                  # Patch fabric.mod.json if test_mc != game_version
-                  if LOADER == "fabric" and TEST_MC != GAME_VERSION:
-                      patch_fabric_mc_version(run_dir / "mods" / JAR_NAME, GAME_VERSION, TEST_MC)
-
-                  # Download Minecraft
-                  mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"
-                  if not mc_json.exists():
-                      print(f"  Downloading Minecraft {TEST_MC}...")
-                      subprocess.run(
-                          ["java", "-jar", HMC_JAR, "--command", "download", TEST_MC],
-                          capture_output=True, text=True, timeout=300
-                      )
-
-                  # Install modloader
-                  if LOADER == "fabric":
-                      # Download Fabric installer if needed
-                      if not Path(FABRIC_INSTALLER_JAR).exists():
-                          print(f"  Downloading Fabric installer...")
-                          urllib.request.urlretrieve(FABRIC_INSTALLER_URL, FABRIC_INSTALLER_JAR)
-                      minecraft_dir = os.path.expanduser("~/.minecraft")
-                      print(f"  Installing Fabric for {TEST_MC} via Fabric Installer...")
-                      install_result = subprocess.run(
-                          ["java", "-jar", FABRIC_INSTALLER_JAR, "client",
-                           "-dir", minecraft_dir,
-                           "-mcversion", TEST_MC,
-                           "-noprofile"],
-                          capture_output=True, text=True, timeout=300
-                      )
-                      if install_result.returncode != 0:
-                          print(f"  WARNING: Fabric installer returned code {install_result.returncode}")
-                          if install_result.stderr:
-                              print(f"  stderr: {install_result.stderr[:500]}")
+                      skip_launch = True
                   else:
-                      print(f"  Installing {LOADER} for {TEST_MC} (Java {JAVA_VERSION})...")
-                      install_result = subprocess.run(
-                          ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", str(JAVA_VERSION)],
-                          capture_output=True, text=True, timeout=600
-                      )
-                      if install_result.returncode != 0:
-                          print(f"  WARNING: {LOADER} install returned code {install_result.returncode}")
-                          if install_result.stderr:
-                              print(f"  Install stderr: {install_result.stderr[:300]}")
+                      # Patch fabric.mod.json if test_mc != game_version
+                      if LOADER == "fabric" and TEST_MC != GAME_VERSION:
+                          patch_fabric_mc_version(run_dir / "mods" / JAR_NAME, GAME_VERSION, TEST_MC)
 
-                  # Verify installation
-                  skip_launch = False
-                  if LOADER == "fabric":
-                      # Check Fabric version JSON directly (Fabric installer creates it)
-                      versions_dir = Path(os.path.expanduser("~/.minecraft/versions"))
-                      fabric_dirs = list(versions_dir.glob(f"fabric-loader-*-{TEST_MC}"))
-                      if not fabric_dirs:
-                          result["status"] = "not_tested"
-                          reason = f"No Fabric installation found for {TEST_MC}"
+                      # Download Minecraft
+                      mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"
+                      if not mc_json.exists():
+                          print(f"  Downloading Minecraft {TEST_MC}...")
+                          subprocess.run(
+                              ["java", "-jar", HMC_JAR, "--command", "download", TEST_MC],
+                              capture_output=True, text=True, timeout=300
+                          )
+
+                      # Install modloader
+                      if LOADER == "fabric":
+                          # Download Fabric installer if needed
+                          if not Path(FABRIC_INSTALLER_JAR).exists():
+                              print(f"  Downloading Fabric installer...")
+                              urllib.request.urlretrieve(FABRIC_INSTALLER_URL, FABRIC_INSTALLER_JAR)
+                          minecraft_dir = os.path.expanduser("~/.minecraft")
+                          print(f"  Installing Fabric for {TEST_MC} via Fabric Installer...")
+                          install_result = subprocess.run(
+                              ["java", "-jar", FABRIC_INSTALLER_JAR, "client",
+                               "-dir", minecraft_dir,
+                               "-mcversion", TEST_MC,
+                               "-noprofile"],
+                              capture_output=True, text=True, timeout=300
+                          )
                           if install_result.returncode != 0:
-                              reason += f" (installer failed with code {install_result.returncode})"
-                          result["crash_summary"] = reason
-                          result["launch_stderr"] = (install_result.stderr or "")[:2000]
-                          print(f"  SKIPPED: {reason}")
-                          skip_launch = True
+                              print(f"  WARNING: Fabric installer returned code {install_result.returncode}")
+                              if install_result.stderr:
+                                  print(f"  stderr: {install_result.stderr[:500]}")
                       else:
-                          version_id = fabric_dirs[0].name
-                          print(f"  Fabric installed: {version_id}")
-                  else:
-                      list_result = subprocess.run(
-                          ["java", "-jar", HMC_JAR, "--command", "list", LOADER_REGEX],
-                          capture_output=True, text=True, timeout=30
-                      )
-                      list_output = (list_result.stdout or "").strip()
-                      if not list_output or "Couldn't find" in list_output or "No" in list_output:
-                          result["status"] = "not_tested"
-                          reason = f"No {LOADER} installation found for {TEST_MC}"
+                          print(f"  Installing {LOADER} for {TEST_MC} (Java {JAVA_VERSION})...")
+                          install_result = subprocess.run(
+                              ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", str(JAVA_VERSION)],
+                              capture_output=True, text=True, timeout=600
+                          )
                           if install_result.returncode != 0:
-                              reason += f" (install failed with code {install_result.returncode})"
-                          result["crash_summary"] = reason
-                          result["launch_stderr"] = (install_result.stderr or "")[:2000]
-                          print(f"  SKIPPED: {reason}")
-                          skip_launch = True
+                              print(f"  WARNING: {LOADER} install returned code {install_result.returncode}")
+                              if install_result.stderr:
+                                  print(f"  Install stderr: {install_result.stderr[:300]}")
+
+                      # Verify installation
+                      if LOADER == "fabric":
+                          # Check Fabric version JSON directly (Fabric installer creates it)
+                          versions_dir = Path(os.path.expanduser("~/.minecraft/versions"))
+                          fabric_dirs = list(versions_dir.glob(f"fabric-loader-*-{TEST_MC}"))
+                          if not fabric_dirs:
+                              result["status"] = "not_tested"
+                              reason = f"No Fabric installation found for {TEST_MC}"
+                              if install_result.returncode != 0:
+                                  reason += f" (installer failed with code {install_result.returncode})"
+                              result["crash_summary"] = reason
+                              result["launch_stderr"] = (install_result.stderr or "")[:2000]
+                              print(f"  SKIPPED: {reason}")
+                              skip_launch = True
+                          else:
+                              version_id = fabric_dirs[0].name
+                              print(f"  Fabric installed: {version_id}")
+                      else:
+                          list_result = subprocess.run(
+                              ["java", "-jar", HMC_JAR, "--command", "list", LOADER_REGEX],
+                              capture_output=True, text=True, timeout=30
+                          )
+                          list_output = (list_result.stdout or "").strip()
+                          if not list_output or "Couldn't find" in list_output or "No" in list_output:
+                              result["status"] = "not_tested"
+                              reason = f"No {LOADER} installation found for {TEST_MC}"
+                              if install_result.returncode != 0:
+                                  reason += f" (install failed with code {install_result.returncode})"
+                              result["crash_summary"] = reason
+                              result["launch_stderr"] = (install_result.stderr or "")[:2000]
+                              print(f"  SKIPPED: {reason}")
+                              skip_launch = True
 
                   if not skip_launch:
                       # Download mc-runtime-test jar
