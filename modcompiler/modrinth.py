@@ -138,6 +138,24 @@ def publish_one_mod(
     )
 
     new_jar_size = jar_path.stat().st_size
+    target_version = mod["metadata"]["mod_version"]
+
+    # If the exact version number is already published for this slot, skip.
+    # Modrinth allows multiple versions per slot, but re-uploading the same
+    # version number would fail or create duplicates.
+    same_version = [
+        v for v in all_existing
+        if str(v.get("version_number", "")) == target_version
+    ]
+    if same_version:
+        best = same_version[0]
+        entry["publish_status"] = "skipped"
+        entry["note"] = (
+            f"Version {target_version} already exists on Modrinth for "
+            f"{mod['loader']} {mod['minecraft_version']} (id={best.get('id', '-')})."
+        )
+        entry["version_id"] = best.get("id", "")
+        return entry
 
     # Check if ANY existing version is a shell
     # Shell heuristic: < 5000 bytes OR new jar is 10x larger.
@@ -145,26 +163,11 @@ def publish_one_mod(
     # with one .class + one JSON recipe may legitimately be 2-3KB). The 10x
     # ratio guard helps — if our rebuilt jar is also small, it won't trigger.
     shell_versions = []
-    real_versions = []
     for v in all_existing:
         sz = _get_version_primary_file_size(v)
         is_shell = sz < 5000 or (sz > 0 and new_jar_size > sz * 10)
         if is_shell:
             shell_versions.append(v)
-        else:
-            real_versions.append(v)
-
-    if real_versions and not shell_versions:
-        # Only real versions exist — nothing to fix, skip
-        best = real_versions[0]
-        best_size = _get_version_primary_file_size(best)
-        entry["publish_status"] = "skipped"
-        entry["note"] = (
-            f"Real version already exists on Modrinth as {best.get('version_number', '-')} "
-            f"(id={best.get('id', '-')}, size={best_size}B). No shells found."
-        )
-        entry["version_id"] = best.get("id", "")
-        return entry
 
     if shell_versions:
         # Shell(s) detected — bump the version number and upload a new version
