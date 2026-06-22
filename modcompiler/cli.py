@@ -329,6 +329,10 @@ def command_bundle(args: argparse.Namespace) -> int:
         result = load_json(result_path)
         if not all(key in result for key in ("slug", "loader", "minecraft_version")):
             continue
+        if result.get("status") == "skipped_precheck":
+            # Versions explicitly skipped during preparation (e.g. unsupported
+            # exact patches) should not fail the bundle or be published.
+            continue
 
         slug = result["slug"]
         source_root = result_path.parent

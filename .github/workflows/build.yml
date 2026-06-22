@@ -104,7 +104,41 @@ jobs:
           name: prepared-inputs
           path: .workflow_state/prepared
 
+      - name: Check pre-build validation
+        id: precheck
+        shell: bash
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys
+          from pathlib import Path
+          plan_path = Path(".workflow_state/prepared/build-plan.json")
+          slug = "${{ matrix.slug }}"
+          artifact_dir = Path(f".workflow_artifacts/per-mod/{slug}")
+          artifact_dir.mkdir(parents=True, exist_ok=True)
+          skip = "false"
+          if not plan_path.exists():
+              print("Plan file not found")
+          else:
+              plan = json.loads(plan_path.read_text(encoding="utf-8"))
+              entry = next((m for m in plan.get("mods", []) if m.get("slug") == slug), None)
+              if entry and entry.get("precheck_error"):
+                  print(f"SKIPPED: {slug} has precheck_error: {entry['precheck_error']}")
+                  result = {
+                      "slug": slug,
+                      "status": "skipped_precheck",
+                      "precheck_error": entry["precheck_error"],
+                      "minecraft_version": entry.get("minecraft_version"),
+                      "loader": entry.get("loader"),
+                      "jar_names": [],
+                  }
+                  (artifact_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+                  skip = "true"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"skip={skip}\n")
+          PYEOF
+
       - name: Build one mod
+        if: steps.precheck.outputs.skip != 'true'
         shell: bash
         run: |
           python build_mods.py build-one \
