@@ -573,19 +573,14 @@ jobs:
                               ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", str(JAVA_VERSION)],
                               capture_output=True, text=True, timeout=600
                           )
-                          install_stderr = (install_result.stderr or "")[:500]
-                          install_stdout = (install_result.stdout or "")[:500]
+                          install_stderr = (install_result.stderr or "")[:2000]
+                          install_stdout = (install_result.stdout or "")[:2000]
                           if install_result.returncode != 0:
                               print(f"  WARNING: {LOADER} install returned code {install_result.returncode}")
                           if install_stderr:
                               print(f"  Install stderr: {install_stderr}")
                           if install_stdout:
                               print(f"  Install stdout: {install_stdout}")
-                          # Debug: list version directories after install
-                          vdir = Path(os.path.expanduser("~/.minecraft/versions"))
-                          if vdir.exists():
-                              matching = [d.name for d in vdir.iterdir() if LOADER in d.name.lower() and TEST_MC in d.name]
-                              print(f"  Install check: found {len(matching)} {LOADER} dirs matching {TEST_MC}: {matching[:5]}")
 
                       # Verify installation
                       if LOADER == "fabric":
@@ -605,11 +600,25 @@ jobs:
                               version_id = fabric_dirs[0].name
                               print(f"  Fabric installed: {version_id}")
                       else:
-                          # Check forge/neoforge installation via filesystem (more reliable than hmc list)
+                          # Check forge/neoforge installation via filesystem (HeadlessMC install can be async)
                           versions_dir = Path(os.path.expanduser("~/.minecraft/versions"))
                           loader_pattern = "forge" if LOADER == "forge" else "neoforge"
-                          loader_dirs = list(versions_dir.glob(f"{TEST_MC}-{loader_pattern}*")) + list(versions_dir.glob(f"*-{loader_pattern}*-{TEST_MC}"))
-                          if not loader_dirs:
+                          version_id = None
+                          poll_waited = 0
+                          poll_interval = 10
+                          while poll_waited < 300:
+                              if versions_dir.exists():
+                                  loader_dirs = [
+                                      d for d in versions_dir.iterdir()
+                                      if d.is_dir() and loader_pattern in d.name.lower() and TEST_MC in d.name
+                                  ]
+                                  if loader_dirs:
+                                      version_id = loader_dirs[0].name
+                                      print(f"  {LOADER} installed: {version_id} (after {poll_waited}s)")
+                                      break
+                              time.sleep(poll_interval)
+                              poll_waited += poll_interval
+                          if not version_id:
                               # Fallback: try hmc list command
                               list_result = subprocess.run(
                                   ["java", "-jar", HMC_JAR, "--command", "list", LOADER_REGEX],
@@ -628,9 +637,6 @@ jobs:
                               else:
                                   version_id = list_output.split("\n")[0].strip()
                                   print(f"  {LOADER} installed (via hmc list): {version_id}")
-                          else:
-                              version_id = loader_dirs[0].name
-                              print(f"  {LOADER} installed: {version_id}")
 
                   if not skip_launch:
                       # Download mc-runtime-test jar
