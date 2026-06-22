@@ -212,7 +212,8 @@ def command_build_one(args: argparse.Namespace) -> int:
                 str(Path(args.manifest).resolve()),
             ]
             env = os.environ.copy()
-            java_home = java_home_for_version(int(mod["java_version"]), env)
+            build_jdk_version = int(mod.get("build_jdk_version") or mod["java_version"])
+            java_home = java_home_for_version(build_jdk_version, env)
             env["JAVA_HOME"] = java_home
             env["PATH"] = sanitize_env_path(java_home, env.get("PATH"))
 

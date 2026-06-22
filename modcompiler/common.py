@@ -313,6 +313,7 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
             precheck_error: str | None = None
             range_folder = "-"
             java_version: int | None = None
+            build_jdk_version: int | None = None
             template_dir = ""
             jar_glob = ""
             build_command: list[str] = []
@@ -329,6 +330,7 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
                 loader_config = resolved_range["loaders"][loader]
                 validate_loader_exact_support(loader_config, exact_version)
                 java_version = resolve_java_version(loader_config, exact_version)
+                build_jdk_version = int(loader_config.get("build_jdk_version", java_version))
                 template_dir = loader_config["template_dir"]
                 jar_glob = loader_config["jar_glob"]
                 build_command = loader_config["build_command"]
@@ -354,6 +356,7 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
                     "loader": loader,
                     "range_folder": range_folder,
                     "java_version": java_version,
+                    "build_jdk_version": build_jdk_version,
                     "metadata": {
                         "mod_id": metadata.mod_id,
                         "name": metadata.name,
