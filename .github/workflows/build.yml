@@ -407,8 +407,8 @@ jobs:
           python3 - <<'PYEOF'
           import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
-          sys.path.insert(0, "scripts")
-          import launcher_test_lib
+          exec(compile(open("scripts/launcher_test_lib.py").read(), "scripts/launcher_test_lib.py", "exec"))
+          dep_resolve = resolve_dependencies
 
           SLUG = os.environ["SLUG"]
           JAR_NAME = os.environ["JAR_NAME"]
@@ -452,7 +452,7 @@ jobs:
               subprocess.run(["pkill", "-f", "java"], capture_output=True)
               time.sleep(1)
 
-              java_home = launcher_test_lib.find_java_home(str(JAVA_VERSION))
+              java_home = find_java_home(str(JAVA_VERSION))
               if java_home:
                   os.environ["JAVA_HOME"] = java_home
               print(f"  Java home: {java_home}")
@@ -490,11 +490,17 @@ jobs:
                   shutil.copy2(str(jar_path), str(run_dir / "mods" / JAR_NAME))
 
                   # Resolve mod dependencies (fabric-api, etc.)
-                  launcher_test_lib.resolve_dependencies(run_dir / "mods", TEST_MC, LOADER)
+                  unresolved = dep_resolve(run_dir / "mods", TEST_MC, LOADER)
+                  if unresolved:
+                      result["status"] = "dep_unresolved"
+                      result["crash_summary"] = f"Unresolved dependencies: {', '.join(unresolved)}"
+                      print(f"  FAILED: Unresolved dependencies: {unresolved}")
+                      print("::endgroup::")
+                      return result
 
                   # Patch fabric.mod.json if test_mc != game_version
                   if LOADER == "fabric" and TEST_MC != GAME_VERSION:
-                      launcher_test_lib.patch_fabric_mc_version(run_dir / "mods" / JAR_NAME, GAME_VERSION, TEST_MC)
+                      patch_fabric_mc_version(run_dir / "mods" / JAR_NAME, GAME_VERSION, TEST_MC)
 
                   # Download Minecraft
                   mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / TEST_MC / f"{TEST_MC}.json"

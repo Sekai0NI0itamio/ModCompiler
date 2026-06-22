@@ -25,9 +25,16 @@ def resolve_dependencies(mods_dir, game_version, loader):
 
     Scans all jars in mods_dir for fabric.mod.json, detects dependencies,
     and downloads matching versions from Modrinth for game_version + loader.
+
+    Returns a list of unresolved dependency IDs (empty if all resolved).
+    A dependency is "unresolved" if:
+      - It is not in KNOWN_DEPENDENCIES (no Modrinth project ID)
+      - No matching version exists on Modrinth for the target game_version+loader
+      - The download failed
     """
+    unresolved = []
     if loader != "fabric":
-        return
+        return unresolved
     deps_needed = {}
     for jar_file in sorted(Path(mods_dir).glob("*.jar")):
         if "mc-runtime-test" in jar_file.name:
@@ -45,12 +52,13 @@ def resolve_dependencies(mods_dir, game_version, loader):
         except Exception as e:
             print(f"  [dep] WARNING: Could not read {jar_file.name}: {e}")
     if not deps_needed:
-        return
+        return unresolved
     print(f"  [dep] Dependencies detected: {deps_needed}")
     for dep_id, constraint in deps_needed.items():
         known_id = KNOWN_DEPENDENCIES.get(dep_id)
         if not known_id:
-            print(f"  [dep] WARNING: Unknown dependency '{dep_id}' — cannot auto-resolve")
+            print(f"  [dep] UNRESOLVED: Unknown dependency '{dep_id}' — cannot auto-resolve")
+            unresolved.append(dep_id)
             continue
         if list(Path(mods_dir).glob(f"*{dep_id}*.jar")):
             print(f"  [dep] {dep_id} already present in mods/")
@@ -67,11 +75,14 @@ def resolve_dependencies(mods_dir, game_version, loader):
             with urllib.request.urlopen(req, timeout=30) as r:
                 versions = json.loads(r.read().decode())
             if not versions:
-                print(f"  [dep] WARNING: No {dep_id} version found for {game_version}")
+                print(f"  [dep] UNRESOLVED: No {dep_id} version found for {game_version}")
+                unresolved.append(dep_id)
                 continue
             best = versions[0]
             files = best.get("files", [])
             if not files:
+                print(f"  [dep] UNRESOLVED: No files in {dep_id} version for {game_version}")
+                unresolved.append(dep_id)
                 continue
             dl_url, file_name = "", ""
             for f in files:
@@ -86,9 +97,16 @@ def resolve_dependencies(mods_dir, game_version, loader):
                 urllib.request.urlretrieve(dl_url, str(dest))
                 print(f"  [dep] Downloaded {file_name} ({dest.stat().st_size / 1024:.0f} KB)")
             else:
-                print(f"  [dep] WARNING: No download URL for {dep_id}")
+                print(f"  [dep] UNRESOLVED: No download URL for {dep_id}")
+                unresolved.append(dep_id)
         except Exception as e:
-            print(f"  [dep] ERROR resolving {dep_id}: {e}")
+            print(f"  [dep] UNRESOLVED: Error resolving {dep_id}: {e}")
+            unresolved.append(dep_id)
+    if unresolved:
+        print(f"  [dep] UNRESOLVED dependencies: {unresolved}")
+    else:
+        print(f"  [dep] All dependencies resolved successfully")
+    return unresolved
 
 
 def find_java_home(version):

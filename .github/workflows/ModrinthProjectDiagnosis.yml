@@ -646,10 +646,11 @@ jobs:
           python3 - <<'PYEOF'
           import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
-          sys.path.insert(0, "scripts")
-          from launcher_test_lib import resolve_dependencies as resolve_deps
-          from launcher_test_lib import find_java_home as find_java_home_lib
-          from launcher_test_lib import patch_fabric_mc_version
+          # Load shared library from scripts/ (reliable, no sys.path needed)
+          exec(compile(open("scripts/launcher_test_lib.py").read(), "scripts/launcher_test_lib.py", "exec"))
+          resolve_deps = resolve_dependencies
+          find_java_home_lib = find_java_home
+          patch_mc = patch_fabric_mc_version
 
           # ---- Config from matrix ----
           GAME_VERSION = "${{ matrix.game_version }}"
@@ -776,7 +777,13 @@ jobs:
                   time.sleep(5)
 
               # Resolve mod dependencies (fabric-api, etc.)
-              resolve_deps(run_dir / "mods", TEST_MC, LOADER)
+              unresolved = resolve_deps(run_dir / "mods", TEST_MC, LOADER)
+              if unresolved:
+                  result["status"] = "dep_unresolved"
+                  result["crash_summary"] = f"Unresolved dependencies: {', '.join(unresolved)}"
+                  print(f"  FAILED: Unresolved dependencies: {unresolved}")
+                  print("::endgroup::")
+                  return result
 
               if not (run_dir / "mods" / FILE_NAME).exists():
                   result["crash_summary"] = f"Failed to download mod jar: {FILE_NAME}"
@@ -790,7 +797,7 @@ jobs:
 
               # Patch fabric.mod.json if test_mc != game_version
               if LOADER == "fabric" and TEST_MC != GAME_VERSION:
-                  patch_fabric_mc_version(run_dir / "mods" / FILE_NAME, GAME_VERSION, TEST_MC)
+                  patch_mc(run_dir / "mods" / FILE_NAME, GAME_VERSION, TEST_MC)
 
               # ---- Download Minecraft + install modloader ----
               # Always run install to ensure the correct loader version is available
@@ -1195,7 +1202,7 @@ jobs:
                   return "SHELL", f"Shell jar: {r.get('shell_reason', 'unknown')}"
 
               # Launcher test results override code metrics
-              launcher_failed = launcher_status in ("launcher_failed", "crashed", "failed")
+              launcher_failed = launcher_status in ("launcher_failed", "crashed", "failed", "dep_unresolved")
               launcher_passed = launcher_status == "passed"
 
               issues = []
@@ -1384,6 +1391,8 @@ jobs:
                       ]
                       if launcher_status == "launcher_failed" and crash_summary:
                           health_lines.append(f"  Crash summary        : {crash_summary[:300]}")
+                      elif launcher_status == "dep_unresolved" and crash_summary:
+                          health_lines.append(f"  Unresolved deps      : {crash_summary[:300]}")
                       elif launcher_status == "not_tested" and crash_summary:
                           health_lines.append(f"  Skip reason          : {crash_summary[:300]}")
                       health_lines.append("")

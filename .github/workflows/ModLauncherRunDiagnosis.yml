@@ -299,8 +299,7 @@ jobs:
           python3 - <<'PYEOF'
           import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
-          sys.path.insert(0, "scripts")
-          import launcher_test_lib
+          exec(compile(open("scripts/launcher_test_lib.py").read(), "scripts/launcher_test_lib.py", "exec"))
 
           MATRIX_FILE = "launcher-matrix.json"
           RESULTS_DIR = Path("launcher-results")
@@ -437,11 +436,17 @@ jobs:
                       return result
 
                   # Resolve mod dependencies (fabric-api, etc.)
-                  launcher_test_lib.resolve_dependencies(run_dir / "mods", test_mc, loader)
+                  unresolved = resolve_dependencies(run_dir / "mods", test_mc, loader)
+                  if unresolved:
+                      result["status"] = "dep_unresolved"
+                      result["crash_summary"] = f"Unresolved dependencies: {', '.join(unresolved)}"
+                      print(f"  FAILED: Unresolved dependencies: {unresolved}")
+                      print("::endgroup::")
+                      return result
 
                   # Patch fabric.mod.json if test_mc != game_version
                   if loader == "fabric" and test_mc != gv:
-                      launcher_test_lib.patch_fabric_mc_version(run_dir / "mods" / file_name, gv, test_mc)
+                      patch_fabric_mc_version(run_dir / "mods" / file_name, gv, test_mc)
 
                   mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / test_mc / f"{test_mc}.json"
                   if not mc_json.exists():

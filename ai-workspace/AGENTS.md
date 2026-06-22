@@ -218,7 +218,7 @@ Fabric mods MAY depend on external libraries (e.g., `fabric-api`). The launcher 
 - When a mod's `fabric.mod.json` declares a dependency like `fabric-api`, the workflow scans the jar
 - Known dependencies (currently: `fabric-api`, ID `P7dR8mSH`) are queried from the Modrinth API for the matching MC version
 - The dependency jar is downloaded into `run/mods/` alongside the test mod
-- Fabric Loader loads all jars from `mods/` at runtime
+- Fabric Loader loads all jars from `mods/` at runtime (the game directory is set to `run/`, so Fabric discovers everything in `run/mods/`)
 
 **Currently supported auto-resolved dependencies:**
 | Dependency | Modrinth Project ID |
@@ -226,10 +226,16 @@ Fabric mods MAY depend on external libraries (e.g., `fabric-api`). The launcher 
 | `fabric-api` | `P7dR8mSH` |
 | `fabric-api-base` | `P7dR8mSH` |
 
-**If a dependency cannot be resolved:**
-1. Unknown/unregistered dependency → Warning is printed, mod will likely fail to load
-2. No matching version found for the target MC version → Warning is printed
-3. The mod will still be launched — if Fabric Loader rejects it, the test fails
+**CRITICAL: Dependency failure = version+loader FAIL**
+
+If a mod declares a dependency and ANY of the following occur, that version+loader combination is a **FAIL** and CANNOT be published to Modrinth:
+
+1. **Unresolved dependency** — the dependency is not in `KNOWN_DEPENDENCIES` (no Modrinth project ID mapped)
+2. **No matching version** — the Modrinth API returns no version of the dependency for the target MC version+loader
+3. **Download failure** — the dependency jar could not be downloaded
+4. **Launcher test failure** — the dependency was downloaded but the game still crashes (e.g., incompatible dependency version, missing transitive dependency)
+
+The `resolve_dependencies()` function returns a list of unresolved dependency IDs. The workflow checks this list — if non-empty, the test is marked as `dep_unresolved` (a failure state) immediately, without even attempting to launch the game.
 
 **IMPORTANT for source code (`mod.txt`):**
 - Set `requires_fabric_api=false` in `mod.txt`
@@ -237,7 +243,14 @@ Fabric mods MAY depend on external libraries (e.g., `fabric-api`). The launcher 
 - Instead, the launcher test workflow resolves and downloads fabric-api at test time
 - This keeps the mod jar itself dependency-free while still testing with fabric-api present
 
-**Exception**: If a dependency has NO matching Modrinth project ID and the launcher test fails due to the missing dependency, that version+loader is a **fail** and cannot be published. Remove the dependency from the mod code, or add the Modrinth project ID to `KNOWN_DEPENDENCIES` in all 3 workflows.
+**If you need to add a new auto-resolvable dependency:**
+1. Add the dependency ID and Modrinth project ID to `KNOWN_DEPENDENCIES` in `scripts/launcher_test_lib.py`
+2. This single change propagates to all 3 workflows (they all load the same library via `exec(compile(...))`)
+3. No workflow file edits needed
+
+**If a dependency CANNOT be auto-resolved** (no Modrinth project, proprietary library, etc.):
+- That version+loader is a **FAIL** — do NOT publish it
+- Either remove the dependency from the mod code for that version, or add the Modrinth project ID to `KNOWN_DEPENDENCIES`
 
 ### Rule 3: Yarn Mapping Differences
 
@@ -293,11 +306,12 @@ After triggering a build:
 4. Download the `test-results` artifact
 5. Read each `.txt` file — check for "pass"
 
-**IMPORTANT**: Both `fail` and `not_tested` mean the version+loader is faulty and CANNOT be published to Modrinth. A version is only considered "working" when BOTH build=success AND launcher-test=pass.
+**IMPORTANT**: `fail`, `not_tested`, and `dep_unresolved` all mean the version+loader is faulty and CANNOT be published to Modrinth. A version is only considered "working" when BOTH build=success AND launcher-test=pass.
 
 Build status and launcher test status are tracked separately:
 - **build=success, launcher=pass** → Version works, can be published
 - **build=success, launcher=fail** → Mod compiled but crashes at runtime — needs fix
+- **build=success, launcher=dep_unresolved** → Mod has unresolvable dependencies — cannot be published
 - **build=success, launcher=not_tested** → Mod compiled but couldn't be tested — infrastructure issue, needs fix
 - **build=fail** → Mod doesn't compile — needs fix
 
