@@ -376,7 +376,7 @@ jobs:
     needs: [prepare-tests]
     if: always() && needs.prepare-tests.outputs.total != '0' && needs.prepare-tests.outputs.total != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 20
@@ -604,6 +604,7 @@ jobs:
                           versions_dir = Path(os.path.expanduser("~/.minecraft/versions"))
                           loader_pattern = "forge" if LOADER == "forge" else "neoforge"
                           version_id = None
+                          nf_version = None
                           poll_waited = 0
                           poll_interval = 10
                           while poll_waited < 300:
@@ -618,6 +619,34 @@ jobs:
                                       break
                               time.sleep(poll_interval)
                               poll_waited += poll_interval
+
+                          # Fallback for NeoForge: run the official installer directly
+                          if not version_id and LOADER == "neoforge":
+                              nf_version = resolve_neoforge_version(TEST_MC, install_stdout)
+                              if nf_version:
+                                  print(f"  NeoForge version resolved: {nf_version}")
+                                  nf_code, nf_out, nf_err = install_neoforge_direct(TEST_MC, nf_version)
+                                  print(f"  NeoForge direct installer exit code: {nf_code}")
+                                  if nf_out:
+                                      print(f"  NeoForge installer stdout: {nf_out[:1000]}")
+                                  if nf_err:
+                                      print(f"  NeoForge installer stderr: {nf_err[:1000]}")
+                                  # Poll again, matching either MC version or NeoForge version
+                                  poll_waited = 0
+                                  while poll_waited < 300:
+                                      if versions_dir.exists():
+                                          loader_dirs = [
+                                              d for d in versions_dir.iterdir()
+                                              if d.is_dir() and loader_pattern in d.name.lower()
+                                              and (TEST_MC in d.name or (nf_version and nf_version in d.name))
+                                          ]
+                                          if loader_dirs:
+                                              version_id = loader_dirs[0].name
+                                              print(f"  {LOADER} installed via direct installer: {version_id} (after {poll_waited}s)")
+                                              break
+                                      time.sleep(poll_interval)
+                                      poll_waited += poll_interval
+
                           if not version_id:
                               # Fallback: try hmc list command
                               list_result = subprocess.run(

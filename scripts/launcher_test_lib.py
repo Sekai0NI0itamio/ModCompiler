@@ -164,3 +164,65 @@ def patch_fabric_mc_version(mod_jar, old_version, new_version):
     except Exception as e:
         print(f"  WARNING: Could not patch fabric.mod.json: {e}")
     return False
+
+
+def _neoforge_version_prefix(mc_version):
+    """Map a Minecraft version to the NeoForge version prefix.
+
+    Examples:
+      - 1.20.6 -> 20.6
+      - 1.21   -> 21.0
+      - 1.21.1 -> 21.1
+      - 26.1   -> 26.1
+    """
+    parts = mc_version.split(".")
+    if parts[0] == "1" and len(parts) >= 2:
+        return f"{int(parts[1]) + 20}.{parts[2] if len(parts) > 2 else '0'}"
+    return ".".join(parts[:2])
+
+
+def resolve_neoforge_version(mc_version, install_stdout=""):
+    """Resolve the NeoForge loader version for a Minecraft version.
+
+    First tries to parse the version from HeadlessMC install stdout
+    (e.g. "Installing NeoForge 1.21.1-21.1.234" -> "21.1.234").
+    Falls back to the latest matching version from NeoForge Maven metadata.
+    """
+    m = re.search(r"Installing NeoForge [^-\s]+-([\w.\-]+)", install_stdout)
+    if m:
+        return m.group(1).strip()
+
+    prefix = _neoforge_version_prefix(mc_version)
+    url = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "ModCompiler/1.0"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            xml = r.read().decode("utf-8")
+        versions = re.findall(r"<version>([^<]+)</version>", xml)
+        matching = sorted([v for v in versions if v.startswith(prefix + ".")])
+        return matching[-1] if matching else None
+    except Exception as e:
+        print(f"  Could not fetch NeoForge versions: {e}")
+        return None
+
+
+def install_neoforge_direct(mc_version, neoforge_version, timeout=600):
+    """Download and run the NeoForge installer directly.
+
+    Returns (returncode, stdout, stderr).
+    """
+    installer_jar = f"neoforge-{neoforge_version}-installer.jar"
+    installer_url = (
+        f"https://maven.neoforged.net/releases/net/neoforged/neoforge/"
+        f"{neoforge_version}/{installer_jar}"
+    )
+    if not Path(installer_jar).exists():
+        print(f"  Downloading NeoForge installer {installer_jar}...")
+        urllib.request.urlretrieve(installer_url, installer_jar)
+        print(f"  Downloaded {installer_jar} ({Path(installer_jar).stat().st_size / 1024:.0f} KB)")
+    print(f"  Running NeoForge installer for {neoforge_version}...")
+    result = subprocess.run(
+        ["java", "-jar", installer_jar, "--install-client"],
+        capture_output=True, text=True, timeout=timeout
+    )
+    return result.returncode, result.stdout or "", result.stderr or ""
