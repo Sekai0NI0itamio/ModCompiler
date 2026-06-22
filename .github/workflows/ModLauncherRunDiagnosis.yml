@@ -299,7 +299,7 @@ jobs:
           python3 - <<'PYEOF'
           import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
-          sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+          sys.path.insert(0, "scripts")
           import launcher_test_lib
 
           MATRIX_FILE = "launcher-matrix.json"

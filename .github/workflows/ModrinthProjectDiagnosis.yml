@@ -646,7 +646,7 @@ jobs:
           python3 - <<'PYEOF'
           import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
           from pathlib import Path
-          sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+          sys.path.insert(0, "scripts")
           from launcher_test_lib import resolve_dependencies as resolve_deps
           from launcher_test_lib import find_java_home as find_java_home_lib
           from launcher_test_lib import patch_fabric_mc_version
