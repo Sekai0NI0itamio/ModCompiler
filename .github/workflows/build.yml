@@ -373,8 +373,8 @@ jobs:
         id: cache-hmc
         uses: actions/cache@v4
         with:
-          path: headlessmc-launcher-2.9.0.jar
-          key: hmc-2.9.0
+          path: headlessmc-launcher-wrapper-2.9.0.jar
+          key: hmc-wrapper-2.9.0
 
       - name: Get HeadlessMC
         if: steps.cache-hmc.outputs.cache-hit != 'true'
@@ -382,7 +382,7 @@ jobs:
         with:
           repository: 3arthqu4ke/headlessmc
           tag: "2.9.0"
-          fileName: headlessmc-launcher-2.9.0.jar
+          fileName: headlessmc-launcher-wrapper-2.9.0.jar
 
       - name: Install xvfb dependencies
         run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
@@ -421,7 +421,7 @@ jobs:
           MCRT_JAR = os.environ["MCRT_JAR"]
           SAFE_KEY = os.environ["SAFE_KEY"]
           GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
-          HMC_JAR = "headlessmc-launcher-2.9.0.jar"
+          HMC_JAR = "headlessmc-launcher-wrapper-2.9.0.jar"
           FABRIC_INSTALLER_URL = "https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.1.1/fabric-installer-1.1.1.jar"
           FABRIC_INSTALLER_JAR = "fabric-installer-1.1.1.jar"
           MCRT_VERSION = "4.4.0"

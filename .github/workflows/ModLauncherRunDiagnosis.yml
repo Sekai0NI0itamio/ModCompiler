@@ -286,12 +286,12 @@ jobs:
           restore-keys: |
             mc-runtime-test-combined-
 
-      - name: Get HeadlessMC
+      - name: Download HeadlessMC launcher
         uses: robinraju/release-downloader@a96f54c1b5f5e09e47d9504526e96febd949d4c2
         with:
           repository: 3arthqu4ke/headlessmc
           tag: "2.9.0"
-          fileName: headlessmc-launcher-2.9.0.jar
+          fileName: headlessmc-launcher-wrapper-2.9.0.jar
 
       - name: Install xvfb dependencies
         run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y x11-xserver-utils
@@ -481,6 +481,19 @@ jobs:
                           ["java", "-jar", HMC_JAR, "--command", loader, test_mc, "--java", str(java_ver)],
                           capture_output=True, text=True, timeout=600
                       )
+                      install_stderr = (install_result.stderr or "")[:500]
+                      install_stdout = (install_result.stdout or "")[:500]
+                      if install_result.returncode != 0:
+                          print(f"  WARNING: {loader} install for {test_mc} returned code {install_result.returncode}")
+                      if install_stderr:
+                          print(f"  Install stderr: {install_stderr}")
+                      if install_stdout:
+                          print(f"  Install stdout: {install_stdout}")
+                      # Debug: list version directories after install
+                      vdir = Path(os.path.expanduser("~/.minecraft/versions"))
+                      if vdir.exists():
+                          matching = [d.name for d in vdir.iterdir() if loader.replace("neo","neo") in d.name.lower() and test_mc in d.name]
+                          print(f"  Install check: found {len(matching)} {loader} dirs matching {test_mc}: {matching[:5]}")
 
                   # Verify installation
                   if loader == "fabric":
