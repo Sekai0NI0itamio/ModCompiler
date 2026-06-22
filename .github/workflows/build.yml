@@ -537,10 +537,19 @@ jobs:
                               ["java", "-jar", HMC_JAR, "--command", LOADER, TEST_MC, "--java", str(JAVA_VERSION)],
                               capture_output=True, text=True, timeout=600
                           )
+                          install_stderr = (install_result.stderr or "")[:500]
+                          install_stdout = (install_result.stdout or "")[:500]
                           if install_result.returncode != 0:
                               print(f"  WARNING: {LOADER} install returned code {install_result.returncode}")
-                              if install_result.stderr:
-                                  print(f"  Install stderr: {install_result.stderr[:300]}")
+                          if install_stderr:
+                              print(f"  Install stderr: {install_stderr}")
+                          if install_stdout:
+                              print(f"  Install stdout: {install_stdout}")
+                          # Debug: list version directories after install
+                          vdir = Path(os.path.expanduser("~/.minecraft/versions"))
+                          if vdir.exists():
+                              matching = [d.name for d in vdir.iterdir() if LOADER in d.name.lower() and TEST_MC in d.name]
+                              print(f"  Install check: found {len(matching)} {LOADER} dirs matching {TEST_MC}: {matching[:5]}")
 
                       # Verify installation
                       if LOADER == "fabric":
