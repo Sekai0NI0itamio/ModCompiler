@@ -430,6 +430,7 @@ Use a dash for version ranges within the same minor family: `1.20.1-1.20.6` expa
 
 | Path | Description |
 |---|---|
+| `scripts/launcher_test_lib.py` | Shared library — `resolve_dependencies()`, `find_java_home()`, `patch_fabric_mc_version()` |
 | `AGENTS.md` | This file |
 | `tools/README.md` | Tool documentation |
 | `tools/ModrinthProjectDiagnosis.yml` | Diagnosis workflow |
