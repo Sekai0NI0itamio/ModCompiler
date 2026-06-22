@@ -27,6 +27,7 @@ Examples:
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
 import subprocess
@@ -169,26 +170,90 @@ def get_run_logs(repo: str, run_id: str):
             print(line)
 
 
-def download_artifacts(repo: str, run_id: str, artifact_dir: str):
-    """Download all artifacts from a run."""
-    dest = Path(artifact_dir)
-    dest.mkdir(parents=True, exist_ok=True)
-
-    print(f"\n[artifacts] Downloading artifacts to {dest}...")
+def list_artifacts(repo: str, run_id: str) -> list[dict]:
+    """List all artifacts for a run via GitHub API."""
     result = subprocess.run(
-        ["gh", "run", "download", run_id, "--repo", repo, "--dir", str(dest)],
+        ["gh", "api", f"/repos/{repo}/actions/runs/{run_id}/artifacts",
+         "--jq", ".artifacts"],
+        capture_output=True, text=True, timeout=30
+    )
+    if result.returncode != 0:
+        print(f"[artifacts] WARNING: Failed to list artifacts: {result.stderr.strip()}")
+        return []
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return []
+
+
+def _download_single_artifact(repo: str, run_id: str, name: str, dest_dir: str):
+    """Download a single artifact by name."""
+    dest = Path(dest_dir) / name
+    dest.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        ["gh", "run", "download", run_id, "--repo", repo,
+         "-n", name, "--dir", str(dest)],
         capture_output=True, text=True, timeout=120
     )
     if result.returncode != 0:
-        print(f"[artifacts] WARNING: {result.stderr.strip()}")
-    else:
-        # List downloaded artifacts
-        artifact_count = len([p for p in dest.iterdir() if p.is_dir()])
-        print(f"[artifacts] Downloaded {artifact_count} artifact(s) to {dest}")
-        for p in sorted(dest.iterdir()):
-            if p.is_dir():
-                file_count = len(list(p.rglob("*")))
-                print(f"  {p.name}/ ({file_count} files)")
+        return (name, False, result.stderr.strip())
+    file_count = len(list(dest.rglob("*")))
+    return (name, True, f"{file_count} files")
+
+
+def download_artifacts(repo: str, run_id: str, artifact_dir: str, max_workers: int = 5):
+    """Download all artifacts from a run concurrently."""
+    dest = Path(artifact_dir)
+    dest.mkdir(parents=True, exist_ok=True)
+
+    # List artifacts first
+    print(f"\n[artifacts] Listing artifacts for run {run_id}...")
+    artifacts = list_artifacts(repo, run_id)
+
+    if not artifacts:
+        print("[artifacts] No artifacts found or failed to list. Falling back to sequential download.")
+        result = subprocess.run(
+            ["gh", "run", "download", run_id, "--repo", repo, "--dir", str(dest)],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode != 0:
+            print(f"[artifacts] WARNING: {result.stderr.strip()}")
+        else:
+            artifact_count = len([p for p in dest.iterdir() if p.is_dir()])
+            print(f"[artifacts] Downloaded {artifact_count} artifact(s) to {dest}")
+        return
+
+    # Filter out expired artifacts
+    downloadable = [a for a in artifacts if not a.get("expired", False)]
+    expired = len(artifacts) - len(downloadable)
+    if expired:
+        print(f"[artifacts] Skipping {expired} expired artifact(s)")
+
+    if not downloadable:
+        print("[artifacts] No downloadable artifacts found.")
+        return
+
+    print(f"[artifacts] Downloading {len(downloadable)} artifact(s) concurrently (max_workers={max_workers})...")
+
+    # Download concurrently
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(
+                _download_single_artifact, repo, run_id, a["name"], str(dest)
+            ): a["name"]
+            for a in downloadable
+        }
+        for future in concurrent.futures.as_completed(futures):
+            name, ok, info = future.result()
+            if ok:
+                print(f"  [OK] {name} ({info})")
+            else:
+                print(f"  [FAIL] {name}: {info[:100]}")
+            results.append((name, ok, info))
+
+    success_count = sum(1 for _, ok, _ in results if ok)
+    print(f"[artifacts] Downloaded {success_count}/{len(downloadable)} artifact(s) to {dest}")
 
 
 def trigger_via_api(workflow_file: str, inputs: dict, ref: str, repo: str, token: str):
@@ -237,6 +302,8 @@ def main():
                         help="Download artifacts after completion")
     parser.add_argument("--artifact-dir", default=".workflow_downloads",
                         help="Directory for downloaded artifacts")
+    parser.add_argument("--max-workers", type=int, default=5,
+                        help="Max concurrent artifact downloads (default: 5)")
     parser.add_argument("--show-logs", action="store_true", default=True,
                         help="Show failed job logs after completion (default: true)")
 
@@ -286,7 +353,7 @@ def main():
 
     # Download artifacts
     if args.download_artifacts:
-        download_artifacts(repo, run_id, args.artifact_dir)
+        download_artifacts(repo, run_id, args.artifact_dir, args.max_workers)
 
     # Exit with appropriate code
     if conclusion == "success":

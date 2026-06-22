@@ -37,10 +37,10 @@ Compiles mod source code across MC version+loader combos. Takes a zip in `incomi
 **This is the PRIMARY way to run workflows.** Do NOT use `gh workflow run` manually. This script triggers a workflow, waits for it to complete (blocking), and returns the results. This allows the AI agent to automatically continue after the run finishes.
 
 ```bash
-# Trigger Build Mods, wait for completion, download artifacts
+# Trigger Build Mods, wait for completion, download artifacts concurrently
 python3 tools/trigger_workflow.py build.yml \
     --inputs zip_path=incoming/my-fix.zip max_parallel=all \
-    --download-artifacts
+    --download-artifacts --max-workers 5
 
 # Trigger diagnosis
 python3 tools/trigger_workflow.py ModrinthProjectDiagnosis.yml \
@@ -48,7 +48,7 @@ python3 tools/trigger_workflow.py ModrinthProjectDiagnosis.yml \
     --timeout 60
 ```
 
-The script exits with code 0 on success, 1 on failure. Failed job logs are printed automatically. Artifacts are downloaded to `.workflow_downloads/` if `--download-artifacts` is set.
+The script exits with code 0 on success, 1 on failure. Failed job logs are printed automatically. Artifacts are downloaded **concurrently** (default 5 workers) to `.workflow_downloads/` if `--download-artifacts` is set. Adjust `--max-workers` to control parallelism.
 
 ### 5. DIF Knowledge Base — `./dif/` and `./tools/dif_search.py`
 
@@ -157,9 +157,9 @@ For each group of broken versions:
    ```bash
    python3 tools/trigger_workflow.py build.yml \
        --inputs zip_path=incoming/<zip-name>.zip max_parallel=all \
-       --download-artifacts
+       --download-artifacts --max-workers 5
    ```
-   The script blocks until the run finishes. Exit code 0 = success.
+   The script blocks until the run finishes, downloads all artifacts concurrently. Exit code 0 = success.
 
 4. **Read the build results** from the downloaded artifacts:
    - `.workflow_downloads/all-mod-builds/SUMMARY.md` — overall build status
@@ -327,6 +327,39 @@ After every successful build+test cycle, update `workspace/ratings.txt` with the
 The ratings file tracks 82 version+loader combos. Over many runs, the user can identify which combos consistently fail (rating 3) and remove them from the manifest to speed up future builds.
 
 Do NOT skip this step. It is essential for the long-term health of the build pipeline.
+
+### Rule 12: NEVER Document a Fix Without Build Verification
+
+**You MUST NOT document, claim, or record a fix as "verified" until you have actually built it through the Build Mods workflow and confirmed the results.**
+
+This means:
+- **Do NOT create DIF entries** until the build passes AND the launcher test passes
+- **Do NOT write FIX-REPORT.md** until the build passes AND the launcher test passes
+- **Do NOT update ratings** until you have observed the actual build/test results
+- **Do NOT claim a fix works** based on code analysis alone
+
+The ONLY acceptable evidence that a fix works is:
+1. `trigger_workflow.py` exits with code 0
+2. `all-mod-builds/SUMMARY.md` shows status = "success"
+3. `test-results/*.txt` shows "pass" (not "fail" or "not_tested")
+
+If launcher tests return `not_tested`, the fix is UNVERIFIED. You may note the build succeeded but you MUST state that the launcher test was not performed. Do NOT mark the version as "fixed" — mark it as "build-passed, launcher-untested".
+
+**This is the most important rule. Violating it wastes everyone's time with false claims of working fixes.**
+
+### Rule 13: NEVER Build Locally — ONLY Use the Build Mods Workflow
+
+**You are FORBIDDEN from running Gradle, Maven, or any local build tool.** All builds MUST go through the Build Mods workflow via `trigger_workflow.py`.
+
+Reasons:
+1. The workflow uses the CORRECT build templates, Gradle configurations, and Java versions per MC version
+2. The workflow runs on a clean environment, avoiding local configuration contamination
+3. The workflow automatically runs launcher tests after building
+4. Building locally would produce results that may not match the workflow's results
+5. The workflow's results are the source of truth — if it doesn't build in the workflow, it doesn't work
+
+**Acceptable**: `python3 tools/trigger_workflow.py build.yml --inputs zip_path=... --download-artifacts`
+**Forbidden**: `./gradlew build`, `gradle jar`, `mvn package`, `javac ...`, `java -jar ...`
 
 ---
 
