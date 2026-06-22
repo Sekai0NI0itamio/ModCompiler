@@ -605,7 +605,7 @@ jobs:
     needs: [diagnose]
     if: always() && needs.diagnose.outputs.matrix_count != '0'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     continue-on-error: true
     strategy:
       fail-fast: false
@@ -872,11 +872,54 @@ jobs:
                       version_id = fabric_dirs[0].name
                       print(f"  Fabric installed: {version_id}")
               else:
-                  # Check forge/neoforge installation via filesystem (more reliable than hmc list)
+                  # Check forge/neoforge installation via filesystem (HeadlessMC install can be async)
                   versions_dir = Path(os.path.expanduser("~/.minecraft/versions"))
                   loader_pattern = "forge" if LOADER == "forge" else "neoforge"
-                  loader_dirs = list(versions_dir.glob(f"{TEST_MC}-{loader_pattern}*")) + list(versions_dir.glob(f"*-{loader_pattern}*-{TEST_MC}"))
-                  if not loader_dirs:
+                  version_id = None
+                  nf_version = None
+                  poll_waited = 0
+                  poll_interval = 10
+                  while poll_waited < 300:
+                      if versions_dir.exists():
+                          loader_dirs = [
+                              d for d in versions_dir.iterdir()
+                              if d.is_dir() and loader_pattern in d.name.lower() and TEST_MC in d.name
+                          ]
+                          if loader_dirs:
+                              version_id = loader_dirs[0].name
+                              print(f"  {LOADER} installed: {version_id} (after {poll_waited}s)")
+                              break
+                      time.sleep(poll_interval)
+                      poll_waited += poll_interval
+
+                  # Fallback for NeoForge: run the official installer directly
+                  if not version_id and LOADER == "neoforge":
+                      nf_version = resolve_neoforge_version(TEST_MC, install_stdout)
+                      if nf_version:
+                          print(f"  NeoForge version resolved: {nf_version}")
+                          nf_code, nf_out, nf_err = install_neoforge_direct(TEST_MC, nf_version)
+                          print(f"  NeoForge direct installer exit code: {nf_code}")
+                          if nf_out:
+                              print(f"  NeoForge installer stdout: {nf_out[:1000]}")
+                          if nf_err:
+                              print(f"  NeoForge installer stderr: {nf_err[:1000]}")
+                          # Poll again, matching either MC version or NeoForge version
+                          poll_waited = 0
+                          while poll_waited < 300:
+                              if versions_dir.exists():
+                                  loader_dirs = [
+                                      d for d in versions_dir.iterdir()
+                                      if d.is_dir() and loader_pattern in d.name.lower()
+                                      and (TEST_MC in d.name or (nf_version and nf_version in d.name))
+                                  ]
+                                  if loader_dirs:
+                                      version_id = loader_dirs[0].name
+                                      print(f"  {LOADER} installed via direct installer: {version_id} (after {poll_waited}s)")
+                                      break
+                              time.sleep(poll_interval)
+                              poll_waited += poll_interval
+
+                  if not version_id:
                       # Fallback: try hmc list command
                       list_result = subprocess.run(
                           ["java", "-jar", HMC_JAR, "--command", "list", LOADER_REGEX],
@@ -899,9 +942,6 @@ jobs:
                       else:
                           version_id = list_output.split("\n")[0].strip()
                           print(f"  {LOADER} installed (via hmc list): {version_id}")
-                  else:
-                      version_id = loader_dirs[0].name
-                      print(f"  {LOADER} installed: {version_id}")
 
               # ---- Download mc-runtime-test jar ----
               mcrt_name = download_mcrt_jar()
