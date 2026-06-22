@@ -296,10 +296,37 @@ def build_prepare_plan(zip_path: Path, prepared_root: Path, manifest: dict[str, 
         validate_mod_dir(mod_dir)
         metadata, version_info = load_mod_metadata(mod_dir / "mod.txt", mod_dir / "version.txt")
         version_spec = version_info["minecraft_version"].strip()
-        exact_versions = expand_minecraft_version_spec(version_spec)
         loader = version_info["loader"].strip().lower()
         if loader not in {"fabric", "forge", "neoforge"}:
             raise ModCompilerError(f"{mod_dir.name}: unsupported loader '{loader}'")
+
+        # Resolve the target range for this mod to filter exact versions against
+        # the loader's supported_versions list (if present). This prevents
+        # generating builds for exact versions the template cannot handle,
+        # e.g. 1.20 when the template only supports 1.20.1-1.20.6.
+        raw_exact_versions = expand_minecraft_version_spec(version_spec)
+        filtered_exact_versions: list[str] = []
+        filter_warnings: list[str] = []
+        for candidate in raw_exact_versions:
+            try:
+                resolved_range = resolve_range(manifest, candidate)
+                loader_config = resolved_range["loaders"].get(loader)
+                if loader_config is None:
+                    filter_warnings.append(
+                        f"Skipping {candidate}: loader '{loader}' is not supported in folder {resolved_range['folder']}"
+                    )
+                    continue
+                supported = loader_config.get("supported_versions")
+                if supported and candidate not in supported:
+                    filter_warnings.append(
+                        f"Skipping {candidate}: {loader_config['template_dir']} only supports {', '.join(supported)}"
+                    )
+                    continue
+                filtered_exact_versions.append(candidate)
+            except ModCompilerError as error:
+                filter_warnings.append(f"Skipping {candidate}: {error}")
+        exact_versions = filtered_exact_versions
+
         for exact_version in exact_versions:
             slug = make_slug(metadata.mod_id, loader, exact_version)
             if slug in seen_slugs:
