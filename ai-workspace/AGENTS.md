@@ -211,17 +211,33 @@ Fabric templates use **split source sets** (`splitEnvironmentSourceSets()`). Thi
 
 **DO NOT modify `adapters.py` or build.gradle templates to strip `splitEnvironmentSourceSets()`.** This is a hack that breaks other mods. Place your code in the correct source set instead.
 
-### Rule 2: Fabric API Dependency
+### Rule 2: Mod Dependencies
 
-Fabric mods MUST NOT depend on `fabric-api`. Set `requires_fabric_api=false` in `mod.txt`:
+Fabric mods MAY depend on external libraries (e.g., `fabric-api`). The launcher test workflow will **automatically resolve and download known dependencies** from Modrinth during the test:
 
-```
-requires_fabric_api=false
-```
+- When a mod's `fabric.mod.json` declares a dependency like `fabric-api`, the workflow scans the jar
+- Known dependencies (currently: `fabric-api`, ID `P7dR8mSH`) are queried from the Modrinth API for the matching MC version
+- The dependency jar is downloaded into `run/mods/` alongside the test mod
+- Fabric Loader loads all jars from `mods/` at runtime
 
-The build system will then omit `fabric-api` from the generated `fabric.mod.json`.
+**Currently supported auto-resolved dependencies:**
+| Dependency | Modrinth Project ID |
+|---|---|
+| `fabric-api` | `P7dR8mSH` |
+| `fabric-api-base` | `P7dR8mSH` |
 
-If the mod uses Fabric API events (like `ClientTickEvents`), rewrite it to use **mixin injection** instead. The mixin goes in `src/client/java/` and the mixin JSON goes in `src/client/resources/`.
+**If a dependency cannot be resolved:**
+1. Unknown/unregistered dependency → Warning is printed, mod will likely fail to load
+2. No matching version found for the target MC version → Warning is printed
+3. The mod will still be launched — if Fabric Loader rejects it, the test fails
+
+**IMPORTANT for source code (`mod.txt`):**
+- Set `requires_fabric_api=false` in `mod.txt`
+- The build system will NOT include fabric-api in the generated jar's `fabric.mod.json`
+- Instead, the launcher test workflow resolves and downloads fabric-api at test time
+- This keeps the mod jar itself dependency-free while still testing with fabric-api present
+
+**Exception**: If a dependency has NO matching Modrinth project ID and the launcher test fails due to the missing dependency, that version+loader is a **fail** and cannot be published. Remove the dependency from the mod code, or add the Modrinth project ID to `KNOWN_DEPENDENCIES` in all 3 workflows.
 
 ### Rule 3: Yarn Mapping Differences
 

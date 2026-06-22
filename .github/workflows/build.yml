@@ -405,7 +405,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 - <<'PYEOF'
-          import json, os, subprocess, sys, shutil, re, time, urllib.request, zipfile
+          import json, os, subprocess, sys, shutil, re, time, urllib.request, urllib.parse, zipfile
           from pathlib import Path
 
           SLUG = os.environ["SLUG"]
@@ -425,6 +425,79 @@ jobs:
           MCRT_VERSION = "4.4.0"
           MCRT_REPO = "headlesshq/mc-runtime-test"
           LAUNCH_TIMEOUT = 120
+
+          # ---- Known dependency project IDs on Modrinth ----
+          KNOWN_DEPENDENCIES = {
+              "fabric-api": "P7dR8mSH",
+              "fabric-api-base": "P7dR8mSH",
+          }
+          MODRINTH_API = "https://api.modrinth.com/v2"
+
+          def resolve_dependencies(mods_dir, game_version, loader):
+              """Resolve and download dependencies from Modrinth based on fabric.mod.json."""
+              if loader != "fabric":
+                  return
+              deps_needed = {}
+              for jar_file in sorted(mods_dir.glob("*.jar")):
+                  if "mc-runtime-test" in jar_file.name:
+                      continue
+                  try:
+                      with zipfile.ZipFile(jar_file, 'r') as zf:
+                          if "fabric.mod.json" not in zf.namelist():
+                              continue
+                          fmj = json.loads(zf.read("fabric.mod.json").decode("utf-8"))
+                          for dep_id, constraint in fmj.get("depends", {}).items():
+                              if dep_id in ("minecraft", "fabricloader", "java"):
+                                  continue
+                              if dep_id not in deps_needed:
+                                  deps_needed[dep_id] = constraint
+                  except Exception as e:
+                      print(f"  [dep] WARNING: Could not read {jar_file.name}: {e}")
+              if not deps_needed:
+                  return
+              print(f"  [dep] Dependencies detected: {deps_needed}")
+              for dep_id, constraint in deps_needed.items():
+                  known_id = KNOWN_DEPENDENCIES.get(dep_id)
+                  if not known_id:
+                      print(f"  [dep] WARNING: Unknown dependency '{dep_id}' — cannot auto-resolve")
+                      continue
+                  if list(mods_dir.glob(f"*{dep_id}*.jar")):
+                      print(f"  [dep] {dep_id} already present in mods/")
+                      continue
+                  print(f"  [dep] Resolving {dep_id} (Modrinth {known_id}) for {game_version}...")
+                  try:
+                      url = f"{MODRINTH_API}/project/{known_id}/version"
+                      params = urllib.parse.urlencode({
+                          "game_versions": json.dumps([game_version]),
+                          "loaders": json.dumps([loader]),
+                          "featured": "true",
+                      })
+                      req = urllib.request.Request(f"{url}?{params}", headers={"User-Agent": "ModCompiler/1.0"})
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          versions = json.loads(r.read().decode())
+                      if not versions:
+                          print(f"  [dep] WARNING: No {dep_id} version found for {game_version}")
+                          continue
+                      best = versions[0]
+                      files = best.get("files", [])
+                      if not files:
+                          continue
+                      dl_url, file_name = "", ""
+                      for f in files:
+                          if f.get("primary", False):
+                              dl_url, file_name = f.get("url", ""), f.get("filename", "")
+                              break
+                      if not dl_url:
+                          dl_url, file_name = files[0].get("url", ""), files[0].get("filename", "")
+                      if dl_url and file_name:
+                          dest = mods_dir / file_name
+                          print(f"  [dep] Downloading {file_name} ({best.get('version_number', '?')})...")
+                          urllib.request.urlretrieve(dl_url, str(dest))
+                          print(f"  [dep] Downloaded {file_name} ({dest.stat().st_size / 1024:.0f} KB)")
+                      else:
+                          print(f"  [dep] WARNING: No download URL for {dep_id}")
+                  except Exception as e:
+                      print(f"  [dep] ERROR resolving {dep_id}: {e}")
 
           RESULTS_DIR = Path("launcher-results")
           CRASH_DIR = Path("crash-logs")
@@ -511,6 +584,9 @@ jobs:
               else:
                   print(f"  Copying {JAR_NAME}...")
                   shutil.copy2(str(jar_path), str(run_dir / "mods" / JAR_NAME))
+
+                  # Resolve mod dependencies (fabric-api, etc.)
+                  resolve_dependencies(run_dir / "mods", TEST_MC, LOADER)
 
                   # Patch fabric.mod.json if test_mc != game_version
                   if LOADER == "fabric" and TEST_MC != GAME_VERSION:
