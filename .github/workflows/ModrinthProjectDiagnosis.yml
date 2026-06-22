@@ -613,6 +613,8 @@ jobs:
       matrix: ${{ fromJson(needs.diagnose.outputs.launcher_matrix) }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
