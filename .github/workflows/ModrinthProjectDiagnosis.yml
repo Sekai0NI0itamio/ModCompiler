@@ -867,24 +867,36 @@ jobs:
                       version_id = fabric_dirs[0].name
                       print(f"  Fabric installed: {version_id}")
               else:
-                  list_result = subprocess.run(
-                      ["java", "-jar", HMC_JAR, "--command", "list", LOADER_REGEX],
-                      capture_output=True, text=True, timeout=30
-                  )
-                  list_output = (list_result.stdout or "").strip()
-                  if not list_output or "Couldn't find" in list_output or "No" in list_output:
-                      result["status"] = "not_tested"
-                      reason = f"No {LOADER} installation found for {TEST_MC}"
-                      if install_result.returncode != 0:
-                          reason += f" (install failed with code {install_result.returncode})"
-                      result["crash_summary"] = reason
-                      result["launch_stderr"] = (install_result.stderr or "")[:2000]
-                      print(f"  SKIPPED: {reason}")
-                      print("::endgroup::")
-                      entry_dir = OUT_DIR / SAFE_KEY
-                      entry_dir.mkdir(parents=True, exist_ok=True)
-                      (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
-                      sys.exit(0)
+                  # Check forge/neoforge installation via filesystem (more reliable than hmc list)
+                  versions_dir = Path(os.path.expanduser("~/.minecraft/versions"))
+                  loader_pattern = "forge" if LOADER == "forge" else "neoforge"
+                  loader_dirs = list(versions_dir.glob(f"{TEST_MC}-{loader_pattern}*")) + list(versions_dir.glob(f"*-{loader_pattern}*-{TEST_MC}"))
+                  if not loader_dirs:
+                      # Fallback: try hmc list command
+                      list_result = subprocess.run(
+                          ["java", "-jar", HMC_JAR, "--command", "list", LOADER_REGEX],
+                          capture_output=True, text=True, timeout=30
+                      )
+                      list_output = (list_result.stdout or "").strip()
+                      if not list_output or "Couldn't find" in list_output or "No" in list_output:
+                          result["status"] = "not_tested"
+                          reason = f"No {LOADER} installation found for {TEST_MC}"
+                          if install_result.returncode != 0:
+                              reason += f" (install failed with code {install_result.returncode})"
+                          result["crash_summary"] = reason
+                          result["launch_stderr"] = (install_result.stderr or "")[:2000]
+                          print(f"  SKIPPED: {reason}")
+                          print("::endgroup::")
+                          entry_dir = OUT_DIR / SAFE_KEY
+                          entry_dir.mkdir(parents=True, exist_ok=True)
+                          (entry_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+                          sys.exit(0)
+                      else:
+                          version_id = list_output.split("\n")[0].strip()
+                          print(f"  {LOADER} installed (via hmc list): {version_id}")
+                  else:
+                      version_id = loader_dirs[0].name
+                      print(f"  {LOADER} installed: {version_id}")
 
               # ---- Download mc-runtime-test jar ----
               mcrt_name = download_mcrt_jar()

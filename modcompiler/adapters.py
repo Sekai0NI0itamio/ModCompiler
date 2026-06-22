@@ -144,6 +144,7 @@ def _copy_sources_to_workspace(source_dir: Path, workspace: Path) -> None:
         "src/client/java",
         "src/client/kotlin",
         "src/main/resources",
+        "src/client/resources",
     ):
         candidate = workspace / relative
         if candidate.exists():
@@ -161,6 +162,7 @@ def _copy_sources_to_workspace(source_dir: Path, workspace: Path) -> None:
 
     _copy_dir_if_exists(source_root / "client" / "java", workspace / "src" / "client" / "java")
     _copy_dir_if_exists(source_root / "client" / "kotlin", workspace / "src" / "client" / "kotlin")
+    _copy_dir_if_exists(source_root / "client" / "resources", workspace / "src" / "client" / "resources")
 
 
 def prepare_workspace(
