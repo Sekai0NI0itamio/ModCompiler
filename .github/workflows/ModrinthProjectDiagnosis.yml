@@ -1216,23 +1216,43 @@ jobs:
               f"  {'-'*40} {'-'*12} {'-'*12} {'-'*7} {'-'*7}",
           ]
 
-          table_entries = []
+          # Build detailed entries with timing info
+          detailed_entries = []
           for r in records:
               vnum = r.get("version_number", "unknown")
+              file_url = r.get("file_url", "")
+              jar_name = r.get("file_name", "")
               for loader in r.get("loaders", []):
                   for mc_version in r.get("game_versions", []):
                       is_shell = r.get("is_shell", False)
                       if is_shell:
                           health = "SHELL"
+                          launcher = "N/A"
+                          timing = {}
                       else:
                           lr = launcher_map.get((mc_version, loader), {})
                           launcher_status = lr.get("status", "not_tested")
                           h, _ = check_code_health(r, launcher_status)
                           health = h
-                      lr = launcher_map.get((mc_version, loader), {})
-                      launcher = lr.get("status", "not_tested") if not is_shell else "N/A"
+                          launcher = launcher_status
+                          timing = lr.get("timing", {})
                       label = f"{vnum} [{loader} {mc_version}]"
                       table_entries.append((label, health, launcher, r.get("class_count", 0), r.get("method_estimate", -1)))
+                      # Store detailed info
+                      detailed_entries.append({
+                          "label": label,
+                          "version_number": vnum,
+                          "loader": loader,
+                          "mc_version": mc_version,
+                          "health": health,
+                          "launcher_status": launcher,
+                          "file_url": file_url,
+                          "jar_name": jar_name,
+                          "timing": timing,
+                          "class_count": r.get("class_count", 0),
+                          "method_estimate": r.get("method_estimate", -1),
+                          "crash_summary": lr.get("crash_summary", "") if not is_shell else "",
+                      })
 
           for pair in missing_pairs:
               mc_ver = pair.get("mc_version", "")
@@ -1265,10 +1285,57 @@ jobs:
               f"  TOTAL     : {len(table_entries)}",
               "",
               SEP,
+              "",
+              "── DETAILED VERSION REPORT ──────────────────────────────────────",
+              "",
+          ]
+
+          # Add detailed info for each entry
+          for e in detailed_entries:
+              timing = e.get("timing", {})
+              total_time = timing.get("total_seconds", 0) if timing else 0
+              download_time = timing.get("download_seconds", 0) if timing else 0
+              install_time = timing.get("install_seconds", 0) if timing else 0
+              launch_time = timing.get("launch_seconds", 0) if timing else 0
+              
+              summary_lines += [
+                  f"  {e['label']}",
+                  f"    Health: {e['health']} | Launcher: {e['launcher_status']} | Classes: {e['class_count']} | Methods: {e['method_estimate']}",
+                  f"    Jar: {e['jar_name']}",
+                  f"    Download URL: {e['file_url']}",
+                  f"    Timing: Download={download_time}s | Install={install_time}s | Launch={launch_time}s | Total={total_time}s",
+              ]
+              if e.get("crash_summary"):
+                  crash_short = e["crash_summary"].replace("\n", " ").strip()[:100]
+                  summary_lines.append(f"    Crash: {crash_short}...")
+              summary_lines.append("")
+
+          summary_lines += [
+              SEP,
           ]
 
           (OUT / "Final-Diagnosis.txt").write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
           print(f"Wrote Final-Diagnosis.txt ({len(summary_lines)} lines)")
+          
+          # Write detailed JSON report
+          detailed_report = {
+              "project": title,
+              "slug": slug,
+              "url": f"https://modrinth.com/mod/{slug}",
+              "generated": datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC'),
+              "total_versions": len(table_entries),
+              "counts": {
+                  "healthy": sum(1 for e in table_entries if e[1] == 'HEALTHY'),
+                  "warning": sum(1 for e in table_entries if e[1] == 'WARNING'),
+                  "unhealthy": sum(1 for e in table_entries if e[1] == 'UNHEALTHY'),
+                  "shell": sum(1 for e in table_entries if e[1] == 'SHELL'),
+                  "missing": sum(1 for e in table_entries if e[1] == 'MISSING'),
+              },
+              "versions": detailed_entries,
+          }
+          (OUT / "detailed-report.json").write_text(json.dumps(detailed_report, indent=2), encoding="utf-8")
+          print(f"Wrote detailed-report.json")
+          
           print(f"DiagnosisLogs contains {len(table_entries)} entries")
 
           for status in ("HEALTHY", "WARNING", "UNHEALTHY", "SHELL", "MISSING"):

@@ -521,16 +521,27 @@ def main():
         "test_mc": args.test_mc,
         "version_number": args.version_number,
         "jar_name": args.jar_name,
+        "file_url": args.file_url or "",
         "crash_summary": "",
         "logs": "",
+        "timing": {
+            "download_seconds": 0,
+            "install_seconds": 0,
+            "launch_seconds": 0,
+            "total_seconds": 0,
+        },
     }
 
+    start_total = time.time()
+
     # Place mod jar
+    start_download = time.time()
     if args.jar_path and Path(args.jar_path).exists():
         shutil.copy2(args.jar_path, str(run_dir / "mods" / args.jar_name))
         print(f"  Using local jar: {args.jar_path}")
+        result["timing"]["download_seconds"] = 0
     elif args.file_url:
-        print(f"  Downloading {args.jar_name}...")
+        print(f"  Downloading {args.jar_name} from {args.file_url}...")
         for attempt in range(3):
             r = subprocess.run(
                 ["curl", "-fsSL", "--retry", "3", "--retry-delay", "5",
@@ -540,6 +551,8 @@ def main():
             if r.returncode == 0:
                 break
             time.sleep(5)
+        result["timing"]["download_seconds"] = round(time.time() - start_download, 1)
+        print(f"  Download took {result['timing']['download_seconds']}s")
 
     # Resolve dependencies
     unresolved = resolve_deps(run_dir / "mods", args.test_mc, args.loader)
@@ -561,8 +574,13 @@ def main():
         patch_mc(run_dir / "mods" / args.jar_name, args.game_version, args.test_mc)
 
     # Install mod loader
+    start_install = time.time()
     version_id = install_modloader(args, result)
+    result["timing"]["install_seconds"] = round(time.time() - start_install, 1)
+    if version_id:
+        print(f"  Install took {result['timing']['install_seconds']}s")
     if not version_id:
+        result["timing"]["total_seconds"] = round(time.time() - start_total, 1)
         write_result(result, args)
         return 0
 
@@ -572,11 +590,19 @@ def main():
         result["status"] = "not_tested"
         result["crash_summary"] = f"No mc-runtime-test jar for {args.test_mc}/{args.mcrt_jar}"
         print(f"  FAILED: No mc-runtime-test jar available")
+        result["timing"]["total_seconds"] = round(time.time() - start_total, 1)
         write_result(result, args)
         return 0
 
     # Launch and test
+    start_launch = time.time()
     launch_and_test(args, result)
+    result["timing"]["launch_seconds"] = round(time.time() - start_launch, 1)
+    print(f"  Launch took {result['timing']['launch_seconds']}s")
+
+    # Final timing
+    result["timing"]["total_seconds"] = round(time.time() - start_total, 1)
+    print(f"  Total time: {result['timing']['total_seconds']}s")
 
     # Write results
     write_result(result, args)
