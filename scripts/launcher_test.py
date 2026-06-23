@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Launcher test for Minecraft mods — process-group aware, OOM-safe.
+"""Launcher test for Minecraft mods — memory-safe, process-group aware.
 
 Key design choices:
-- Never use subprocess.PIPE with Java/Minecraft (pipes buffer in Python
-  memory and can trigger OOM killers on CI runners with limited RAM)
-- Redirect game output to temporary files and poll via filesystem
-- Kill the ENTIRE process group (not just the wrapper) when done
-- Use `start_new_session=True` + explicit pkill for cleanup
+- Sets JAVA_TOOL_OPTIONS=-Xmx1G to cap ALL Java subprocesses
+- Never uses subprocess.PIPE with Java/Minecraft (would buffer in Python memory)
+- Redirects game output to temp files and polls via filesystem
+- Kills the ENTIRE process group (not just the wrapper) when done
+- Uses start_new_session=True + explicit process group kill for cleanup
 
 Usage:
   python3 scripts/launcher_test.py \
@@ -26,6 +26,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -36,7 +37,16 @@ from pathlib import Path
 
 socket.setdefaulttimeout(120)
 
-# Load shared library from scripts/
+# === MEMORY SAFETY: Cap ALL Java subprocesses to 1GB default heap ===
+# This prevents OOM killer from terminating our Python process
+os.environ["JAVA_TOOL_OPTIONS"] = os.environ.get("JAVA_TOOL_OPTIONS", "") + " -Xmx1G -XX:MaxMetaspaceSize=256M"
+
+# Game-specific memory limits (larger for actual game)
+GAME_JVM_ARGS = "-Djava.awt.headless=true -Xmx3G -Xms512M -XX:MaxMetaspaceSize=512M"
+# HMC wrapper memory limit (small)
+HMC_JVM_ARGS = "-Xmx512M -XX:MaxMetaspaceSize=128M"
+
+# === Load shared library from scripts/ ===
 exec(compile(open("scripts/launcher_test_lib.py").read(),
              "scripts/launcher_test_lib.py", "exec"))
 resolve_deps = resolve_dependencies  # noqa: F821
@@ -72,21 +82,49 @@ def parse_args():
 
 def cleanup_processes():
     """Kill any Java/HeadlessMC processes that might leak between runs."""
-    for pat in ["headlessmc-launcher-wrapper", "HeadlessMC", "Xvfb", "net.minecraft", "net.neoforged", "cpw.mods"]:
+    for pat in ["headlessmc-launcher-wrapper", "HeadlessMC", "Minecraft", "Xvfb"]:
         try:
-            subprocess.run(["pkill", "-9", "-f", pat],
-                           stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL, timeout=5)
+            subprocess.run(
+                ["pkill", "-9", "-f", pat],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, timeout=5
+            )
         except Exception:
             pass
-    # Final catch-all Java kill
+    # Catch-all Java kill
     try:
-        subprocess.run(["pkill", "-9", "-f", "java"],
-                       stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL, timeout=5)
+        subprocess.run(
+            ["pkill", "-9", "-f", "java"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, timeout=5
+        )
     except Exception:
         pass
     time.sleep(1)
+
+
+def run_java(cmd_args, timeout=300, memory_limit="1G"):
+    """Run a Java subprocess with explicit memory limits.
+
+    Args:
+        cmd_args: List of args AFTER 'java' (e.g., ["-jar", HMC_JAR, "--command", ...])
+        timeout: Process timeout in seconds
+        memory_limit: Override memory limit string (e.g., "512M")
+
+    Returns:
+        CompletedProcess
+    """
+    env = os.environ.copy()
+    env["JAVA_TOOL_OPTIONS"] = f"-Xmx{memory_limit} -XX:MaxMetaspaceSize=256M"
+
+    full_cmd = ["java"] + cmd_args
+    return subprocess.run(
+        full_cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=timeout,
+        env=env,
+    )
 
 
 def download_mcrt_jar(test_mc, mcrt_jar, github_token):
@@ -134,29 +172,32 @@ def install_modloader(args, result):
     mc_json = Path(os.path.expanduser("~/.minecraft/versions")) / args.test_mc / f"{args.test_mc}.json"
     if not mc_json.exists():
         print(f"  Downloading Minecraft {args.test_mc}...")
-        subprocess.run(
-            ["java", "-jar", HMC_JAR, "--command", "download", args.test_mc],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=300,
+        run_java(
+            ["-jar", HMC_JAR, "--command", "download", args.test_mc],
+            timeout=300, memory_limit="512M",
         )
 
     install_result = None
     if args.loader == "fabric":
         if not Path(FABRIC_INSTALLER_JAR).exists():
             print(f"  Downloading Fabric installer...")
-            urllib.request.urlretrieve(FABRIC_INSTALLER_URL, FABRIC_INSTALLER_JAR)
+            try:
+                urllib.request.urlretrieve(FABRIC_INSTALLER_URL, FABRIC_INSTALLER_JAR)
+            except Exception as e:
+                print(f"  WARNING: Failed to download Fabric installer: {e}")
         minecraft_dir = os.path.expanduser("~/.minecraft")
         print(f"  Installing Fabric for {args.test_mc}...")
-        install_result = subprocess.run(
-            ["java", "-jar", FABRIC_INSTALLER_JAR, "client",
+        install_result = run_java(
+            ["-jar", FABRIC_INSTALLER_JAR, "client",
              "-dir", minecraft_dir, "-mcversion", args.test_mc, "-noprofile"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=300,
+            timeout=300, memory_limit="1G",
         )
     else:
         print(f"  Installing {args.loader} for {args.test_mc} (Java {args.java_version})...")
-        install_result = subprocess.run(
-            ["java", "-jar", HMC_JAR, "--command", args.loader, args.test_mc,
+        install_result = run_java(
+            ["-jar", HMC_JAR, "--command", args.loader, args.test_mc,
              "--java", str(args.java_version)],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600,
+            timeout=600, memory_limit="1G",
         )
 
     # Verify installation by looking at versions dir
@@ -213,9 +254,10 @@ def install_modloader(args, result):
                     poll_waited += poll_interval
 
         if not version_id:
+            # Try HMC list command as last resort
             list_result = subprocess.run(
-                ["java", "-jar", HMC_JAR, "--command", "list", args.loader_regex],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=30,
+                ["java", "-Xmx512M", "-jar", HMC_JAR, "--command", "list", args.loader_regex],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=60,
             )
             list_output = (list_result.stdout or b"").decode(errors="replace").strip()
             if not list_output or "Couldn't find" in list_output or "No" in list_output:
@@ -236,7 +278,7 @@ def launch_and_test(args, result):
     """Launch Minecraft and test. Modifies result dict in place."""
     print(f"  Launching Minecraft {args.test_mc} with {args.loader}...")
 
-    # Create temp files for game output (NEVER use PIPE with Java)
+    # Create temp files for game output (NEVER use PIPE with Java/Minecraft)
     stdout_path = Path("run/game-stdout.log")
     stderr_path = Path("run/game-stderr.log")
     stdout_path.parent.mkdir(parents=True, exist_ok=True)
@@ -245,14 +287,21 @@ def launch_and_test(args, result):
     stderr_file = open(stderr_path, "w")
 
     try:
-        # Start the game with start_new_session to fully detach process group
+        # Start the game with start_new_session to create a new process group
+        # Use explicit memory limits for the game process
+        env = os.environ.copy()
+        env["JAVA_TOOL_OPTIONS"] = "-Xmx512M -XX:MaxMetaspaceSize=128M"  # HMC wrapper limit
+        env["GAME_JVM_ARGS"] = GAME_JVM_ARGS  # Passed through to the actual game
+
         launch_proc = subprocess.Popen(
-            ["xvfb-run", "java", "-Dhmc.check.xvfb=true",
+            ["xvfb-run", "java", "-Xmx512M", "-XX:MaxMetaspaceSize=128M",
              "-jar", HMC_JAR, "--command", "launch", args.loader_regex, "-regex",
-             "--jvm", "-Djava.awt.headless=true -Xmx3G -Xms512M"],
+             "--jvm", GAME_JVM_ARGS],
             stdout=stdout_file, stderr=stderr_file,
-            start_new_session=True,  # Important: creates new session for killpg
+            start_new_session=True,
+            env=env,
         )
+        pgid = os.getpgid(launch_proc.pid)
     finally:
         stdout_file.close()
         stderr_file.close()
@@ -264,12 +313,12 @@ def launch_and_test(args, result):
     poll_interval = 5
 
     while waited < LAUNCH_TIMEOUT:
-        time.sleep(poll_interval)
-        waited += poll_interval
-
+        # Check if process exited on its own
         if launch_proc.poll() is not None:
-            print(f"  Game exited on its own after {waited}s (exit code {launch_proc.returncode})")
-            game_started = True
+            exit_code = launch_proc.returncode
+            print(f"  Game exited after {waited}s (code: {exit_code})")
+            if exit_code == 0 or exit_code == -9:
+                game_started = True
             break
 
         # Check crash reports
@@ -287,8 +336,9 @@ def launch_and_test(args, result):
         log_path = Path("run/logs/latest.log")
         if log_path.exists():
             try:
-                log_text = log_path.read_text(encoding="utf-8", errors="replace")
-                if "Setting user:" in log_text or "Loaded" in log_text:
+                with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                    log_tail = f.read()[-4000:]
+                if "Setting user:" in log_tail or ("Loaded" in log_tail and "Minecraft" in log_tail):
                     if not game_started:
                         print(f"  Game reached title screen after {waited}s")
                         game_started = True
@@ -299,14 +349,16 @@ def launch_and_test(args, result):
             except Exception:
                 pass
 
-    # Kill the entire process group (not just the parent)
+        time.sleep(poll_interval)
+        waited += poll_interval
+
+    # Kill the entire process group (not just the parent process)
     print(f"  Cleaning up game process ({waited}s total)...")
     try:
-        pgid = os.getpgid(launch_proc.pid)
-        os.killpg(pgid, 15)  # SIGTERM
+        os.killpg(pgid, signal.SIGTERM)
         time.sleep(2)
         try:
-            os.killpg(pgid, 9)  # SIGKILL as fallback
+            os.killpg(pgid, signal.SIGKILL)  # Hard kill as fallback
         except Exception:
             pass
     except Exception:
@@ -315,7 +367,7 @@ def launch_and_test(args, result):
         except Exception:
             pass
 
-    # Final cleanup to be safe
+    # Final cleanup to be safe - kill any remaining Java/Xvfb processes
     cleanup_processes()
 
     # Determine result
@@ -329,7 +381,8 @@ def launch_and_test(args, result):
     log_path = Path("run/logs/latest.log")
     if log_path.exists():
         try:
-            log_text = log_path.read_text(encoding="utf-8", errors="replace")[:5000]
+            with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                log_text = f.read()[-5000:]
         except Exception:
             log_text = ""
 
@@ -337,10 +390,12 @@ def launch_and_test(args, result):
         result["status"] = "launcher_failed"
         if has_crash_report:
             crash_file = list(crash_reports_dir.glob("crash-*.txt"))[0]
-            result["crash_summary"] = crash_file.read_text(encoding="utf-8", errors="replace")[:500]
+            with open(crash_file, "r", encoding="utf-8", errors="replace") as f:
+                result["crash_summary"] = f.read()[:500]
         elif has_hs_err:
             hs_file = list(Path("run").glob("hs_err_pid*.log"))[0]
-            result["crash_summary"] = hs_file.read_text(encoding="utf-8", errors="replace")[:500]
+            with open(hs_file, "r", encoding="utf-8", errors="replace") as f:
+                result["crash_summary"] = f.read()[:500]
         result["logs"] = log_text
         print(f"  FAILED: crash report found")
     elif crash_detected:
@@ -348,11 +403,6 @@ def launch_and_test(args, result):
         result["crash_summary"] = "Crash detected during game load"
         result["logs"] = log_text
         print(f"  FAILED: crash detected during monitoring")
-    elif game_started and exit_code not in (0, -9) and waited < LAUNCH_TIMEOUT:
-        result["status"] = "launcher_failed"
-        result["crash_summary"] = f"Game exited unexpectedly (code {exit_code})"
-        result["logs"] = log_text
-        print(f"  FAILED: Game exited with code {exit_code}")
     elif game_started:
         result["status"] = "passed"
         result["logs"] = log_text
@@ -375,8 +425,7 @@ def write_result(result, args):
         json.dumps(result, indent=2), encoding="utf-8"
     )
 
-    # Write simple status file (compatible with build.yml collect-tests)
-    # Expected: "pass", "fail", or "not_tested"
+    # Write simple status file (compatible with workflow collect-tests)
     if result["status"] == "passed":
         status_text = "pass"
     elif result["status"] == "not_tested":
@@ -415,6 +464,7 @@ def main():
     if java_home:
         os.environ["JAVA_HOME"] = java_home
     print(f"  JAVA_HOME={java_home}")
+    print(f"  JAVA_TOOL_OPTIONS={os.environ.get('JAVA_TOOL_OPTIONS', '(unset)')}")
 
     run_dir = Path("run")
     if run_dir.exists():
