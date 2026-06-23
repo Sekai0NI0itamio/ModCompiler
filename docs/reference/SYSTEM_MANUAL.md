@@ -145,8 +145,9 @@ If this stage fails, the issue is usually one of:
 ### Stage 2: Build
 
 Each exact target from the zip is built as its own matrix job.
-The `Build Mods` workflow now accepts `max_parallel`, which controls how many exact targets GitHub builds at the same time.
-Use `all` for no scaffold-side cap, or enter a positive number if you want to throttle the matrix.
+The `Build Mods` workflow accepts a `max_parallel` input.
+**ALWAYS leave `max_parallel` as the default `all`.** The workflow automatically resolves `all` to the exact number of jobs in the matrix, so every version+loader builds in parallel.
+Only use a smaller positive number for emergency throttling; it will make the run much slower and is not the normal workflow.
 
 For each exact target:
 
@@ -445,7 +446,7 @@ In GitHub:
 3. select `Build Mods`
 4. click `Run workflow`
 5. enter the zip path such as `incoming/tpateleport-1.12.2-forge.zip`
-6. enter `max_parallel`, either as a positive number or `all`
+6. leave `max_parallel` as the default `all` so every version+loader builds in parallel
 
 ### Step 4: Read The Result
 
