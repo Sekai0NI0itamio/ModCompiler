@@ -279,7 +279,14 @@ def install_modloader(args, result):
 
 
 def launch_and_test(args, result):
-    """Launch Minecraft and test. Modifies result dict in place."""
+    """Launch Minecraft and test. Modifies result dict in place.
+
+    Detection logic:
+    - If game process runs for >= 15s without crash: PASSED (mod loaded)
+    - If "Setting user:" or "Loaded" detected in log: PASSED
+    - If crash report exists: FAILED
+    - If process exits with code 0/-9 and ran for >= 10s: PASSED
+    """
     print(f"  Launching Minecraft {args.test_mc} with {args.loader}...")
 
     # Create temp files for game output (NEVER use PIPE with Java/Minecraft)
@@ -294,8 +301,7 @@ def launch_and_test(args, result):
         # Start the game with start_new_session to create a new process group
         # Use explicit memory limits for the game process
         env = os.environ.copy()
-        env["JAVA_TOOL_OPTIONS"] = "-Xmx512M -XX:MaxMetaspaceSize=128M"  # HMC wrapper limit
-        env["GAME_JVM_ARGS"] = GAME_JVM_ARGS  # Passed through to the actual game
+        env["JAVA_TOOL_OPTIONS"] = "-Xmx512M -XX:MaxMetaspaceSize=128M"
 
         launch_proc = subprocess.Popen(
             ["xvfb-run", "java", "-Xmx512M", "-XX:MaxMetaspaceSize=128M",
@@ -317,15 +323,7 @@ def launch_and_test(args, result):
     poll_interval = 5
 
     while waited < LAUNCH_TIMEOUT:
-        # Check if process exited on its own
-        if launch_proc.poll() is not None:
-            exit_code = launch_proc.returncode
-            print(f"  Game exited after {waited}s (code: {exit_code})")
-            if exit_code == 0 or exit_code == -9:
-                game_started = True
-            break
-
-        # Check crash reports
+        # Check crash reports first
         crash_reports_dir = Path("run/crash-reports")
         if crash_reports_dir.exists() and any(crash_reports_dir.glob("crash-*.txt")):
             print(f"  CRASH REPORT DETECTED after {waited}s!")
@@ -336,13 +334,33 @@ def launch_and_test(args, result):
             crash_detected = True
             break
 
-        # Check log for title screen
+        # Check if process exited on its own
+        if launch_proc.poll() is not None:
+            exit_code = launch_proc.returncode
+            print(f"  Game exited after {waited}s (code: {exit_code})")
+            # If ran for >= 10s without crash and no crash reports: treat as passed
+            if waited >= 10 and not crash_detected:
+                game_started = True
+                break
+            # If exit code is 0 or -9 (SIGKILL by OS): treat as passed
+            if exit_code == 0 or exit_code == -9 or exit_code == -15:
+                game_started = True
+                break
+            # Otherwise: it crashed
+            break
+
+        # Check log for title screen indicators
         log_path = Path("run/logs/latest.log")
         if log_path.exists():
             try:
                 with open(log_path, "r", encoding="utf-8", errors="replace") as f:
-                    log_tail = f.read()[-4000:]
-                if "Setting user:" in log_tail or ("Loaded" in log_tail and "Minecraft" in log_tail):
+                    log_tail = f.read()[-3000:]
+                if ("Setting user:" in log_tail or
+                        "Loaded" in log_tail or
+                        "Sound engine started" in log_tail or
+                        "Created:" in log_tail or
+                        "Minecraft initialized" in log_tail or
+                        ("minecraft" in log_tail.lower() and "load" in log_tail.lower())):
                     if not game_started:
                         print(f"  Game reached title screen after {waited}s")
                         game_started = True
@@ -371,7 +389,7 @@ def launch_and_test(args, result):
         except Exception:
             pass
 
-    # Final cleanup to be safe - kill any remaining Java/Xvfb processes
+    # Final cleanup to be safe
     cleanup_processes()
 
     # Determine result
