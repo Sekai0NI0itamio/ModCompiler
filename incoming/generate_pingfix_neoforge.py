@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 
 NEOFORGE_VERSIONS = [
-    "1.20.6",
+    "1.20.2", "1.20.4", "1.20.6",
     "1.21", "1.21.1",
     "1.21.2", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.7", "1.21.8",
     "1.21.9", "1.21.10", "1.21.11",
@@ -14,7 +14,7 @@ NEOFORGE_VERSIONS = [
 
 MOD_TXT = """mod_id=pingfix
 name=PingFix
-mod_version=1.0.0
+mod_version=3.2.0
 group=com.itamio.pingfix
 entrypoint_class=com.itamio.pingfix.PingFixMod
 description=Fixes multiplayer server list ping by periodically refreshing the server browser.
@@ -65,7 +65,7 @@ license="MIT"
 
 [[mods]]
 modId="pingfix"
-version="1.0.0"
+version="3.2.0"
 displayName="PingFix"
 description="Fixes multiplayer server list ping by periodically refreshing the server browser."
 authors="Itamio"
