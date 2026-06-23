@@ -278,15 +278,13 @@ def install_modloader(args, result):
         return version_id
 
 
-def launch_and_test(args, result):
+def launch_and_test(args, result, version_id):
     """Launch Minecraft and test. Modifies result dict in place.
 
-    Detection logic (STRICT — no false positives):
-    - Title screen detected in log → we kill it → PASSED
-    - Game exits on its own with code 0 → PASSED
-    - Game exits on its own with code != 0 → FAILED
-    - Crash report / hs_err file → FAILED
-    - Timeout without title screen → FAILED
+    version_id is the exact installed version to launch (e.g.
+    "fabric-loader-0.16.9-1.20.1" or "1.20.1-forge-49.0.30").
+    Using the exact version avoids launching the wrong Minecraft version
+    when multiple loader versions are cached.
     """
     print(f"  Launching Minecraft {args.test_mc} with {args.loader}...")
 
@@ -300,12 +298,14 @@ def launch_and_test(args, result):
 
     try:
         # Start the game with start_new_session to create a new process group
+        # Use explicit memory limits for the game process
         env = os.environ.copy()
         env["JAVA_TOOL_OPTIONS"] = "-Xmx512M -XX:MaxMetaspaceSize=128M"
 
+        # Use exact version_id (no regex) to avoid launching wrong version
         launch_proc = subprocess.Popen(
             ["xvfb-run", "java", "-Xmx512M", "-XX:MaxMetaspaceSize=128M",
-             "-jar", HMC_JAR, "--command", "launch", args.loader_regex, "-regex",
+             "-jar", HMC_JAR, "--command", "launch", version_id,
              "--jvm", GAME_JVM_ARGS],
             stdout=stdout_file, stderr=stderr_file,
             start_new_session=True,
@@ -616,7 +616,7 @@ def main():
 
     # Launch and test
     start_launch = time.time()
-    launch_and_test(args, result)
+    launch_and_test(args, result, version_id)
     result["timing"]["launch_seconds"] = round(time.time() - start_launch, 1)
     print(f"  Launch took {result['timing']['launch_seconds']}s")
 

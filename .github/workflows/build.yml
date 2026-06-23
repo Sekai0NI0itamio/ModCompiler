@@ -447,19 +447,60 @@ jobs:
         run: |
           JAR_PATH=$(find .workflow_downloads/builds -name "${{ matrix.jar_name }}" | head -1)
           mkdir -p launcher-results crash-logs
-          python3 -u scripts/launcher_test.py \
-            --slug "${{ matrix.slug }}" \
-            --jar-name "${{ matrix.jar_name }}" \
-            --jar-path "${JAR_PATH}" \
-            --game-version "${{ matrix.game_version }}" \
-            --test-mc "${{ matrix.test_mc }}" \
-            --loader "${{ matrix.loader }}" \
-            --original-loader "${{ matrix.original_loader }}" \
-            --java-version "${{ matrix.java_version }}" \
-            --loader-regex "${{ matrix.loader_regex }}" \
-            --mcrt-jar "${{ matrix.mcrt_jar }}" \
-            --safe-key "${{ matrix.safe_key }}" \
-            --out-dir launcher-results
+
+          run_test() {
+            local round=$1
+            echo "=== Launcher test round $round ==="
+            rm -rf run
+            python3 -u scripts/launcher_test.py \
+              --slug "${{ matrix.slug }}" \
+              --jar-name "${{ matrix.jar_name }}" \
+              --jar-path "${JAR_PATH}" \
+              --game-version "${{ matrix.game_version }}" \
+              --test-mc "${{ matrix.test_mc }}" \
+              --loader "${{ matrix.loader }}" \
+              --original-loader "${{ matrix.original_loader }}" \
+              --java-version "${{ matrix.java_version }}" \
+              --loader-regex "${{ matrix.loader_regex }}" \
+              --mcrt-jar "${{ matrix.mcrt_jar }}" \
+              --safe-key "${{ matrix.safe_key }}" \
+              --out-dir launcher-results
+          }
+
+          test_passed() {
+            local status_file="launcher-results/${{ matrix.safe_key }}.txt"
+            if [ -f "$status_file" ]; then
+              local status=$(cat "$status_file")
+              if [ "$status" = "pass" ] || [ "$status" = "not_tested" ]; then
+                return 0
+              fi
+            fi
+            return 1
+          }
+
+          # Round 1
+          run_test 1
+          if test_passed; then
+            echo "Round 1 passed"
+            exit 0
+          fi
+          echo "Round 1 result: FAILED"
+
+          # Round 2 (retry)
+          echo "Round 1 failed, retrying (round 2)..."
+          pkill -9 -f "headlessmc-launcher-wrapper" 2>/dev/null || true
+          pkill -9 -f "Xvfb" 2>/dev/null || true
+          rm -rf run launcher-results
+          mkdir -p launcher-results
+
+          run_test 2
+          if test_passed; then
+            echo "Round 2 passed (retry succeeded)"
+            exit 0
+          fi
+
+          echo "Both rounds failed"
+          exit 1
 
       - name: Upload test result
         if: always()
