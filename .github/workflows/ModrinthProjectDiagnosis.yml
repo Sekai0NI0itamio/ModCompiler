@@ -1220,11 +1220,12 @@ jobs:
           ]
 
           # Build detailed entries with timing info
+          table_entries = []
           detailed_entries = []
           for r in records:
               vnum = r.get("version_number", "unknown")
               file_url = r.get("file_url", "")
-              jar_name = r.get("file_name", "")
+              jar_name = r.get("jar_name", "")
               for loader in r.get("loaders", []):
                   for mc_version in r.get("game_versions", []):
                       is_shell = r.get("is_shell", False)

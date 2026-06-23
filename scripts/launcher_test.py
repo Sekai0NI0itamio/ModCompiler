@@ -281,11 +281,12 @@ def install_modloader(args, result):
 def launch_and_test(args, result):
     """Launch Minecraft and test. Modifies result dict in place.
 
-    Detection logic:
-    - If game process runs for >= 15s without crash: PASSED (mod loaded)
-    - If "Setting user:" or "Loaded" detected in log: PASSED
-    - If crash report exists: FAILED
-    - If process exits with code 0/-9 and ran for >= 10s: PASSED
+    Detection logic (STRICT — no false positives):
+    - Title screen detected in log → we kill it → PASSED
+    - Game exits on its own with code 0 → PASSED
+    - Game exits on its own with code != 0 → FAILED
+    - Crash report / hs_err file → FAILED
+    - Timeout without title screen → FAILED
     """
     print(f"  Launching Minecraft {args.test_mc} with {args.loader}...")
 
@@ -299,7 +300,6 @@ def launch_and_test(args, result):
 
     try:
         # Start the game with start_new_session to create a new process group
-        # Use explicit memory limits for the game process
         env = os.environ.copy()
         env["JAVA_TOOL_OPTIONS"] = "-Xmx512M -XX:MaxMetaspaceSize=128M"
 
@@ -317,8 +317,10 @@ def launch_and_test(args, result):
         stderr_file.close()
 
     # Poll for game loading / crashes
-    game_started = False
+    title_screen_detected = False
     crash_detected = False
+    self_exited = False
+    self_exit_code = None
     waited = 0
     poll_interval = 5
 
@@ -336,17 +338,9 @@ def launch_and_test(args, result):
 
         # Check if process exited on its own
         if launch_proc.poll() is not None:
-            exit_code = launch_proc.returncode
-            print(f"  Game exited after {waited}s (code: {exit_code})")
-            # If ran for >= 10s without crash and no crash reports: treat as passed
-            if waited >= 10 and not crash_detected:
-                game_started = True
-                break
-            # If exit code is 0 or -9 (SIGKILL by OS): treat as passed
-            if exit_code == 0 or exit_code == -9 or exit_code == -15:
-                game_started = True
-                break
-            # Otherwise: it crashed
+            self_exited = True
+            self_exit_code = launch_proc.returncode
+            print(f"  Game exited on its own after {waited}s (code: {self_exit_code})")
             break
 
         # Check log for title screen indicators
@@ -356,14 +350,13 @@ def launch_and_test(args, result):
                 with open(log_path, "r", encoding="utf-8", errors="replace") as f:
                     log_tail = f.read()[-3000:]
                 if ("Setting user:" in log_tail or
-                        "Loaded" in log_tail or
                         "Sound engine started" in log_tail or
                         "Created:" in log_tail or
                         "Minecraft initialized" in log_tail or
-                        ("minecraft" in log_tail.lower() and "load" in log_tail.lower())):
-                    if not game_started:
+                        "Reloading resource" in log_tail):
+                    if not title_screen_detected:
                         print(f"  Game reached title screen after {waited}s")
-                        game_started = True
+                        title_screen_detected = True
                         if waited < LAUNCH_TIMEOUT - 10:
                             time.sleep(10)
                             waited += 10
@@ -392,7 +385,7 @@ def launch_and_test(args, result):
     # Final cleanup to be safe
     cleanup_processes()
 
-    # Determine result
+    # Determine result - STRICT checking
     exit_code = launch_proc.returncode if launch_proc.poll() is not None else -9
 
     crash_reports_dir = Path("run/crash-reports")
@@ -407,6 +400,19 @@ def launch_and_test(args, result):
                 log_text = f.read()[-5000:]
         except Exception:
             log_text = ""
+
+    # Check for error indicators in log even if no crash report
+    log_has_error = False
+    error_indicators = [
+        "Exception caught", "Caused by:", "java.lang.",
+        "net.fabricmc.loader", "Error loading", "Crashing!",
+        "The game crashed", "LoadingError", "InitializationError",
+    ]
+    if log_text:
+        for indicator in error_indicators:
+            if indicator in log_text:
+                log_has_error = True
+                break
 
     if has_crash_report or has_hs_err:
         result["status"] = "launcher_failed"
@@ -425,10 +431,24 @@ def launch_and_test(args, result):
         result["crash_summary"] = "Crash detected during game load"
         result["logs"] = log_text
         print(f"  FAILED: crash detected during monitoring")
-    elif game_started:
+    elif title_screen_detected:
         result["status"] = "passed"
         result["logs"] = log_text
-        print(f"  PASSED")
+        print(f"  PASSED (title screen detected)")
+    elif self_exited and self_exit_code == 0:
+        result["status"] = "passed"
+        result["logs"] = log_text
+        print(f"  PASSED (exited cleanly with code 0)")
+    elif self_exited:
+        result["status"] = "launcher_failed"
+        result["crash_summary"] = f"Game exited with non-zero code: {self_exit_code}"
+        result["logs"] = log_text
+        print(f"  FAILED: game exited with code {self_exit_code}")
+    elif log_has_error:
+        result["status"] = "launcher_failed"
+        result["crash_summary"] = "Game log contains error indicators but no crash report generated"
+        result["logs"] = log_text
+        print(f"  FAILED: errors detected in game log")
     else:
         result["status"] = "launcher_failed"
         result["crash_summary"] = f"Game never reached title screen (timed out after {LAUNCH_TIMEOUT}s)"
