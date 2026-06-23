@@ -41,8 +41,8 @@ socket.setdefaulttimeout(120)
 # This prevents OOM killer from terminating our Python process
 os.environ["JAVA_TOOL_OPTIONS"] = os.environ.get("JAVA_TOOL_OPTIONS", "") + " -Xmx1G -XX:MaxMetaspaceSize=256M"
 
-# Game-specific memory limits (2G is safe for 7GB CI runners)
-GAME_JVM_ARGS = "-Djava.awt.headless=true -Xmx2G -Xms512M -XX:MaxMetaspaceSize=512M"
+# Game-specific memory limits (3G is safe for 7GB CI runners)
+GAME_JVM_ARGS = "-Djava.awt.headless=true -Xmx3G -Xms1G -XX:MaxMetaspaceSize=512M"
 # HMC wrapper memory limit (small)
 HMC_JVM_ARGS = "-Xmx512M -XX:MaxMetaspaceSize=128M"
 
@@ -107,13 +107,14 @@ def cleanup_processes():
     time.sleep(0.5)
 
 
-def run_java(cmd_args, timeout=300, memory_limit="1G"):
+def run_java(cmd_args, timeout=300, memory_limit="1G", capture_output=False):
     """Run a Java subprocess with explicit memory limits.
 
     Args:
         cmd_args: List of args AFTER 'java' (e.g., ["-jar", HMC_JAR, "--command", ...])
         timeout: Process timeout in seconds
         memory_limit: Override memory limit string (e.g., "512M")
+        capture_output: If True, capture stdout/stderr instead of discarding
 
     Returns:
         CompletedProcess
@@ -121,13 +122,21 @@ def run_java(cmd_args, timeout=300, memory_limit="1G"):
     env = os.environ.copy()
     env["JAVA_TOOL_OPTIONS"] = f"-Xmx{memory_limit} -XX:MaxMetaspaceSize=256M"
 
-    full_cmd = ["java"] + cmd_args
+    java_bin = "java"
+    java_home = os.environ.get("JAVA_HOME", "")
+    if java_home and Path(java_home, "bin", "java").exists():
+        java_bin = str(Path(java_home, "bin", "java"))
+
+    full_cmd = [java_bin] + cmd_args
+    stdout = subprocess.PIPE if capture_output else subprocess.DEVNULL
+    stderr = subprocess.PIPE if capture_output else subprocess.DEVNULL
     return subprocess.run(
         full_cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=stdout,
+        stderr=stderr,
         timeout=timeout,
         env=env,
+        text=True if capture_output else None,
     )
 
 
@@ -201,8 +210,14 @@ def install_modloader(args, result):
         install_result = run_java(
             ["-jar", HMC_JAR, "--command", args.loader, args.test_mc,
              "--java", str(args.java_version)],
-            timeout=600, memory_limit="1G",
+            timeout=600, memory_limit="1G", capture_output=True,
         )
+        if install_result.stdout:
+            print(f"  Install stdout (first 500 chars): {install_result.stdout[:500]}")
+        if install_result.stderr:
+            print(f"  Install stderr (first 500 chars): {install_result.stderr[:500]}")
+        if install_result.returncode != 0:
+            print(f"  WARNING: HMC install exited with code {install_result.returncode}")
 
     # Verify installation by looking at versions dir
     versions_dir = Path(os.path.expanduser("~/.minecraft/versions"))
@@ -222,17 +237,40 @@ def install_modloader(args, result):
         version_id = None
         poll_waited = 0
         poll_interval = 10
+        
+        def find_loader_dir():
+            if not versions_dir.exists():
+                return None
+            all_dirs = [d.name for d in versions_dir.iterdir() if d.is_dir()]
+            exact = []
+            partial = []
+            for dname in all_dirs:
+                dlower = dname.lower()
+                if loader_pattern in dlower:
+                    if args.test_mc in dname:
+                        exact.append(dname)
+                    else:
+                        mc_major = args.test_mc.split(".")[0]
+                        for part in dname.split("-"):
+                            if "." in part and part.split(".")[0] == mc_major:
+                                partial.append(dname)
+                                break
+            if exact:
+                return exact[0]
+            if partial:
+                return partial[0]
+            return None
+        
         while poll_waited < 300:
-            if versions_dir.exists():
-                loader_dirs = [
-                    d for d in versions_dir.iterdir()
-                    if d.is_dir() and loader_pattern in d.name.lower()
-                    and args.test_mc in d.name
-                ]
-                if loader_dirs:
-                    version_id = loader_dirs[0].name
-                    print(f"  {args.loader} installed: {version_id} (after {poll_waited}s)")
-                    break
+            found = find_loader_dir()
+            if found:
+                version_id = found
+                print(f"  {args.loader} installed: {version_id} (after {poll_waited}s)")
+                break
+            if poll_waited % 60 == 0 and poll_waited > 0:
+                if versions_dir.exists():
+                    all_dirs = [d.name for d in versions_dir.iterdir() if d.is_dir()]
+                    print(f"  Waiting for {args.loader} install... ({poll_waited}s) versions dir has {len(all_dirs)} entries: {all_dirs[:10]}")
             time.sleep(poll_interval)
             poll_waited += poll_interval
 
@@ -240,30 +278,37 @@ def install_modloader(args, result):
             nf_version = resolve_neoforge_version(args.test_mc, "")  # noqa: F821
             if nf_version:
                 print(f"  NeoForge version resolved: {nf_version}")
-                nf_code, _, _ = install_neoforge_direct(args.test_mc, nf_version)  # noqa: F821
+                nf_code, nf_stdout, nf_stderr = install_neoforge_direct(args.test_mc, nf_version)  # noqa: F821
                 print(f"  NeoForge direct installer exit code: {nf_code}")
+                if nf_stdout:
+                    print(f"  Direct installer stdout: {nf_stdout[:500]}")
+                if nf_stderr:
+                    print(f"  Direct installer stderr: {nf_stderr[:500]}")
                 poll_waited = 0
                 while poll_waited < 300:
-                    if versions_dir.exists():
-                        loader_dirs = [
-                            d for d in versions_dir.iterdir()
-                            if d.is_dir() and loader_pattern in d.name.lower()
-                            and (args.test_mc in d.name or (nf_version and nf_version in d.name))
-                        ]
-                        if loader_dirs:
-                            version_id = loader_dirs[0].name
-                            print(f"  {args.loader} installed via direct installer: {version_id} (after {poll_waited}s)")
-                            break
+                    found = find_loader_dir()
+                    if found:
+                        version_id = found
+                        print(f"  {args.loader} installed via direct installer: {version_id} (after {poll_waited}s)")
+                        break
+                    if poll_waited % 60 == 0 and poll_waited > 0:
+                            if versions_dir.exists():
+                                all_dirs = [d.name for d in versions_dir.iterdir() if d.is_dir()]
+                                print(f"  Waiting for direct install... ({poll_waited}s) versions dir has {len(all_dirs)} entries: {all_dirs[:10]}")
                     time.sleep(poll_interval)
                     poll_waited += poll_interval
 
         if not version_id:
             # Try HMC list command as last resort
+            java_bin = str(Path(os.environ.get("JAVA_HOME", ""), "bin", "java")) if os.environ.get("JAVA_HOME", "") else "java"
             list_result = subprocess.run(
-                ["java", "-Xmx512M", "-jar", HMC_JAR, "--command", "list", args.loader_regex],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=60,
+                [java_bin, "-Xmx512M", "-jar", HMC_JAR, "--command", "list", args.loader_regex],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60,
             )
             list_output = (list_result.stdout or b"").decode(errors="replace").strip()
+            list_stderr = (list_result.stderr or b"").decode(errors="replace").strip()
+            if list_stderr:
+                print(f"  hmc list stderr: {list_stderr[:300]}")
             if not list_output or "Couldn't find" in list_output or "No" in list_output:
                 result["status"] = "not_tested"
                 reason = f"No {args.loader} installation found for {args.test_mc}"
@@ -298,15 +343,17 @@ def launch_and_test(args, result, version_id):
 
     try:
         # Start the game with start_new_session to create a new process group
-        # Use explicit memory limits for the game process
+        # HMC wrapper gets small heap; game gets GAME_JVM_ARGS via --jvm flag
+        # Do NOT set JAVA_TOOL_OPTIONS here - it would override game --jvm args
         env = os.environ.copy()
-        env["JAVA_TOOL_OPTIONS"] = "-Xmx512M -XX:MaxMetaspaceSize=128M"
+        env.pop("JAVA_TOOL_OPTIONS", None)
 
         # Use exact version_id (no regex) to avoid launching wrong version
+        launch_cmd = ["xvfb-run", "java"] + HMC_JVM_ARGS.split() + \
+                     ["-jar", HMC_JAR, "--command", "launch", version_id,
+                      "--jvm", GAME_JVM_ARGS]
         launch_proc = subprocess.Popen(
-            ["xvfb-run", "java", "-Xmx512M", "-XX:MaxMetaspaceSize=128M",
-             "-jar", HMC_JAR, "--command", "launch", version_id,
-             "--jvm", GAME_JVM_ARGS],
+            launch_cmd,
             stdout=stdout_file, stderr=stderr_file,
             start_new_session=True,
             env=env,

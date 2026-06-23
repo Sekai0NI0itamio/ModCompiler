@@ -222,8 +222,12 @@ def install_neoforge_direct(mc_version, neoforge_version, timeout=600):
         urllib.request.urlretrieve(installer_url, installer_jar)
         print(f"  Downloaded {installer_jar} ({Path(installer_jar).stat().st_size / 1024:.0f} KB)")
     print(f"  Running NeoForge installer for {neoforge_version}...")
+    java_bin = "java"
+    java_home = os.environ.get("JAVA_HOME", "")
+    if java_home and Path(java_home, "bin", "java").exists():
+        java_bin = str(Path(java_home, "bin", "java"))
     result = subprocess.run(
-        ["java", "-jar", installer_jar, "--install-client"],
+        [java_bin, "-jar", installer_jar, "--install-client"],
         capture_output=True, text=True, timeout=timeout
     )
     return result.returncode, result.stdout or "", result.stderr or ""
