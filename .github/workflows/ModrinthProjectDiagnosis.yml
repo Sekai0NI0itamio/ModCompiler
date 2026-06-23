@@ -403,6 +403,7 @@ jobs:
               "missing_count": len(missing_pairs),
               "has_issues": len(shells) > 0 or len(missing_pairs) > 0,
               "version_records": records,
+              "selected_version_ids": [v["id"] for v in selected],
               "missing_pairs": [{"mc_version": gv, "loader": l} for gv, l in missing_pairs],
               "missing_by_loader": {k: sorted(v) for k, v in missing_by_loader.items()},
           }
@@ -648,20 +649,67 @@ jobs:
           PYTHONUNBUFFERED: "1"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          JAR_URL="${{ matrix.file_url }}"
+          JAR_NAME="${{ matrix.file_name }}"
+          SAFE_KEY="${{ matrix.safe_key }}"
           mkdir -p launcher-result
-          python3 -u scripts/launcher_test.py \
-            --game-version "${{ matrix.game_version }}" \
-            --test-mc "${{ matrix.test_mc }}" \
-            --loader "${{ matrix.loader }}" \
-            --original-loader "${{ matrix.original_loader }}" \
-            --file-url "${{ matrix.file_url }}" \
-            --jar-name "${{ matrix.file_name }}" \
-            --version-number "${{ matrix.version_number }}" \
-            --java-version "${{ matrix.java_version }}" \
-            --loader-regex "${{ matrix.loader_regex }}" \
-            --mcrt-jar "${{ matrix.mcrt_jar }}" \
-            --safe-key "${{ matrix.safe_key }}" \
-            --out-dir launcher-result
+
+          run_test() {
+            local round=$1
+            echo "=== Launcher test round $round ==="
+            rm -rf run
+            python3 -u scripts/launcher_test.py \
+              --game-version "${{ matrix.game_version }}" \
+              --test-mc "${{ matrix.test_mc }}" \
+              --loader "${{ matrix.loader }}" \
+              --original-loader "${{ matrix.original_loader }}" \
+              --file-url "$JAR_URL" \
+              --jar-name "$JAR_NAME" \
+              --version-number "${{ matrix.version_number }}" \
+              --java-version "${{ matrix.java_version }}" \
+              --loader-regex "${{ matrix.loader_regex }}" \
+              --mcrt-jar "${{ matrix.mcrt_jar }}" \
+              --safe-key "$SAFE_KEY" \
+              --out-dir launcher-result
+            return $?
+          }
+
+          test_passed() {
+            # Check if launcher test actually passed (not just script exit code)
+            local status_file="launcher-result/${SAFE_KEY}.txt"
+            if [ -f "$status_file" ]; then
+              local status=$(cat "$status_file")
+              if [ "$status" = "pass" ] || [ "$status" = "not_tested" ]; then
+                return 0
+              fi
+            fi
+            return 1
+          }
+
+          # Round 1
+          run_test 1
+          if test_passed; then
+            echo "Round 1 passed"
+            exit 0
+          fi
+          echo "Round 1 result: FAILED"
+
+          # Round 2 (retry) - retry once on failure
+          echo "Round 1 failed, retrying (round 2)..."
+          # Clean up for fresh retry
+          pkill -9 -f "headlessmc-launcher-wrapper" 2>/dev/null || true
+          pkill -9 -f "Xvfb" 2>/dev/null || true
+          rm -rf run launcher-result
+          mkdir -p launcher-result
+
+          run_test 2
+          if test_passed; then
+            echo "Round 2 passed (retry succeeded)"
+            exit 0
+          fi
+
+          echo "Both rounds failed"
+          exit 1
 
       - name: Upload launcher result
         if: always()
@@ -778,8 +826,15 @@ jobs:
           diagnosis = json.loads((DIAG_DIR / "diagnosis.json").read_text(encoding="utf-8"))
           slug = diagnosis["slug"]
           title = diagnosis["title"]
-          records = diagnosis.get("version_records", [])
+          all_records = diagnosis.get("version_records", [])
           missing_pairs = diagnosis.get("missing_pairs", [])
+          selected_ids = set(diagnosis.get("selected_version_ids", []))
+
+          # Filter to only latest versions per slot (for diagnosis logs)
+          records = [r for r in all_records if r.get("id", "") in selected_ids]
+          if not records:
+              records = all_records  # fallback if no selected IDs
+          print(f"Total versions: {len(all_records)}, Selected (latest per slot): {len(records)}")
 
           # Build lookup: (game_version, loader) -> launcher result
           launcher_map = {}
@@ -1471,8 +1526,17 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Project:** [${{ needs.diagnose.outputs.project_title }}](https://modrinth.com/mod/${{ needs.diagnose.outputs.project_slug }})" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Artifact: DiagnosisLogs" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Full Diagnosis Report" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          find .workflow_artifacts/DiagnosisLogs/ -type f | sort | head -80 >> "$GITHUB_STEP_SUMMARY"
+          if [ -f .workflow_artifacts/DiagnosisLogs/Final-Diagnosis.txt ]; then
+            cat .workflow_artifacts/DiagnosisLogs/Final-Diagnosis.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Final-Diagnosis.txt not found" >> "$GITHUB_STEP_SUMMARY"
+            find .workflow_artifacts/DiagnosisLogs/ -type f | sort | head -40 >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Artifact: DiagnosisLogs" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Full report, decompiled sources, crash logs, and detailed JSON available in the **DiagnosisLogs** artifact below." >> "$GITHUB_STEP_SUMMARY"
