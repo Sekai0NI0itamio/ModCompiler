@@ -250,10 +250,23 @@ def install_modloader(args, result):
                     if args.test_mc in dname:
                         exact.append(dname)
                     else:
+                        # NeoForge uses version-prefix naming (e.g. neoforge-20.4.251 for MC 1.20.4)
+                        if args.loader == "neoforge":
+                            mc_parts = args.test_mc.split(".")
+                            if mc_parts[0] == "1" and len(mc_parts) >= 2:
+                                nf_prefix = f"{mc_parts[1]}.{mc_parts[2] if len(mc_parts) > 2 else '0'}"
+                            else:
+                                nf_prefix = ".".join(mc_parts[:2])
+                            for part in dname.split("-"):
+                                if part.startswith(nf_prefix):
+                                    partial.append(dname)
+                                    break
+                        # Forge fallback: check major version in parts
                         mc_major = args.test_mc.split(".")[0]
                         for part in dname.split("-"):
                             if "." in part and part.split(".")[0] == mc_major:
-                                partial.append(dname)
+                                if dname not in partial:
+                                    partial.append(dname)
                                 break
             if exact:
                 return exact[0]

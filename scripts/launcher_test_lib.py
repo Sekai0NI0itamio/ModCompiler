@@ -170,6 +170,7 @@ def patch_fabric_mc_version(mod_jar, old_version, new_version):
 def _neoforge_version_prefix(mc_version):
     """Map a Minecraft version to the NeoForge version prefix.
 
+    NeoForge versions drop the "1." prefix from Minecraft versions.
     Examples:
       - 1.20.6 -> 20.6
       - 1.21   -> 21.0
@@ -178,7 +179,7 @@ def _neoforge_version_prefix(mc_version):
     """
     parts = mc_version.split(".")
     if parts[0] == "1" and len(parts) >= 2:
-        return f"{int(parts[1]) + 20}.{parts[2] if len(parts) > 2 else '0'}"
+        return f"{parts[1]}.{parts[2] if len(parts) > 2 else '0'}"
     return ".".join(parts[:2])
 
 
