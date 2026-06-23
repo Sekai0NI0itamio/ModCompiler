@@ -41,8 +41,8 @@ socket.setdefaulttimeout(120)
 # This prevents OOM killer from terminating our Python process
 os.environ["JAVA_TOOL_OPTIONS"] = os.environ.get("JAVA_TOOL_OPTIONS", "") + " -Xmx1G -XX:MaxMetaspaceSize=256M"
 
-# Game-specific memory limits (larger for actual game)
-GAME_JVM_ARGS = "-Djava.awt.headless=true -Xmx3G -Xms512M -XX:MaxMetaspaceSize=512M"
+# Game-specific memory limits (2G is safe for 7GB CI runners)
+GAME_JVM_ARGS = "-Djava.awt.headless=true -Xmx2G -Xms512M -XX:MaxMetaspaceSize=512M"
 # HMC wrapper memory limit (small)
 HMC_JVM_ARGS = "-Xmx512M -XX:MaxMetaspaceSize=128M"
 
@@ -81,8 +81,12 @@ def parse_args():
 
 
 def cleanup_processes():
-    """Kill any Java/HeadlessMC processes that might leak between runs."""
-    for pat in ["headlessmc-launcher-wrapper", "HeadlessMC", "Minecraft", "Xvfb"]:
+    """Kill any game processes that might leak between runs.
+    Never kill arbitrary java processes - they might be the CI runner's own processes!
+    """
+    for pat in ["headlessmc-launcher-wrapper", "HeadlessMC", "net.minecraft",
+                "Xvfb-run", "Minecraft.*launcher", "neo.forge", "net.neoforged",
+                "cpw.mods.bootstraplauncher", "net.minecraftforge"]:
         try:
             subprocess.run(
                 ["pkill", "-9", "-f", pat],
@@ -91,16 +95,16 @@ def cleanup_processes():
             )
         except Exception:
             pass
-    # Catch-all Java kill
+    # Kill Xvfb (virtual display) processes specifically
     try:
         subprocess.run(
-            ["pkill", "-9", "-f", "java"],
+            ["pkill", "-9", "Xvfb"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, timeout=5
         )
     except Exception:
         pass
-    time.sleep(1)
+    time.sleep(0.5)
 
 
 def run_java(cmd_args, timeout=300, memory_limit="1G"):
